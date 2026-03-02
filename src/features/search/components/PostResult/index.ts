@@ -1,0 +1,1 @@
+export { PostResult } from './PostResult';

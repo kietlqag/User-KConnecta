@@ -1,0 +1,1 @@
+export { FriendRequestCard } from './FriendRequestCard';

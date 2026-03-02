@@ -1,0 +1,1 @@
+export { GroupsLeftSidebar } from './GroupsLeftSidebar';

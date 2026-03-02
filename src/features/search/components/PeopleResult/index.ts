@@ -1,0 +1,1 @@
+export { PeopleResult } from './PeopleResult';
