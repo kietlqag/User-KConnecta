@@ -1,4 +1,4 @@
-import { Post } from '../../../components/shared';
+import { Post } from '../../../../components/shared';
 import { GroupsHeader, GroupsLeftSidebar } from '../components';
 import { Group, GroupPost } from '../types/groups.types';
 import exampleImage from 'figma:asset/74ca37b8e92fb5ac2cb3fb9e7b8898e6ebafb02b.png';

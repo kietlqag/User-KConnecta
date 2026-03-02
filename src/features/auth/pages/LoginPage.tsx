@@ -67,7 +67,6 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <AuthCard 
-        title="Chào mừng trở lại!" 
         subtitle="Đăng nhập để khám phá thế giới KConnecta"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
