@@ -1,60 +1,64 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router@7.1.3';
-import { Mail, Lock } from 'lucide-react';
-import { AuthCard } from '../components/AuthCard';
-import { AuthInput } from '../components/AuthInput';
-import { SocialButton } from '../components/SocialButton';
-import { LoginFormData } from '../types/auth.types';
+import React, { useState } from "react";
+import { Link } from "react-router@7.1.3";
+import { Mail, Lock } from "lucide-react";
+import { AuthCard } from "../components/AuthCard";
+import { AuthInput } from "../components/AuthInput";
+import { SocialButton } from "../components/SocialButton";
+import { LoginFormData } from "../types/auth.types";
 
 export function LoginPage() {
   const [formData, setFormData] = useState<LoginFormData>({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
     rememberMe: false,
   });
-  const [errors, setErrors] = useState<Partial<LoginFormData>>({});
+  const [errors, setErrors] = useState<Partial<LoginFormData>>(
+    {},
+  );
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
     // Clear error when user starts typing
     if (errors[name as keyof LoginFormData]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
   const validate = (): boolean => {
     const newErrors: Partial<LoginFormData> = {};
-    
+
     if (!formData.email) {
-      newErrors.email = 'Email là bắt buộc';
+      newErrors.email = "Email là bắt buộc";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = "Email không hợp lệ";
     }
-    
+
     if (!formData.password) {
-      newErrors.password = 'Mt khẩu là bắt buộc';
+      newErrors.password = "Mt khẩu là bắt buộc";
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+      newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validate()) return;
-    
+
     setIsLoading(true);
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Login data:', formData);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    console.log("Login data:", formData);
     setIsLoading(false);
     // Handle login logic here
   };
@@ -66,9 +70,7 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-      <AuthCard 
-        subtitle="Đăng nhập để khám phá thế giới KConnecta"
-      >
+      <AuthCard subtitle="Đăng nhập để khám phá thế giới KConnecta">
         <form onSubmit={handleSubmit} className="space-y-6">
           <AuthInput
             label="Email"
@@ -103,8 +105,18 @@ export function LoginPage() {
                   className="w-4 h-4 appearance-none rounded border-2 border-gray-400 bg-white checked:bg-emerald-500 checked:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer transition-all"
                 />
                 {formData.rememberMe && (
-                  <svg className="w-2.5 h-2.5 absolute text-white pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-2.5 h-2.5 absolute text-white pointer-events-none"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                 )}
               </div>
@@ -121,20 +133,35 @@ export function LoginPage() {
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                <svg
+                  className="animate-spin h-5 w-5"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
                 </svg>
                 Đang đăng nhập...
               </span>
             ) : (
-              'Đăng nhập'
+              "Đăng nhập"
             )}
           </button>
 
           <div className="text-center">
-            <Link 
-              to="/auth/forgot-password" 
+            <Link
+              to="/auth/forgot-password"
               className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
             >
               Quên mật khẩu?
@@ -146,16 +173,21 @@ export function LoginPage() {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">Hoặc</span>
+              <span className="px-4 bg-white text-gray-500">
+                Hoặc
+              </span>
             </div>
           </div>
 
-          <SocialButton provider="google" onClick={() => handleSocialLogin('google')} />
+          <SocialButton
+            provider="google"
+            onClick={() => handleSocialLogin("google")}
+          />
 
           <p className="text-center text-sm text-gray-600 mt-6">
-            Chưa có tài khoản?{' '}
-            <Link 
-              to="/auth/register" 
+            Chưa có tài khoản?{" "}
+            <Link
+              to="/auth/register"
               className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
             >
               Đăng ký ngay

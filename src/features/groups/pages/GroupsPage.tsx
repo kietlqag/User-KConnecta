@@ -1,4 +1,4 @@
-import { Post } from '../../../../components/shared';
+import { Post } from '../../../components/shared';
 import { GroupsHeader, GroupsLeftSidebar } from '../components';
 import { Group, GroupPost } from '../types/groups.types';
 import exampleImage from 'figma:asset/74ca37b8e92fb5ac2cb3fb9e7b8898e6ebafb02b.png';
@@ -93,7 +93,7 @@ const mockGroupPosts: GroupPost[] = [
     id: '2',
     group: {
       id: '2',
-      name: 'Vi��t Nam Glory Clash Royale',
+      name: 'Vit Nam Glory Clash Royale',
       icon: 'https://images.unsplash.com/photo-1762340278560-ada94c871862?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWNobm9sb2d5JTIwY29tbXVuaXR5JTIwbG9nb3xlbnwxfHx8fDE3Njk2NjY5NDV8MA&ixlib=rb-4.1.0&q=80&w=1080',
     },
     author: {
