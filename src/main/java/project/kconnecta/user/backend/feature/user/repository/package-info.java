@@ -1,5 +1,4 @@
-﻿/**
- * Package project.kconnecta.user.backend.module.user.repository.
+/**
+ * Package project.kconnecta.user.backend.feature.user.repository.
  */
-package project.kconnecta.user.backend.module.user.repository;
-
+package project.kconnecta.user.backend.feature.user.repository;

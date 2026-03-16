@@ -1,5 +1,4 @@
-﻿/**
- * Package project.kconnecta.user.backend.module.user.mapper.
+/**
+ * Package project.kconnecta.user.backend.feature.user.mapper.
  */
-package project.kconnecta.user.backend.module.user.mapper;
-
+package project.kconnecta.user.backend.feature.user.mapper;
