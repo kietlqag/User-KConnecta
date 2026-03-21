@@ -9,7 +9,7 @@ export const ConversationItem = ({ conversation, onClick }: ConversationItemProp
   return (
     <button 
       onClick={onClick}
-      className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors"
+      className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
     >
       {/* Avatar */}
       <div className="relative flex-shrink-0">

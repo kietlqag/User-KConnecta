@@ -1,4 +1,4 @@
-import { RouterProvider } from 'react-router@7.1.3';
+import { RouterProvider } from 'react-router-dom';
 import { router } from './routes';
 import { MenuProvider } from './contexts/MenuContext';
 

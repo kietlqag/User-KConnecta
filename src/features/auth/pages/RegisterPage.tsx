@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router@7.1.3';
+import { Link } from 'react-router-dom';
 import { AuthCard } from '../components/AuthCard';
 import { EmailStep, OTPVerificationStep, PasswordStep, ProfileSetupStep } from '../components/signup-steps';
 

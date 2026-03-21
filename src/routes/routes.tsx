@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router@7.1.3';
+import { createBrowserRouter } from 'react-router-dom';
 import { AuthLayout } from '../layouts';
 import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth/pages';
 import { WelcomePage } from '../pages';

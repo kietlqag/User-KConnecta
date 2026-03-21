@@ -93,12 +93,17 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
   const handleReact = (messageId: string, emoji: string) => {
     setMessages(messages.map(msg => {
       if (msg.id === messageId) {
-        const reactions = msg.reactions || [];
+        // Nếu emoji rỗng (từ MessageBubble khi click lại reaction đang có) thì xóa hết reactions
+        if (emoji === '') {
+          return {
+            ...msg,
+            reactions: [],
+          };
+        }
+        // Nếu có emoji mới thì thay thế toàn bộ reactions bằng emoji mới (chỉ giữ 1 reaction)
         return {
           ...msg,
-          reactions: reactions.includes(emoji)
-            ? reactions.filter(r => r !== emoji)
-            : [...reactions, emoji],
+          reactions: [emoji],
         };
       }
       return msg;
@@ -113,7 +118,7 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
           {fullScreen && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors -ml-2"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors -ml-2 cursor-pointer"
               title="Quay lại danh sách chat"
             >
               <ArrowLeft className="w-5 h-5 text-gray-700" />
@@ -139,21 +144,21 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
 
         {/* Action Icons */}
         <div className="flex items-center gap-2">
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Gọi thoại">
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Gọi thoại">
             <Phone className="w-4 h-4 text-blue-600" />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Gọi video">
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Gọi video">
             <Video className="w-4 h-4 text-blue-600" />
           </button>
           {fullScreen && (
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors" title="Thông tin cuộc trò chuyện">
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Thông tin cuộc trò chuyện">
               <Info className="w-4 h-4 text-blue-600" />
             </button>
           )}
           {!fullScreen && onMinimize && (
             <button
               onClick={onMinimize}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               title="Thu nhỏ"
             >
               <Minus className="w-4 h-4 text-blue-600" />
@@ -162,7 +167,7 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
           {!fullScreen && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               title="Đóng"
             >
               <X className="w-4 h-4 text-blue-600" />
@@ -189,25 +194,25 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
           {/* Left Action Icons */}
           <div className="flex items-center gap-1">
             <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               title="Gửi tin nhắn thoại"
             >
               <Mic className="w-5 h-5 text-blue-600" />
             </button>
             <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               title="Đính kèm ảnh"
             >
               <ImageIcon className="w-5 h-5 text-blue-600" />
             </button>
             <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               title="Chọn sticker"
             >
               <Sticker className="w-5 h-5 text-blue-600" />
             </button>
             <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
               title="Chọn GIF"
             >
               <FileImage className="w-5 h-5 text-blue-600" />
@@ -226,7 +231,7 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
             />
             <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="p-1.5 hover:bg-gray-200 rounded-full transition-colors absolute right-2 top-1/2 -translate-y-1/2"
+              className="p-1.5 hover:bg-gray-200 rounded-full transition-colors absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
               title="Chọn emoji"
             >
               <Smile className="w-5 h-5 text-blue-600" />
@@ -258,7 +263,7 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
                   setInputText(inputText + emoji);
                   setShowEmojiPicker(false);
                 }}
-                className="text-2xl hover:scale-125 transition-transform"
+                className="text-2xl hover:scale-125 transition-transform cursor-pointer"
               >
                 {emoji}
               </button>

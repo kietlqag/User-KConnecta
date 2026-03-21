@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, MoreHorizontal, ExternalLink } from 'lucide-react';
-import { useNavigate } from 'react-router@7.1.3';
+import { useNavigate } from 'react-router-dom';
 import { ConversationItem } from '../ConversationItem';
 import { ChatWindow } from '../ChatWindow';
 import { Conversation, MessengerFilter } from '../../types/messenger.types';
@@ -153,7 +153,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold">Đoạn chat</h2>
               <div className="flex items-center gap-2">
-                <button className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
+                <button className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer">
                   <MoreHorizontal className="w-5 h-5 text-gray-600" />
                 </button>
                 <button 
@@ -161,7 +161,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
                     navigate('/messages');
                     onClose();
                   }}
-                  className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                  className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
                   title="Mở trong Messenger"
                 >
                   <ExternalLink className="w-5 h-5 text-gray-600" />
@@ -187,7 +187,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
                 <button
                   key={filter.key}
                   onClick={() => setActiveFilter(filter.key)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
                     activeFilter === filter.key
                       ? 'bg-blue-100 text-blue-600'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -196,7 +196,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
                   {filter.label}
                 </button>
               ))}
-              <button className="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+              <button className="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors cursor-pointer">
                 ...
               </button>
             </div>
@@ -222,7 +222,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
                 navigate('/messages');
                 onClose();
               }}
-              className="w-full text-center text-blue-600 hover:bg-gray-100 py-2 rounded-lg text-sm font-medium transition-colors"
+              className="w-full text-center text-blue-600 hover:bg-gray-100 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
             >
               Xem tất cả trong Messenger
             </button>

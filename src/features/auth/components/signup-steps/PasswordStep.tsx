@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, ArrowLeft } from 'lucide-react';
+import { Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { AuthInput } from '../AuthInput';
 
 interface PasswordStepProps {
@@ -10,6 +10,8 @@ interface PasswordStepProps {
 export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -97,7 +99,7 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
             <AuthInput
               label="Mật khẩu"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               icon={<Lock size={20} />}
               value={password}
@@ -105,6 +107,13 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
               error={errors.password}
               autoFocus
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-[42px] text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           </div>
 
           {password && (
@@ -139,17 +148,24 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
           )}
         </div>
 
-        <div>
+        <div className="relative">
           <AuthInput
             label="Xác nhận mật khẩu"
             name="confirmPassword"
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             placeholder="••••••••"
             icon={<Lock size={20} />}
             value={confirmPassword}
             onChange={handleConfirmPasswordChange}
             error={errors.confirmPassword}
           />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            className="absolute right-3 top-[42px] text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
         </div>
 
         <div className="bg-gray-50 rounded-xl p-4 space-y-2">

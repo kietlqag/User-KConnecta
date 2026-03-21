@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router@7.1.3';
+import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, Lock, CheckCircle2 } from 'lucide-react';
 import { AuthCard } from '../components/AuthCard';
 import { AuthInput } from '../components/AuthInput';

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router@7.1.3';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Clock, 
@@ -90,7 +90,7 @@ export const LeftSidebar = () => {
             <button
               key={item.id}
               onClick={() => navigate(item.href)}
-              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left group"
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left group cursor-pointer"
               aria-label={item.label}
             >
               {item.icon}
@@ -101,7 +101,7 @@ export const LeftSidebar = () => {
           ))}
 
           {/* See More */}
-          <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left">
+          <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer">
             <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center">
               <ChevronDown className="w-5 h-5 text-gray-700" />
             </div>
@@ -118,7 +118,7 @@ export const LeftSidebar = () => {
         </div>
 
         <nav className="space-y-1 mb-4">
-          <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left">
+          <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer">
             <div className="w-9 h-9 rounded-lg bg-gray-300 flex items-center justify-center overflow-hidden">
               <Flag className="w-5 h-5 text-gray-600" />
             </div>
@@ -129,17 +129,17 @@ export const LeftSidebar = () => {
         {/* Footer Links */}
         <div className="px-2 pt-4 pb-6 text-xs text-gray-500 space-y-2">
           <div className="flex flex-wrap gap-1">
-            <a href="#" className="hover:underline">Quyền riêng tư</a>
+            <a href="#" className="hover:underline cursor-pointer">Quyền riêng tư</a>
             <span>·</span>
-            <a href="#" className="hover:underline">Điều khoản</a>
+            <a href="#" className="hover:underline cursor-pointer">Điều khoản</a>
             <span>·</span>
-            <a href="#" className="hover:underline">Quảng cáo</a>
+            <a href="#" className="hover:underline cursor-pointer">Quảng cáo</a>
             <span>·</span>
-            <a href="#" className="hover:underline">Lựa chọn quảng cáo</a>
+            <a href="#" className="hover:underline cursor-pointer">Lựa chọn quảng cáo</a>
             <span>·</span>
-            <a href="#" className="hover:underline">Cookie</a>
+            <a href="#" className="hover:underline cursor-pointer">Cookie</a>
             <span>·</span>
-            <a href="#" className="hover:underline">Xem thêm</a>
+            <a href="#" className="hover:underline cursor-pointer">Xem thêm</a>
           </div>
           <div className="text-gray-500">
             KConnecta © 2025

@@ -1,5 +1,5 @@
 import { AuthInput } from '../AuthInput';
-import { useNavigate } from 'react-router@7.1.3';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileData {
   fullName: string;

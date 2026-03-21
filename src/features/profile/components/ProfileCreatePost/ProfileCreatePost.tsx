@@ -1,5 +1,5 @@
 import { Image, Video, Smile, MapPin } from 'lucide-react';
-import { Link } from 'react-router@7.1.3';
+import { Link } from 'react-router-dom';
 
 interface ProfileCreatePostProps {
   username: string;

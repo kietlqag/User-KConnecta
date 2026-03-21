@@ -1,4 +1,4 @@
-import { Link } from 'react-router@7.1.3';
+import { Link } from 'react-router-dom';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 
 interface Friend {

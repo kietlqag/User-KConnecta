@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Mail } from 'lucide-react';
 import { AuthInput } from '../AuthInput';
-import logoV2 from '../../../../assets/LogoKConnecta_V2.png';
 
 interface EmailStepProps {
   onNext: (email: string) => void;
@@ -46,7 +45,9 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
   return (
     <div>
       <div className="text-center mb-8">
-        <img src={logoV2} alt="KConnecta Logo V2" className="w-16 h-16 mx-auto mb-4 rounded-2xl shadow-lg object-contain" />
+        <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <span className="text-3xl font-bold text-white">K</span>
+        </div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Tạo tài khoản mới</h2>
         <p className="text-gray-600">Nhập email của bạn để bắt đầu</p>
       </div>

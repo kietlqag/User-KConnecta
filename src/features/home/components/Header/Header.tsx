@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router@7.1.3';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, Home, Users, Video, Store, Grid3x3, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
 import { MenuPanel } from '../../../menu/components';
+import { AccountMenu } from '../../../account/components';
 import { SearchSuggestions } from '../../../search/components';
 import { RecentSearchItem } from '../../../search/types/search.types';
 import { useMenu } from '../../../../contexts/MenuContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
+import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 
 export function Header() {
   const [showMessenger, setShowMessenger] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
@@ -74,7 +77,7 @@ export function Header() {
 
           {/* Right Section - User Actions */}
           <div className="flex items-center gap-2 flex-1 justify-end max-w-[320px]">
-            <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors lg:hidden">
+            <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors lg:hidden cursor-pointer">
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
             
@@ -83,8 +86,9 @@ export function Header() {
                 toggleMenu();
                 setShowMessenger(false);
                 setShowNotifications(false);
+                setShowAccountMenu(false);
               }}
-              className={`hidden sm:flex p-2 hover:bg-gray-200 rounded-full transition-colors ${
+              className={`hidden sm:flex p-2 hover:bg-gray-200 rounded-full transition-colors cursor-pointer ${
                 isMenuOpen ? 'bg-emerald-100' : 'bg-gray-100'
               }`}
               title="Menu"
@@ -100,8 +104,9 @@ export function Header() {
                 setShowMessenger(!showMessenger);
                 setMenuOpen(false);
                 setShowNotifications(false);
+                setShowAccountMenu(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 text-gray-700" />
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
@@ -114,8 +119,9 @@ export function Header() {
                 setShowNotifications(!showNotifications);
                 setMenuOpen(false);
                 setShowMessenger(false);
+                setShowAccountMenu(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
             >
               <Bell className="w-5 h-5 text-gray-700" />
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
@@ -123,9 +129,22 @@ export function Header() {
               </span>
             </button>
             
-            <button className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white hover:opacity-90 transition-opacity">
-              <span className="text-sm font-semibold">QK</span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowAccountMenu(!showAccountMenu);
+                  setMenuOpen(false);
+                  setShowMessenger(false);
+                  setShowNotifications(false);
+                }}
+                className="w-10 h-10 rounded-full overflow-hidden hover:opacity-90 transition-opacity cursor-pointer"
+                data-account-toggle
+              >
+                <img src={avatarImage} alt="Avatar" className="w-full h-full object-cover" />
+              </button>
+              
+              {showAccountMenu && <AccountMenu onClose={() => setShowAccountMenu(false)} />}
+            </div>
           </div>
         </div>
       </div>

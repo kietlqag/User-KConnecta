@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router@7.1.3';
+import { Link } from 'react-router-dom';
 import { Search, Home, Users, Video, Store, Grid3x3, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
