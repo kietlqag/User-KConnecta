@@ -1,0 +1,31 @@
+package project.kconnecta.user.backend.feature.auth.dto.request;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+
+import java.time.LocalDate;
+
+@Getter
+public class RegisterRequest {
+    @NotBlank @Email
+    private String email;
+
+    @NotBlank @Size(min = 8)
+    private String password;
+
+    @NotBlank
+    private String fullName;
+
+    @NotBlank @Size(min = 3, max = 30)
+    private String username;
+
+    private LocalDate dateOfBirth;
+
+    @NotBlank
+    private String gender;
+
+    private String location;
+    private String bio;
+}
