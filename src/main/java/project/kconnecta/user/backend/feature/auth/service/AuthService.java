@@ -9,6 +9,7 @@ import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.auth.dto.request.LoginRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.RegisterRequest;
 import project.kconnecta.user.backend.feature.auth.dto.response.AuthResponse;
+import project.kconnecta.user.backend.feature.user.dto.request.ResetPasswordRequest;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -66,5 +67,22 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .username(user.getUsername())
                 .build();
+    }
+    public void resetPassword(ResetPasswordRequest request) {
+        // Kiểm tra email đã verify OTP chưa
+        if (!otpService.isVerified(request.getEmail())) {
+            throw new ValidationException("Email chưa được xác thực OTP");
+        }
+
+        // Tìm user
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại"));
+
+        // Cập nhật password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        // Xóa OTP đã verify
+        otpService.clear(request.getEmail());
     }
 }

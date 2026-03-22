@@ -8,6 +8,7 @@ import project.kconnecta.user.backend.feature.auth.dto.request.*;
 import project.kconnecta.user.backend.feature.auth.dto.response.AuthResponse;
 import project.kconnecta.user.backend.feature.auth.service.AuthService;
 import project.kconnecta.user.backend.feature.auth.service.OtpService;
+import project.kconnecta.user.backend.feature.user.dto.request.ResetPasswordRequest;
 
 import java.util.Map;
 
@@ -39,5 +40,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Đặt lại mật khẩu thành công"));
     }
 }
