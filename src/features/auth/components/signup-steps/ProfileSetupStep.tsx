@@ -1,5 +1,8 @@
+import { useState } from 'react';
+import { ArrowLeft, User, AtSign, Calendar, MapPin } from 'lucide-react';
 import { AuthInput } from '../AuthInput';
 import { useNavigate } from 'react-router-dom';
+import { authApi } from '@/apis/authApi';
 
 interface ProfileData {
   fullName: string;
@@ -12,10 +15,11 @@ interface ProfileData {
 
 interface ProfileSetupStepProps {
   email: string;
+  password: string;
   onBack: () => void;
 }
 
-export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
+export function ProfileSetupStep({ email, password, onBack }: ProfileSetupStepProps) {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<ProfileData>({
     fullName: '',
@@ -72,16 +76,24 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
     if (!validateProfile()) return;
 
     setIsLoading(true);
-    
-    // Simulate account creation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    console.log('Complete registration:', { email, ...profileData });
-    
-    setIsLoading(false);
-    
-    // Navigate to home page after successful registration
-    navigate('/home');
+    try {
+      await authApi.register({
+        email,
+        password,
+        fullName: profileData.fullName,
+        username: profileData.username,
+        dateOfBirth: profileData.dateOfBirth || undefined,
+        gender: profileData.gender,
+        location: profileData.location || undefined,
+        bio: profileData.bio || undefined,
+      });
+      navigate('/home');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.';
+      setErrors(prev => ({ ...prev, fullName: msg }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

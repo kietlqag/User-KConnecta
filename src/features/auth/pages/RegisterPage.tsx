@@ -72,8 +72,9 @@ export function RegisterPage() {
         )}
 
         {currentStep === 'profile' && (
-          <ProfileSetupStep 
+          <ProfileSetupStep
             email={signupData.email}
+            password={signupData.password}
             onBack={handleBackToPassword}
           />
         )}

@@ -1,5 +1,6 @@
 import { useState, useRef, KeyboardEvent, ClipboardEvent } from 'react';
 import { ShieldCheck, ArrowLeft } from 'lucide-react';
+import { authApi } from '@/apis/authApi';
 
 interface OTPVerificationStepProps {
   email: string;
@@ -65,15 +66,12 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
     setIsLoading(true);
     setError('');
 
-    // Simulate API verification
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Mock validation - accept any 6-digit code
-    if (code.length === 6) {
-      setIsLoading(false);
+    try {
+      await authApi.verifyOtp(email, code);
       onNext();
-    } else {
-      setError('Mã OTP không hợp lệ');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Mã OTP không hợp lệ hoặc đã hết hạn');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -104,8 +102,11 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
       });
     }, 1000);
 
-    // Simulate resending OTP
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await authApi.sendOtp(email);
+    } catch {
+      // Silently fail on resend
+    }
   };
 
   return (
