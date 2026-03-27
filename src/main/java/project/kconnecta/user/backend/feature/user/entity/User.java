@@ -2,11 +2,11 @@ package project.kconnecta.user.backend.feature.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import project.kconnecta.user.backend.feature.auth.entity.Account;
 
-import java.util.UUID;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
+import java.util.UUID;
 
 @Entity
 @Table(name = "users", schema = "public")
@@ -24,13 +24,10 @@ public class User {
     @Column(nullable = false, unique = true, length = 30)
     private String username;
 
-    @Column(nullable = false, unique = true, length = 255)
-    private String email;
-
     @Column(name = "full_name", nullable = false, length = 120)
     private String fullName;
 
-    @Column(nullable = false, length = 200)
+    @Column(length = 200)
     private String bio;
 
     @Column(length = 10)
@@ -39,8 +36,9 @@ public class User {
     @Column(length = 120)
     private String location;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
-    private String passwordHash;
+    @OneToOne(optional = false, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "account_id", nullable = false, unique = true)
+    private Account account;
 
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;

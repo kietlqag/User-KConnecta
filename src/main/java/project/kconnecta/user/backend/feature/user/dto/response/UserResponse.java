@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.user.dto.response;
 
 import lombok.Builder;
 import lombok.Data;
+import project.kconnecta.user.backend.common.enums.AccountStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -13,6 +14,7 @@ public class UserResponse {
     private UUID id;
     private String username;
     private String email;
+    private AccountStatus accountStatus;
     private String fullName;
     private String bio;
     private String gender;

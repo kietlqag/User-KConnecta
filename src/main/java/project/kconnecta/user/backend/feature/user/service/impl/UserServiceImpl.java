@@ -1,9 +1,13 @@
 package project.kconnecta.user.backend.feature.user.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import project.kconnecta.user.backend.common.enums.AccountStatus;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
+import project.kconnecta.user.backend.feature.auth.entity.Account;
+import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
 import project.kconnecta.user.backend.feature.user.dto.request.CreateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.request.UpdateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.response.UserResponse;
@@ -19,9 +23,12 @@ import java.util.UUID;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final AccountRepository accountRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+
     @Override
     public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (accountRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Email already exists");
         }
 
@@ -33,14 +40,19 @@ public class UserServiceImpl implements UserService {
                 ? null
                 : request.getGender().trim().toUpperCase();
 
+        Account account = Account.builder()
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .status(AccountStatus.ACTIVE)
+                .build();
+
         User user = User.builder()
                 .username(request.getUsername())
-                .email(request.getEmail())
+                .account(account)
                 .fullName(request.getFullName())
                 .bio(request.getBio())
                 .gender(normalizedGender)
                 .location(request.getLocation())
-                .passwordHash(request.getPasswordHash())
                 .dateOfBirth(request.getDateOfBirth())
                 .build();
 
@@ -68,27 +80,43 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
-        if (userRepository.existsByEmail(request.getEmail())
-                && !user.getEmail().equals(request.getEmail())) {
+        if (request.getEmail() != null
+                && accountRepository.existsByEmail(request.getEmail())
+                && !user.getAccount().getEmail().equals(request.getEmail())) {
             throw new DuplicateResourceException("Email already exists");
         }
 
-        if (userRepository.existsByUsername(request.getUsername())
+        if (request.getUsername() != null
+                && userRepository.existsByUsername(request.getUsername())
                 && !user.getUsername().equals(request.getUsername())) {
             throw new DuplicateResourceException("Username already exists");
         }
+
         String normalizedGender = request.getGender() == null
                 ? null
                 : request.getGender().trim().toUpperCase();
 
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setFullName(request.getFullName());
-        user.setBio(request.getBio());
-        user.setGender(normalizedGender);
-        user.setLocation(request.getLocation());
-        user.setPasswordHash(request.getPasswordHash());
-        user.setDateOfBirth(request.getDateOfBirth());
+        if (request.getUsername() != null) {
+            user.setUsername(request.getUsername());
+        }
+        if (request.getEmail() != null) {
+            user.getAccount().setEmail(request.getEmail());
+        }
+        if (request.getFullName() != null) {
+            user.setFullName(request.getFullName());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+        if (request.getGender() != null) {
+            user.setGender(normalizedGender);
+        }
+        if (request.getLocation() != null) {
+            user.setLocation(request.getLocation());
+        }
+        if (request.getDateOfBirth() != null) {
+            user.setDateOfBirth(request.getDateOfBirth());
+        }
 
         return mapToResponse(userRepository.save(user));
     }
@@ -100,11 +128,13 @@ public class UserServiceImpl implements UserService {
 
         userRepository.delete(user);
     }
+
     private UserResponse mapToResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .email(user.getEmail())
+                .email(user.getAccount().getEmail())
+                .accountStatus(user.getAccount().getStatus())
                 .fullName(user.getFullName())
                 .bio(user.getBio())
                 .gender(user.getGender())
@@ -115,5 +145,3 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 }
-
-

@@ -12,6 +12,5 @@ public class UpdateUserRequest {
     private String bio;
     private String gender;
     private String location;
-    private String passwordHash;
     private LocalDate dateOfBirth;
 }

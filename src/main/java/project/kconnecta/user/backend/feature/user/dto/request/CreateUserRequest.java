@@ -1,8 +1,10 @@
 package project.kconnecta.user.backend.feature.user.dto.request;
 
-import java.time.LocalDate;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import jakarta.validation.constraints.*;
+
+import java.time.LocalDate;
 
 @Data
 public class CreateUserRequest {
@@ -24,7 +26,7 @@ public class CreateUserRequest {
     private String location;
 
     @NotBlank(message = "Password is required")
-    private String passwordHash;
+    private String password;
 
     private LocalDate dateOfBirth;
 }
