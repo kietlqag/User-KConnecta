@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router@7.1.3';
-import { Mail, ArrowLeft, Lock, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Lock, Mail } from 'lucide-react';
+import { authService } from '@/services/authService';
 import { AuthCard } from '../components/AuthCard';
 import { AuthInput } from '../components/AuthInput';
 import { OTPInput } from '../components/OTPInput';
@@ -16,10 +17,11 @@ export function ForgotPasswordPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(0);
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email) {
       setErrors({ email: 'Email là bắt buộc' });
       return;
@@ -30,37 +32,50 @@ export function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Send OTP to:', email);
-    setIsLoading(false);
-    setStep('otp');
-    setCountdown(60);
-    setErrors({});
+    try {
+      const { exists } = await authService.checkEmailExists(email);
+      if (!exists) {
+        setErrors({ email: 'Email chưa có tài khoản' });
+        return;
+      }
+
+      await authService.sendOtp(email);
+      setStep('otp');
+      setCountdown(60);
+      setOtpExpiresIn(60);
+      setErrors({});
+    } catch (err) {
+      setErrors({ email: err instanceof Error ? err.message : 'Không gửi được mã OTP' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOTPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (otp.length !== 6) {
       setErrors({ otp: 'Vui lòng nhập đầy đủ mã OTP' });
       return;
     }
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Verify OTP:', otp);
-    setIsLoading(false);
-    setStep('reset');
-    setErrors({});
+    try {
+      await authService.verifyOtp(email, otp);
+      setStep('reset');
+      setErrors({});
+    } catch (err) {
+      setErrors({ otp: err instanceof Error ? err.message : 'Mã OTP không hợp lệ' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const newErrors: Record<string, string> = {};
-    
+
     if (!password) {
       newErrors.password = 'Mật khẩu là bắt buộc';
     } else if (password.length < 8) {
@@ -79,34 +94,55 @@ export function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Reset password');
-    setIsLoading(false);
-    setStep('success');
-    setErrors({});
+    try {
+      await authService.resetPassword(email, password);
+      setStep('success');
+      setErrors({});
+    } catch (err) {
+      setErrors({
+        password: err instanceof Error ? err.message : 'Không đặt lại được mật khẩu',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResendOTP = async () => {
     if (countdown > 0) return;
-    
+
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('Resend OTP to:', email);
-    setIsLoading(false);
-    setCountdown(60);
-    setOtp('');
+    try {
+      await authService.sendOtp(email);
+      setCountdown(60);
+      setOtpExpiresIn(60);
+      setOtp('');
+      setErrors({});
+    } catch (err) {
+      setErrors({ otp: err instanceof Error ? err.message : 'Không gửi lại được mã OTP' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Countdown timer
   React.useEffect(() => {
     if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
+      const timer = window.setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => window.clearTimeout(timer);
     }
   }, [countdown]);
 
+  React.useEffect(() => {
+    if (otpExpiresIn > 0) {
+      const timer = window.setTimeout(() => setOtpExpiresIn(otpExpiresIn - 1), 1000);
+      return () => window.clearTimeout(timer);
+    }
+  }, [otpExpiresIn]);
+
   const renderContent = () => {
+    const formattedOtpExpiresIn = `${String(Math.floor(otpExpiresIn / 60)).padStart(2, '0')}:${String(
+      otpExpiresIn % 60,
+    ).padStart(2, '0')}`;
+
     switch (step) {
       case 'email':
         return (
@@ -115,9 +151,7 @@ export function ForgotPasswordPage() {
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Mail className="text-emerald-600" size={32} />
               </div>
-              <p className="text-gray-600 text-sm">
-                Nhập email của bạn để nhận mã xác thực
-              </p>
+              <p className="text-gray-600 text-sm">Nhập email của bạn để nhận mã xác thực</p>
             </div>
 
             <AuthInput
@@ -152,8 +186,8 @@ export function ForgotPasswordPage() {
               )}
             </button>
 
-            <Link 
-              to="/auth/login" 
+            <Link
+              to="/auth/login"
               className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors mt-4"
             >
               <ArrowLeft size={16} />
@@ -171,35 +205,18 @@ export function ForgotPasswordPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <p className="text-gray-600 text-sm">
-                Nhập mã OTP đã được gửi đến
-              </p>
+              <p className="text-gray-600 text-sm">Nhập mã OTP đã được gửi đến</p>
               <p className="text-emerald-600 font-medium mt-1">{email}</p>
             </div>
 
-            <OTPInput 
-              value={otp} 
+            <OTPInput
+              value={otp}
               onChange={(value) => {
                 setOtp(value);
                 setErrors({});
               }}
               error={errors.otp}
             />
-
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={handleResendOTP}
-                disabled={countdown > 0 || isLoading}
-                className="text-sm text-purple-400 hover:text-purple-300 disabled:text-white/40 disabled:cursor-not-allowed transition-colors"
-              >
-                {countdown > 0 ? (
-                  `Gửi lại mã sau ${countdown}s`
-                ) : (
-                  'Gửi lại mã'
-                )}
-              </button>
-            </div>
 
             <button
               type="submit"
@@ -219,6 +236,31 @@ export function ForgotPasswordPage() {
               )}
             </button>
 
+            <p className="text-sm text-gray-500 text-center -mt-2">
+              Mã hết hạn sau:{' '}
+              <span className={otpExpiresIn > 10 ? 'font-semibold text-amber-600' : 'font-semibold text-red-500'}>
+                {formattedOtpExpiresIn}
+              </span>
+            </p>
+
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Không nhận được mã?{' '}
+                {countdown > 0 ? (
+                  <span className="text-gray-400">Gửi lại sau {countdown}s</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOTP}
+                    disabled={isLoading}
+                    className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Gửi lại
+                  </button>
+                )}
+              </p>
+            </div>
+
             <button
               type="button"
               onClick={() => setStep('email')}
@@ -237,21 +279,19 @@ export function ForgotPasswordPage() {
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Lock className="text-emerald-600" size={32} />
               </div>
-              <p className="text-gray-600 text-sm">
-                Tạo mật khẩu mới cho tài khoản của bạn
-              </p>
+              <p className="text-gray-600 text-sm">Tạo mật khẩu mới cho tài khoản của bạn</p>
             </div>
 
             <AuthInput
               label="Mật khẩu mới"
               name="password"
               type="password"
-              placeholder="••••••••"
+              placeholder="........"
               icon={<Lock size={20} />}
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                setErrors(prev => ({ ...prev, password: '' }));
+                setErrors((prev) => ({ ...prev, password: '' }));
               }}
               error={errors.password}
             />
@@ -260,12 +300,12 @@ export function ForgotPasswordPage() {
               label="Xác nhận mật khẩu"
               name="confirmPassword"
               type="password"
-              placeholder="••••••••"
+              placeholder="........"
               icon={<Lock size={20} />}
               value={confirmPassword}
               onChange={(e) => {
                 setConfirmPassword(e.target.value);
-                setErrors(prev => ({ ...prev, confirmPassword: '' }));
+                setErrors((prev) => ({ ...prev, confirmPassword: '' }));
               }}
               error={errors.confirmPassword}
             />
@@ -298,9 +338,7 @@ export function ForgotPasswordPage() {
             </div>
             <div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Thành công!</h3>
-              <p className="text-gray-600 text-sm">
-                Mật khẩu của bạn đã được đặt lại thành công
-              </p>
+              <p className="text-gray-600 text-sm">Mật khẩu của bạn đã được đặt lại thành công</p>
             </div>
             <Link
               to="/auth/login"
@@ -320,12 +358,12 @@ export function ForgotPasswordPage() {
     email: 'Quên mật khẩu',
     otp: 'Xác thực OTP',
     reset: 'Đặt lại mật khẩu',
-    success: 'Hoàn tất'
+    success: 'Hoàn tất',
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-      <AuthCard 
+      <AuthCard
         title={titles[step]}
         subtitle={step !== 'success' ? 'Khôi phục tài khoản KConnecta của bạn' : undefined}
       >

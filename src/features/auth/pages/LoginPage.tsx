@@ -1,31 +1,108 @@
-import React, { useState } from "react";
-import { Link } from "react-router@7.1.3";
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router@7.1.3";
 import { Mail, Lock } from "lucide-react";
+import { authService } from "@/services/authService";
 import { AuthCard } from "../components/AuthCard";
 import { AuthInput } from "../components/AuthInput";
-import { SocialButton } from "../components/SocialButton";
 import { LoginFormData } from "../types/auth.types";
 
 export function LoginPage() {
+  const navigate = useNavigate();
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
     rememberMe: false,
   });
-  const [errors, setErrors] = useState<Partial<LoginFormData>>(
-    {},
-  );
+  const [errors, setErrors] = useState<Partial<LoginFormData>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (!clientId) {
+      setGoogleError("Thiếu VITE_GOOGLE_CLIENT_ID ở frontend");
+      return;
+    }
+
+    let cancelled = false;
+    let script = document.querySelector<HTMLScriptElement>(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    );
+
+    const renderGoogleButton = () => {
+      if (cancelled || !window.google?.accounts.id || !googleButtonRef.current) {
+        return;
+      }
+
+      googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async ({ credential }) => {
+          if (!credential) {
+            setGoogleError("Google không trả về token đăng nhập");
+            return;
+          }
+
+          setGoogleError(null);
+          setIsGoogleLoading(true);
+
+          try {
+            const user = await authService.googleLogin(credential);
+            authService.saveCurrentUser(user, !!formData.rememberMe);
+            navigate("/home");
+          } catch (err) {
+            setGoogleError(
+              err instanceof Error ? err.message : "Đăng nhập Google thất bại"
+            );
+          } finally {
+            setIsGoogleLoading(false);
+          }
+        },
+      });
+
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        type: "standard",
+        theme: "outline",
+        text: "signin_with",
+        shape: "rectangular",
+        size: "large",
+        width: Math.min(380, googleButtonRef.current.offsetWidth || 380),
+        logo_alignment: "left",
+      });
+    };
+
+    if (script) {
+      script.addEventListener("load", renderGoogleButton);
+      renderGoogleButton();
+    } else {
+      script = document.createElement("script");
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = renderGoogleButton;
+      script.onerror = () =>
+        setGoogleError("Không tải được Google Identity Services");
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      cancelled = true;
+      if (script) {
+        script.removeEventListener("load", renderGoogleButton);
+      }
+    };
+  }, [formData.rememberMe, navigate]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
-    // Clear error when user starts typing
+
     if (errors[name as keyof LoginFormData]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
@@ -41,7 +118,7 @@ export function LoginPage() {
     }
 
     if (!formData.password) {
-      newErrors.password = "Mt khẩu là bắt buộc";
+      newErrors.password = "Mật khẩu là bắt buộc";
     } else if (formData.password.length < 6) {
       newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
     }
@@ -56,16 +133,18 @@ export function LoginPage() {
     if (!validate()) return;
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    console.log("Login data:", formData);
-    setIsLoading(false);
-    // Handle login logic here
-  };
-
-  const handleSocialLogin = (provider: string) => {
-    console.log(`Login with ${provider}`);
-    // Handle social login logic here
+    try {
+      const user = await authService.login(formData.email, formData.password);
+      authService.saveCurrentUser(user, !!formData.rememberMe);
+      navigate("/home");
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        password: err instanceof Error ? err.message : "Đăng nhập thất bại",
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -100,7 +179,7 @@ export function LoginPage() {
                 <input
                   type="checkbox"
                   name="rememberMe"
-                  checked={formData.rememberMe}
+                  checked={!!formData.rememberMe}
                   onChange={handleChange}
                   className="w-4 h-4 appearance-none rounded border-2 border-gray-400 bg-white checked:bg-emerald-500 checked:border-emerald-500 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer transition-all"
                 />
@@ -120,9 +199,7 @@ export function LoginPage() {
                   </svg>
                 )}
               </div>
-              <span className="text-sm text-gray-600 flex-1">
-                Ghi nhớ đăng nhập
-              </span>
+              <span className="text-sm text-gray-600 flex-1">Ghi nhớ đăng nhập</span>
             </label>
           </div>
 
@@ -133,10 +210,7 @@ export function LoginPage() {
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg
-                  className="animate-spin h-5 w-5"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
                     cx="12"
@@ -173,16 +247,24 @@ export function LoginPage() {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">
-                Hoặc
-              </span>
+              <span className="px-4 bg-white text-gray-500">Hoặc</span>
             </div>
           </div>
 
-          <SocialButton
-            provider="google"
-            onClick={() => handleSocialLogin("google")}
-          />
+          <div className="space-y-3">
+            <div
+              ref={googleButtonRef}
+              className="flex min-h-[44px] items-center justify-center"
+            />
+            {isGoogleLoading && (
+              <p className="text-center text-sm text-gray-500">
+                Đang xác thực với Google...
+              </p>
+            )}
+            {googleError && (
+              <p className="text-center text-sm text-red-500">{googleError}</p>
+            )}
+          </div>
 
           <p className="text-center text-sm text-gray-600 mt-6">
             Chưa có tài khoản?{" "}

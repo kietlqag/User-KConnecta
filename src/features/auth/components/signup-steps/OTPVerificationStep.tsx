@@ -1,5 +1,6 @@
-import { useState, useRef, KeyboardEvent, ClipboardEvent } from 'react';
-import { ShieldCheck, ArrowLeft } from 'lucide-react';
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import { authService } from '@/services/authService';
 
 interface OTPVerificationStepProps {
   email: string;
@@ -12,10 +13,24 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [expiresIn, setExpiresIn] = useState(60);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  const startCooldown = () => {
+    setResendCooldown(60);
+    setExpiresIn(60);
+    const timer = window.setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const handleChange = (index: number, value: string) => {
-    // Only allow numbers
     if (value && !/^\d$/.test(value)) return;
 
     const newOtp = [...otp];
@@ -23,19 +38,31 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
     setOtp(newOtp);
     setError('');
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Auto-submit when all fields are filled
     if (index === 5 && value) {
       const fullOtp = newOtp.join('');
       if (fullOtp.length === 6) {
-        handleVerify(fullOtp);
+        void handleVerify(fullOtp);
       }
     }
   };
+
+  useEffect(() => {
+    if (expiresIn <= 0) return;
+
+    const timer = window.setTimeout(() => {
+      setExpiresIn((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [expiresIn]);
+
+  const formattedExpiresIn = `${String(Math.floor(expiresIn / 60)).padStart(2, '0')}:${String(
+    expiresIn % 60,
+  ).padStart(2, '0')}`;
 
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
@@ -52,12 +79,12 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').trim();
-    
+
     if (/^\d{6}$/.test(pastedData)) {
       const newOtp = pastedData.split('');
       setOtp(newOtp);
       inputRefs.current[5]?.focus();
-      handleVerify(pastedData);
+      void handleVerify(pastedData);
     }
   };
 
@@ -65,15 +92,12 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
     setIsLoading(true);
     setError('');
 
-    // Simulate API verification
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Mock validation - accept any 6-digit code
-    if (code.length === 6) {
-      setIsLoading(false);
+    try {
+      await authService.verifyOtp(email, code);
       onNext();
-    } else {
-      setError('Mã OTP không hợp lệ');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Mã OTP không hợp lệ');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -81,31 +105,26 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const fullOtp = otp.join('');
-    
+
     if (fullOtp.length !== 6) {
       setError('Vui lòng nhập đầy đủ mã OTP');
       return;
     }
 
-    handleVerify(fullOtp);
+    void handleVerify(fullOtp);
   };
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
 
-    setResendCooldown(60);
-    const timer = setInterval(() => {
-      setResendCooldown(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    setError('');
 
-    // Simulate resending OTP
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      await authService.sendOtp(email);
+      startCooldown();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không gửi lại được mã OTP');
+    }
   };
 
   return (
@@ -120,9 +139,7 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
 
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Xác nhận Email</h2>
-        <p className="text-gray-600">
-          Chúng tôi đã gửi mã xác nhận đến
-        </p>
+        <p className="text-gray-600">Chúng tôi đã gửi mã xác nhận đến</p>
         <p className="text-emerald-600 font-semibold mt-1">{email}</p>
       </div>
 
@@ -147,16 +164,14 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
                   error
                     ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                     : digit
-                    ? 'border-emerald-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200'
-                    : 'border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
+                      ? 'border-emerald-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200'
+                      : 'border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
                 }`}
                 autoFocus={index === 0}
               />
             ))}
           </div>
-          {error && (
-            <p className="mt-3 text-sm text-red-600 text-center">{error}</p>
-          )}
+          {error && <p className="mt-3 text-sm text-red-600 text-center">{error}</p>}
         </div>
 
         <button
@@ -177,13 +192,18 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
           )}
         </button>
 
+        <p className="text-sm text-gray-500 text-center -mt-2">
+          Mã hết hạn sau:{' '}
+          <span className={expiresIn > 10 ? 'font-semibold text-amber-600' : 'font-semibold text-red-500'}>
+            {formattedExpiresIn}
+          </span>
+        </p>
+
         <div className="text-center">
           <p className="text-sm text-gray-600">
             Không nhận được mã?{' '}
             {resendCooldown > 0 ? (
-              <span className="text-gray-400">
-                Gửi lại sau {resendCooldown}s
-              </span>
+              <span className="text-gray-400">Gửi lại sau {resendCooldown}s</span>
             ) : (
               <button
                 type="button"

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Mail } from 'lucide-react';
+import { authService } from '@/services/authService';
+import logoV2 from '@/assets/LogoKConnecta_V2.png';
 import { AuthInput } from '../AuthInput';
 
 interface EmailStepProps {
@@ -12,12 +14,12 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const validateEmail = (email: string): boolean => {
-    if (!email) {
+  const validateEmail = (value: string): boolean => {
+    if (!value) {
       setError('Email là bắt buộc');
       return false;
     }
-    if (!/\S+@\S+\.\S+/.test(email)) {
+    if (!/\S+@\S+\.\S+/.test(value)) {
       setError('Email không hợp lệ');
       return false;
     }
@@ -26,15 +28,26 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateEmail(email)) return;
-    
+
     setIsLoading(true);
-    // Simulate sending OTP
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    
-    onNext(email);
+    setError('');
+
+    try {
+      const { exists } = await authService.checkEmailExists(email);
+      if (exists) {
+        setError('Email đã được sử dụng');
+        return;
+      }
+
+      await authService.sendOtp(email);
+      onNext(email);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không gửi được mã OTP');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,9 +58,11 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
   return (
     <div>
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-          <span className="text-3xl font-bold text-white">K</span>
-        </div>
+        <img
+          src={logoV2}
+          alt="KConnecta"
+          className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg object-cover"
+        />
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Tạo tài khoản mới</h2>
         <p className="text-gray-600">Nhập email của bạn để bắt đầu</p>
       </div>

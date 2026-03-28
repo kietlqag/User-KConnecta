@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Lock } from 'lucide-react';
 import { AuthInput } from '../AuthInput';
 
 interface PasswordStepProps {
@@ -10,18 +10,16 @@ interface PasswordStepProps {
 export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const calculatePasswordStrength = (password: string): number => {
+  const calculatePasswordStrength = (value: string): number => {
     let strength = 0;
-    if (password.length >= 8) strength++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
-    if (/\d/.test(password)) strength++;
-    if (/[^a-zA-Z\d]/.test(password)) strength++;
+    if (value.length >= 8) strength++;
+    if (/[a-z]/.test(value) && /[A-Z]/.test(value)) strength++;
+    if (/\d/.test(value)) strength++;
+    if (/[^a-zA-Z\d]/.test(value)) strength++;
     return strength;
   };
 
@@ -30,14 +28,14 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
     setPassword(value);
     setPasswordStrength(calculatePasswordStrength(value));
     if (errors.password) {
-      setErrors(prev => ({ ...prev, password: undefined }));
+      setErrors((prev) => ({ ...prev, password: undefined }));
     }
   };
 
   const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setConfirmPassword(e.target.value);
     if (errors.confirmPassword) {
-      setErrors(prev => ({ ...prev, confirmPassword: undefined }));
+      setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
     }
   };
 
@@ -68,8 +66,7 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
     if (!validatePasswords()) return;
 
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
 
     onNext(password);
@@ -95,26 +92,17 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <div className="relative">
-            <AuthInput
-              label="Mật khẩu"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="••••••••"
-              icon={<Lock size={20} />}
-              value={password}
-              onChange={handlePasswordChange}
-              error={errors.password}
-              autoFocus
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-[42px] text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
+          <AuthInput
+            label="Mật khẩu"
+            name="password"
+            type="password"
+            placeholder="••••••••"
+            icon={<Lock size={20} />}
+            value={password}
+            onChange={handlePasswordChange}
+            error={errors.password}
+            autoFocus
+          />
 
           {password && (
             <div className="mt-3">
@@ -136,8 +124,8 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
                       passwordStrength >= 3
                         ? 'text-green-600'
                         : passwordStrength === 2
-                        ? 'text-yellow-600'
-                        : 'text-orange-600'
+                          ? 'text-yellow-600'
+                          : 'text-orange-600'
                     }`}
                   >
                     {strengthLabels[passwordStrength - 1]}
@@ -148,25 +136,16 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
           )}
         </div>
 
-        <div className="relative">
-          <AuthInput
-            label="Xác nhận mật khẩu"
-            name="confirmPassword"
-            type={showConfirmPassword ? 'text' : 'password'}
-            placeholder="••••••••"
-            icon={<Lock size={20} />}
-            value={confirmPassword}
-            onChange={handleConfirmPasswordChange}
-            error={errors.confirmPassword}
-          />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-[42px] text-gray-500 hover:text-gray-700 transition-colors"
-          >
-            {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-          </button>
-        </div>
+        <AuthInput
+          label="Xác nhận mật khẩu"
+          name="confirmPassword"
+          type="password"
+          placeholder="••••••••"
+          icon={<Lock size={20} />}
+          value={confirmPassword}
+          onChange={handleConfirmPasswordChange}
+          error={errors.confirmPassword}
+        />
 
         <div className="bg-gray-50 rounded-xl p-4 space-y-2">
           <p className="text-sm font-medium text-gray-700 mb-2">Mật khẩu phải có:</p>

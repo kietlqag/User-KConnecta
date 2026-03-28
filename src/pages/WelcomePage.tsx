@@ -1,5 +1,6 @@
 import { Link } from 'react-router@7.1.3';
-import { Users, Shield, Zap, Heart, ArrowRight, Sparkles } from 'lucide-react';
+import { Users, Shield, Zap, Heart, ArrowRight } from 'lucide-react';
+import logoV1 from '@/assets/LogoKConnecta_V1.png';
 
 export function WelcomePage() {
   const features = [
@@ -38,18 +39,13 @@ export function WelcomePage() {
           {/* Logo & Brand */}
           <div className="text-center mb-8 sm:mb-12">
             <div className="inline-flex items-center justify-center mb-6 relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-3xl blur-2xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-3xl flex items-center justify-center shadow-xl transform transition-transform group-hover:scale-110 group-hover:rotate-3">
-                <span className="text-4xl sm:text-5xl font-bold text-white">K</span>
-                <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-yellow-400 animate-pulse" />
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-[2rem] blur-3xl opacity-25 group-hover:opacity-40 transition-opacity"></div>
+              <img
+                src={logoV1}
+                alt="KConnecta"
+                className="relative w-56 sm:w-64 lg:w-72 drop-shadow-2xl transform transition-transform group-hover:scale-105"
+              />
             </div>
-            
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-4 sm:mb-6">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600">
-                KConnecta
-              </span>
-            </h1>
             
             <p className="text-xl sm:text-2xl text-gray-600 mb-8 sm:mb-12 max-w-2xl mx-auto">
               Mạng xã hội kết nối mọi người

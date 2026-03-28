@@ -1,4 +1,5 @@
 import React from 'react';
+import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
 interface AuthCardProps {
   children: React.ReactNode;
@@ -13,9 +14,11 @@ export function AuthCard({ children, title, subtitle }: AuthCardProps) {
         {(title || subtitle) && (
           <div className="mb-8 text-center">
             <div className="flex items-center justify-center mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-md">
-                <span className="text-3xl font-bold text-white">K</span>
-              </div>
+              <img
+                src={logoV2}
+                alt="KConnecta"
+                className="w-16 h-16 rounded-2xl shadow-md object-cover"
+              />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
             {subtitle && (

@@ -1,5 +1,8 @@
-import { AuthInput } from '../AuthInput';
+import { useState } from 'react';
+import { ArrowLeft, AtSign, Calendar, MapPin, User } from 'lucide-react';
 import { useNavigate } from 'react-router@7.1.3';
+import { authService } from '@/services/authService';
+import { AuthInput } from '../AuthInput';
 
 interface ProfileData {
   fullName: string;
@@ -12,10 +15,11 @@ interface ProfileData {
 
 interface ProfileSetupStepProps {
   email: string;
+  password: string;
   onBack: () => void;
 }
 
-export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
+export function ProfileSetupStep({ email, password, onBack }: ProfileSetupStepProps) {
   const navigate = useNavigate();
   const [profileData, setProfileData] = useState<ProfileData>({
     fullName: '',
@@ -26,14 +30,16 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
     bio: '',
   });
   const [errors, setErrors] = useState<Partial<ProfileData>>({});
+  const [submitError, setSubmitError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setProfileData(prev => ({ ...prev, [name]: value }));
-    
+    setProfileData((prev) => ({ ...prev, [name]: value }));
+    setSubmitError('');
+
     if (errors[name as keyof ProfileData]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }));
+      setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
 
@@ -72,16 +78,20 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
     if (!validateProfile()) return;
 
     setIsLoading(true);
-    
-    // Simulate account creation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    console.log('Complete registration:', { email, ...profileData });
-    
-    setIsLoading(false);
-    
-    // Navigate to home page after successful registration
-    navigate('/home');
+    setSubmitError('');
+
+    try {
+      await authService.register({
+        email,
+        password,
+        ...profileData,
+      });
+      navigate('/home');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Không tạo được tài khoản');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -100,7 +110,6 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Full Name */}
         <AuthInput
           label="Họ và tên"
           name="fullName"
@@ -113,7 +122,6 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
           autoFocus
         />
 
-        {/* Username */}
         <AuthInput
           label="Tên người dùng"
           name="username"
@@ -125,11 +133,8 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
           error={errors.username}
         />
 
-        {/* Date of Birth */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Ngày sinh
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Ngày sinh</label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
               <Calendar size={20} />
@@ -146,16 +151,11 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
               }`}
             />
           </div>
-          {errors.dateOfBirth && (
-            <p className="mt-1.5 text-sm text-red-600">{errors.dateOfBirth}</p>
-          )}
+          {errors.dateOfBirth && <p className="mt-1.5 text-sm text-red-600">{errors.dateOfBirth}</p>}
         </div>
 
-        {/* Gender */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Giới tính
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Giới tính</label>
           <div className="grid grid-cols-3 gap-3">
             {['Nam', 'Nữ', 'Khác'].map((gender) => (
               <label
@@ -174,27 +174,19 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
                   onChange={handleChange}
                   className="sr-only"
                 />
-                <span className={`text-sm font-medium ${
-                  profileData.gender === gender ? 'text-emerald-700' : 'text-gray-700'
-                }`}>
+                <span
+                  className={`text-sm font-medium ${
+                    profileData.gender === gender ? 'text-emerald-700' : 'text-gray-700'
+                  }`}
+                >
                   {gender}
                 </span>
-                {profileData.gender === gender && (
-                  <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
               </label>
             ))}
           </div>
-          {errors.gender && (
-            <p className="mt-1.5 text-sm text-red-600">{errors.gender}</p>
-          )}
+          {errors.gender && <p className="mt-1.5 text-sm text-red-600">{errors.gender}</p>}
         </div>
 
-        {/* Location (Optional) */}
         <AuthInput
           label="Vị trí (Tùy chọn)"
           name="location"
@@ -205,11 +197,8 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
           onChange={handleChange}
         />
 
-        {/* Bio (Optional) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Giới thiệu bản thân (Tùy chọn)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Giới thiệu bản thân (Tùy chọn)</label>
           <textarea
             name="bio"
             value={profileData.bio}
@@ -219,10 +208,10 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
             className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl transition-all focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 resize-none"
             maxLength={200}
           />
-          <p className="mt-1.5 text-xs text-gray-500 text-right">
-            {profileData.bio.length}/200
-          </p>
+          <p className="mt-1.5 text-xs text-gray-500 text-right">{profileData.bio.length}/200</p>
         </div>
+
+        {submitError && <p className="text-sm text-red-600 text-center">{submitError}</p>}
 
         <button
           type="submit"
@@ -241,18 +230,6 @@ export function ProfileSetupStep({ email, onBack }: ProfileSetupStepProps) {
             'Hoàn tất đăng ký'
           )}
         </button>
-
-        <p className="text-xs text-gray-500 text-center mt-4">
-          Bằng cách nhấn "Hoàn tất đăng ký", bạn đồng ý với{' '}
-          <a href="#" className="text-emerald-600 hover:text-emerald-700 font-medium">
-            Điều khoản dịch vụ
-          </a>{' '}
-          và{' '}
-          <a href="#" className="text-emerald-600 hover:text-emerald-700 font-medium">
-            Chính sách bảo mật
-          </a>{' '}
-          của KConnecta
-        </p>
       </form>
     </div>
   );

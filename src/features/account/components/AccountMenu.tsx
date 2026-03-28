@@ -1,6 +1,7 @@
 import { Settings, HelpCircle, AlertCircle, Moon, LogOut, ChevronRight } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router@7.1.3';
+import { Link, useNavigate } from 'react-router@7.1.3';
+import { authService } from '@/services/authService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 
 interface AccountMenuProps {
@@ -9,6 +10,7 @@ interface AccountMenuProps {
 
 export function AccountMenu({ onClose }: AccountMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,9 +39,9 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
   }, [onClose]);
 
   const handleLogout = () => {
-    // Handle logout logic here
-    console.log('Logging out...');
+    authService.logout();
     onClose();
+    navigate('/auth/login');
   };
 
   return (
