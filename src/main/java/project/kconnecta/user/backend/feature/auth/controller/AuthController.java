@@ -23,7 +23,7 @@ public class AuthController {
     @PostMapping("/send-otp")
     public ResponseEntity<?> sendOtp(@Valid @RequestBody SendOtpRequest request) {
         otpService.sendOtp(request.getEmail());
-        return ResponseEntity.ok(Map.of("message", "OTP đã được gửi đến " + request.getEmail()));
+        return ResponseEntity.ok(Map.of("message", "OTP da duoc gui den " + request.getEmail()));
     }
 
     @PostMapping("/verify-otp")
@@ -41,9 +41,20 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<AuthResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(authService.googleLogin(request.getIdToken()));
+    }
+
+    @GetMapping("/check-email")
+    public ResponseEntity<?> checkEmail(@RequestParam String email) {
+        return ResponseEntity.ok(Map.of("exists", authService.emailExists(email)));
+    }
+
     @PostMapping("/reset-password")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
-        return ResponseEntity.ok(Map.of("message", "Đặt lại mật khẩu thành công"));
+        return ResponseEntity.ok(Map.of("message", "Dat lai mat khau thanh cong"));
     }
 }

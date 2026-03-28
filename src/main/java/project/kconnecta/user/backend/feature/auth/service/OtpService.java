@@ -4,16 +4,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
-import project.kconnecta.user.backend.common.util.MailService;
 import project.kconnecta.user.backend.common.enums.OtpType;
+import project.kconnecta.user.backend.common.util.MailService;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
-import project.kconnecta.user.backend.feature.auth.entity.Otp;
 import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
-import project.kconnecta.user.backend.feature.auth.repository.OtpRepository;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +22,7 @@ public class OtpService {
 
     private final MailService mailService;
     private final AccountRepository accountRepository;
-    private final OtpRepository otpRepository;
+    private final Map<String, OtpSession> otpStore = new ConcurrentHashMap<>();
 
     public void sendOtp(String email) {
         Account account = accountRepository.findByEmail(email)
@@ -38,57 +38,72 @@ public class OtpService {
                 : OtpType.ACCOUNT_ACTIVATION;
 
         String code = String.format("%06d", new Random().nextInt(1_000_000));
+        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(1);
         String htmlContent = getOtpEmailTemplate(code);
         mailService.sendMail(email, "Ma xac nhan KConnecta", htmlContent);
 
-        otpRepository.deleteByAccountEmailAndType(email, otpType);
-        otpRepository.save(
-                Otp.builder()
-                        .account(account)
-                        .code(code)
-                        .type(otpType)
-                        .expiresAt(LocalDateTime.now().plusMinutes(1))
-                        .build()
-        );
+        otpStore.put(buildKey(email, otpType), new OtpSession(code, otpType, expiresAt, false));
     }
 
     public void verifyOtp(String email, String code) {
         Account account = accountRepository.findByEmail(email)
-                .orElseThrow(() -> new ValidationException("Chưa gửi OTP cho email này"));
+                .orElseThrow(() -> new ValidationException("Chua gui OTP cho email nay"));
 
         OtpType otpType = account.getStatus() == AccountStatus.INACTIVE
                 ? OtpType.ACCOUNT_ACTIVATION
                 : OtpType.PASSWORD_RESET;
 
-        Otp otp = otpRepository.findTopByAccountEmailAndTypeOrderByCreatedAtDesc(email, otpType)
-                .orElseThrow(() -> new ValidationException("Chưa gửi OTP cho email này"));
+        String key = buildKey(email, otpType);
+        OtpSession otp = getValidOtp(key);
 
-        if (LocalDateTime.now().isAfter(otp.getExpiresAt())) {
-            throw new ValidationException("Mã OTP đã hết hạn");
-        }
-        if (!otp.getCode().equals(code)) {
-            throw new ValidationException("Mã OTP không đúng");
+        if (!otp.code().equals(code)) {
+            throw new ValidationException("Ma OTP khong dung");
         }
 
         if (otpType == OtpType.ACCOUNT_ACTIVATION) {
             account.setStatus(AccountStatus.ACTIVE);
             accountRepository.save(account);
-            otpRepository.delete(otp);
+            otpStore.remove(key);
             return;
         }
 
-        otp.setVerifiedAt(LocalDateTime.now());
-        otpRepository.save(otp);
+        otpStore.put(key, otp.markVerified());
     }
 
     public boolean isVerified(String email) {
-        return otpRepository.findTopByAccountEmailAndTypeOrderByCreatedAtDesc(email, OtpType.PASSWORD_RESET)
-                .map(otp -> otp.getVerifiedAt() != null && LocalDateTime.now().isBefore(otp.getExpiresAt()))
-                .orElse(false);
+        String key = buildKey(email, OtpType.PASSWORD_RESET);
+        OtpSession otp = otpStore.get(key);
+
+        if (otp == null) {
+            return false;
+        }
+        if (LocalDateTime.now().isAfter(otp.expiresAt())) {
+            otpStore.remove(key);
+            return false;
+        }
+
+        return otp.verified();
     }
 
     public void clear(String email) {
-        otpRepository.deleteByAccountEmail(email);
+        otpStore.remove(buildKey(email, OtpType.PASSWORD_RESET));
+        otpStore.remove(buildKey(email, OtpType.ACCOUNT_ACTIVATION));
+    }
+
+    private OtpSession getValidOtp(String key) {
+        OtpSession otp = otpStore.get(key);
+        if (otp == null) {
+            throw new ValidationException("Chua gui OTP cho email nay");
+        }
+        if (LocalDateTime.now().isAfter(otp.expiresAt())) {
+            otpStore.remove(key);
+            throw new ValidationException("Ma OTP da het han");
+        }
+        return otp;
+    }
+
+    private String buildKey(String email, OtpType otpType) {
+        return email.trim().toLowerCase() + ":" + otpType.name();
     }
 
     private String getOtpEmailTemplate(String code) {
@@ -112,20 +127,31 @@ public class OtpService {
                 <div class="container">
                     <div class="header"><h1>KConnecta</h1></div>
                     <div class="content">
-                        <p>Xin chào,</p>
-                        <p>Bạn vừa yêu cầu mã xác thực (OTP) để truy cập hoặc cập nhật tài khoản KConnecta. Vui lòng sử dụng mã dưới đây:</p>
+                        <p>Xin chao,</p>
+                        <p>Ban vua yeu cau ma xac thuc (OTP) de truy cap hoac cap nhat tai khoan KConnecta. Vui long su dung ma duoi day:</p>
                         <div class="otp-container">
-                            <p style="margin-bottom: 10px; color: #64748b; font-size: 14px;">MÃ XÁC THỰC CỦA BẠN</p>
+                            <p style="margin-bottom: 10px; color: #64748b; font-size: 14px;">MA XAC THUC CUA BAN</p>
                             <div class="otp-code">""" + code + """
                             </div>
                         </div>
-                        <p>Mã này có hiệu lực trong vòng <strong>1 phút</strong>. Tuyệt đối không chia sẻ mã này với bất kỳ ai.</p>
-                        <p style="color: #ef4444; font-size: 13px; margin-top: 20px; text-align: center;">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này.</p>
+                        <p>Ma nay co hieu luc trong vong <strong>1 phut</strong>. Tuyet doi khong chia se ma nay voi bat ky ai.</p>
+                        <p style="color: #ef4444; font-size: 13px; margin-top: 20px; text-align: center;">Neu ban khong thuc hien yeu cau nay, vui long bo qua email nay.</p>
                     </div>
                     <div class="footer"><p>&copy; 2026 KConnecta. All rights reserved.</p></div>
                 </div>
             </body>
             </html>
             """;
+    }
+
+    private record OtpSession(
+            String code,
+            OtpType type,
+            LocalDateTime expiresAt,
+            boolean verified
+    ) {
+        private OtpSession markVerified() {
+            return new OtpSession(code, type, expiresAt, true);
+        }
     }
 }

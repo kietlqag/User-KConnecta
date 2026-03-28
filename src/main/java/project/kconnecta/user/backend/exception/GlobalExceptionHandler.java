@@ -1,5 +1,6 @@
 package project.kconnecta.user.backend.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -11,6 +12,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     // 404
@@ -47,6 +49,7 @@ public class GlobalExceptionHandler {
     // fallback 500
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleException(Exception ex) {
+        log.error("Unhandled exception", ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
     }
 
