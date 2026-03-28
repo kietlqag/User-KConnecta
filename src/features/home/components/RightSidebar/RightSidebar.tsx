@@ -32,7 +32,7 @@ export function RightSidebar() {
   ];
 
   return (
-    <aside className="hidden lg:block w-[280px] xl:w-[360px] h-[calc(100vh-56px)] sticky top-14 overflow-y-auto pb-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+    <aside className="hidden lg:block w-[280px] xl:w-[360px] h-[calc(100vh-56px)] sticky top-14 overflow-y-auto pb-4 sidebar-scrollbar">
       <div className="px-4 py-4 space-y-4">
         {/* Sponsored Section */}
         <div>

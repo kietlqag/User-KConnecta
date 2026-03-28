@@ -1,6 +1,6 @@
 import { Settings, HelpCircle, AlertCircle, Moon, LogOut, ChevronRight } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router@7.1.3';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 
 interface AccountMenuProps {
@@ -10,7 +10,6 @@ interface AccountMenuProps {
 export function AccountMenu({ onClose }: AccountMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
-  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -27,7 +26,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
         onClose();
       }
     };
-  
+
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
 
@@ -38,11 +37,10 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
   }, [onClose]);
 
   const handleLogout = () => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-  onClose();
-  window.location.href = "/auth/login";
-};
+    // Handle logout logic here
+    console.log('Logging out...');
+    onClose();
+  };
 
   return (
     <div 

@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router@7.1.3";
 import { Mail, Lock } from "lucide-react";
 import { AuthCard } from "../components/AuthCard";
 import { AuthInput } from "../components/AuthInput";
 import { SocialButton } from "../components/SocialButton";
 import { LoginFormData } from "../types/auth.types";
-import { authApi } from "../../../apis/authApi";
 
 export function LoginPage() {
   const [formData, setFormData] = useState<LoginFormData>({
@@ -31,7 +30,7 @@ export function LoginPage() {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
   };
- 
+
   const validate = (): boolean => {
     const newErrors: Partial<LoginFormData> = {};
 
@@ -42,7 +41,7 @@ export function LoginPage() {
     }
 
     if (!formData.password) {
-      newErrors.password = "Mật khẩu là bắt buộc";
+      newErrors.password = "Mt khẩu là bắt buộc";
     } else if (formData.password.length < 6) {
       newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
     }
@@ -51,47 +50,18 @@ export function LoginPage() {
     return Object.keys(newErrors).length === 0;
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (!validate()) return;
+    if (!validate()) return;
 
-  try {
     setIsLoading(true);
-    setErrors({});
-
-    console.log("Sending login:", formData);
-
-    const res = await authApi.login({
-      email: formData.email,
-      password: formData.password,
-    });
-
-    console.log("Login success:", res.data);
-
-    // 🔥 LƯU USER
-    localStorage.setItem("user", JSON.stringify(res.data));
-
-    // nếu backend có token thì lưu thêm
-    if (res.data.token) {
-      localStorage.setItem("token", res.data.token);
-    }
-
-    // 👉 chuyển trang
-    window.location.href = "/home";
-
-  } catch (error: any) {
-    console.error("Login error:", error?.response?.data);
-
-    setErrors((prev) => ({
-      ...prev,
-      password:
-        error?.response?.data?.message || "Đăng nhập thất bại",
-    }));
-  } finally {
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    console.log("Login data:", formData);
     setIsLoading(false);
-  }
-};
+    // Handle login logic here
+  };
 
   const handleSocialLogin = (provider: string) => {
     console.log(`Login with ${provider}`);
@@ -156,13 +126,6 @@ export function LoginPage() {
             </label>
           </div>
 
-
-
-          {errors.password && (
-  <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-sm">
-    {errors.password}
-  </div>
-)}
           <button
             type="submit"
             disabled={isLoading}

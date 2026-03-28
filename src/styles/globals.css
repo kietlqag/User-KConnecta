@@ -183,3 +183,80 @@
 html {
   font-size: var(--font-size);
 }
+
+/* Custom scrollbar utilities */
+@layer utilities {
+  /* Hide scrollbar completely */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+  
+  /* Thin scrollbar with custom styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;  /* Firefox */
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+  
+  .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+  }
+  
+  .scrollbar-track-transparent::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  /* Hover-to-show scrollbar for sidebars */
+  .sidebar-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .sidebar-scrollbar::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+  
+  /* Show scrollbar on hover */
+  .sidebar-scrollbar:hover {
+    scrollbar-width: thin;  /* Firefox */
+  }
+  
+  .sidebar-scrollbar:hover::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+  }
+  
+  .sidebar-scrollbar:hover::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+  }
+  
+  .sidebar-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+}

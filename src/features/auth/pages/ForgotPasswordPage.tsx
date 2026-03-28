@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router@7.1.3';
 import { Mail, ArrowLeft, Lock, CheckCircle2 } from 'lucide-react';
 import { AuthCard } from '../components/AuthCard';
 import { AuthInput } from '../components/AuthInput';
 import { OTPInput } from '../components/OTPInput';
-import { authApi } from '../../../apis/authApi';
+
 type Step = 'email' | 'otp' | 'reset' | 'success';
 
 export function ForgotPasswordPage() {
@@ -17,7 +17,6 @@ export function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
-  // Gửi OTP
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -31,20 +30,15 @@ export function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
-    try {
-      await authApi.sendOtp(email);
-      setStep('otp');
-      setCountdown(60);
-      setErrors({});
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Có lỗi xảy ra';
-      setErrors({ email: message });
-    } finally {
-      setIsLoading(false);
-    }
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log('Send OTP to:', email);
+    setIsLoading(false);
+    setStep('otp');
+    setCountdown(60);
+    setErrors({});
   };
 
-  // Xác thực OTP
   const handleOTPSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -54,19 +48,14 @@ export function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
-    try {
-      await authApi.verifyOtp(email, otp);
-      setStep('reset');
-      setErrors({});
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Mã OTP không đúng';
-      setErrors({ otp: message });
-    } finally {
-      setIsLoading(false);
-    }
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log('Verify OTP:', otp);
+    setIsLoading(false);
+    setStep('reset');
+    setErrors({});
   };
 
-  // Đặt lại mật khẩu
   const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,32 +79,23 @@ export function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
-    try {
-      await authApi.resetPassword(email, password);
-      setStep('success');
-      setErrors({});
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Có lỗi xảy ra';
-      setErrors({ password: message });
-    } finally {
-      setIsLoading(false);
-    }
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    console.log('Reset password');
+    setIsLoading(false);
+    setStep('success');
+    setErrors({});
   };
 
-  // Gửi lại OTP
   const handleResendOTP = async () => {
     if (countdown > 0) return;
     
     setIsLoading(true);
-    try {
-      await authApi.sendOtp(email);
-      setCountdown(60);
-      setOtp('');
-    } catch (error: any) {
-      console.error('Resend OTP error:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('Resend OTP to:', email);
+    setIsLoading(false);
+    setCountdown(60);
+    setOtp('');
   };
 
   // Countdown timer

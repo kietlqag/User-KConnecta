@@ -12,7 +12,7 @@ const sidebarItems: FriendsSidebarItem[] = [
 
 export const FriendsLeftSidebar = () => {
   return (
-    <div className="w-[360px] bg-white border-r border-gray-200 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
+    <div className="w-[360px] bg-white border-r border-gray-200 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto sidebar-scrollbar">
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900">Bạn bè</h1>

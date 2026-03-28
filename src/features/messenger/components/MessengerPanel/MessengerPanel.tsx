@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Search, MoreHorizontal, ExternalLink } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router@7.1.3';
 import { ConversationItem } from '../ConversationItem';
 import { ChatWindow } from '../ChatWindow';
 import { Conversation, MessengerFilter } from '../../types/messenger.types';

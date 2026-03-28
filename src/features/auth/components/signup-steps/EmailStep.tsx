@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Mail } from 'lucide-react';
 import { AuthInput } from '../AuthInput';
-import { authApi } from '@/apis/authApi';
 
 interface EmailStepProps {
   onNext: (email: string) => void;
@@ -31,14 +30,11 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
     if (!validateEmail(email)) return;
     
     setIsLoading(true);
-    try {
-      await authApi.sendOtp(email);
-      onNext(email);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Không thể gửi OTP. Vui lòng thử lại.');
-    } finally {
-      setIsLoading(false);
-    }
+    // Simulate sending OTP
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setIsLoading(false);
+    
+    onNext(email);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

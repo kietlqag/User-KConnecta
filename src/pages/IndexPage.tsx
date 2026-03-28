@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router@7.1.3';
 import { Users, Shield, Zap, Heart, ArrowRight, Sparkles } from 'lucide-react';
 
 export function IndexPage() {

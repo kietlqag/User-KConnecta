@@ -13,7 +13,7 @@ interface GroupsLeftSidebarProps {
 
 export const GroupsLeftSidebar = ({ joinedGroups }: GroupsLeftSidebarProps) => {
   return (
-    <div className="w-[360px] bg-white border-r border-gray-200 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
+    <div className="w-[360px] bg-white border-r border-gray-200 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto sidebar-scrollbar">
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">

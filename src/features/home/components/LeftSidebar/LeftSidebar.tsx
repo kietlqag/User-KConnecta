@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router@7.1.3';
 import { 
   Users, 
   Clock, 
@@ -81,7 +81,7 @@ export const LeftSidebar = () => {
 
   return (
     <aside
-      className="fixed left-0 top-14 w-72 h-[calc(100vh-56px)] bg-white border-r border-gray-200 overflow-y-auto z-30"
+      className="fixed left-0 top-14 w-72 h-[calc(100vh-56px)] bg-white border-r border-gray-200 overflow-y-auto z-30 sidebar-scrollbar"
     >
       <div className="p-2">
         {/* Menu Items */}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router@7.1.3';
 import { AuthCard } from '../components/AuthCard';
 import { EmailStep, OTPVerificationStep, PasswordStep, ProfileSetupStep } from '../components/signup-steps';
 
@@ -72,9 +72,8 @@ export function RegisterPage() {
         )}
 
         {currentStep === 'profile' && (
-          <ProfileSetupStep
+          <ProfileSetupStep 
             email={signupData.email}
-            password={signupData.password}
             onBack={handleBackToPassword}
           />
         )}

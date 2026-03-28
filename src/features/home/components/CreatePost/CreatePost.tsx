@@ -1,5 +1,5 @@
 import { Image, Video, Smile } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router@7.1.3';
 
 export function CreatePost() {
   return (

@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router@7.1.3';
 import { ChevronDown, MoreHorizontal } from 'lucide-react';
 
 interface ProfileTabsProps {

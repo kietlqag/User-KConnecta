@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router@7.1.3';
 
 export function AuthLayout() {
   return (
