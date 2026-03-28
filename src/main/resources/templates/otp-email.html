@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KConnecta OTP</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f6f9fc;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #2563eb;
+            color: #ffffff;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+        .content {
+            padding: 40px;
+            color: #334155;
+            line-height: 1.6;
+        }
+        .otp-container {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+            border: 2px dashed #cbd5e1;
+        }
+        .otp-code {
+            font-size: 42px;
+            font-weight: 800;
+            color: #1e40af;
+            letter-spacing: 8px;
+            margin: 0;
+        }
+        .footer {
+            background-color: #f8fafc;
+            color: #64748b;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .warning {
+            color: #ef4444;
+            font-size: 13px;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>KConnecta</h1>
+        </div>
+        <div class="content">
+            <p>Xin chào,</p>
+            <p>Bạn vừa yêu cầu mã xác thực (OTP) để truy cập hoặc cập nhật tài khoản KConnecta. Vui lòng sử dụng mã dưới đây:</p>
+            
+            <div class="otp-container">
+                <p style="margin-bottom: 10px; color: #64748b; font-size: 14px;">MÃ XÁC THỰC CỦA BẠN</p>
+                <div class="otp-code">{{OTP_CODE}}</div>
+            </div>
+
+            <p>Mã này có hiệu lực trong vòng <strong>1 phút</strong>. Tuyệt đối không chia sẻ mã này với bất kỳ ai.</p>
+            
+            <p class="warning">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này hoặc liên hệ với bộ phận hỗ trợ nếu thấy nghi ngờ.</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 KConnecta. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -16,8 +16,11 @@ import project.kconnecta.user.backend.feature.user.dto.request.ResetPasswordRequ
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -27,17 +30,17 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         Account account = accountRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ValidationException("Email chua gui OTP"));
+                .orElseThrow(() -> new ValidationException("Email chưa được gửi mã OTP"));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new ValidationException("Email chua duoc kich hoat OTP");
+            throw new ValidationException("Email chưa được kích hoạt OTP");
         }
 
         if (userRepository.findByAccountEmail(request.getEmail()).isPresent()) {
-            throw new DuplicateResourceException("Email da duoc su dung");
+            throw new DuplicateResourceException("Email đã được sử dụng");
         }
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Ten nguoi dung da ton tai");
+            throw new DuplicateResourceException("Tên người dùng đã tồn tại");
         }
 
         account.setPasswordHash(passwordEncoder.encode(request.getPassword()));
@@ -59,22 +62,22 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         Account account = accountRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại"));
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new ValidationException("Tai khoan khong kha dung");
+            throw new ValidationException("Tài khoản không khả dụng");
         }
 
         if (account.getPasswordHash() == null) {
-            throw new ValidationException("Tai khoan chua hoan tat dang ky");
+            throw new ValidationException("Tài khoản chưa hoàn tất đăng ký");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), account.getPasswordHash())) {
-            throw new ValidationException("Mat khau khong dung");
+            throw new ValidationException("Mật khẩu không đúng");
         }
 
         User user = userRepository.findByAccountId(account.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng tương ứng"));
 
         return toResponse(user);
     }
@@ -90,14 +93,14 @@ public class AuthService {
 
     public void resetPassword(ResetPasswordRequest request) {
         if (!otpService.isVerified(request.getEmail())) {
-            throw new ValidationException("Email chua duoc xac thuc OTP");
+            throw new ValidationException("Email chưa được xác thực OTP");
         }
 
         Account account = accountRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại"));
 
         if (userRepository.findByAccountId(account.getId()).isEmpty()) {
-            throw new ValidationException("Email chua co tai khoan nguoi dung de dat lai mat khau");
+            throw new ValidationException("Email chưa có tài khoản người dùng để đặt lại mật khẩu");
         }
 
         account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
