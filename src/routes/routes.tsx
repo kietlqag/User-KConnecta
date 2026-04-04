@@ -11,6 +11,7 @@ import { MarketplacePage } from '../features/marketplace/pages';
 import LiveVideoPage from '../features/live/pages/LiveVideoPage';
 import SearchResultsPage from '../features/search/pages/SearchResultsPage';
 import MessengerPage from '../features/messenger/pages/MessengerPage';
+import { GuestRoute, ProtectedRoute } from './RouteGuards';
 
 export const router = createBrowserRouter([
   {
@@ -18,68 +19,78 @@ export const router = createBrowserRouter([
     Component: WelcomePage,
   },
   {
-    path: '/home',
-    Component: HomePage,
-  },
-  {
-    path: '/profile/:username?',
-    Component: ProfilePage,
-  },
-  {
-    path: '/profile/:username/friends',
-    Component: ProfileFriendsPage,
-  },
-  {
-    path: '/profile/:username/photos',
-    Component: ProfilePhotosPage,
-  },
-  {
-    path: '/profile/:username/about',
-    Component: ProfileAboutPage,
-  },
-  {
-    path: '/friends',
-    Component: FriendsPage,
-  },
-  {
-    path: '/groups',
-    Component: GroupsPage,
-  },
-  {
-    path: '/watch',
-    Component: WatchPage,
-  },
-  {
-    path: '/marketplace',
-    Component: MarketplacePage,
-  },
-  {
-    path: '/live',
-    Component: LiveVideoPage,
-  },
-  {
-    path: '/search',
-    Component: SearchResultsPage,
-  },
-  {
-    path: '/messages',
-    Component: MessengerPage,
+    Component: ProtectedRoute,
+    children: [
+      {
+        path: '/home',
+        Component: HomePage,
+      },
+      {
+        path: '/profile/:username?',
+        Component: ProfilePage,
+      },
+      {
+        path: '/profile/:username/friends',
+        Component: ProfileFriendsPage,
+      },
+      {
+        path: '/profile/:username/photos',
+        Component: ProfilePhotosPage,
+      },
+      {
+        path: '/profile/:username/about',
+        Component: ProfileAboutPage,
+      },
+      {
+        path: '/friends',
+        Component: FriendsPage,
+      },
+      {
+        path: '/groups',
+        Component: GroupsPage,
+      },
+      {
+        path: '/watch',
+        Component: WatchPage,
+      },
+      {
+        path: '/marketplace',
+        Component: MarketplacePage,
+      },
+      {
+        path: '/live',
+        Component: LiveVideoPage,
+      },
+      {
+        path: '/search',
+        Component: SearchResultsPage,
+      },
+      {
+        path: '/messages',
+        Component: MessengerPage,
+      },
+    ],
   },
   {
     path: '/auth',
-    Component: AuthLayout,
+    Component: GuestRoute,
     children: [
       {
-        path: 'login',
-        Component: LoginPage,
-      },
-      {
-        path: 'register',
-        Component: RegisterPage,
-      },
-      {
-        path: 'forgot-password',
-        Component: ForgotPasswordPage,
+        Component: AuthLayout,
+        children: [
+          {
+            path: 'login',
+            Component: LoginPage,
+          },
+          {
+            path: 'register',
+            Component: RegisterPage,
+          },
+          {
+            path: 'forgot-password',
+            Component: ForgotPasswordPage,
+          },
+        ],
       },
     ],
   },

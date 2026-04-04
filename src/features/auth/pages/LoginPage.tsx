@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router@7.1.3";
+import { Link, useLocation, useNavigate } from "react-router@7.1.3";
 import { Mail, Lock } from "lucide-react";
 import { authService } from "@/services/authService";
 import { AuthCard } from "../components/AuthCard";
@@ -8,6 +8,7 @@ import { LoginFormData } from "../types/auth.types";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
@@ -18,6 +19,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const redirectTo = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || "/home";
 
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -52,7 +54,7 @@ export function LoginPage() {
           try {
             const user = await authService.googleLogin(credential);
             authService.saveCurrentUser(user, !!formData.rememberMe);
-            navigate("/home");
+            navigate(redirectTo, { replace: true });
           } catch (err) {
             setGoogleError(
               err instanceof Error ? err.message : "Đăng nhập Google thất bại"
@@ -94,7 +96,7 @@ export function LoginPage() {
         script.removeEventListener("load", renderGoogleButton);
       }
     };
-  }, [formData.rememberMe, navigate]);
+  }, [formData.rememberMe, navigate, redirectTo]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -136,7 +138,7 @@ export function LoginPage() {
     try {
       const user = await authService.login(formData.email, formData.password);
       authService.saveCurrentUser(user, !!formData.rememberMe);
-      navigate("/home");
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setErrors((prev) => ({
         ...prev,

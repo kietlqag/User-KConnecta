@@ -1,6 +1,12 @@
 import { api } from './api';
 
 const AUTH_USER_KEY = 'authUser';
+const REMEMBER_ME_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+interface StoredAuthUser {
+  user: AuthUser;
+  expiresAt: number;
+}
 
 export interface AuthUser {
   id: string;
@@ -66,17 +72,50 @@ export const authService = {
     const otherStorage = rememberMe ? sessionStorage : localStorage;
 
     otherStorage.removeItem(AUTH_USER_KEY);
+    if (rememberMe) {
+      const payload: StoredAuthUser = {
+        user,
+        expiresAt: Date.now() + REMEMBER_ME_TTL_MS,
+      };
+      storage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
+      return;
+    }
+
     storage.setItem(AUTH_USER_KEY, JSON.stringify(user));
   },
 
   getCurrentUser: (): AuthUser | null => {
-    const raw = localStorage.getItem(AUTH_USER_KEY) ?? sessionStorage.getItem(AUTH_USER_KEY);
-    if (!raw) return null;
+    const localUser = localStorage.getItem(AUTH_USER_KEY);
+    if (localUser) {
+      try {
+        const parsed = JSON.parse(localUser) as StoredAuthUser | AuthUser;
+
+        if (
+          typeof parsed === 'object' &&
+          parsed !== null &&
+          'user' in parsed &&
+          'expiresAt' in parsed
+        ) {
+          if (typeof parsed.expiresAt !== 'number' || parsed.expiresAt <= Date.now()) {
+            localStorage.removeItem(AUTH_USER_KEY);
+          } else {
+            return parsed.user;
+          }
+        } else {
+          authService.saveCurrentUser(parsed as AuthUser, true);
+          return parsed as AuthUser;
+        }
+      } catch {
+        localStorage.removeItem(AUTH_USER_KEY);
+      }
+    }
+
+    const sessionUser = sessionStorage.getItem(AUTH_USER_KEY);
+    if (!sessionUser) return null;
 
     try {
-      return JSON.parse(raw) as AuthUser;
+      return JSON.parse(sessionUser) as AuthUser;
     } catch {
-      localStorage.removeItem(AUTH_USER_KEY);
       sessionStorage.removeItem(AUTH_USER_KEY);
       return null;
     }
