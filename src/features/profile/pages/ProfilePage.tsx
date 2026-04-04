@@ -86,7 +86,7 @@ export function ProfilePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Header />
 
       <div className="pt-14">
@@ -103,10 +103,9 @@ export function ProfilePage() {
 
         <ProfileTabs username={userProfile.id} />
 
-        <div className="max-w-[1100px] mx-auto px-4 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-[360px,1fr] gap-4">
-            {/* Left Sidebar - Intro, Friends, Photos */}
-            <div className="space-y-4 order-2 md:order-1">
+        <div className="max-w-[1320px] mx-auto px-4 py-4 lg:py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.55fr)] gap-4 lg:gap-6 items-start">
+            <div className="space-y-4 order-2 lg:order-1 lg:sticky lg:top-[136px]">
               <ProfileIntro
                 location={userProfile.location}
                 hometown={userProfile.hometown}
@@ -125,13 +124,8 @@ export function ProfilePage() {
               <PhotosPreview username={userProfile.id} photos={photos} />
             </div>
 
-            {/* Right Content - Create Post + Posts */}
-            <div className="order-1 md:order-2">
-              <ProfileCreatePost
-                userAvatar={userProfile.avatar}
-                userName={userProfile.name}
-              />
-
+            <div className="space-y-4 order-1 lg:order-2">
+              <ProfileCreatePost username={userProfile.name} />
               <ProfilePosts posts={posts} />
             </div>
           </div>

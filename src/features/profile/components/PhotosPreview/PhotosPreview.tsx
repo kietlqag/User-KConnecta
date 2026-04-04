@@ -16,12 +16,12 @@ export function PhotosPreview({ username, photos }: PhotosPreviewProps) {
   const remainingCount = Math.max(0, photos.length - 9);
 
   return (
-    <div className="bg-white rounded-lg shadow p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-gray-900">Ảnh</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Ảnh</h2>
         <Link
           to={`/profile/${username}/photos`}
-          className="text-emerald-600 hover:underline font-medium"
+          className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
         >
           Xem tất cả ảnh
         </Link>
