@@ -11,6 +11,7 @@ public interface UserService {
     UserResponse createUser(CreateUserRequest request);
     List<UserResponse> getAllUsers();
     UserResponse getUserById(UUID id);
+    UserResponse getUserByUsername(String username);
     UserResponse updateUser(UUID id, UpdateUserRequest request);
     void deleteUser(UUID id);
 }

@@ -12,5 +12,10 @@ public class UpdateUserRequest {
     private String bio;
     private String gender;
     private String location;
+    private String hometown;
+    private String relationshipStatus;
+    private String school;
     private LocalDate dateOfBirth;
+    private String avatarUrl;
+    private String coverPhotoUrl;
 }

@@ -53,6 +53,9 @@ public class UserServiceImpl implements UserService {
                 .bio(request.getBio())
                 .gender(normalizedGender)
                 .location(request.getLocation())
+                .hometown(request.getHometown())
+                .relationshipStatus(request.getRelationshipStatus())
+                .school(request.getSchool())
                 .dateOfBirth(request.getDateOfBirth())
                 .build();
 
@@ -71,6 +74,14 @@ public class UserServiceImpl implements UserService {
     public UserResponse getUserById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        return mapToResponse(user);
+    }
+
+    @Override
+    public UserResponse getUserByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
 
         return mapToResponse(user);
     }
@@ -114,8 +125,23 @@ public class UserServiceImpl implements UserService {
         if (request.getLocation() != null) {
             user.setLocation(request.getLocation());
         }
+        if (request.getHometown() != null) {
+            user.setHometown(request.getHometown());
+        }
+        if (request.getRelationshipStatus() != null) {
+            user.setRelationshipStatus(request.getRelationshipStatus());
+        }
+        if (request.getSchool() != null) {
+            user.setSchool(request.getSchool());
+        }
         if (request.getDateOfBirth() != null) {
             user.setDateOfBirth(request.getDateOfBirth());
+        }
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
+        if (request.getCoverPhotoUrl() != null) {
+            user.setCoverPhotoUrl(request.getCoverPhotoUrl());
         }
 
         return mapToResponse(userRepository.save(user));
@@ -139,7 +165,12 @@ public class UserServiceImpl implements UserService {
                 .bio(user.getBio())
                 .gender(user.getGender())
                 .location(user.getLocation())
+                .hometown(user.getHometown())
+                .relationshipStatus(user.getRelationshipStatus())
+                .school(user.getSchool())
                 .dateOfBirth(user.getDateOfBirth())
+                .avatarUrl(user.getAvatarUrl())
+                .coverPhotoUrl(user.getCoverPhotoUrl())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

@@ -25,6 +25,12 @@ public class CreateUserRequest {
 
     private String location;
 
+    private String hometown;
+
+    private String relationshipStatus;
+
+    private String school;
+
     @NotBlank(message = "Password is required")
     private String password;
 
