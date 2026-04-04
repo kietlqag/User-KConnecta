@@ -3,7 +3,7 @@ import { AuthLayout } from '../layouts';
 import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth/pages';
 import { WelcomePage } from '../pages';
 import { HomePage } from '../features/home/pages';
-import { ProfilePage, ProfileFriendsPage, ProfilePhotosPage } from '../features/profile/pages';
+import { ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage } from '../features/profile/pages';
 import { FriendsPage } from '../features/friends/pages';
 import { GroupsPage } from '../features/groups/pages';
 import { WatchPage } from '../features/watch/pages';
@@ -32,6 +32,10 @@ export const router = createBrowserRouter([
   {
     path: '/profile/:username/photos',
     Component: ProfilePhotosPage,
+  },
+  {
+    path: '/profile/:username/about',
+    Component: ProfileAboutPage,
   },
   {
     path: '/friends',

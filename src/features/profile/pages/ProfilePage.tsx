@@ -1,3 +1,4 @@
+import { useParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
 import {
   ProfileHeader,
@@ -7,25 +8,62 @@ import {
   ProfilePosts,
   FriendsPreview,
   PhotosPreview,
+  EditProfileDialog,
 } from '../components';
 import { authService } from '@/services/authService';
+import * as React from 'react';
 
 export function ProfilePage() {
+  const { username: urlUsername } = useParams();
   const currentUser = authService.getCurrentUser();
-  
-  // Mock user data merged with current user data
+  const username = urlUsername || currentUser?.username || '';
+  const isOwnProfile = currentUser?.username === username;
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [profile, setProfile] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await authService.getUserByUsername(username);
+        setProfile(response);
+        
+        // If it's our own profile, update the local storage to keep it fresh
+        if (isOwnProfile) {
+          authService.saveCurrentUser(response);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        // Fallback for own profile if API fails
+        if (isOwnProfile) {
+          setProfile(currentUser);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [username, isOwnProfile]);
+
   const userProfile = {
-    id: currentUser?.username || 'quockiet',
-    fullName: currentUser?.fullName || 'Quốc Kiệt',
-    username: currentUser?.username || 'Kian',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
-    coverPhoto: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
+    id: profile?.id || username,
+    fullName: profile?.fullName || 'Quốc Kiệt',
+    username: profile?.username || username,
+    avatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
+    coverPhoto: profile?.coverPhotoUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
     friendsCount: 253,
-    location: 'Thành phố Hồ Chí Minh',
-    school: 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
-    hometown: 'Tịnh An, An Giang, Vietnam',
-    relationship: 'Đang hẹn hò với Ngô Nhựt Phát',
+    location: profile?.location || 'Thành phố Hồ Chí Minh',
+    school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
+    hometown: profile?.hometown || 'Tịnh An, An Giang, Vietnam',
+    relationship: profile?.relationshipStatus || 'Độc thân',
+    bio: profile?.bio || 'Mô tả ngắn về bản thân bạn',
+    dateOfBirth: profile?.dateOfBirth,
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
+  }
 
   const featuredPhotos = [
     { id: '1', url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400', count: 1 },
@@ -101,30 +139,33 @@ export function ProfilePage() {
           friendsCount={userProfile.friendsCount}
           location={userProfile.location}
           school={userProfile.school}
-          isOwnProfile={true}
+          isOwnProfile={isOwnProfile}
+          onEditClick={() => setIsEditDialogOpen(true)}
         />
 
-        <ProfileTabs username={userProfile.id} isOwnProfile={true} />
+        <ProfileTabs username={username} isOwnProfile={isOwnProfile} />
 
         <div className="max-w-[1320px] mx-auto px-4 py-4 lg:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.55fr)] gap-4 lg:gap-6 items-start">
             <div className="space-y-4 order-2 lg:order-1 lg:sticky lg:top-[136px]">
               <ProfileIntro
+                bio={userProfile.bio}
                 location={userProfile.location}
                 hometown={userProfile.hometown}
                 relationship={userProfile.relationship}
                 school={userProfile.school}
                 featuredPhotos={featuredPhotos}
                 isOwnProfile={true}
+                onEditClick={() => setIsEditDialogOpen(true)}
               />
 
               <FriendsPreview
-                username={userProfile.id}
+                username={username}
                 friendsCount={userProfile.friendsCount}
                 friends={friends}
               />
 
-              <PhotosPreview username={userProfile.id} photos={photos} />
+              <PhotosPreview username={username} photos={photos} />
             </div>
 
             <div className="space-y-4 order-1 lg:order-2">
@@ -134,6 +175,22 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <EditProfileDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        initialData={{
+          fullName: userProfile.fullName,
+          location: userProfile.location,
+          hometown: userProfile.hometown,
+          school: userProfile.school,
+          relationship: userProfile.relationship,
+          bio: userProfile.bio,
+          dateOfBirth: userProfile.dateOfBirth,
+          avatarUrl: userProfile.avatar,
+          coverPhotoUrl: userProfile.coverPhoto,
+        }}
+      />
     </div>
   );
 }

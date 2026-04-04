@@ -45,8 +45,9 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
   };
 
   const currentUser = authService.getCurrentUser();
-  const profileLink = `/profile/${currentUser?.username || 'quockiet'}`;
-  const fullName = currentUser?.fullName || 'Khang Nguyen';
+  const profileLink = currentUser ? `/profile/${currentUser.username}` : '/auth/login';
+  const fullName = currentUser?.fullName || 'Người dùng';
+  const avatarUrl = currentUser?.avatarUrl || avatarImage;
 
   return (
     <div 
@@ -62,7 +63,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
           onClick={onClose}
         >
           <img
-            src={avatarImage}
+            src={avatarUrl}
             alt={fullName}
             className="w-9 h-9 rounded-full object-cover"
           />

@@ -7,6 +7,15 @@ export interface AuthUser {
   email: string;
   fullName: string;
   username: string;
+  bio?: string;
+  gender?: string;
+  location?: string;
+  hometown?: string;
+  relationshipStatus?: string;
+  school?: string;
+  dateOfBirth?: string;
+  avatarUrl?: string;
+  coverPhotoUrl?: string;
 }
 
 export interface RegisterData {
@@ -18,9 +27,16 @@ export interface RegisterData {
   gender: string;
   location?: string;
   bio?: string;
+  hometown?: string;
+  relationshipStatus?: string;
+  school?: string;
 }
 
 export const authService = {
+  updateProfile: (id: string, data: Partial<RegisterData>) =>
+    api.put<AuthUser>(`/users/${id}`, data),
+  getUserByUsername: (username: string) =>
+    api.get<AuthUser>(`/users/username/${username}`),
   checkEmailExists: (email: string) =>
     api.get<{ exists: boolean }>(`/auth/check-email?email=${encodeURIComponent(email)}`),
 

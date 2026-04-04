@@ -19,8 +19,9 @@ import { authService } from '@/services/authService';
 export const LeftSidebar = () => {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
-  const fullName = currentUser?.fullName || 'Quang Khải';
-  const username = currentUser?.username || 'quockiet';
+  const fullName = currentUser?.fullName || 'Người dùng';
+  const username = currentUser?.username;
+  const avatarUrl = currentUser?.avatarUrl;
   const initials = fullName
     .split(' ')
     .map(n => n[0])
@@ -32,8 +33,12 @@ export const LeftSidebar = () => {
     {
       id: 'profile',
       icon: (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white">
-          <span className="text-sm font-semibold">{initials}</span>
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-white overflow-hidden">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={fullName} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{initials}</span>
+          )}
         </div>
       ),
       label: fullName,

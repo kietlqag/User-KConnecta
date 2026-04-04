@@ -9,6 +9,7 @@ import { SearchSuggestions } from '../../../search/components';
 import { RecentSearchItem } from '../../../search/types/search.types';
 import { useMenu } from '../../../../contexts/MenuContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
+import { authService } from '@/services/authService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 
 export function Header() {
@@ -19,6 +20,8 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const { isMenuOpen, toggleMenu, setMenuOpen } = useMenu();
+  const currentUser = authService.getCurrentUser();
+  const userAvatar = currentUser?.avatarUrl || avatarImage;
 
   const navItems = [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
@@ -140,7 +143,7 @@ export function Header() {
                 className="w-10 h-10 rounded-full overflow-hidden hover:opacity-90 transition-opacity cursor-pointer"
                 data-account-toggle
               >
-                <img src={avatarImage} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
               </button>
               
               {showAccountMenu && <AccountMenu onClose={() => setShowAccountMenu(false)} />}

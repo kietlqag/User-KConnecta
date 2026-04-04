@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
 import { ProfileHeader } from '../components/ProfileHeader';
@@ -6,19 +7,48 @@ import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
 import { authService } from '@/services/authService';
 
 export function ProfilePhotosPage() {
-  const { username = 'quockiet' } = useParams();
+  const { username: urlUsername } = useParams();
   const currentUser = authService.getCurrentUser();
+  const username = urlUsername || currentUser?.username || '';
+  const isOwnProfile = currentUser?.username === username;
+  const [profile, setProfile] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await authService.getUserByUsername(username);
+        setProfile(response);
+        if (isOwnProfile) {
+          authService.saveCurrentUser(response);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        if (isOwnProfile) {
+          setProfile(currentUser);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [username, isOwnProfile]);
 
   const userProfile = {
-    id: currentUser?.username || 'quockiet',
-    fullName: currentUser?.fullName || 'Quốc Kiệt',
-    username: currentUser?.username || 'Kian',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
-    coverPhoto: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
+    id: profile?.id || username,
+    fullName: profile?.fullName || 'Quốc Kiệt',
+    username: profile?.username || username,
+    avatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
+    coverPhoto: profile?.coverPhotoUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
     friendsCount: 253,
-    location: 'Thành phố Hồ Chí Minh',
-    school: 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
+    location: profile?.location || 'Thành phố Hồ Chí Minh',
+    school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
+  }
 
   const photos = [
     { id: '1', url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600', timestamp: '21 tháng 1' },
@@ -48,10 +78,10 @@ export function ProfilePhotosPage() {
           friendsCount={userProfile.friendsCount}
           location={userProfile.location}
           school={userProfile.school}
-          isOwnProfile={true}
+          isOwnProfile={isOwnProfile}
         />
 
-        <ProfileTabs username={userProfile.id} isOwnProfile={true} />
+        <ProfileTabs username={username} isOwnProfile={isOwnProfile} />
 
         <div className="max-w-[1100px] mx-auto px-4 py-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">

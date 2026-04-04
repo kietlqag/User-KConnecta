@@ -3,21 +3,25 @@ import { Link } from 'react-router-dom';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 
 interface ProfileIntroProps {
+  bio?: string;
   location?: string;
   hometown?: string;
   relationship?: string;
   school?: string;
   featuredPhotos?: Array<{ id: string; url: string; count?: number }>;
   isOwnProfile?: boolean;
+  onEditClick?: () => void;
 }
 
 export function ProfileIntro({
+  bio,
   location,
   hometown,
   relationship,
   school,
   featuredPhotos = [],
   isOwnProfile = true,
+  onEditClick,
 }: ProfileIntroProps) {
   return (
     <div className="space-y-4">
@@ -26,13 +30,22 @@ export function ProfileIntro({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Thông tin cá nhân</h2>
           {isOwnProfile && (
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+            <button 
+              onClick={onEditClick}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
               <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             </button>
           )}
         </div>
 
         <div className="space-y-3">
+          {bio && (
+            <div className="text-center py-2 px-1">
+              <p className="text-gray-700 dark:text-gray-300 italic">"{bio}"</p>
+              <div className="h-px bg-gray-100 dark:bg-gray-700 my-4 w-full" />
+            </div>
+          )}
           {location && (
             <div className="flex items-start gap-3">
               <MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
@@ -70,7 +83,10 @@ export function ProfileIntro({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Học vấn</h2>
             {isOwnProfile && (
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button 
+                onClick={onEditClick}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
                 <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
             )}
@@ -96,7 +112,10 @@ export function ProfileIntro({
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tin nổi bật</h2>
             {isOwnProfile && (
-              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button 
+                onClick={onEditClick}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
                 <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
             )}
