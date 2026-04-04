@@ -1,13 +1,32 @@
-import { Link, useLocation } from 'react-router@7.1.3';
-import { ChevronDown, MoreHorizontal } from 'lucide-react';
+import * as React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { ChevronDown, MoreHorizontal, Lock, Settings, LogOut } from 'lucide-react';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from '@/components/ui/dropdown-menu';
+import { authService } from '@/services/authService';
+import { ChangePasswordDialog } from '@/features/auth/components';
 
 interface ProfileTabsProps {
   username: string;
+  isOwnProfile?: boolean;
 }
 
-export function ProfileTabs({ username }: ProfileTabsProps) {
+export function ProfileTabs({ username, isOwnProfile: isOwnProfileProp }: ProfileTabsProps) {
   const location = useLocation();
   const currentPath = location.pathname;
+  const currentUser = authService.getCurrentUser();
+  
+  const isOwnProfile = isOwnProfileProp ?? (
+    currentUser?.username?.toLowerCase() === username?.toLowerCase() || 
+    currentUser?.id === username
+  );
+  
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
 
   const tabs = [
     { label: 'Tất cả', path: `/profile/${username}` },
@@ -45,11 +64,40 @@ export function ProfileTabs({ username }: ProfileTabsProps) {
             ))}
           </nav>
 
-          <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0">
-            <MoreHorizontal className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0">
+                <MoreHorizontal className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {isOwnProfile && (
+                <>
+                  <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)}>
+                    <Lock className="mr-2 h-4 w-4" />
+                    <span>Đổi mật khẩu</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Cài đặt</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600 dark:text-red-400">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Đăng xuất</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      <ChangePasswordDialog 
+        open={isPasswordDialogOpen} 
+        onOpenChange={setIsPasswordDialogOpen} 
+      />
     </div>
   );
-}
+}

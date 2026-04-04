@@ -4,7 +4,7 @@ import { ImageWithFallback } from '../../../../components/figma/ImageWithFallbac
 interface ProfileHeaderProps {
   coverPhoto: string;
   avatar: string;
-  name: string;
+  fullName: string;
   username?: string;
   friendsCount: number;
   location?: string;
@@ -15,7 +15,7 @@ interface ProfileHeaderProps {
 export function ProfileHeader({
   coverPhoto,
   avatar,
-  name,
+  fullName,
   username,
   friendsCount,
   location,
@@ -32,7 +32,7 @@ export function ProfileHeader({
             <div className="w-[168px] h-[168px] rounded-full border-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
               <ImageWithFallback
                 src={avatar}
-                alt={name}
+                alt={fullName}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -48,7 +48,7 @@ export function ProfileHeader({
             <div className="flex items-start justify-between mb-2">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                  {name} {username && <span className="text-gray-500 dark:text-gray-400 text-2xl">({username})</span>}
+                  {fullName} {username && <span className="text-gray-500 dark:text-gray-400 text-2xl">({username})</span>}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">{friendsCount} người bạn</p>
               </div>

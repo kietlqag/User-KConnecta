@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router@7.1.3';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Clock, 
@@ -14,20 +14,30 @@ import {
   HelpCircle,
   Moon
 } from 'lucide-react';
+import { authService } from '@/services/authService';
 
 export const LeftSidebar = () => {
   const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+  const fullName = currentUser?.fullName || 'Quang Khải';
+  const username = currentUser?.username || 'quockiet';
+  const initials = fullName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   const menuItems = [
     {
       id: 'profile',
       icon: (
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white">
-          <span className="text-sm font-semibold">QK</span>
+          <span className="text-sm font-semibold">{initials}</span>
         </div>
       ),
-      label: 'Quang Khải',
-      href: '/profile',
+      label: fullName,
+      href: `/profile/${username}`,
     },
     {
       id: 'friends',

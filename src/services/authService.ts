@@ -39,6 +39,9 @@ export const authService = {
   login: (email: string, password: string) =>
     api.post<AuthUser>('/auth/login', { email, password }),
 
+  changePassword: (email: string, oldPassword: string, newPassword: string) =>
+    api.post<{ message: string }>('/auth/change-password', { email, oldPassword, newPassword }),
+
   googleLogin: (idToken: string) =>
     api.post<AuthUser>('/auth/google-login', { idToken }),
 

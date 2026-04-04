@@ -8,13 +8,16 @@ import {
   FriendsPreview,
   PhotosPreview,
 } from '../components';
+import { authService } from '@/services/authService';
 
 export function ProfilePage() {
-  // Mock user data
+  const currentUser = authService.getCurrentUser();
+  
+  // Mock user data merged with current user data
   const userProfile = {
-    id: 'quockiet',
-    name: 'Quốc Kiệt',
-    username: 'Kian',
+    id: currentUser?.username || 'quockiet',
+    fullName: currentUser?.fullName || 'Quốc Kiệt',
+    username: currentUser?.username || 'Kian',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
     coverPhoto: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
     friendsCount: 253,
@@ -60,7 +63,7 @@ export function ProfilePage() {
   const posts = [
     {
       id: '1',
-      userName: userProfile.name,
+      userName: userProfile.fullName,
       userAvatar: userProfile.avatar,
       timestamp: '21 tháng 1 lúc 14:16',
       content:
@@ -73,7 +76,7 @@ export function ProfilePage() {
     },
     {
       id: '2',
-      userName: userProfile.name,
+      userName: userProfile.fullName,
       userAvatar: userProfile.avatar,
       timestamp: '15 tháng 1 lúc 09:30',
       content: 'Một ngày làm việc mới đầy năng lượng! 💪',
@@ -93,7 +96,7 @@ export function ProfilePage() {
         <ProfileHeader
           coverPhoto={userProfile.coverPhoto}
           avatar={userProfile.avatar}
-          name={userProfile.name}
+          fullName={userProfile.fullName}
           username={userProfile.username}
           friendsCount={userProfile.friendsCount}
           location={userProfile.location}
@@ -101,7 +104,7 @@ export function ProfilePage() {
           isOwnProfile={true}
         />
 
-        <ProfileTabs username={userProfile.id} />
+        <ProfileTabs username={userProfile.id} isOwnProfile={true} />
 
         <div className="max-w-[1320px] mx-auto px-4 py-4 lg:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.55fr)] gap-4 lg:gap-6 items-start">
@@ -125,7 +128,7 @@ export function ProfilePage() {
             </div>
 
             <div className="space-y-4 order-1 lg:order-2">
-              <ProfileCreatePost username={userProfile.name} />
+              <ProfileCreatePost username={userProfile.fullName} />
               <ProfilePosts posts={posts} />
             </div>
           </div>

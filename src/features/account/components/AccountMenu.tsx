@@ -1,6 +1,6 @@
 import { Settings, HelpCircle, AlertCircle, Moon, LogOut, ChevronRight } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router@7.1.3';
+import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 
@@ -44,6 +44,10 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
     navigate('/auth/login');
   };
 
+  const currentUser = authService.getCurrentUser();
+  const profileLink = `/profile/${currentUser?.username || 'quockiet'}`;
+  const fullName = currentUser?.fullName || 'Khang Nguyen';
+
   return (
     <div 
       ref={menuRef}
@@ -53,16 +57,16 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
       <div className="p-2 overflow-y-auto">
         {/* User Profile Section */}
         <Link
-          to="/profile"
+          to={profileLink}
           className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
           onClick={onClose}
         >
           <img
             src={avatarImage}
-            alt="Khang Nguyen"
+            alt={fullName}
             className="w-9 h-9 rounded-full object-cover"
           />
-          <span className="font-semibold text-gray-900">Khang Nguyen</span>
+          <span className="font-semibold text-gray-900">{fullName}</span>
         </Link>
 
         {/* View All Profiles Button */}
