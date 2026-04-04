@@ -1,0 +1,273 @@
+package project.kconnecta.user.backend.feature.post.service.impl;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import project.kconnecta.user.backend.exception.ResourceNotFoundException;
+import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.CreatePostMediaRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostMediaResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
+import project.kconnecta.user.backend.feature.post.entity.*;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.repository.*;
+import project.kconnecta.user.backend.feature.post.service.PostService;
+import project.kconnecta.user.backend.feature.user.entity.User;
+import project.kconnecta.user.backend.feature.user.repository.UserRepository;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class PostServiceImpl implements PostService {
+
+    private final PostRepository postRepository;
+    private final PostMediaRepository postMediaRepository;
+    private final PostAudienceExclusionRepository postAudienceExclusionRepository;
+    private final PostMentionRepository postMentionRepository;
+    private final PostReactionRepository postReactionRepository;
+    private final PostCommentRepository postCommentRepository;
+    private final PostShareRepository postShareRepository;
+    private final UserRepository userRepository;
+
+    @Override
+    public PostResponse createPost(CreatePostRequest request) {
+        User author = getUser(request.getAuthorId(), "Author not found");
+        List<CreatePostMediaRequest> mediaRequests = request.getMedia() == null ? Collections.emptyList() : request.getMedia();
+
+        if ((request.getContent() == null || request.getContent().isBlank()) && mediaRequests.isEmpty()) {
+            throw new ValidationException("Post must have content or media");
+        }
+
+        PostStatus status = request.getStatus() == null ? PostStatus.PUBLISHED : request.getStatus();
+        PostPrivacy privacy = request.getPrivacy() == null ? PostPrivacy.PUBLIC : request.getPrivacy();
+
+        if (status == PostStatus.SCHEDULED && request.getScheduledAt() == null) {
+            throw new ValidationException("scheduledAt is required when status is SCHEDULED");
+        }
+
+        if (privacy != PostPrivacy.FRIENDS_EXCEPT && request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
+            throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
+        }
+
+        Post post = Post.builder()
+                .author(author)
+                .content(trimToNull(request.getContent()))
+                .privacy(privacy)
+                .status(status)
+                .scheduledAt(request.getScheduledAt())
+                .publishedAt(status == PostStatus.PUBLISHED ? LocalDateTime.now() : null)
+                .locationText(trimToNull(request.getLocationText()))
+                .backgroundStyle(trimToNull(request.getBackgroundStyle()))
+                .promoted(Boolean.TRUE.equals(request.getPromoted()))
+                .build();
+
+        attachMedia(post, mediaRequests);
+        attachExcludedUsers(post, request.getExcludedUserIds());
+        attachTaggedUsers(post, request.getTaggedUserIds());
+
+        return mapToResponse(postRepository.save(post));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostResponse> getAllPosts() {
+        return postRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PostResponse getPostById(UUID id) {
+        return mapToResponse(getPost(id));
+    }
+
+    @Override
+    public PostReactionResponse addReaction(UUID postId, AddReactionRequest request) {
+        Post post = getPost(postId);
+        User user = getUser(request.getUserId(), "Reaction user not found");
+
+        PostReaction reaction = postReactionRepository.findByPostIdAndUserId(postId, request.getUserId())
+                .orElseGet(() -> PostReaction.builder().post(post).user(user).build());
+        reaction.setReactionType(request.getReactionType());
+
+        PostReaction saved = postReactionRepository.save(reaction);
+        return PostReactionResponse.builder()
+                .id(saved.getId())
+                .postId(saved.getPost().getId())
+                .userId(saved.getUser().getId())
+                .reactionType(saved.getReactionType())
+                .createdAt(saved.getCreatedAt())
+                .updatedAt(saved.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    public PostCommentResponse addComment(UUID postId, CreateCommentRequest request) {
+        Post post = getPost(postId);
+        User user = getUser(request.getUserId(), "Comment user not found");
+
+        PostComment parentComment = null;
+        if (request.getParentCommentId() != null) {
+            parentComment = postCommentRepository.findById(request.getParentCommentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent comment not found"));
+            if (!parentComment.getPost().getId().equals(postId)) {
+                throw new ValidationException("Parent comment does not belong to this post");
+            }
+        }
+
+        PostComment saved = postCommentRepository.save(PostComment.builder()
+                .post(post)
+                .user(user)
+                .parentComment(parentComment)
+                .content(request.getContent().trim())
+                .build());
+
+        return PostCommentResponse.builder()
+                .id(saved.getId())
+                .postId(saved.getPost().getId())
+                .userId(saved.getUser().getId())
+                .userFullName(saved.getUser().getFullName())
+                .parentCommentId(saved.getParentComment() == null ? null : saved.getParentComment().getId())
+                .content(saved.getContent())
+                .createdAt(saved.getCreatedAt())
+                .updatedAt(saved.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    public PostShareResponse sharePost(UUID postId, SharePostRequest request) {
+        Post post = getPost(postId);
+        User user = getUser(request.getUserId(), "Share user not found");
+
+        PostShare saved = postShareRepository.save(PostShare.builder()
+                .post(post)
+                .user(user)
+                .sharedContent(trimToNull(request.getSharedContent()))
+                .build());
+
+        return PostShareResponse.builder()
+                .id(saved.getId())
+                .postId(saved.getPost().getId())
+                .userId(saved.getUser().getId())
+                .userFullName(saved.getUser().getFullName())
+                .sharedContent(saved.getSharedContent())
+                .createdAt(saved.getCreatedAt())
+                .build();
+    }
+
+    private void attachMedia(Post post, List<CreatePostMediaRequest> mediaRequests) {
+        for (int i = 0; i < mediaRequests.size(); i++) {
+            CreatePostMediaRequest mediaRequest = mediaRequests.get(i);
+            post.getMedia().add(PostMedia.builder()
+                    .post(post)
+                    .mediaType(mediaRequest.getMediaType())
+                    .fileUrl(mediaRequest.getFileUrl().trim())
+                    .thumbnailUrl(trimToNull(mediaRequest.getThumbnailUrl()))
+                    .sortOrder(mediaRequest.getSortOrder() == null ? i : mediaRequest.getSortOrder())
+                    .build());
+        }
+    }
+
+    private void attachExcludedUsers(Post post, List<UUID> excludedUserIds) {
+        if (excludedUserIds == null) {
+            return;
+        }
+        for (UUID excludedUserId : excludedUserIds.stream().distinct().toList()) {
+            post.getAudienceExclusions().add(PostAudienceExclusion.builder()
+                    .post(post)
+                    .excludedUser(getUser(excludedUserId, "Excluded user not found"))
+                    .build());
+        }
+    }
+
+    private void attachTaggedUsers(Post post, List<UUID> taggedUserIds) {
+        if (taggedUserIds == null) {
+            return;
+        }
+        for (UUID taggedUserId : taggedUserIds.stream().distinct().toList()) {
+            post.getMentions().add(PostMention.builder()
+                    .post(post)
+                    .taggedUser(getUser(taggedUserId, "Tagged user not found"))
+                    .build());
+        }
+    }
+
+    private Post getPost(UUID postId) {
+        return postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + postId));
+    }
+
+    private User getUser(UUID userId, String message) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(message + ": " + userId));
+    }
+
+    private PostResponse mapToResponse(Post post) {
+        List<PostMediaResponse> media = postMediaRepository.findAllByPostIdOrderBySortOrderAsc(post.getId())
+                .stream()
+                .map(item -> PostMediaResponse.builder()
+                        .id(item.getId())
+                        .mediaType(item.getMediaType())
+                        .fileUrl(item.getFileUrl())
+                        .thumbnailUrl(item.getThumbnailUrl())
+                        .sortOrder(item.getSortOrder())
+                        .build())
+                .toList();
+
+        List<UUID> excludedUserIds = postAudienceExclusionRepository.findAllByPostId(post.getId())
+                .stream()
+                .map(item -> item.getExcludedUser().getId())
+                .toList();
+
+        List<UUID> taggedUserIds = postMentionRepository.findAllByPostId(post.getId())
+                .stream()
+                .map(item -> item.getTaggedUser().getId())
+                .toList();
+
+        return PostResponse.builder()
+                .id(post.getId())
+                .authorId(post.getAuthor().getId())
+                .authorUsername(post.getAuthor().getUsername())
+                .authorFullName(post.getAuthor().getFullName())
+                .content(post.getContent())
+                .privacy(post.getPrivacy())
+                .status(post.getStatus())
+                .scheduledAt(post.getScheduledAt())
+                .publishedAt(post.getPublishedAt())
+                .locationText(post.getLocationText())
+                .backgroundStyle(post.getBackgroundStyle())
+                .promoted(post.isPromoted())
+                .reactionCount(postReactionRepository.countByPostId(post.getId()))
+                .commentCount(postCommentRepository.countByPostId(post.getId()))
+                .shareCount(postShareRepository.countByPostId(post.getId()))
+                .media(media)
+                .excludedUserIds(excludedUserIds)
+                .taggedUserIds(taggedUserIds)
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .build();
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+}
