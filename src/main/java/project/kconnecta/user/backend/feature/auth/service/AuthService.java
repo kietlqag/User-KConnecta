@@ -11,6 +11,7 @@ import project.kconnecta.user.backend.common.enums.AccountStatus;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.feature.auth.dto.request.ChangePasswordRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.LoginRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.RegisterRequest;
 import project.kconnecta.user.backend.feature.auth.dto.response.AuthResponse;
@@ -41,6 +42,18 @@ public class AuthService {
 
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
+
+    public void changePassword(ChangePasswordRequest request) {
+        Account account = accountRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
+
+        if (!passwordEncoder.matches(request.getOldPassword(), account.getPasswordHash())) {
+            throw new ValidationException("Mat khau cu khong dung");
+        }
+
+        account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        accountRepository.save(account);
+    }
 
     public AuthResponse register(RegisterRequest request) {
         Account account = accountRepository.findByEmail(request.getEmail())

@@ -57,4 +57,10 @@ public class AuthController {
         authService.resetPassword(request);
         return ResponseEntity.ok(Map.of("message", "Dat lai mat khau thanh cong"));
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(request);
+        return ResponseEntity.ok(Map.of("message", "Doi mat khau thanh cong"));
+    }
 }
