@@ -33,8 +33,14 @@ export function ProfileTabs({ username, isOwnProfile: isOwnProfileProp }: Profil
     { label: 'Giới thiệu', path: `/profile/${username}/about` },
     { label: 'Bạn bè', path: `/profile/${username}/friends` },
     { label: 'Ảnh', path: `/profile/${username}/photos` },
-    { label: 'Video', path: `/profile/${username}/videos` },
-    { label: 'Xem thêm', path: `/profile/${username}/more` },
+    { label: 'Reels', path: `/profile/${username}/reels` },
+  ];
+
+  const moreTabs = [
+    { label: 'Thích', path: `/profile/${username}/likes` },
+    { label: 'Clip', path: `/profile/${username}/clips` },
+    { label: 'Sự kiện', path: `/profile/${username}/events` },
+    { label: 'Câu hỏi', path: `/profile/${username}/questions` },
   ];
 
   const isActive = (path: string) => {
@@ -62,6 +68,31 @@ export function ProfileTabs({ username, isOwnProfile: isOwnProfileProp }: Profil
                 {tab.label}
               </Link>
             ))}
+
+            {/* More Dropdown Tab */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={`flex items-center gap-1 px-4 py-4 font-medium transition-colors whitespace-nowrap outline-none ${
+                    moreTabs.some(tab => isActive(tab.path))
+                      ? 'text-emerald-600 dark:text-emerald-400 border-b-4 border-emerald-600 dark:border-emerald-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg'
+                  }`}
+                >
+                  Xem thêm
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {moreTabs.map((tab) => (
+                  <DropdownMenuItem key={tab.path} asChild>
+                    <Link to={tab.path} className="w-full cursor-pointer">
+                      {tab.label}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </nav>
 
           <DropdownMenu>

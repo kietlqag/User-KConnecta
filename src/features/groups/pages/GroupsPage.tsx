@@ -1,5 +1,6 @@
 import { Post } from '../../../components/shared';
-import { GroupsHeader, GroupsLeftSidebar } from '../components';
+import { Header } from '../../home/components/Header';
+import { GroupsLeftSidebar } from '../components';
 import { Group, GroupPost } from '../types/groups.types';
 import exampleImage from 'figma:asset/74ca37b8e92fb5ac2cb3fb9e7b8898e6ebafb02b.png';
 
@@ -138,7 +139,7 @@ const mockGroupPosts: GroupPost[] = [
 export const GroupsPage = () => {
   return (
     <div className="min-h-screen bg-gray-100">
-      <GroupsHeader />
+      <Header />
       
       <div className="max-w-[1920px] mx-auto">
         <div className="flex pt-14">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { WatchHeader, ReelPlayer, ReelNavigation } from '../components';
+import { Header } from '../../home/components/Header';
+import { ReelPlayer, ReelNavigation } from '../components';
 import { Reel, ReelComment } from '../types/watch.types';
 import reelImage from 'figma:asset/31a71acf4ef3fd228bada3a6b0e3bebe7634528f.png';
 import reelImage2 from 'figma:asset/c7a8ce7ba396d53b08d61568bbcaba1bfb78fb98.png';
@@ -190,7 +191,7 @@ export const WatchPage = () => {
 
   return (
     <div className="min-h-screen bg-black">
-      <WatchHeader />
+      <Header />
       
       {/* Main Content Area */}
       <div className="pt-14 h-screen relative">

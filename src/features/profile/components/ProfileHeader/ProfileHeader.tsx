@@ -1,4 +1,5 @@
-import { Camera, Plus, Edit, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { useState } from 'react';
+import { Camera, Plus, Edit, ChevronDown, MoreHorizontal, X } from 'lucide-react';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 
 interface ProfileHeaderProps {
@@ -24,15 +25,47 @@ export function ProfileHeader({
   isOwnProfile = true,
   onEditClick,
 }: ProfileHeaderProps) {
+  const [viewerImage, setViewerImage] = useState<string | null>(null);
+
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      {/* Image Viewer Lightbox */}
+      {viewerImage && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-4 lg:p-12 animate-in fade-in duration-200"
+          onClick={() => setViewerImage(null)}
+        >
+          <button 
+            className="absolute top-4 right-4 p-2 bg-gray-800/50 hover:bg-gray-700/50 rounded-full text-white transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setViewerImage(null);
+            }}
+          >
+            <X className="w-8 h-8" />
+          </button>
+          
+          <div className="relative max-w-full max-h-full">
+            <img 
+              src={viewerImage} 
+              alt="Full size" 
+              className="max-w-full max-h-[90vh] object-contain shadow-2xl rounded-sm"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="max-w-[1100px] mx-auto">
         {/* Cover Photo Area */}
-        <div className="relative h-[250px] md:h-[350px] w-full rounded-b-xl overflow-hidden bg-gray-200 dark:bg-gray-700 group/cover">
+        <div 
+          className="relative h-[250px] md:h-[350px] w-full rounded-b-xl overflow-hidden bg-gray-200 dark:bg-gray-700 group/cover cursor-pointer"
+          onClick={() => setViewerImage(coverPhoto)}
+        >
           <ImageWithFallback
             src={coverPhoto}
             alt="Cover photo"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-[1.02]"
           />
           {isOwnProfile && (
             <button 
@@ -49,12 +82,15 @@ export function ProfileHeader({
         <div className="px-4 pb-4 pt-1">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-4 -mt-8 md:-mt-12 lg:-mt-16">
             {/* Avatar - overlaps cover photo */}
-            <div className="relative group/avatar flex-shrink-0">
+            <div 
+              className="relative group/avatar flex-shrink-0 cursor-pointer"
+              onClick={() => setViewerImage(avatar)}
+            >
               <div className="w-[168px] h-[168px] rounded-full border-[5px] border-white dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
                 <ImageWithFallback
                   src={avatar}
                   alt={fullName}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-opacity duration-200 group-hover/avatar:opacity-90"
                 />
               </div>
               {isOwnProfile && (

@@ -1,4 +1,5 @@
-import { MarketplaceHeader, MarketplaceSidebar, ProductCard } from '../components';
+import { Header } from '../../home/components/Header';
+import { MarketplaceSidebar, ProductCard } from '../components';
 import { MarketplaceProduct } from '../types/marketplace.types';
 import marketplaceImage from 'figma:asset/5b4cb3f200da18be30ba3014c937ebcb48fc745c.png';
 
@@ -134,8 +135,7 @@ const mockProducts: MarketplaceProduct[] = [
 export const MarketplacePage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <MarketplaceHeader />
+      <Header />
 
       {/* Main Layout */}
       <div className="flex pt-14">
