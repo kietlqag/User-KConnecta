@@ -26,27 +26,27 @@ export const router = createBrowserRouter([
         Component: HomePage,
       },
       {
-        path: '/profile/:username?',
+        path: '/profile/:userId?',
         Component: ProfilePage,
       },
       {
-        path: '/profile/:username/friends',
+        path: '/profile/:userId/friends',
         Component: ProfileFriendsPage,
       },
       {
-        path: '/profile/:username/photos',
+        path: '/profile/:userId/photos',
         Component: ProfilePhotosPage,
       },
       {
-        path: '/profile/:username/about',
+        path: '/profile/:userId/about',
         Component: ProfileAboutPage,
       },
       {
-        path: '/profile/:username/reels',
+        path: '/profile/:userId/reels',
         Component: ProfileReelsPage,
       },
       {
-        path: '/profile/:username/likes',
+        path: '/profile/:userId/likes',
         Component: ProfileLikesPage,
       },
       {

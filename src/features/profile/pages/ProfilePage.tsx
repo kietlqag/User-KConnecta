@@ -1,42 +1,133 @@
+import * as React from 'react';
 import { useParams } from 'react-router-dom';
+import { authService, type AuthUser } from '@/services/authService';
+import { postService, type PostResponse, type ReactionType } from '@/services/postService';
 import { Header } from '../../home/components/Header';
 import {
-  ProfileHeader,
-  ProfileTabs,
-  ProfileIntro,
-  ProfileCreatePost,
-  ProfilePosts,
+  EditProfileDialog,
   FriendsPreview,
   PhotosPreview,
-  EditProfileDialog,
+  ProfileCreatePost,
+  ProfileHeader,
+  ProfileIntro,
+  ProfilePosts,
+  ProfileTabs,
 } from '../components';
-import { authService } from '@/services/authService';
-import * as React from 'react';
+
+interface ProfileFeedPost {
+  id: string;
+  userName: string;
+  userAvatar: string;
+  timestamp: string;
+  content: string;
+  image?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  isLiked?: boolean;
+  currentUserReactionType?: ReactionType | null;
+}
+
+const DEFAULT_AVATAR =
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300';
+
+const DEFAULT_COVER =
+  'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200';
+
+function normalizeId(value?: string | null) {
+  return value?.trim().toLowerCase() ?? '';
+}
+
+function formatPostTimestamp(dateString?: string | null) {
+  if (!dateString) {
+    return '';
+  }
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+}
+
+function mapPostToProfileFeed(post: PostResponse, avatarUrl: string): ProfileFeedPost {
+  const firstImage = (post.media ?? []).find((item) => item.mediaType === 'IMAGE');
+
+  return {
+    id: post.id,
+    userName: post.authorFullName,
+    userAvatar: avatarUrl,
+    timestamp: formatPostTimestamp(post.publishedAt || post.createdAt),
+    content: post.content,
+    image: firstImage?.mediaUrl,
+    likes: post.reactionCount,
+    comments: post.commentCount,
+    shares: post.shareCount,
+    isLiked: !!post.currentUserReactionType,
+    currentUserReactionType: post.currentUserReactionType,
+  };
+}
 
 export function ProfilePage() {
-  const { username: urlUsername } = useParams();
+  const { userId: routeUserId } = useParams();
   const currentUser = authService.getCurrentUser();
-  const username = urlUsername || currentUser?.username || '';
-  const isOwnProfile = currentUser?.username === username;
+  const userId = routeUserId || currentUser?.id || '';
+  const isOwnProfile = currentUser?.id === userId;
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
-  const [profile, setProfile] = React.useState<any>(null);
+  const [profile, setProfile] = React.useState<AuthUser | null>(null);
+  const [posts, setPosts] = React.useState<ProfileFeedPost[]>([]);
   const [loading, setLoading] = React.useState(true);
+
+  const fetchProfilePosts = React.useCallback(
+    async (profileData?: AuthUser | null) => {
+      try {
+        const allPosts = await postService.getAllPosts(currentUser?.id);
+        const targetAuthorId = normalizeId(profileData?.id || userId);
+
+        const profilePosts = allPosts
+          .filter((post) => normalizeId(post.authorId) === targetAuthorId)
+          .sort((left, right) => {
+            const leftTime = new Date(left.publishedAt || left.createdAt).getTime();
+            const rightTime = new Date(right.publishedAt || right.createdAt).getTime();
+            return rightTime - leftTime;
+          })
+          .map((post) => mapPostToProfileFeed(post, profileData?.avatarUrl || DEFAULT_AVATAR));
+
+        setPosts(profilePosts);
+      } catch (error) {
+        console.error('Error fetching profile posts:', error);
+        setPosts([]);
+      }
+    },
+    [userId],
+  );
 
   React.useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await authService.getUserByUsername(username);
+        const response = await authService.getUserById(userId);
         setProfile(response);
-        
-        // If it's our own profile, update the local storage to keep it fresh
+
         if (isOwnProfile) {
           authService.saveCurrentUser(response);
         }
+
+        await fetchProfilePosts(response);
       } catch (error) {
         console.error('Error fetching profile:', error);
-        // Fallback for own profile if API fails
-        if (isOwnProfile) {
+
+        if (isOwnProfile && currentUser) {
           setProfile(currentUser);
+          await fetchProfilePosts(currentUser);
+        } else {
+          setPosts([]);
         }
       } finally {
         setLoading(false);
@@ -44,14 +135,14 @@ export function ProfilePage() {
     };
 
     fetchProfile();
-  }, [username, isOwnProfile]);
+  }, [currentUser, fetchProfilePosts, isOwnProfile, userId]);
 
   const userProfile = {
-    id: profile?.id || username,
+    id: profile?.id || userId,
     fullName: profile?.fullName || 'Quốc Kiệt',
-    username: profile?.username || username,
-    avatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
-    coverPhoto: profile?.coverPhotoUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
+    username: profile?.username || currentUser?.username || '',
+    avatar: profile?.avatarUrl || DEFAULT_AVATAR,
+    coverPhoto: profile?.coverPhotoUrl || DEFAULT_COVER,
     friendsCount: 253,
     location: profile?.location || 'Thành phố Hồ Chí Minh',
     school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
@@ -98,34 +189,6 @@ export function ProfilePage() {
     { id: '12', url: 'https://images.unsplash.com/photo-1531545514256-b1400bc00f31?w=400' },
   ];
 
-  const posts = [
-    {
-      id: '1',
-      userName: userProfile.fullName,
-      userAvatar: userProfile.avatar,
-      timestamp: '21 tháng 1 lúc 14:16',
-      content:
-        'Đồng chí Tô Lâm, Tổng Bí thư Ban Chấp hành Trung ương Đảng khoá XIII được tức tin nhiệm giữ chức Tổng Bí thư Ban Chấp hành Trung ương Đảng khoá XIV',
-      image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800',
-      likes: 42,
-      comments: 8,
-      shares: 3,
-      isLiked: false,
-    },
-    {
-      id: '2',
-      userName: userProfile.fullName,
-      userAvatar: userProfile.avatar,
-      timestamp: '15 tháng 1 lúc 09:30',
-      content: 'Một ngày làm việc mới đầy năng lượng! 💪',
-      image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800',
-      likes: 128,
-      comments: 24,
-      shares: 5,
-      isLiked: true,
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Header />
@@ -143,7 +206,7 @@ export function ProfilePage() {
           onEditClick={() => setIsEditDialogOpen(true)}
         />
 
-        <ProfileTabs username={username} isOwnProfile={isOwnProfile} />
+        <ProfileTabs userId={userProfile.id} isOwnProfile={isOwnProfile} />
 
         <div className="max-w-[1320px] mx-auto px-4 py-4 lg:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.55fr)] gap-4 lg:gap-6 items-start">
@@ -155,21 +218,24 @@ export function ProfilePage() {
                 relationship={userProfile.relationship}
                 school={userProfile.school}
                 featuredPhotos={featuredPhotos}
-                isOwnProfile={true}
+                isOwnProfile={isOwnProfile}
                 onEditClick={() => setIsEditDialogOpen(true)}
               />
 
               <FriendsPreview
-                username={username}
+                userId={userProfile.id}
                 friendsCount={userProfile.friendsCount}
                 friends={friends}
               />
 
-              <PhotosPreview username={username} photos={photos} />
+              <PhotosPreview userId={userProfile.id} photos={photos} />
             </div>
 
             <div className="space-y-4 order-1 lg:order-2">
-              <ProfileCreatePost username={userProfile.fullName} />
+              <ProfileCreatePost
+                username={userProfile.fullName}
+                onPostCreated={() => fetchProfilePosts(profile || currentUser)}
+              />
               <ProfilePosts posts={posts} />
             </div>
           </div>

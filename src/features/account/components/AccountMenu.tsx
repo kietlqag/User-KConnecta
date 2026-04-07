@@ -45,7 +45,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
   };
 
   const currentUser = authService.getCurrentUser();
-  const profileLink = currentUser ? `/profile/${currentUser.username}` : '/auth/login';
+  const profileLink = currentUser ? `/profile/${currentUser.id}` : '/auth/login';
   const fullName = currentUser?.fullName || 'Người dùng';
   const avatarUrl = currentUser?.avatarUrl || avatarImage;
 

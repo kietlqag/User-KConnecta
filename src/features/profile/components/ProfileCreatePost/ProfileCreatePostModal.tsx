@@ -20,12 +20,14 @@ interface ProfileCreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
   username: string;
+  onPostCreated?: () => void;
 }
 
 export function ProfileCreatePostModal({
   isOpen,
   onClose,
   username,
+  onPostCreated,
 }: ProfileCreatePostModalProps) {
   const [postContent, setPostContent] = useState('');
   const [privacy, setPrivacy] = useState('public');
@@ -78,6 +80,7 @@ export function ProfileCreatePostModal({
       toast.success('Đăng bài thành công');
       setPostContent('');
       setShowSettingsModal(false);
+      onPostCreated?.();
       onClose();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể đăng bài');

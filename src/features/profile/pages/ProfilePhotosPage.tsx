@@ -7,17 +7,17 @@ import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
 import { authService } from '@/services/authService';
 
 export function ProfilePhotosPage() {
-  const { username: urlUsername } = useParams();
+  const { userId: routeUserId } = useParams();
   const currentUser = authService.getCurrentUser();
-  const username = urlUsername || currentUser?.username || '';
-  const isOwnProfile = currentUser?.username === username;
+  const userId = routeUserId || currentUser?.id || '';
+  const isOwnProfile = currentUser?.id === userId;
   const [profile, setProfile] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await authService.getUserByUsername(username);
+        const response = await authService.getUserById(userId);
         setProfile(response);
         if (isOwnProfile) {
           authService.saveCurrentUser(response);
@@ -33,12 +33,12 @@ export function ProfilePhotosPage() {
     };
 
     fetchProfile();
-  }, [username, isOwnProfile]);
+  }, [userId, isOwnProfile]);
 
   const userProfile = {
-    id: profile?.id || username,
+    id: profile?.id || userId,
     fullName: profile?.fullName || 'Quốc Kiệt',
-    username: profile?.username || username,
+    username: profile?.username || currentUser?.username || '',
     avatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
     coverPhoto: profile?.coverPhotoUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
     friendsCount: 253,
@@ -81,7 +81,7 @@ export function ProfilePhotosPage() {
           isOwnProfile={isOwnProfile}
         />
 
-        <ProfileTabs username={username} isOwnProfile={isOwnProfile} />
+        <ProfileTabs userId={userProfile.id} isOwnProfile={isOwnProfile} />
 
         <div className="max-w-[1100px] mx-auto px-4 py-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">

@@ -1,4 +1,4 @@
-import { Link } from 'react-router@7.1.3';
+import { Link } from 'react-router-dom';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 
 interface Photo {
@@ -7,21 +7,21 @@ interface Photo {
 }
 
 interface PhotosPreviewProps {
-  username: string;
+  userId: string;
   photos: Photo[];
 }
 
-export function PhotosPreview({ username, photos }: PhotosPreviewProps) {
+export function PhotosPreview({ userId, photos }: PhotosPreviewProps) {
   const displayPhotos = photos.slice(0, 9);
   const remainingCount = Math.max(0, photos.length - 9);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-      <div className="flex items-center justify-between mb-4">
+    <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Ảnh</h2>
         <Link
-          to={`/profile/${username}/photos`}
-          className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+          to={`/profile/${userId}/photos`}
+          className="font-medium text-emerald-600 hover:underline dark:text-emerald-400"
         >
           Xem tất cả ảnh
         </Link>
@@ -31,16 +31,16 @@ export function PhotosPreview({ username, photos }: PhotosPreviewProps) {
         {displayPhotos.map((photo, index) => (
           <div
             key={photo.id}
-            className="relative aspect-square rounded-lg overflow-hidden group cursor-pointer"
+            className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg"
           >
             <ImageWithFallback
               src={photo.url}
               alt={`Photo ${index + 1}`}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              className="h-full w-full object-cover transition-transform group-hover:scale-105"
             />
             {index === 8 && remainingCount > 0 && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                <span className="text-white text-2xl font-bold">+{remainingCount}</span>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                <span className="text-2xl font-bold text-white">+{remainingCount}</span>
               </div>
             )}
           </div>

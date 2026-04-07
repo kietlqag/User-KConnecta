@@ -5,9 +5,10 @@ import { ProfileCreatePostModal } from './ProfileCreatePostModal';
 
 interface ProfileCreatePostProps {
   username: string;
+  onPostCreated?: () => void;
 }
 
-export function ProfileCreatePost({ username }: ProfileCreatePostProps) {
+export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePostProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -65,6 +66,7 @@ export function ProfileCreatePost({ username }: ProfileCreatePostProps) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         username={username}
+        onPostCreated={onPostCreated}
       />
     </>
   );

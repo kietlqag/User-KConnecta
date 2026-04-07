@@ -41,6 +41,8 @@ export interface RegisterData {
 export const authService = {
   updateProfile: (id: string, data: Partial<RegisterData>) =>
     api.put<AuthUser>(`/users/${id}`, data),
+  getUserById: (id: string) =>
+    api.get<AuthUser>(`/users/${id}`),
   getUserByUsername: (username: string) =>
     api.get<AuthUser>(`/users/username/${username}`),
   checkEmailExists: (email: string) =>

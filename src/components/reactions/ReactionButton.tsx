@@ -1,34 +1,49 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { ThumbsUp } from 'lucide-react';
+import type { ReactionType } from '@/services/postService';
 
-interface Reaction {
+export interface ReactionOption {
+  type: ReactionType;
   emoji: string;
   label: string;
   color: string;
 }
 
-const reactions: Reaction[] = [
-  { emoji: '👍', label: 'Like', color: 'text-blue-500' },
-  { emoji: '❤️', label: 'Love', color: 'text-red-500' },
-  { emoji: '😂', label: 'Haha', color: 'text-yellow-500' },
-  { emoji: '😮', label: 'Wow', color: 'text-yellow-500' },
-  { emoji: '😢', label: 'Sad', color: 'text-yellow-500' },
-  { emoji: '😡', label: 'Angry', color: 'text-orange-500' },
+export const reactions: ReactionOption[] = [
+  { type: 'LIKE', emoji: '👍', label: 'Thích', color: 'text-blue-500' },
+  { type: 'LOVE', emoji: '❤️', label: 'Yêu thích', color: 'text-red-500' },
+  { type: 'HAHA', emoji: '😂', label: 'Haha', color: 'text-yellow-500' },
+  { type: 'WOW', emoji: '😮', label: 'Wow', color: 'text-yellow-500' },
+  { type: 'SAD', emoji: '😢', label: 'Buồn', color: 'text-yellow-500' },
+  { type: 'ANGRY', emoji: '😡', label: 'Phẫn nộ', color: 'text-orange-500' },
 ];
 
 interface ReactionButtonProps {
-  initialReaction?: Reaction | null;
-  onReactionChange?: (reaction: Reaction | null) => void;
+  initialReaction?: ReactionOption | null;
+  onReactionChange?: (reaction: ReactionOption) => void;
+  className?: string;
+  buttonClassName?: string;
+  disabled?: boolean;
 }
 
-export function ReactionButton({ initialReaction = null, onReactionChange }: ReactionButtonProps) {
-  const [selectedReaction, setSelectedReaction] = useState<Reaction | null>(initialReaction);
+export function ReactionButton({
+  initialReaction = null,
+  onReactionChange,
+  className = '',
+  buttonClassName = '',
+  disabled = false,
+}: ReactionButtonProps) {
+  const [selectedReaction, setSelectedReaction] = useState<ReactionOption | null>(initialReaction);
   const [showReactions, setShowReactions] = useState(false);
   const [hoveredReaction, setHoveredReaction] = useState<number | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSelectedReaction(initialReaction);
+  }, [initialReaction]);
 
   const handleMouseEnter = () => {
+    if (disabled) return;
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
@@ -42,26 +57,15 @@ export function ReactionButton({ initialReaction = null, onReactionChange }: Rea
     }, 300);
   };
 
-  const handleReactionClick = (reaction: Reaction) => {
-    if (selectedReaction?.emoji === reaction.emoji) {
-      setSelectedReaction(null);
-      onReactionChange?.(null);
-    } else {
-      setSelectedReaction(reaction);
-      onReactionChange?.(reaction);
-    }
+  const applyReaction = (reaction: ReactionOption) => {
+    setSelectedReaction(reaction);
+    onReactionChange?.(reaction);
     setShowReactions(false);
   };
 
   const handleButtonClick = () => {
-    if (!selectedReaction) {
-      const likeReaction = reactions[0];
-      setSelectedReaction(likeReaction);
-      onReactionChange?.(likeReaction);
-    } else {
-      setSelectedReaction(null);
-      onReactionChange?.(null);
-    }
+    if (disabled) return;
+    applyReaction(selectedReaction ?? reactions[0]);
   };
 
   useEffect(() => {
@@ -74,12 +78,10 @@ export function ReactionButton({ initialReaction = null, onReactionChange }: Rea
 
   return (
     <div
-      ref={containerRef}
-      className="relative inline-block"
+      className={`relative ${className}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Reaction Bar */}
       <div
         className={`absolute bottom-full left-0 mb-2 transition-all duration-200 ease-out ${
           showReactions
@@ -90,8 +92,8 @@ export function ReactionButton({ initialReaction = null, onReactionChange }: Rea
         <div className="bg-white rounded-full shadow-lg border border-gray-200 px-2 py-2 flex items-center gap-1">
           {reactions.map((reaction, index) => (
             <button
-              key={reaction.label}
-              onClick={() => handleReactionClick(reaction)}
+              key={reaction.type}
+              onClick={() => applyReaction(reaction)}
               onMouseEnter={() => setHoveredReaction(index)}
               onMouseLeave={() => setHoveredReaction(null)}
               className={`text-2xl transition-all duration-150 ease-out hover:scale-125 ${
@@ -99,6 +101,7 @@ export function ReactionButton({ initialReaction = null, onReactionChange }: Rea
               }`}
               style={{ padding: '4px' }}
               aria-label={reaction.label}
+              type="button"
             >
               {reaction.emoji}
             </button>
@@ -106,12 +109,13 @@ export function ReactionButton({ initialReaction = null, onReactionChange }: Rea
         </div>
       </div>
 
-      {/* Like Button */}
       <button
         onClick={handleButtonClick}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors ${
+        disabled={disabled}
+        className={`flex w-full items-center justify-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-60 ${
           selectedReaction ? selectedReaction.color : 'text-gray-600'
-        }`}
+        } ${buttonClassName}`}
+        type="button"
       >
         {selectedReaction ? (
           <>

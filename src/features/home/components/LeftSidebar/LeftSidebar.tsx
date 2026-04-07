@@ -20,7 +20,7 @@ export const LeftSidebar = () => {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
   const fullName = currentUser?.fullName || 'Người dùng';
-  const username = currentUser?.username;
+  const userId = currentUser?.id;
   const avatarUrl = currentUser?.avatarUrl;
   const initials = fullName
     .split(' ')
@@ -42,7 +42,7 @@ export const LeftSidebar = () => {
         </div>
       ),
       label: fullName,
-      href: `/profile/${username}`,
+      href: `/profile/${userId}`,
     },
     {
       id: 'friends',

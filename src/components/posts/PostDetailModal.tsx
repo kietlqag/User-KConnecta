@@ -1,4 +1,13 @@
+import { useEffect, useState } from 'react';
 import { X, ThumbsUp, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
+import { toast } from 'sonner';
+import { authService } from '@/services/authService';
+import { postService } from '@/services/postService';
+import {
+  getActiveReactions,
+  getTotalReactionCount,
+  type ReactionCountMap,
+} from '@/components/reactions';
 import { CommentSection } from './CommentSection';
 
 interface Post {
@@ -14,115 +23,187 @@ interface Post {
   comments?: number;
   shares?: number;
   image?: string;
+  reactionCounts?: ReactionCountMap;
 }
 
 interface PostDetailModalProps {
   post: Post;
   isOpen: boolean;
   onClose: () => void;
+  onCommentAdded?: () => void;
+  onCommentCountChange?: (count: number) => void;
+  onShareAdded?: () => void;
 }
 
-export function PostDetailModal({ post, isOpen, onClose }: PostDetailModalProps) {
+export function PostDetailModal({
+  post,
+  isOpen,
+  onClose,
+  onCommentAdded,
+  onCommentCountChange,
+  onShareAdded,
+}: PostDetailModalProps) {
+  const [commentCount, setCommentCount] = useState(post.comments || 0);
+  const [shareCount, setShareCount] = useState(post.shares || 0);
+  const [isSharing, setIsSharing] = useState(false);
+
+  const reactionCounts = post.reactionCounts || {
+    LIKE: post.likes || 0,
+    LOVE: 0,
+    HAHA: 0,
+    WOW: 0,
+    SAD: 0,
+    ANGRY: 0,
+  };
+  const activeReactions = getActiveReactions(reactionCounts);
+  const totalReactionCount = getTotalReactionCount(reactionCounts);
+
+  useEffect(() => {
+    setCommentCount(post.comments || 0);
+    setShareCount(post.shares || 0);
+  }, [post.comments, post.shares, post.id]);
+
   if (!isOpen) return null;
 
+  const handleShare = async () => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      toast.error('Bạn cần đăng nhập để chia sẻ');
+      return;
+    }
+
+    try {
+      setIsSharing(true);
+      await postService.sharePost(post.id, { userId: currentUser.id });
+      setShareCount((prev) => prev + 1);
+      onShareAdded?.();
+      toast.success('Đã chia sẻ bài viết');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể chia sẻ bài viết');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleCommentAdded = () => {
+    setCommentCount((prev) => {
+      const nextCount = prev + 1;
+      onCommentCountChange?.(nextCount);
+      return nextCount;
+    });
+    onCommentAdded?.();
+  };
+
+  const handleCommentsLoaded = (count: number) => {
+    setCommentCount(count);
+    onCommentCountChange?.(count);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <h2 className="font-semibold text-lg">Bài viết của {post.author.name}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+          <h2 className="text-lg font-semibold">Bài viết của {post.author.name}</h2>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 transition-colors hover:bg-gray-300"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* Content - Scrollable */}
         <div className="flex-1 overflow-y-auto">
-          {/* Post Header */}
-          <div className="px-4 pt-4 pb-3">
+          <div className="px-4 pb-3 pt-4">
             <div className="flex items-start justify-between">
               <div className="flex gap-3">
                 <img
                   src={post.author.avatar}
                   alt={post.author.name}
-                  className="w-10 h-10 rounded-full object-cover"
+                  className="h-10 w-10 rounded-full object-cover"
                 />
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-[15px]">{post.author.name}</h3>
+                    <h3 className="text-[15px] font-semibold">{post.author.name}</h3>
                     {post.author.status && (
                       <div className="flex items-center gap-1">
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
                         <span className="text-xs text-gray-600">{post.author.status}</span>
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-gray-500 text-xs">
+                  <div className="flex items-center gap-1 text-xs text-gray-500">
                     <span>{post.timestamp}</span>
                     <span>·</span>
                     <span>🌐</span>
                   </div>
                 </div>
               </div>
-              <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <MoreHorizontal className="w-5 h-5 text-gray-600" />
+              <button className="rounded-full p-2 transition-colors hover:bg-gray-100">
+                <MoreHorizontal className="h-5 w-5 text-gray-600" />
               </button>
             </div>
           </div>
 
-          {/* Post Content */}
           <div className="px-4 pb-3">
-            <p className="text-[15px] whitespace-pre-wrap leading-relaxed">{post.content}</p>
+            <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{post.content}</p>
           </div>
 
-          {/* Post Image if exists */}
           {post.image && (
             <div className="mb-3">
-              <img
-                src={post.image}
-                alt="Post content"
-                className="w-full object-cover"
-              />
+              <img src={post.image} alt="Post content" className="w-full object-cover" />
             </div>
           )}
 
-          {/* Reactions Count */}
-          <div className="px-4 py-2 flex items-center justify-between text-sm text-gray-600 border-b border-gray-200">
+          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 text-sm text-gray-600">
             <div className="flex items-center gap-1">
-              <div className="flex items-center -space-x-1">
-                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white">
-                  <ThumbsUp className="w-3 h-3 text-white fill-white" />
-                </div>
-              </div>
-              <span className="ml-1">{post.likes || 0}</span>
+              {totalReactionCount > 0 && (
+                <>
+                  <div className="flex items-center -space-x-1">
+                    {activeReactions.slice(0, 3).map((reaction) => (
+                      <span
+                        key={reaction.type}
+                        className="flex h-4 w-4 items-center justify-center rounded-full border border-white bg-white text-sm leading-none"
+                      >
+                        {reaction.emoji}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="ml-1">{totalReactionCount}</span>
+                </>
+              )}
             </div>
             <div className="flex gap-3">
-              <span>{post.comments || 0} bình luận</span>
-              <span>{post.shares || 0} chia sẻ</span>
+              <span>{commentCount} bình luận</span>
+              <span>{shareCount} chia sẻ</span>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="px-4 py-1 border-b border-gray-200 grid grid-cols-3 gap-1">
-            <button className="flex items-center justify-center gap-2 py-2 rounded-md hover:bg-gray-100 transition-colors">
-              <ThumbsUp className="w-5 h-5 text-gray-600" />
-              <span className="font-semibold text-gray-600 text-[15px]">Thích</span>
+          <div className="grid grid-cols-3 gap-1 border-b border-gray-200 px-4 py-1">
+            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100">
+              <ThumbsUp className="h-5 w-5 text-gray-600" />
+              <span className="text-[15px] font-semibold text-gray-600">Thích</span>
             </button>
-            <button className="flex items-center justify-center gap-2 py-2 rounded-md hover:bg-gray-100 transition-colors">
-              <MessageCircle className="w-5 h-5 text-gray-600" />
-              <span className="font-semibold text-gray-600 text-[15px]">Bình luận</span>
+            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100">
+              <MessageCircle className="h-5 w-5 text-gray-600" />
+              <span className="text-[15px] font-semibold text-gray-600">Bình luận</span>
             </button>
-            <button className="flex items-center justify-center gap-2 py-2 rounded-md hover:bg-gray-100 transition-colors">
-              <Share2 className="w-5 h-5 text-gray-600" />
-              <span className="font-semibold text-gray-600 text-[15px]">Chia sẻ</span>
+            <button
+              onClick={handleShare}
+              disabled={isSharing}
+              className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 disabled:opacity-60"
+            >
+              <Share2 className="h-5 w-5 text-gray-600" />
+              <span className="text-[15px] font-semibold text-gray-600">
+                {isSharing ? 'Đang chia sẻ...' : 'Chia sẻ'}
+              </span>
             </button>
           </div>
 
-          {/* Comments Section */}
-          <CommentSection postId={post.id} />
+          <CommentSection
+            postId={post.id}
+            onCommentAdded={handleCommentAdded}
+            onCommentsLoaded={handleCommentsLoaded}
+          />
         </div>
       </div>
     </div>

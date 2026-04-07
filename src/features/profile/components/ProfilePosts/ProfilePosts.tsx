@@ -1,4 +1,5 @@
 import { Filter, Grid3x3 } from 'lucide-react';
+import type { ReactionType } from '@/services/postService';
 import { Post } from '../../../home/components/Post';
 
 interface ProfilePostsProps {
@@ -13,6 +14,7 @@ interface ProfilePostsProps {
     comments: number;
     shares: number;
     isLiked?: boolean;
+    currentUserReactionType?: ReactionType | null;
   }>;
 }
 

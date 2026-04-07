@@ -32,15 +32,13 @@ export function CommentInput({
 
   return (
     <div className="flex items-start gap-2">
-      {/* User Avatar */}
       <img
         src={userAvatar}
         alt="Your avatar"
         className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1"
       />
 
-      {/* Input Container */}
-      <div className="flex-1 relative">
+      <div className="flex-1">
         <div
           className={`bg-gray-100 rounded-full flex items-center px-3 py-2 transition-all ${
             isFocused ? 'ring-1 ring-emerald-500' : ''
@@ -58,8 +56,7 @@ export function CommentInput({
             className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-gray-500"
           />
 
-          {/* Action Icons */}
-          <div className="flex items-center gap-1 ml-2">
+          <div className="ml-2 flex items-center gap-1">
             <button
               type="button"
               className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
@@ -88,19 +85,18 @@ export function CommentInput({
             >
               <FileImage className="w-5 h-5 text-gray-600" />
             </button>
+            {content.trim() && (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="p-1.5 hover:bg-emerald-50 rounded-full text-emerald-600 hover:text-emerald-700 transition-colors"
+                title="Gửi"
+              >
+                <Send className="w-5 h-5 fill-current" />
+              </button>
+            )}
           </div>
         </div>
-
-        {/* Send Button (appears when typing) */}
-        {content.trim() && (
-          <button
-            onClick={handleSubmit}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-600 hover:text-emerald-700 transition-colors"
-            title="Gửi"
-          >
-            <Send className="w-5 h-5 fill-current" />
-          </button>
-        )}
       </div>
     </div>
   );
