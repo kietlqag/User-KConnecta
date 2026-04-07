@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +26,7 @@ public class PostResponse {
     private String backgroundStyle;
     private boolean promoted;
     private long reactionCount;
+    private ReactionType currentUserReactionType;
     private long commentCount;
     private long shareCount;
     private List<PostMediaResponse> media;

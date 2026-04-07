@@ -10,6 +10,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequ
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
@@ -31,13 +32,18 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PostResponse>> getAllPosts() {
-        return ResponseEntity.ok(postService.getAllPosts());
+    public ResponseEntity<List<PostResponse>> getAllPosts(
+            @RequestParam(required = false) UUID currentUserId
+    ) {
+        return ResponseEntity.ok(postService.getAllPosts(currentUserId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PostResponse> getPostById(@PathVariable UUID id) {
-        return ResponseEntity.ok(postService.getPostById(id));
+    public ResponseEntity<PostResponse> getPostById(
+            @PathVariable UUID id,
+            @RequestParam(required = false) UUID currentUserId
+    ) {
+        return ResponseEntity.ok(postService.getPostById(id, currentUserId));
     }
 
     @PostMapping("/{id}/reactions")
@@ -46,6 +52,16 @@ public class PostController {
             @Valid @RequestBody AddReactionRequest request
     ) {
         return ResponseEntity.ok(postService.addReaction(id, request));
+    }
+
+    @GetMapping("/{id}/reactions/details")
+    public ResponseEntity<PostReactionDetailsResponse> getReactionDetails(@PathVariable UUID id) {
+        return ResponseEntity.ok(postService.getReactionDetails(id));
+    }
+
+    @GetMapping("/{id}/comments")
+    public ResponseEntity<List<PostCommentResponse>> getComments(@PathVariable UUID id) {
+        return ResponseEntity.ok(postService.getComments(id));
     }
 
     @PostMapping("/{id}/comments")

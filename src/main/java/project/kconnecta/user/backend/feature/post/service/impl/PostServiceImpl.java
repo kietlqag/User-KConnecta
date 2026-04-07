@@ -12,21 +12,28 @@ import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostMediaResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReactionCountResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReactionUserResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.entity.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
 import project.kconnecta.user.backend.feature.post.repository.*;
 import project.kconnecta.user.backend.feature.post.service.PostService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -78,22 +85,22 @@ public class PostServiceImpl implements PostService {
         attachExcludedUsers(post, request.getExcludedUserIds());
         attachTaggedUsers(post, request.getTaggedUserIds());
 
-        return mapToResponse(postRepository.save(post));
+        return mapToResponse(postRepository.save(post), request.getAuthorId());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<PostResponse> getAllPosts() {
+    public List<PostResponse> getAllPosts(UUID currentUserId) {
         return postRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
-                .map(this::mapToResponse)
+                .map(post -> mapToResponse(post, currentUserId))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PostResponse getPostById(UUID id) {
-        return mapToResponse(getPost(id));
+    public PostResponse getPostById(UUID id, UUID currentUserId) {
+        return mapToResponse(getPost(id), currentUserId);
     }
 
     @Override
@@ -114,6 +121,62 @@ public class PostServiceImpl implements PostService {
                 .createdAt(saved.getCreatedAt())
                 .updatedAt(saved.getUpdatedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PostReactionDetailsResponse getReactionDetails(UUID postId) {
+        Post post = getPost(postId);
+        List<PostReaction> reactions = postReactionRepository.findAllByPostIdOrderByCreatedAtDesc(postId);
+
+        var countByType = reactions.stream()
+                .collect(Collectors.groupingBy(PostReaction::getReactionType, Collectors.counting()));
+
+        List<PostReactionCountResponse> counts = Arrays.stream(ReactionType.values())
+                .map(reactionType -> PostReactionCountResponse.builder()
+                        .reactionType(reactionType)
+                        .count(countByType.getOrDefault(reactionType, 0L))
+                        .build())
+                .toList();
+
+        List<PostReactionUserResponse> users = reactions.stream()
+                .map(reaction -> PostReactionUserResponse.builder()
+                        .userId(reaction.getUser().getId())
+                        .username(reaction.getUser().getUsername())
+                        .fullName(reaction.getUser().getFullName())
+                        .avatarUrl(reaction.getUser().getAvatarUrl())
+                        .reactionType(reaction.getReactionType())
+                        .reactedAt(reaction.getCreatedAt())
+                        .build())
+                .toList();
+
+        return PostReactionDetailsResponse.builder()
+                .postId(post.getId())
+                .totalCount(reactions.size())
+                .counts(counts)
+                .reactions(users)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostCommentResponse> getComments(UUID postId) {
+        getPost(postId);
+        return postCommentRepository.findAllByPostIdOrderByCreatedAtAsc(postId)
+                .stream()
+                .map(comment -> PostCommentResponse.builder()
+                        .id(comment.getId())
+                        .postId(comment.getPost().getId())
+                        .userId(comment.getUser().getId())
+                        .username(comment.getUser().getUsername())
+                        .userFullName(comment.getUser().getFullName())
+                        .userAvatarUrl(comment.getUser().getAvatarUrl())
+                        .parentCommentId(comment.getParentComment() == null ? null : comment.getParentComment().getId())
+                        .content(comment.getContent())
+                        .createdAt(comment.getCreatedAt())
+                        .updatedAt(comment.getUpdatedAt())
+                        .build())
+                .toList();
     }
 
     @Override
@@ -141,7 +204,9 @@ public class PostServiceImpl implements PostService {
                 .id(saved.getId())
                 .postId(saved.getPost().getId())
                 .userId(saved.getUser().getId())
+                .username(saved.getUser().getUsername())
                 .userFullName(saved.getUser().getFullName())
+                .userAvatarUrl(saved.getUser().getAvatarUrl())
                 .parentCommentId(saved.getParentComment() == null ? null : saved.getParentComment().getId())
                 .content(saved.getContent())
                 .createdAt(saved.getCreatedAt())
@@ -217,7 +282,7 @@ public class PostServiceImpl implements PostService {
                 .orElseThrow(() -> new ResourceNotFoundException(message + ": " + userId));
     }
 
-    private PostResponse mapToResponse(Post post) {
+    private PostResponse mapToResponse(Post post, UUID currentUserId) {
         List<PostMediaResponse> media = postMediaRepository.findAllByPostIdOrderBySortOrderAsc(post.getId())
                 .stream()
                 .map(item -> PostMediaResponse.builder()
@@ -239,6 +304,12 @@ public class PostServiceImpl implements PostService {
                 .map(item -> item.getTaggedUser().getId())
                 .toList();
 
+        var currentUserReactionType = currentUserId == null
+                ? null
+                : postReactionRepository.findByPostIdAndUserId(post.getId(), currentUserId)
+                .map(PostReaction::getReactionType)
+                .orElse(null);
+
         return PostResponse.builder()
                 .id(post.getId())
                 .authorId(post.getAuthor().getId())
@@ -253,6 +324,7 @@ public class PostServiceImpl implements PostService {
                 .backgroundStyle(post.getBackgroundStyle())
                 .promoted(post.isPromoted())
                 .reactionCount(postReactionRepository.countByPostId(post.getId()))
+                .currentUserReactionType(currentUserReactionType)
                 .commentCount(postCommentRepository.countByPostId(post.getId()))
                 .shareCount(postShareRepository.countByPostId(post.getId()))
                 .media(media)
