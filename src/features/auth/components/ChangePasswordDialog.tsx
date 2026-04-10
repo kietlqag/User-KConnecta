@@ -1,11 +1,11 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { Lock, Loader2, Eye, EyeOff } from 'lucide-react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
@@ -26,6 +26,9 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
   const [showNewPassword, setShowNewPassword] = React.useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
+  const currentUser = authService.getCurrentUser();
+  const isSettingPassword = !currentUser?.hasPassword;
+
   const {
     register,
     handleSubmit,
@@ -43,7 +46,6 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
   const newPassword = watch('newPassword');
 
   const onSubmit = async (data: any) => {
-    const currentUser = authService.getCurrentUser();
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để thực hiện thao tác này');
       return;
@@ -51,12 +53,19 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
 
     setIsLoading(true);
     try {
-      await authService.changePassword(currentUser.email, data.oldPassword, data.newPassword);
-      toast.success('Đổi mật khẩu thành công');
+      if (isSettingPassword) {
+        await authService.setPassword(currentUser.email, data.newPassword);
+        // Update stored user so hasPassword becomes true
+        authService.saveCurrentUser({ ...currentUser, hasPassword: true });
+        toast.success('Đặt mật khẩu thành công');
+      } else {
+        await authService.changePassword(currentUser.email, data.oldPassword, data.newPassword);
+        toast.success('Đổi mật khẩu thành công');
+      }
       onOpenChange(false);
       reset();
     } catch (error: any) {
-      toast.error(error.message || 'Có lỗi xảy ra khi đổi mật khẩu');
+      toast.error(error.message || 'Có lỗi xảy ra');
     } finally {
       setIsLoading(false);
     }
@@ -74,38 +83,42 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="w-5 h-5 text-emerald-600" />
-            Đổi mật khẩu
+            {isSettingPassword ? 'Đặt mật khẩu' : 'Đổi mật khẩu'}
           </DialogTitle>
           <DialogDescription>
-            Nhập mật khẩu hiện tại và mật khẩu mới của bạn bên dưới.
+            {isSettingPassword
+              ? 'Tài khoản của bạn chưa có mật khẩu. Đặt mật khẩu để đăng nhập bằng email.'
+              : 'Nhập mật khẩu hiện tại và mật khẩu mới của bạn bên dưới.'}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="oldPassword">Mật khẩu hiện tại</Label>
-            <div className="relative">
-              <Input
-                id="oldPassword"
-                type={showOldPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                className="pr-10"
-                {...register('oldPassword', { 
-                  required: 'Mật khẩu hiện tại là bắt buộc' 
-                })}
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                onClick={() => setShowOldPassword(!showOldPassword)}
-              >
-                {showOldPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+          {!isSettingPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="oldPassword">Mật khẩu hiện tại</Label>
+              <div className="relative">
+                <Input
+                  id="oldPassword"
+                  type={showOldPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  className="pr-10"
+                  {...register('oldPassword', {
+                    required: 'Mật khẩu hiện tại là bắt buộc'
+                  })}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  onClick={() => setShowOldPassword(!showOldPassword)}
+                >
+                  {showOldPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {errors.oldPassword && (
+                <p className="text-xs text-red-500">{errors.oldPassword.message}</p>
+              )}
             </div>
-            {errors.oldPassword && (
-              <p className="text-xs text-red-500">{errors.oldPassword.message}</p>
-            )}
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="newPassword">Mật khẩu mới</Label>
@@ -115,7 +128,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                 type={showNewPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 className="pr-10"
-                {...register('newPassword', { 
+                {...register('newPassword', {
                   required: 'Mật khẩu mới là bắt buộc',
                   minLength: {
                     value: 8,
@@ -144,9 +157,9 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                 type={showConfirmPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 className="pr-10"
-                {...register('confirmPassword', { 
+                {...register('confirmPassword', {
                   required: 'Vui lòng xác nhận mật khẩu mới',
-                  validate: (value) => 
+                  validate: (value) =>
                     value === newPassword || 'Mật khẩu xác nhận không khớp'
                 })}
               />
@@ -172,8 +185,8 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
             >
               Hủy
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="bg-emerald-600 hover:bg-emerald-700"
               disabled={isLoading}
             >
@@ -183,7 +196,7 @@ export function ChangePasswordDialog({ open, onOpenChange }: ChangePasswordDialo
                   Đang xử lý...
                 </>
               ) : (
-                'Đổi mật khẩu'
+                isSettingPassword ? 'Đặt mật khẩu' : 'Đổi mật khẩu'
               )}
             </Button>
           </DialogFooter>

@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Camera, Plus, Edit, ChevronDown, MoreHorizontal, X } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Camera, Plus, Edit, ChevronDown, MoreHorizontal, X, Loader2 } from 'lucide-react';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
+import { toast } from 'sonner';
 
 interface ProfileHeaderProps {
   coverPhoto: string;
@@ -12,6 +13,8 @@ interface ProfileHeaderProps {
   school?: string;
   isOwnProfile?: boolean;
   onEditClick?: () => void;
+  onAvatarUpload?: (file: File) => Promise<void>;
+  onCoverUpload?: (file: File) => Promise<void>;
 }
 
 export function ProfileHeader({
@@ -24,8 +27,52 @@ export function ProfileHeader({
   school,
   isOwnProfile = true,
   onEditClick,
+  onAvatarUpload,
+  onCoverUpload,
 }: ProfileHeaderProps) {
   const [viewerImage, setViewerImage] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onAvatarUpload) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước ảnh không được vượt quá 5MB');
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      await onAvatarUpload(file);
+      toast.success('Cập nhật ảnh đại diện thành công');
+    } catch {
+      toast.error('Cập nhật ảnh đại diện thất bại');
+    } finally {
+      setAvatarUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onCoverUpload) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước ảnh không được vượt quá 5MB');
+      return;
+    }
+    setCoverUploading(true);
+    try {
+      await onCoverUpload(file);
+      toast.success('Cập nhật ảnh bìa thành công');
+    } catch {
+      toast.error('Cập nhật ảnh bìa thất bại');
+    } finally {
+      setCoverUploading(false);
+      e.target.value = '';
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
@@ -58,7 +105,7 @@ export function ProfileHeader({
 
       <div className="max-w-[1100px] mx-auto">
         {/* Cover Photo Area */}
-        <div 
+        <div
           className="relative h-[250px] md:h-[350px] w-full rounded-b-xl overflow-hidden bg-gray-200 dark:bg-gray-700 group/cover cursor-pointer"
           onClick={() => setViewerImage(coverPhoto)}
         >
@@ -68,13 +115,28 @@ export function ProfileHeader({
             className="w-full h-full object-cover transition-transform duration-500 group-hover/cover:scale-[1.02]"
           />
           {isOwnProfile && (
-            <button 
-              onClick={onEditClick}
-              className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 text-gray-900 rounded-lg shadow-sm font-medium transition-colors text-sm"
-            >
-              <Camera className="w-4 h-4" />
-              Chỉnh sửa ảnh bìa
-            </button>
+            <>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverFileChange}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button
+                onClick={(e) => { e.stopPropagation(); coverInputRef.current?.click(); }}
+                disabled={coverUploading}
+                className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 text-gray-900 rounded-lg shadow-sm font-medium transition-colors text-sm cursor-pointer disabled:opacity-70"
+              >
+                {coverUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Camera className="w-4 h-4" />
+                )}
+                {coverUploading ? 'Đang tải...' : 'Chỉnh sửa ảnh bìa'}
+              </button>
+            </>
           )}
         </div>
 
@@ -82,24 +144,41 @@ export function ProfileHeader({
         <div className="px-4 pb-4 pt-1">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-4 -mt-8 md:-mt-12 lg:-mt-16">
             {/* Avatar - overlaps cover photo */}
-            <div 
+            <div
               className="relative group/avatar flex-shrink-0 cursor-pointer"
               onClick={() => setViewerImage(avatar)}
             >
               <div className="w-[168px] h-[168px] rounded-full border-[5px] border-white dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
-                <ImageWithFallback
-                  src={avatar}
-                  alt={fullName}
-                  className="w-full h-full object-cover transition-opacity duration-200 group-hover/avatar:opacity-90"
-                />
+                {avatarUploading ? (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+                    <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+                  </div>
+                ) : (
+                  <ImageWithFallback
+                    src={avatar}
+                    alt={fullName}
+                    className="w-full h-full object-cover transition-opacity duration-200 group-hover/avatar:opacity-90"
+                  />
+                )}
               </div>
               {isOwnProfile && (
-                <button 
-                  onClick={onEditClick}
-                  className="absolute bottom-3 right-3 w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-full flex items-center justify-center transition-colors border-2 border-white dark:border-gray-800 shadow-sm"
-                >
-                  <Camera className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                </button>
+                <>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarFileChange}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); avatarInputRef.current?.click(); }}
+                    disabled={avatarUploading}
+                    className="absolute bottom-3 right-3 w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-full flex items-center justify-center transition-colors border-2 border-white dark:border-gray-800 shadow-sm cursor-pointer disabled:opacity-70"
+                  >
+                    <Camera className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                  </button>
+                </>
               )}
             </div>
 

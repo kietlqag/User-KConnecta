@@ -70,7 +70,7 @@ export const FriendCard = ({
             onAddFriend && (
               <button
                 onClick={() => onAddFriend(friend.id)}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
                 Thêm bạn bè

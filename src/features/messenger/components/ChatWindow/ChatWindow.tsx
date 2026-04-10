@@ -1,86 +1,47 @@
 import { useState, useRef, useEffect } from 'react';
-import { Phone, Video, Minus, X, Smile, Image as ImageIcon, Mic, Sticker, FileImage, Send, ArrowLeft, Info } from 'lucide-react';
+import {
+  Phone, Video, Minus, X, Smile, Image as ImageIcon,
+  Mic, Sticker, FileImage, Send, ArrowLeft, Info, Wifi, WifiOff,
+} from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { MessageBubble } from '../MessageBubble';
 
 interface ChatWindowProps {
   user: ChatUser;
+  messages: Message[];
+  loading?: boolean;
+  connected: boolean;
+  onSendMessage: (content: string) => void;
+  onReactMessage?: (messageId: string, emoji: string) => void;
   onClose: () => void;
   onMinimize?: () => void;
   fullScreen?: boolean;
 }
 
-const mockMessages: Message[] = [
-  {
-    id: '1',
-    senderId: 'other',
-    text: 'Bạn chỉ cần tải vpn về và chuyển sang turkey',
-    timestamp: new Date(Date.now() - 7200000),
-    isOwn: false,
-  },
-  {
-    id: '2',
-    senderId: 'other',
-    text: 'Sau đấy là nhập key 1 phát ăn ngay nha 😍😍😍',
-    timestamp: new Date(Date.now() - 7100000),
-    isOwn: false,
-  },
-  {
-    id: '3',
-    senderId: 'me',
-    text: 'oke đã thành công shop uy tín quá 😘',
-    timestamp: new Date(Date.now() - 3600000),
-    isOwn: true,
-  },
-  {
-    id: '4',
-    senderId: 'other',
-    text: 'Hi',
-    timestamp: new Date(Date.now() - 600000),
-    isOwn: false,
-  },
-  {
-    id: '5',
-    senderId: 'other',
-    text: 'Cảm ơn bạn nhé!',
-    timestamp: new Date(Date.now() - 400000),
-    isOwn: false,
-  },
-  {
-    id: '6',
-    senderId: 'other',
-    text: 'Chúc bạn buổi tối vui vẻ.',
-    timestamp: new Date(Date.now() - 300000),
-    isOwn: false,
-  },
-];
-
-export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindowProps) => {
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+export const ChatWindow = ({
+  user,
+  messages,
+  loading = false,
+  connected,
+  onSendMessage,
+  onReactMessage,
+  onClose,
+  onMinimize,
+  fullScreen,
+}: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSend = () => {
-    if (inputText.trim()) {
-      const newMessage: Message = {
-        id: Date.now().toString(),
-        senderId: 'me',
-        text: inputText,
-        timestamp: new Date(),
-        isOwn: true,
-      };
-      setMessages([...messages, newMessage]);
-      setInputText('');
-    }
+    const text = inputText.trim();
+    if (!text || !connected) return;
+    onSendMessage(text);
+    setInputText('');
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -91,27 +52,17 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
   };
 
   const handleReact = (messageId: string, emoji: string) => {
-    setMessages(messages.map(msg => {
-      if (msg.id === messageId) {
-        // Nếu emoji rỗng (từ MessageBubble khi click lại reaction đang có) thì xóa hết reactions
-        if (emoji === '') {
-          return {
-            ...msg,
-            reactions: [],
-          };
-        }
-        // Nếu có emoji mới thì thay thế toàn bộ reactions bằng emoji mới (chỉ giữ 1 reaction)
-        return {
-          ...msg,
-          reactions: [emoji],
-        };
-      }
-      return msg;
-    }));
+    onReactMessage?.(messageId, emoji);
   };
 
   return (
-    <div className={`${fullScreen ? 'w-full h-full flex flex-col' : 'fixed bottom-0 right-6 w-[360px] h-[520px] rounded-t-xl shadow-2xl animate-in slide-in-from-bottom-4'} bg-white flex flex-col z-50`}>
+    <div
+      className={`${
+        fullScreen
+          ? 'w-full h-full flex flex-col'
+          : 'fixed bottom-0 right-6 w-[360px] h-[520px] rounded-t-xl shadow-2xl animate-in slide-in-from-bottom-4 z-50'
+      } bg-white flex flex-col`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-3">
@@ -126,7 +77,7 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
           )}
           <div className="relative">
             <img
-              src={user.avatar}
+              src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
               alt={user.name}
               className="w-10 h-10 rounded-full object-cover"
             />
@@ -143,7 +94,14 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
         </div>
 
         {/* Action Icons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* Connection status */}
+          <span title={connected ? 'Đã kết nối' : 'Mất kết nối'}>
+            {connected
+              ? <Wifi className="w-4 h-4 text-green-500" />
+              : <WifiOff className="w-4 h-4 text-red-400" />
+            }
+          </span>
           <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Gọi thoại">
             <Phone className="w-4 h-4 text-blue-600" />
           </button>
@@ -151,7 +109,7 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
             <Video className="w-4 h-4 text-blue-600" />
           </button>
           {fullScreen && (
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Thông tin cuộc trò chuyện">
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Thông tin">
               <Info className="w-4 h-4 text-blue-600" />
             </button>
           )}
@@ -177,44 +135,50 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
       </div>
 
       {/* Messages Area */}
-      <div className={`flex-1 overflow-y-auto px-4 py-3 space-y-1 ${fullScreen ? 'max-w-3xl mx-auto w-full' : ''}`}>
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            onReact={handleReact}
-          />
-        ))}
+      <div
+        className={`flex-1 overflow-y-auto px-4 py-3 space-y-1 ${
+          fullScreen ? 'max-w-3xl mx-auto w-full' : ''
+        }`}
+      >
+        {loading ? (
+          <div className="flex items-center justify-center h-full gap-2 text-gray-400 text-sm">
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+            </svg>
+            Đang tải tin nhắn...
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+            Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!
+          </div>
+        ) : (
+          messages.map((message) => (
+            <MessageBubble key={message.id} message={message} onReact={handleReact} />
+          ))
+        )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className={`px-3 py-3 border-t border-gray-200 bg-white ${fullScreen ? 'max-w-3xl mx-auto w-full' : ''}`}>
+      <div
+        className={`px-3 py-3 border-t border-gray-200 bg-white ${
+          fullScreen ? 'max-w-3xl mx-auto w-full' : ''
+        }`}
+      >
         <div className="flex items-center gap-2">
           {/* Left Action Icons */}
           <div className="flex items-center gap-1">
-            <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title="Gửi tin nhắn thoại"
-            >
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Gửi tin nhắn thoại">
               <Mic className="w-5 h-5 text-blue-600" />
             </button>
-            <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title="Đính kèm ảnh"
-            >
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Đính kèm ảnh">
               <ImageIcon className="w-5 h-5 text-blue-600" />
             </button>
-            <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title="Chọn sticker"
-            >
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Chọn sticker">
               <Sticker className="w-5 h-5 text-blue-600" />
             </button>
-            <button
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title="Chọn GIF"
-            >
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Chọn GIF">
               <FileImage className="w-5 h-5 text-blue-600" />
             </button>
           </div>
@@ -226,8 +190,9 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Aa"
-              className="w-full px-3 py-2 pr-11 bg-gray-100 rounded-full outline-none focus:bg-gray-200 transition-colors text-sm"
+              placeholder={connected ? 'Aa' : 'Đang kết nối...'}
+              disabled={!connected}
+              className="w-full px-3 py-2 pr-11 bg-gray-100 rounded-full outline-none focus:bg-gray-200 transition-colors text-sm disabled:opacity-50"
             />
             <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -241,9 +206,9 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
           {/* Send Button */}
           <button
             onClick={handleSend}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() || !connected}
             className={`p-2 rounded-full transition-all ${
-              inputText.trim()
+              inputText.trim() && connected
                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
                 : 'text-blue-400 cursor-not-allowed'
             }`}
@@ -253,7 +218,7 @@ export const ChatWindow = ({ user, onClose, onMinimize, fullScreen }: ChatWindow
           </button>
         </div>
 
-        {/* Emoji Picker (Simple) */}
+        {/* Emoji Picker */}
         {showEmojiPicker && (
           <div className="absolute bottom-full right-4 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 p-3 grid grid-cols-8 gap-2 z-10">
             {['😀', '😂', '😍', '🥰', '😊', '😎', '🤔', '😢', '😭', '😡', '👍', '❤️', '🔥', '✨', '🎉', '👏'].map((emoji) => (

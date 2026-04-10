@@ -1,149 +1,246 @@
-import { useState } from 'react';
-import { Search, MoreHorizontal, Edit } from 'lucide-react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Search, MoreHorizontal, Edit, RefreshCw } from 'lucide-react';
 import { Header } from '../../home/components';
 import { ConversationItem } from '../components';
 import { ChatWindow } from '../components';
 import { Conversation, MessengerFilter } from '../types/messenger.types';
-import { ChatUser } from '../types/message.types';
-
-const mockConversations: Conversation[] = [
-  {
-    id: '1',
-    user: {
-      name: 'Hoàng Ngọc Lam',
-      avatar: 'https://images.unsplash.com/photo-1649589244330-09ca58e4fa64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMHBvcnRyYWl0fGVufDF8fHx8MTc2OTU4OTUwM3ww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    lastMessage: 'Bạn và Lam thấn với là bạn bè · 7 năm',
-    timestamp: '7 năm',
-    isUnread: false,
-  },
-  {
-    id: '2',
-    user: {
-      name: 'Nhiên Nguyệt',
-      avatar: 'https://images.unsplash.com/photo-1581065178026-390bc4e78dad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhc2lhbiUyMHdvbWFuJTIwcHJvZmVzc2lvbmFsfGVufDF8fHx8MTc2OTYyMjU4N3ww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    lastMessage: 'Các bạn hiền đã được kết nối...',
-    timestamp: '7 năm',
-    isUnread: true,
-  },
-  {
-    id: '3',
-    user: {
-      name: 'Tran Nga',
-      avatar: 'https://images.unsplash.com/photo-1705830337569-47a1a24b0ad2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMHdvbWFuJTIwaGVhZHNob3R8ZW58MXx8fHwxNzY5NjY3ODc2fDA&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    lastMessage: 'Bạn và Tran thấn với là bạn bè',
-    timestamp: '7 năm',
-    isUnread: false,
-  },
-  {
-    id: '4',
-    user: {
-      name: 'Nguyễn Văn Minh',
-      avatar: 'https://images.unsplash.com/photo-1554765345-6ad6a5417cde?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3Njk1Njg5MTJ8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    lastMessage: 'Cảm ơn bạn nhiều! 👍',
-    timestamp: '2 giờ',
-    isUnread: true,
-  },
-  {
-    id: '5',
-    user: {
-      name: 'Mai Phương',
-      avatar: 'https://images.unsplash.com/photo-1649589244330-09ca58e4fa64?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMHBvcnRyYWl0fGVufDF8fHx8MTc2OTU4OTUwM3ww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    lastMessage: 'Phương đã gửi một file đính kèm...',
-    timestamp: '5 giờ',
-    isUnread: false,
-  },
-  {
-    id: '6',
-    user: {
-      name: 'Trần Đức Anh',
-      avatar: 'https://images.unsplash.com/photo-1734864489622-0406baee014f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhc2lhbiUyMG1hbiUyMHByb2Zlc3Npb25hbHxlbnwxfHx8fDE3Njk2MTc1OTF8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    lastMessage: 'Hẹn gặp lại bạn nhé!',
-    timestamp: '1 ngày',
-    isUnread: false,
-  },
-  {
-    id: '7',
-    user: {
-      name: 'Ng Phi Yen Nhii',
-      avatar: 'https://images.unsplash.com/photo-1581065178026-390bc4e78dad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhc2lhbiUyMHdvbWFuJTIwcHJvZmVzc2lvbmFsfGVufDF8fHx8MTc2OTYyMjU4N3ww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    lastMessage: 'Bạn và Yên Nhi đã là bạn...',
-    timestamp: '2 ngày',
-    isUnread: true,
-  },
-  {
-    id: '8',
-    user: {
-      name: 'Lê Hoàng Nam',
-      avatar: 'https://images.unsplash.com/photo-1622822923810-77dc32cff690?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMG1hbiUyMGhlYWRzaG90fGVufDF8fHx8MTc2OTY2Nzg3N3ww&ixlib=rb-4.1.0&q=80&w=1080',
-    },
-    lastMessage: 'Ok, tôi sẽ kiểm tra lại',
-    timestamp: '3 ngày',
-    isUnread: false,
-  },
-];
+import { ChatUser, Message, IncomingChatMessage } from '../types/message.types';
+import { useChatSocket } from '../hooks/useChatSocket';
+import { useFriendConversations } from '../hooks/useFriendConversations';
+import { authService } from '@/services/authService';
+import { chatService } from '@/services/chatService';
 
 export default function MessengerPage() {
-  const [activeFilter, setActiveFilter] = useState<MessengerFilter>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeChatUser, setActiveChatUser] = useState<ChatUser | null>(null);
+  const currentUser = authService.getCurrentUser();
 
+  // ─── Conversation list ────────────────────────────────────────────────────
+  const {
+    conversations: baseConversations,
+    loading: loadingConversations,
+    error: friendsError,
+    reload: loadFriends,
+  } = useFriendConversations();
+
+  // Real-time deltas: lastMessage, timestamp, isUnread — keyed by other user's ID
+  const [overrides, setOverrides] = useState<Record<string, Partial<Conversation>>>({});
+
+  const conversations: Conversation[] = baseConversations.map((c) => ({
+    ...c,
+    ...(overrides[c.user.id] ?? {}),
+  }));
+
+  // ─── Active conversation — persisted in URL (?with=<userId>) ─────────────
+  // Surviving navigate-away/back without touching global state or localStorage.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeChatUserId = searchParams.get('with');
+
+  // Derive the ChatUser object from the loaded conversations list.
+  // While baseConversations is still loading this returns null, which is fine —
+  // the loading skeleton will be shown.
+  const activeChatUser = useMemo((): ChatUser | null => {
+    if (!activeChatUserId) return null;
+    const conv = baseConversations.find((c) => c.user.id === activeChatUserId);
+    if (!conv) return null;
+    return {
+      id: conv.user.id,
+      name: conv.user.name,
+      avatar: conv.user.avatar,
+      isOnline: false,
+    };
+  }, [activeChatUserId, baseConversations]);
+
+  // ─── Messages — keyed by other user's ID ─────────────────────────────────
+  const [messagesByUser, setMessagesByUser] = useState<Record<string, Message[]>>({});
+  const [loadingMessages, setLoadingMessages] = useState(false);
+
+  // THE CORE FIX: fetch messages declaratively whenever the selected user changes.
+  // This runs on every mount (handles navigate-away/back) AND every conversation switch.
+  // No cache guard — always fetch fresh so newly-received messages are included.
+  useEffect(() => {
+    if (!activeChatUserId || !currentUser?.id) return;
+
+    let cancelled = false; // prevent setState on unmounted/stale effect
+
+    setLoadingMessages(true);
+    chatService
+      .getChatHistory(currentUser.id, activeChatUserId)
+      .then((history) => {
+        if (cancelled) return;
+        const myId = currentUser.id;
+        const msgs: Message[] = history.map((m) => ({
+          id: `${m.createdAt}-${m.senderId}`,
+          senderId: m.senderId,
+          text: m.content,
+          timestamp: new Date(m.createdAt),
+          isOwn: m.senderId === myId,
+        }));
+        setMessagesByUser((prev) => ({ ...prev, [activeChatUserId]: msgs }));
+
+        // Sync the last-message preview in the sidebar
+        if (msgs.length > 0) {
+          const last = msgs[msgs.length - 1];
+          setOverrides((prev) => ({
+            ...prev,
+            [activeChatUserId]: {
+              ...(prev[activeChatUserId] ?? {}),
+              lastMessage: last.text,
+              timestamp: last.timestamp.toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+            },
+          }));
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Leave existing messages in place; do not wipe them on error
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingMessages(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeChatUserId, currentUser?.id]); // re-runs on every conversation switch AND page remount
+
+  // ─── WebSocket ────────────────────────────────────────────────────────────
+  const handleIncomingMessage = useCallback(
+    (msg: IncomingChatMessage) => {
+      const myId = currentUser?.id;
+      const otherUserId = msg.senderId === myId ? msg.receiverId : msg.senderId;
+
+      const newMsg: Message = {
+        id: `${Date.now()}-${Math.random()}`,
+        senderId: msg.senderId,
+        text: msg.content,
+        timestamp: new Date(msg.createdAt),
+        isOwn: msg.senderId === myId,
+      };
+
+      setMessagesByUser((prev) => ({
+        ...prev,
+        [otherUserId]: [...(prev[otherUserId] ?? []), newMsg],
+      }));
+
+      setOverrides((prev) => ({
+        ...prev,
+        [otherUserId]: {
+          ...(prev[otherUserId] ?? {}),
+          lastMessage: msg.content,
+          timestamp: 'Vừa xong',
+          isUnread: activeChatUserId !== otherUserId,
+        },
+      }));
+    },
+    [currentUser?.id, activeChatUserId],
+  );
+
+  const { connected, sendMessage } = useChatSocket(currentUser?.token, handleIncomingMessage);
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────
+  const handleConversationClick = useCallback(
+    (conversation: Conversation) => {
+      const otherUserId = conversation.user.id;
+
+      // Write selected user into URL — survives page refresh and back-navigation
+      setSearchParams({ with: otherUserId });
+
+      // Mark as read in the overrides map
+      setOverrides((prev) => ({
+        ...prev,
+        [otherUserId]: { ...(prev[otherUserId] ?? {}), isUnread: false },
+      }));
+    },
+    [setSearchParams],
+  );
+
+  const handleBackToList = useCallback(() => {
+    setSearchParams({});
+  }, [setSearchParams]);
+
+  const handleSendMessage = useCallback(
+    (content: string) => {
+      if (!activeChatUserId) return;
+      sendMessage(activeChatUserId, content);
+    },
+    [activeChatUserId, sendMessage],
+  );
+
+  const handleReactMessage = useCallback(
+    (messageId: string, emoji: string) => {
+      if (!activeChatUserId) return;
+      setMessagesByUser((prev) => {
+        const msgs = prev[activeChatUserId] ?? [];
+        return {
+          ...prev,
+          [activeChatUserId]: msgs.map((m) =>
+            m.id === messageId ? { ...m, reactions: emoji === '' ? [] : [emoji] } : m,
+          ),
+        };
+      });
+    },
+    [activeChatUserId],
+  );
+
+  // ─── Derived display state ────────────────────────────────────────────────
   const filters: { key: MessengerFilter; label: string }[] = [
     { key: 'all', label: 'Hộp thư' },
     { key: 'unread', label: 'Chưa đọc' },
   ];
 
-  const filteredConversations = mockConversations.filter((conv) => {
+  const [activeFilter, setActiveFilter] = useState<MessengerFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredConversations = conversations.filter((conv) => {
     if (activeFilter === 'unread' && !conv.isUnread) return false;
-    if (activeFilter === 'groups' && !conv.isGroup) return false;
-    if (searchQuery && !conv.user.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+    if (searchQuery && !conv.user.name.toLowerCase().includes(searchQuery.toLowerCase()))
       return false;
-    }
     return true;
   });
 
-  const handleConversationClick = (conversation: Conversation) => {
-    setActiveChatUser({
-      id: conversation.id,
-      name: conversation.user.name,
-      avatar: conversation.user.avatar,
-      isOnline: Math.random() > 0.5,
-    });
-  };
+  const activeMessages = activeChatUserId ? (messagesByUser[activeChatUserId] ?? []) : [];
 
-  const handleBackToList = () => {
-    setActiveChatUser(null);
-  };
-
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
+    <div className="h-screen bg-white overflow-hidden">
       <Header />
 
-      {/* Main Content */}
-      <div className="pt-14 flex h-[calc(100vh-56px)]">
-        {/* Contact List Panel - Hide when chat is active */}
+      <div className="flex h-[calc(100vh-56px)] mt-14 overflow-hidden">
+        {/* ── Conversation List ── */}
         <div
           className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${
-            activeChatUser
-              ? 'w-0 -translate-x-full'
-              : 'w-[360px] translate-x-0'
+            activeChatUser ? 'w-0 -translate-x-full' : 'w-[360px] translate-x-0'
           }`}
         >
-          <div className={`w-[360px] flex flex-col h-full transition-opacity duration-300 ${
-            activeChatUser ? 'opacity-0' : 'opacity-100'
-          }`}>
-            {/* Sidebar Header */}
+          <div
+            className={`w-[360px] flex flex-col h-full transition-opacity duration-300 ${
+              activeChatUser ? 'opacity-0 pointer-events-none' : 'opacity-100'
+            }`}
+          >
+            {/* Sidebar header */}
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h1 className="text-2xl font-bold">Đoạn chat</h1>
                 <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold">Đoạn chat</h1>
+                  <span
+                    className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`}
+                    title={connected ? 'Đã kết nối realtime' : 'Chưa kết nối'}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={loadFriends}
+                    disabled={loadingConversations}
+                    className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors disabled:opacity-50"
+                    title="Tải lại danh sách"
+                  >
+                    <RefreshCw
+                      className={`w-5 h-5 text-gray-600 ${loadingConversations ? 'animate-spin' : ''}`}
+                    />
+                  </button>
                   <button className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
                     <MoreHorizontal className="w-5 h-5 text-gray-600" />
                   </button>
@@ -158,7 +255,7 @@ export default function MessengerPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Tìm kiếm trên Messenger"
+                  placeholder="Tìm kiếm bạn bè"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:bg-gray-200 transition-colors"
@@ -183,9 +280,18 @@ export default function MessengerPage() {
               </div>
             </div>
 
-            {/* Conversations List */}
+            {/* Conversations */}
             <div className="flex-1 overflow-y-auto p-2">
-              {filteredConversations.length > 0 ? (
+              {loadingConversations ? (
+                <div className="text-center py-8 text-gray-400 text-sm">Đang tải...</div>
+              ) : friendsError ? (
+                <div className="text-center py-8 text-sm">
+                  <p className="text-red-500 mb-2">Không thể tải danh sách bạn bè</p>
+                  <button onClick={loadFriends} className="text-blue-500 hover:underline text-sm">
+                    Thử lại
+                  </button>
+                </div>
+              ) : filteredConversations.length > 0 ? (
                 filteredConversations.map((conversation) => (
                   <ConversationItem
                     key={conversation.id}
@@ -195,22 +301,34 @@ export default function MessengerPage() {
                 ))
               ) : (
                 <div className="text-center py-8 text-gray-500 text-sm">
-                  Không tìm thấy cuộc trò chuyện
+                  {conversations.length === 0
+                    ? 'Chưa có bạn bè nào. Kết bạn để bắt đầu chat!'
+                    : 'Không tìm thấy cuộc trò chuyện'}
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Chat Area - Expand to full width when active */}
+        {/* ── Chat Area ── */}
         <div className="flex-1 flex flex-col bg-gray-50">
           {activeChatUser ? (
             <ChatWindow
               user={activeChatUser}
+              messages={activeMessages}
+              loading={loadingMessages}
+              connected={connected}
+              onSendMessage={handleSendMessage}
+              onReactMessage={handleReactMessage}
               onClose={handleBackToList}
               onMinimize={handleBackToList}
               fullScreen
             />
+          ) : activeChatUserId && loadingConversations ? (
+            // URL has a ?with= param but friends haven't loaded yet
+            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+              Đang tải...
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
@@ -219,7 +337,7 @@ export default function MessengerPage() {
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
                 <p className="text-gray-500 text-sm">
-                  Gửi ảnh và tin nhắn riêng tư cho bạn bè
+                  Chọn một cuộc trò chuyện để bắt đầu nhắn tin
                 </p>
               </div>
             </div>

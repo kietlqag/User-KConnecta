@@ -64,5 +64,10 @@
     server: {
       port: 3000,
       open: '/',
+      hmr: {
+        host: 'localhost',
+        port: 3000,
+        protocol: 'ws',
+      },
     },
   });

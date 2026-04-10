@@ -13,6 +13,8 @@ export interface AuthUser {
   email: string;
   fullName: string;
   username: string;
+  token?: string;
+  hasPassword?: boolean;
   bio?: string;
   gender?: string;
   location?: string;
@@ -43,6 +45,18 @@ export const authService = {
     api.put<AuthUser>(`/users/${id}`, data),
   getUserById: (id: string) =>
     api.get<AuthUser>(`/users/${id}`),
+
+  uploadAvatar: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.postMultipart<AuthUser>(`/users/${id}/avatar`, formData);
+  },
+
+  uploadCoverPhoto: (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.postMultipart<AuthUser>(`/users/${id}/cover`, formData);
+  },
   getUserByUsername: (username: string) =>
     api.get<AuthUser>(`/users/username/${username}`),
   checkEmailExists: (email: string) =>
@@ -65,6 +79,9 @@ export const authService = {
 
   changePassword: (email: string, oldPassword: string, newPassword: string) =>
     api.post<{ message: string }>('/auth/change-password', { email, oldPassword, newPassword }),
+
+  setPassword: (email: string, newPassword: string) =>
+    api.post<{ message: string }>('/auth/set-password', { email, newPassword }),
 
   googleLogin: (idToken: string) =>
     api.post<AuthUser>('/auth/google-login', { idToken }),

@@ -1,6 +1,7 @@
 export interface Conversation {
-  id: string;
+  id: string;          // friendshipId
   user: {
+    id: string;        // userId (UUID) — dùng làm receiverId khi gửi tin
     name: string;
     avatar: string;
   };

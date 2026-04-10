@@ -190,11 +190,11 @@ export const WatchPage = () => {
   }, [currentReelIndex]);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="h-screen bg-black overflow-hidden">
       <Header />
-      
+
       {/* Main Content Area */}
-      <div className="pt-14 h-screen relative">
+      <div className="mt-14 h-[calc(100vh-56px)] relative">
         <ReelPlayer 
           reel={currentReel} 
           comments={currentComments}

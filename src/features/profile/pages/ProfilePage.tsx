@@ -137,6 +137,20 @@ export function ProfilePage() {
     fetchProfile();
   }, [currentUser, fetchProfilePosts, isOwnProfile, userId]);
 
+  const handleAvatarUpload = async (file: File) => {
+    if (!currentUser) return;
+    const updatedUser = await authService.uploadAvatar(currentUser.id, file);
+    authService.saveCurrentUser(updatedUser);
+    setProfile(updatedUser);
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    if (!currentUser) return;
+    const updatedUser = await authService.uploadCoverPhoto(currentUser.id, file);
+    authService.saveCurrentUser(updatedUser);
+    setProfile(updatedUser);
+  };
+
   const userProfile = {
     id: profile?.id || userId,
     fullName: profile?.fullName || 'Quốc Kiệt',
@@ -204,6 +218,8 @@ export function ProfilePage() {
           school={userProfile.school}
           isOwnProfile={isOwnProfile}
           onEditClick={() => setIsEditDialogOpen(true)}
+          onAvatarUpload={isOwnProfile ? handleAvatarUpload : undefined}
+          onCoverUpload={isOwnProfile ? handleCoverUpload : undefined}
         />
 
         <ProfileTabs userId={userProfile.id} isOwnProfile={isOwnProfile} />

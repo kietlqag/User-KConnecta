@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
-import { User, MapPin, Home, GraduationCap, Heart, Calendar, Loader2, Camera } from 'lucide-react';
+import { User, MapPin, Heart, Loader2, Camera } from 'lucide-react';
 import { 
   Dialog, 
   DialogContent, 
@@ -36,6 +36,8 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
   const currentUser = authService.getCurrentUser();
   const [avatarPreview, setAvatarPreview] = React.useState(initialData.avatarUrl);
   const [coverPreview, setCoverPreview] = React.useState(initialData.coverPhotoUrl);
+  const [avatarFile, setAvatarFile] = React.useState<File | null>(null);
+  const [coverFile, setCoverFile] = React.useState<File | null>(null);
 
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const coverInputRef = React.useRef<HTMLInputElement>(null);
@@ -43,8 +45,6 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -54,40 +54,6 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
       year: initialData.dateOfBirth ? initialData.dateOfBirth.split('-')[0] : '',
     },
   });
-
-  const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-
-          if (width > height) {
-            if (width > maxWidth) {
-              height *= maxWidth / width;
-              width = maxWidth;
-            }
-          } else {
-            if (height > maxHeight) {
-              width *= maxHeight / height;
-              height = maxHeight;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.8));
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
-  };
 
   const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
   const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
@@ -102,24 +68,33 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
         return;
       }
 
-      resizeImage(file, type === 'avatar' ? 400 : 1200, type === 'avatar' ? 400 : 400)
-        .then(resizedBase64 => {
-          if (type === 'avatar') {
-            setAvatarPreview(resizedBase64);
-            setValue('avatarUrl', resizedBase64);
-          } else {
-            setCoverPreview(resizedBase64);
-            setValue('coverPhotoUrl', resizedBase64);
-          }
-        });
+      const previewUrl = URL.createObjectURL(file);
+      if (type === 'avatar') {
+        setAvatarFile(file);
+        setAvatarPreview(previewUrl);
+      } else {
+        setCoverFile(file);
+        setCoverPreview(previewUrl);
+      }
     }
   };
 
   const onSubmit = async (formData: any) => {
     if (!currentUser) return;
-    
+
     setIsLoading(true);
     try {
+      // Upload avatar if a new file was selected
+      if (avatarFile) {
+        await authService.uploadAvatar(currentUser.id, avatarFile);
+      }
+
+      // Upload cover photo if a new file was selected
+      if (coverFile) {
+        await authService.uploadCoverPhoto(currentUser.id, coverFile);
+      }
+
+      // Update other profile fields
       const updateData = {
         fullName: formData.fullName,
         bio: formData.bio,
@@ -127,17 +102,15 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
         hometown: formData.hometown,
         school: formData.school,
         relationshipStatus: formData.relationship,
-        dateOfBirth: formData.year && formData.month && formData.day 
+        dateOfBirth: formData.year && formData.month && formData.day
           ? `${formData.year}-${formData.month.padStart(2, '0')}-${formData.day.padStart(2, '0')}`
           : undefined,
-        avatarUrl: formData.avatarUrl,
-        coverPhotoUrl: formData.coverPhotoUrl,
       };
 
       const updatedUser = await authService.updateProfile(currentUser.id, updateData);
-      
+
       authService.saveCurrentUser(updatedUser);
-      
+
       toast.success('Cập nhật thông tin thành công');
       onOpenChange(false);
       window.location.reload();
