@@ -8,6 +8,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
+import project.kconnecta.user.backend.common.util.JwtUtil;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
@@ -39,6 +40,7 @@ public class AuthService {
     private final OtpService otpService;
     private final BCryptPasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
+    private final JwtUtil jwtUtil;
 
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
@@ -96,7 +98,7 @@ public class AuthService {
         }
 
         if (account.getPasswordHash() == null) {
-            throw new ValidationException("Tai khoan chua hoan tat dang ky");
+            throw new ValidationException("Tai khoan nay dang nhap qua Google, vui long dung nut Dang nhap bang Google");
         }
 
         if (!passwordEncoder.matches(request.getPassword(), account.getPasswordHash())) {
@@ -123,8 +125,9 @@ public class AuthService {
             throw new ValidationException("Email Google chua duoc xac minh");
         }
 
+        // Auto-register if not exist
         User user = userRepository.findByAccountEmail(tokenInfo.email())
-                .orElseThrow(() -> new ResourceNotFoundException("Email Google chua ton tai trong he thong"));
+                .orElseGet(() -> registerGoogleUser(tokenInfo));
 
         Account account = user.getAccount();
         if (account.getStatus() != AccountStatus.ACTIVE) {
@@ -132,6 +135,40 @@ public class AuthService {
         }
 
         return toResponse(user);
+    }
+
+    private User registerGoogleUser(GoogleTokenInfo tokenInfo) {
+        Account account = accountRepository.findByEmail(tokenInfo.email())
+                .orElseGet(() -> {
+                    Account newAccount = Account.builder()
+                            .email(tokenInfo.email())
+                            .passwordHash(null)
+                            .status(AccountStatus.ACTIVE)
+                            .build();
+                    return accountRepository.save(newAccount);
+                });
+
+        String baseUsername = tokenInfo.email().split("@")[0]
+                .replaceAll("[^a-zA-Z0-9_]", "")
+                .toLowerCase();
+        String username = baseUsername;
+        int suffix = 1;
+        while (userRepository.existsByUsername(username)) {
+            username = baseUsername + suffix++;
+        }
+
+        String fullName = (tokenInfo.name() != null && !tokenInfo.name().isBlank())
+                ? tokenInfo.name()
+                : username;
+
+        User user = User.builder()
+                .account(account)
+                .username(username)
+                .fullName(fullName)
+                .avatarUrl(tokenInfo.picture())
+                .build();
+
+        return userRepository.save(user);
     }
 
     public boolean emailExists(String email) {
@@ -178,19 +215,42 @@ public class AuthService {
         }
     }
 
+    public void setPassword(String email, String newPassword) {
+        Account account = accountRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
+
+        if (account.getPasswordHash() != null) {
+            throw new ValidationException("Tai khoan da co mat khau, vui long dung tinh nang doi mat khau");
+        }
+
+        account.setPasswordHash(passwordEncoder.encode(newPassword));
+        accountRepository.save(account);
+    }
+
+    public AuthResponse getTestToken(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Username not found: " + username));
+        return toResponse(user);
+    }
+
     private AuthResponse toResponse(User user) {
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
         return AuthResponse.builder()
                 .id(user.getId())
                 .email(user.getAccount().getEmail())
                 .fullName(user.getFullName())
                 .username(user.getUsername())
+                .hasPassword(user.getAccount().getPasswordHash() != null)
+                .token(token)
                 .build();
     }
 
     private record GoogleTokenInfo(
             String email,
             @JsonProperty("email_verified") Boolean emailVerified,
-            @JsonProperty("aud") String audience
+            @JsonProperty("aud") String audience,
+            String name,
+            String picture
     ) {
     }
 }

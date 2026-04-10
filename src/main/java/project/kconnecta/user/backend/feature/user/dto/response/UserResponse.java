@@ -1,16 +1,24 @@
 package project.kconnecta.user.backend.feature.user.dto.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
 @Builder
-public class UserResponse {
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserResponse implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     private UUID id;
     private String username;
     private String email;

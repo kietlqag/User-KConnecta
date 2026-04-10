@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.feature.user.dto.request.CreateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.request.UpdateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.response.UserResponse;
@@ -24,6 +25,35 @@ public class UserController {
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         UserResponse response = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+    @PostMapping("/{id}/avatar")
+    public ResponseEntity<UserResponse> uploadAvatar(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(userService.uploadAvatar(id, file));
+    }
+    @PostMapping("/{id}/cover")
+    public ResponseEntity<UserResponse> uploadCoverPhoto(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(userService.uploadCoverPhoto(id, file));
+    }
+    @PutMapping("/{id}/avatar")
+    public ResponseEntity<UserResponse> updateAvatar(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(userService.uploadAvatar(id, file));
+    }
+
+    @PutMapping("/{id}/cover")
+    public ResponseEntity<UserResponse> updateCoverPhoto(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(userService.uploadCoverPhoto(id, file));
     }
 
     @GetMapping

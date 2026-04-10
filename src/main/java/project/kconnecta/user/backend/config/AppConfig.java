@@ -1,4 +1,4 @@
-package project.kconnecta.user.backend.common.config;
+package project.kconnecta.user.backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
