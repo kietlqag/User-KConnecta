@@ -39,7 +39,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (res.status === 401 || res.status === 403) {
     localStorage.removeItem('authUser');
     sessionStorage.removeItem('authUser');
-    window.location.href = '/login';
+    window.location.href = '/auth/login';
     throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
   }
 

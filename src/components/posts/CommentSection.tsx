@@ -43,23 +43,25 @@ function buildCommentTree(items: PostCommentResponse[]) {
   const rootComments: Comment[] = [];
 
   items.forEach((item) => {
-    commentMap.set(item.id, mapComment(item));
+    commentMap.set(String(item.id), mapComment(item));
   });
 
   items.forEach((item) => {
-    const mapped = commentMap.get(item.id);
+    const mapped = commentMap.get(String(item.id));
     if (!mapped) {
       return;
     }
 
-    if (item.parentCommentId) {
-      const parent = commentMap.get(item.parentCommentId);
+    const parentId = item.parentCommentId ? String(item.parentCommentId) : null;
+    if (parentId) {
+      const parent = commentMap.get(parentId);
       if (parent) {
         parent.replies = [...(parent.replies || []), mapped];
         return;
       }
     }
 
+    // Fallback: if parent is missing, still render this comment at root level.
     rootComments.push(mapped);
   });
 
@@ -91,7 +93,7 @@ export function CommentSection({
         onCommentsLoaded?.(response.length);
       } catch (error) {
         if (isMounted) {
-          toast.error(error instanceof Error ? error.message : 'Không thể tải bình luận');
+          toast.error(error instanceof Error ? error.message : 'Khong the tai binh luan');
         }
       } finally {
         if (isMounted) {
@@ -110,7 +112,7 @@ export function CommentSection({
   const handleAddComment = async (content: string) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
-      toast.error('Bạn cần đăng nhập để bình luận');
+      toast.error('Ban can dang nhap de binh luan');
       return;
     }
 
@@ -131,7 +133,7 @@ export function CommentSection({
             'https://images.unsplash.com/photo-1724435811349-32d27f4d5806?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXJzb24lMjBhdmF0YXIlMjBwcm9maWxlfGVufDF8fHx8MTc2OTYxOTc2NHww&ixlib=rb-4.1.0&q=80&w=400',
         },
         content: response.content,
-        timestamp: 'Vừa xong',
+        timestamp: 'Vua xong',
         likes: 0,
         replies: [],
       };
@@ -139,7 +141,7 @@ export function CommentSection({
       setComments((prev) => [...prev, newComment]);
       onCommentAdded?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể gửi bình luận');
+      toast.error(error instanceof Error ? error.message : 'Khong the gui binh luan');
     } finally {
       setIsSubmitting(false);
     }
@@ -147,9 +149,9 @@ export function CommentSection({
 
   return (
     <div className="px-4 py-3">
-      {isLoading && <div className="mb-4 text-sm text-gray-500">Đang tải bình luận...</div>}
-
-      {comments.length === 0 ? (
+      {isLoading ? (
+        <div className="py-4 text-sm text-gray-500">Dang tai binh luan...</div>
+      ) : comments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8">
           <div className="relative mb-3 h-20 w-20">
             <div className="absolute inset-0 rotate-6 rounded-lg bg-gray-200" />
@@ -157,8 +159,8 @@ export function CommentSection({
               <FileText className="h-10 w-10 text-gray-500" />
             </div>
           </div>
-          <h3 className="mb-1 text-[17px] font-semibold text-gray-800">Chưa có bình luận nào</h3>
-          <p className="text-[15px] text-gray-600">Hãy là người đầu tiên bình luận.</p>
+          <h3 className="mb-1 text-[17px] font-semibold text-gray-800">Chua co binh luan nao</h3>
+          <p className="text-[15px] text-gray-600">Hay la nguoi dau tien binh luan.</p>
         </div>
       ) : (
         <div className="mb-4 space-y-4">

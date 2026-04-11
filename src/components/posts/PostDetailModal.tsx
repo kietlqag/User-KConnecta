@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { X, ThumbsUp, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -63,8 +63,6 @@ export function PostDetailModal({
     setShareCount(post.shares || 0);
   }, [post.comments, post.shares, post.id]);
 
-  if (!isOpen) return null;
-
   const handleShare = async () => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
@@ -85,19 +83,21 @@ export function PostDetailModal({
     }
   };
 
-  const handleCommentAdded = () => {
+  const handleCommentAdded = useCallback(() => {
     setCommentCount((prev) => {
       const nextCount = prev + 1;
       onCommentCountChange?.(nextCount);
       return nextCount;
     });
     onCommentAdded?.();
-  };
+  }, [onCommentAdded, onCommentCountChange]);
 
-  const handleCommentsLoaded = (count: number) => {
+  const handleCommentsLoaded = useCallback((count: number) => {
     setCommentCount(count);
     onCommentCountChange?.(count);
-  };
+  }, [onCommentCountChange]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

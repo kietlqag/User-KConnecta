@@ -8,6 +8,12 @@ interface StoredAuthUser {
   expiresAt: number;
 }
 
+interface CurrentAuthState {
+  user: AuthUser | null;
+  storage: 'local' | 'session' | null;
+  expiresAt: number | null;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -86,21 +92,82 @@ export const authService = {
   googleLogin: (idToken: string) =>
     api.post<AuthUser>('/auth/google-login', { idToken }),
 
-  saveCurrentUser: (user: AuthUser, rememberMe = false) => {
-    const storage = rememberMe ? localStorage : sessionStorage;
-    const otherStorage = rememberMe ? sessionStorage : localStorage;
+  saveCurrentUser: (user: AuthUser, rememberMe?: boolean) => {
+    const readCurrentState = (): CurrentAuthState => {
+      const localRaw = localStorage.getItem(AUTH_USER_KEY);
+      if (localRaw) {
+        try {
+          const parsed = JSON.parse(localRaw) as StoredAuthUser | AuthUser;
+          if (
+            typeof parsed === 'object' &&
+            parsed !== null &&
+            'user' in parsed &&
+            'expiresAt' in parsed
+          ) {
+            return {
+              user: parsed.user,
+              storage: 'local',
+              expiresAt: typeof parsed.expiresAt === 'number' ? parsed.expiresAt : null,
+            };
+          }
 
-    otherStorage.removeItem(AUTH_USER_KEY);
-    if (rememberMe) {
+          return {
+            user: parsed as AuthUser,
+            storage: 'local',
+            expiresAt: null,
+          };
+        } catch {
+          // ignore parse error and continue reading session
+        }
+      }
+
+      const sessionRaw = sessionStorage.getItem(AUTH_USER_KEY);
+      if (sessionRaw) {
+        try {
+          return {
+            user: JSON.parse(sessionRaw) as AuthUser,
+            storage: 'session',
+            expiresAt: null,
+          };
+        } catch {
+          // ignore parse error and fallback to empty state
+        }
+      }
+
+      return { user: null, storage: null, expiresAt: null };
+    };
+
+    const currentState = readCurrentState();
+    const mergedUser: AuthUser = {
+      ...(currentState.user ?? {}),
+      ...user,
+      token: user.token ?? currentState.user?.token,
+    };
+
+    const targetStorage: 'local' | 'session' =
+      rememberMe === true
+        ? 'local'
+        : rememberMe === false
+          ? 'session'
+          : currentState.storage ?? 'session';
+
+    if (targetStorage === 'local') {
       const payload: StoredAuthUser = {
-        user,
-        expiresAt: Date.now() + REMEMBER_ME_TTL_MS,
+        user: mergedUser,
+        expiresAt:
+          currentState.storage === 'local' &&
+          currentState.expiresAt !== null &&
+          currentState.expiresAt > Date.now()
+            ? currentState.expiresAt
+            : Date.now() + REMEMBER_ME_TTL_MS,
       };
-      storage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
+      sessionStorage.removeItem(AUTH_USER_KEY);
       return;
     }
 
-    storage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+    sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(mergedUser));
+    localStorage.removeItem(AUTH_USER_KEY);
   },
 
   getCurrentUser: (): AuthUser | null => {
