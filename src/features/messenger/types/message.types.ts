@@ -1,6 +1,6 @@
-export interface Message {
+﻿export interface Message {
   id: string;
-  senderId: string;   // userId (UUID)
+  senderId: string; // userId (UUID)
   text: string;
   timestamp: Date;
   isOwn: boolean;
@@ -8,10 +8,11 @@ export interface Message {
   systemType?: 'call_log' | 'missed_call';
   callLogKind?: 'missed' | 'completed';
   callDurationSec?: number;
+  callMediaType?: 'audio' | 'video';
 }
 
 export interface ChatUser {
-  id: string;         // userId (UUID) — dùng làm receiverId
+  id: string; // userId (UUID) dùng làm receiverId
   name: string;
   avatar: string;
   isOnline: boolean;
@@ -23,7 +24,7 @@ export interface IncomingChatMessage {
   senderUsername: string;
   receiverId: string;
   content: string;
-  createdAt: string;  // ISO datetime
+  createdAt: string; // ISO datetime
 }
 
 export type CallSignalType =
@@ -40,6 +41,7 @@ export interface OutgoingCallSignal {
   receiverId: string;
   callId: string;
   type: CallSignalType;
+  mediaType?: 'audio' | 'video';
   sdp?: string;
   candidate?: string;
   sdpMid?: string;
@@ -52,6 +54,7 @@ export interface IncomingCallSignal {
   toUserId: string;
   fromUsername: string;
   type: CallSignalType;
+  mediaType?: 'audio' | 'video';
   sdp?: string;
   candidate?: string;
   sdpMid?: string;

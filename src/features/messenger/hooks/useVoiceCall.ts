@@ -3,11 +3,13 @@ import type { CallSignalType, IncomingCallSignal, OutgoingCallSignal } from '../
 
 type CallDirection = 'incoming' | 'outgoing';
 type CallStatus = 'idle' | 'calling' | 'ringing' | 'connecting' | 'in_call' | 'ended' | 'error';
+type CallMediaType = 'audio' | 'video';
 
 interface ActiveCall {
   callId: string;
   peerUserId: string;
   direction: CallDirection;
+  mediaType: CallMediaType;
 }
 
 interface UseVoiceCallOptions {
@@ -27,12 +29,18 @@ function createCallId() {
   return `${Date.now()}-${Math.random()}`;
 }
 
+function hasVideoInSdp(sdp?: string | null) {
+  return typeof sdp === 'string' && /\bm=video\b/i.test(sdp);
+}
+
 export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOptions) {
   const [status, setStatus] = useState<CallStatus>('idle');
   const [incomingSignal, setIncomingSignal] = useState<IncomingCallSignal | null>(null);
+  const [incomingMediaType, setIncomingMediaType] = useState<CallMediaType>('audio');
   const [activeCall, setActiveCall] = useState<ActiveCall | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
+  const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
@@ -77,8 +85,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       setLocalStream(null);
       setRemoteStream(null);
       setIncomingSignal(null);
+      setIncomingMediaType('audio');
       setActiveCall(null);
       setIsMuted(false);
+      setIsCameraEnabled(true);
       if (!keepStatus) {
         setStatus('idle');
       }
@@ -103,9 +113,30 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     [clearCallTimeout],
   );
 
-  const ensureLocalStream = useCallback(async () => {
-    if (localStreamRef.current) return localStreamRef.current;
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+  const ensureLocalStream = useCallback(async (mediaType: CallMediaType) => {
+    const existing = localStreamRef.current;
+
+    if (existing) {
+      const hasVideoTrack = existing.getVideoTracks().length > 0;
+      if (mediaType === 'audio' || hasVideoTrack) {
+        setLocalStream(existing);
+        return existing;
+      }
+
+      existing.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: mediaType === 'video',
+    });
+    if (mediaType === 'video') {
+      const initialVideoEnabled = stream.getVideoTracks().some((track) => track.enabled);
+      setIsCameraEnabled(initialVideoEnabled);
+    } else {
+      setIsCameraEnabled(true);
+    }
     localStreamRef.current = stream;
     setLocalStream(stream);
     return stream;
@@ -166,16 +197,16 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   }, []);
 
   const startCall = useCallback(
-    async (peerUserId: string) => {
+    async (peerUserId: string, mediaType: CallMediaType = 'audio') => {
       if (!currentUserId) return;
       if (status !== 'idle' && status !== 'ended') return;
 
       setErrorMessage(null);
 
       const callId = createCallId();
-      setActiveCall({ callId, peerUserId, direction: 'outgoing' });
+      setActiveCall({ callId, peerUserId, direction: 'outgoing', mediaType });
       setStatus('calling');
-      sendSignal(peerUserId, callId, 'CALL_INVITE');
+      sendSignal(peerUserId, callId, 'CALL_INVITE', { mediaType });
 
       clearCallTimeout();
       callTimeoutRef.current = window.setTimeout(() => {
@@ -186,11 +217,14 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       }, CALL_TIMEOUT_MS);
 
       try {
-        const local = await ensureLocalStream();
+        const local = await ensureLocalStream(mediaType);
         const pc = createPeerConnection(callId, peerUserId);
         local.getTracks().forEach((track) => pc.addTrack(track, local));
 
-        const offer = await pc.createOffer({ offerToReceiveAudio: true });
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: mediaType === 'video',
+        });
         await pc.setLocalDescription(offer);
         sendSignal(peerUserId, callId, 'CALL_OFFER', { sdp: offer.sdp ?? undefined });
       } catch (error) {
@@ -212,15 +246,17 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     if (!incomingSignal) return;
     const callId = incomingSignal.callId;
     const peerUserId = incomingSignal.fromUserId;
+    const offerMediaType: CallMediaType = hasVideoInSdp(pendingOfferRef.current?.sdp) ? 'video' : incomingMediaType;
 
     setErrorMessage(null);
-    setActiveCall({ callId, peerUserId, direction: 'incoming' });
+    setActiveCall({ callId, peerUserId, direction: 'incoming', mediaType: offerMediaType });
     setStatus('connecting');
     setIncomingSignal(null);
+    setIncomingMediaType('audio');
     sendSignal(peerUserId, callId, 'CALL_ACCEPT');
 
     try {
-      const local = await ensureLocalStream();
+      const local = await ensureLocalStream(offerMediaType);
       const pc = createPeerConnection(callId, peerUserId);
       local.getTracks().forEach((track) => pc.addTrack(track, local));
 
@@ -242,7 +278,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       setStatus('error');
       cleanup(true);
     }
-  }, [applyPendingIce, cleanup, createPeerConnection, ensureLocalStream, incomingSignal, sendSignal]);
+  }, [applyPendingIce, cleanup, createPeerConnection, ensureLocalStream, incomingMediaType, incomingSignal, sendSignal]);
 
   const endCall = useCallback(() => {
     if (activeCall) {
@@ -265,6 +301,19 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     setIsMuted(next);
   }, [isMuted]);
 
+  const toggleCamera = useCallback(() => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    const videoTracks = stream.getVideoTracks();
+    if (videoTracks.length === 0) return;
+
+    const next = !isCameraEnabled;
+    videoTracks.forEach((track) => {
+      track.enabled = next;
+    });
+    setIsCameraEnabled(next);
+  }, [isCameraEnabled]);
+
   const handleIncomingSignal = useCallback(
     async (signal: IncomingCallSignal) => {
       if (!currentUserId) return;
@@ -276,6 +325,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         case 'CALL_INVITE':
           if (status === 'idle' || status === 'ended') {
             setIncomingSignal(signal);
+            setIncomingMediaType(signal.mediaType === 'video' ? 'video' : 'audio');
             setStatus('ringing');
           } else {
             sendSignal(signal.fromUserId, signal.callId, 'CALL_REJECT');
@@ -297,6 +347,14 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         case 'CALL_OFFER':
           if (!signal.sdp) break;
           pendingOfferRef.current = { type: 'offer', sdp: signal.sdp };
+
+          if (hasVideoInSdp(signal.sdp)) {
+            setIncomingMediaType('video');
+            setActiveCall((prev) =>
+              prev && prev.callId === signal.callId ? { ...prev, mediaType: 'video' } : prev,
+            );
+          }
+
           if (matchesByCallId && peerRef.current) {
             try {
               await peerRef.current.setRemoteDescription(new RTCSessionDescription(pendingOfferRef.current));
@@ -347,8 +405,11 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       status,
       errorMessage,
       isMuted,
+      isCameraEnabled,
       localStream,
       remoteStream,
+      callMediaType: activeCall?.mediaType ?? incomingMediaType,
+      incomingMediaType,
       activeCallId: activeCall?.callId ?? null,
       incomingPeerUserId,
       incomingFromUsername: incomingSignal?.fromUsername ?? null,
@@ -360,22 +421,28 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       rejectIncoming,
       endCall,
       toggleMute,
+      toggleCamera,
       handleIncomingSignal,
     }),
     [
       acceptIncoming,
+      activeCall?.callId,
+      activeCall?.mediaType,
       activeCall?.peerUserId,
       endCall,
       errorMessage,
       handleIncomingSignal,
+      incomingMediaType,
       incomingPeerUserId,
       incomingSignal?.fromUsername,
+      isCameraEnabled,
       isMuted,
       localStream,
       rejectIncoming,
       remoteStream,
       startCall,
       status,
+      toggleCamera,
       toggleMute,
     ],
   );

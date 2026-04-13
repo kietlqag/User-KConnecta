@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Search, MoreHorizontal, ExternalLink, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router@7.1.3';
 import { ConversationItem } from '../ConversationItem';
@@ -36,12 +36,9 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
 
   return (
     <>
-      {/* Backdrop */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
-      {/* Panel */}
       <div className="fixed top-14 right-4 w-[360px] bg-white rounded-lg shadow-2xl z-50 max-h-[calc(100vh-80px)] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
-        {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-bold">Đoạn chat</h2>
@@ -58,7 +55,10 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
                 <MoreHorizontal className="w-5 h-5 text-gray-600" />
               </button>
               <button
-                onClick={() => { navigate('/messages'); onClose(); }}
+                onClick={() => {
+                  navigate('/messages');
+                  onClose();
+                }}
                 className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
                 title="Mở trong Messenger"
               >
@@ -67,7 +67,6 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
             </div>
           </div>
 
-          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -79,7 +78,6 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
             />
           </div>
 
-          {/* Filters */}
           <div className="flex items-center gap-2 mt-3">
             {filters.map((filter) => (
               <button
@@ -97,7 +95,6 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
           </div>
         </div>
 
-        {/* Conversations List */}
         <div className="flex-1 overflow-y-auto p-2">
           {loading ? (
             <div className="text-center py-8 text-gray-400 text-sm">Đang tải...</div>
@@ -125,10 +122,12 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
           )}
         </div>
 
-        {/* Footer */}
         <div className="p-3 border-t border-gray-200">
           <button
-            onClick={() => { navigate('/messages'); onClose(); }}
+            onClick={() => {
+              navigate('/messages');
+              onClose();
+            }}
             className="w-full text-center text-blue-600 hover:bg-gray-100 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             Xem tất cả trong Messenger

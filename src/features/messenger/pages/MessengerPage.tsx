@@ -13,6 +13,8 @@ import {
   Volume2,
   Mic,
   MicOff,
+  Video,
+  VideoOff,
   X,
   Search as SearchIcon,
 } from 'lucide-react';
@@ -29,22 +31,49 @@ import { chatService } from '@/services/chatService';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
 
-function mapBackendContentToMessageFields(content: string): Pick<Message, 'text' | 'systemType' | 'callLogKind' | 'callDurationSec'> {
+function mapBackendContentToMessageFields(
+  content: string,
+): Pick<Message, 'text' | 'systemType' | 'callLogKind' | 'callDurationSec' | 'callMediaType'> {
   if (!content?.startsWith(CALL_LOG_PREFIX)) {
     return { text: content };
   }
 
   try {
     const payload = JSON.parse(content.slice(CALL_LOG_PREFIX.length));
+    const mediaType: 'audio' | 'video' =
+      payload?.mediaType === 'video' || String(payload?.label || '').toLowerCase().includes('video')
+        ? 'video'
+        : 'audio';
+    const fallbackLabel =
+      payload?.kind === 'completed'
+        ? mediaType === 'video'
+          ? 'Cuộc gọi video hoàn thành'
+          : 'Cuộc gọi thoại hoàn thành'
+        : mediaType === 'video'
+          ? 'Đã bỏ lỡ cuộc gọi video'
+          : 'Đã bỏ lỡ cuộc gọi thoại';
+
     return {
-      text: payload?.label || 'Đã bỏ lỡ cuộc gọi thoại',
+      text: payload?.label || fallbackLabel,
       systemType: 'call_log',
       callLogKind: payload?.kind === 'completed' ? 'completed' : 'missed',
       callDurationSec: typeof payload?.durationSec === 'number' ? payload.durationSec : undefined,
+      callMediaType: mediaType,
     };
   } catch {
-    return { text: 'Đã bỏ lỡ cuộc gọi thoại', systemType: 'call_log', callLogKind: 'missed' };
+    return {
+      text: 'Đã bỏ lỡ cuộc gọi thoại',
+      systemType: 'call_log',
+      callLogKind: 'missed',
+      callMediaType: 'audio',
+    };
   }
+}
+
+function formatConversationPreview(text: string, isOwn: boolean) {
+  const normalized = text.trim();
+  if (!normalized) return '';
+  return isOwn ? `Bạn: ${normalized}` : normalized;
 }
 
 function ChatInfoPanel({ user }: { user: ChatUser }) {
@@ -113,10 +142,12 @@ export default function MessengerPage() {
 
   const callSignalHandlerRef = useRef<(signal: IncomingCallSignal) => void>(() => {});
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const callRecorderRef = useRef<MediaRecorder | null>(null);
   const callRecorderChunksRef = useRef<Blob[]>([]);
   const callRecorderAudioCtxRef = useRef<AudioContext | null>(null);
-  const callRecorderMetaRef = useRef<{ callId: string; startedAt: number } | null>(null);
+  const callRecorderMetaRef = useRef<{ callId: string; startedAt: number; mediaType: 'audio' | 'video' } | null>(null);
   const isUploadingRecordingRef = useRef(false);
 
   const conversations: Conversation[] = baseConversations.map((c) => ({
@@ -165,7 +196,7 @@ export default function MessengerPage() {
             ...prev,
             [activeChatUserId]: {
               ...(prev[activeChatUserId] ?? {}),
-              lastMessage: last.text,
+              lastMessage: formatConversationPreview(last.text, last.isOwn),
               timestamp: last.timestamp.toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -209,7 +240,7 @@ export default function MessengerPage() {
         ...prev,
         [otherUserId]: {
           ...(prev[otherUserId] ?? {}),
-          lastMessage: parsed.text,
+          lastMessage: formatConversationPreview(parsed.text, msg.senderId === myId),
           timestamp: 'Vừa xong',
           isUnread: activeChatUserId !== otherUserId,
         },
@@ -255,6 +286,20 @@ export default function MessengerPage() {
     audio.volume = speakerMode === 'outer' ? 1 : 0.45;
   }, [speakerMode, voiceCall.remoteStream]);
 
+  useEffect(() => {
+    const video = remoteVideoRef.current;
+    if (!video) return;
+    const shouldShowRemoteVideo = voiceCall.callMediaType === 'video' && Boolean(voiceCall.remoteStream);
+    video.srcObject = shouldShowRemoteVideo ? voiceCall.remoteStream : null;
+  }, [voiceCall.callMediaType, voiceCall.remoteStream]);
+
+  useEffect(() => {
+    const video = localVideoRef.current;
+    if (!video) return;
+    const shouldShowLocalVideo = voiceCall.callMediaType === 'video' && Boolean(voiceCall.localStream);
+    video.srcObject = shouldShowLocalVideo ? voiceCall.localStream : null;
+  }, [voiceCall.callMediaType, voiceCall.localStream]);
+
   const stopAndUploadCallRecording = useCallback(
     async (finalCallId?: string | null) => {
       const recorder = callRecorderRef.current;
@@ -270,7 +315,9 @@ export default function MessengerPage() {
         });
       }
 
-      const blob = new Blob(callRecorderChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+      const fallbackMimeType = meta.mediaType === 'video' ? 'video/webm' : 'audio/webm';
+      const mimeType = recorder.mimeType || fallbackMimeType;
+      const blob = new Blob(callRecorderChunksRef.current, { type: mimeType });
       const callId = finalCallId ?? meta.callId;
       const durationSec = Math.max(0, Math.floor((Date.now() - meta.startedAt) / 1000));
 
@@ -294,10 +341,11 @@ export default function MessengerPage() {
 
       isUploadingRecordingRef.current = true;
       try {
-        const file = new File([blob], `call-${callId}-${Date.now()}.webm`, {
-          type: blob.type || 'audio/webm',
+        const fileExt = mimeType.toLowerCase().includes('mp4') ? 'mp4' : 'webm';
+        const file = new File([blob], `call-${callId}-${Date.now()}.${fileExt}`, {
+          type: mimeType,
         });
-        await chatService.uploadCallRecording(callId, file, durationSec);
+        await chatService.uploadCallRecording(callId, file, durationSec, meta.mediaType);
       } catch (error) {
         console.error('[MessengerPage] Failed to upload call recording:', error);
       } finally {
@@ -339,15 +387,33 @@ export default function MessengerPage() {
     localSource.connect(destination);
     remoteSource.connect(destination);
 
-    const preferredMimeTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+    const recordingStream = new MediaStream();
+    destination.stream.getAudioTracks().forEach((track) => {
+      recordingStream.addTrack(track);
+    });
+
+    const isVideoCallRecording = voiceCall.callMediaType === 'video';
+    if (isVideoCallRecording) {
+      const remoteVideoTrack = remoteStream.getVideoTracks().find((track) => track.readyState === 'live');
+      const localVideoTrack = localStream.getVideoTracks().find((track) => track.readyState === 'live');
+      const videoTrack = remoteVideoTrack ?? localVideoTrack;
+      if (videoTrack) {
+        recordingStream.addTrack(videoTrack);
+      }
+    }
+
+    const hasVideoTrack = recordingStream.getVideoTracks().length > 0;
+    const preferredMimeTypes = hasVideoTrack
+      ? ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']
+      : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
     const supportedMimeType = preferredMimeTypes.find((mime) => MediaRecorder.isTypeSupported(mime));
     const recorder = supportedMimeType
-      ? new MediaRecorder(destination.stream, { mimeType: supportedMimeType })
-      : new MediaRecorder(destination.stream);
+      ? new MediaRecorder(recordingStream, { mimeType: supportedMimeType })
+      : new MediaRecorder(recordingStream);
 
     callRecorderAudioCtxRef.current = audioCtx;
     callRecorderChunksRef.current = [];
-    callRecorderMetaRef.current = { callId, startedAt: Date.now() };
+    callRecorderMetaRef.current = { callId, startedAt: Date.now(), mediaType: hasVideoTrack ? 'video' : 'audio' };
     recorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) {
         callRecorderChunksRef.current.push(event.data);
@@ -364,6 +430,7 @@ export default function MessengerPage() {
   }, [
     stopAndUploadCallRecording,
     voiceCall.activeCallId,
+    voiceCall.callMediaType,
     voiceCall.localStream,
     voiceCall.remoteStream,
     voiceCall.status,
@@ -398,8 +465,26 @@ export default function MessengerPage() {
     if (!activeChatUserId) return;
     setShowCallModal(true);
     setSpeakerMode('inner');
-    void voiceCall.startCall(activeChatUserId);
+    void voiceCall.startCall(activeChatUserId, 'audio');
   }, [activeChatUserId, voiceCall]);
+
+  const handleStartVideoCall = useCallback(() => {
+    if (!activeChatUserId) return;
+    setShowCallModal(true);
+    setSpeakerMode('outer');
+    void voiceCall.startCall(activeChatUserId, 'video');
+  }, [activeChatUserId, voiceCall]);
+
+  const handleCallAgain = useCallback(
+    (mediaType: 'audio' | 'video' = 'audio') => {
+      if (mediaType === 'video') {
+        handleStartVideoCall();
+      } else {
+        handleStartVoiceCall();
+      }
+    },
+    [handleStartVideoCall, handleStartVoiceCall],
+  );
 
   const handleEndVoiceCall = useCallback(() => {
     voiceCall.endCall();
@@ -409,12 +494,16 @@ export default function MessengerPage() {
     voiceCall.toggleMute();
   }, [voiceCall]);
 
+  const handleToggleCamera = useCallback(() => {
+    voiceCall.toggleCamera();
+  }, [voiceCall]);
+
   const handleAcceptIncomingCall = useCallback(() => {
     if (voiceCall.incomingPeerUserId) {
       setSearchParams({ with: voiceCall.incomingPeerUserId });
     }
     setShowCallModal(true);
-    setSpeakerMode('inner');
+    setSpeakerMode(voiceCall.incomingMediaType === 'video' ? 'outer' : 'inner');
     void voiceCall.acceptIncoming();
   }, [setSearchParams, voiceCall]);
 
@@ -478,6 +567,7 @@ export default function MessengerPage() {
 
   const isCallOngoing =
     voiceCall.status === 'calling' || voiceCall.status === 'connecting' || voiceCall.status === 'in_call';
+  const isCallConnected = voiceCall.status === 'in_call';
 
   useEffect(() => {
     if (voiceCall.isRinging) {
@@ -493,11 +583,17 @@ export default function MessengerPage() {
       return;
     }
 
+    if (!isCallConnected) {
+      setCallStartedAt(null);
+      setCallDurationSec(0);
+      return;
+    }
+
     setCallStartedAt((prev) => prev ?? Date.now());
-  }, [isCallOngoing]);
+  }, [isCallConnected, isCallOngoing]);
 
   useEffect(() => {
-    if (!isCallOngoing || !callStartedAt) {
+    if (!isCallConnected || !callStartedAt) {
       setCallDurationSec(0);
       return;
     }
@@ -509,7 +605,7 @@ export default function MessengerPage() {
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [isCallOngoing, callStartedAt]);
+  }, [isCallConnected, callStartedAt]);
 
   const activeCallUser = useMemo(() => {
     const targetId = voiceCall.activePeerUserId ?? voiceCall.incomingPeerUserId;
@@ -536,6 +632,8 @@ export default function MessengerPage() {
       : voiceCall.status === 'connecting'
         ? 'Đang kết nối...'
         : formatCallDuration(callDurationSec);
+  const isVideoCall = isCallOngoing && voiceCall.callMediaType === 'video';
+  const isIncomingVideoCall = voiceCall.isRinging && voiceCall.incomingMediaType === 'video';
 
   const showMinimizedCallBar = !showCallModal && (voiceCall.isRinging || isCallOngoing);
   const minimizedCallUser = voiceCall.isRinging ? incomingCallUser : activeCallUser;
@@ -574,7 +672,9 @@ export default function MessengerPage() {
                 className="w-20 h-20 rounded-full object-cover mx-auto"
               />
               <p className="mt-3 text-lg font-semibold text-gray-900">{incomingCallUser.name}</p>
-              <p className="mt-1 text-sm text-gray-500">Đang gọi thoại cho bạn</p>
+              <p className="mt-1 text-sm text-gray-500">
+                {isIncomingVideoCall ? 'Đang gọi video cho bạn' : 'Đang gọi thoại cho bạn'}
+              </p>
             </div>
 
             <div className="mt-6 flex items-center justify-center gap-4">
@@ -601,7 +701,9 @@ export default function MessengerPage() {
       {isCallOngoing && activeCallUser && showCallModal && (
         <div className="fixed inset-0 z-[130] bg-black/20 flex items-center justify-center">
           <div
-            className="w-[340px] rounded-2xl bg-white border border-gray-200 shadow-2xl p-5"
+            className={`rounded-2xl bg-white border border-gray-200 shadow-2xl p-5 ${
+              isVideoCall ? 'w-[680px]' : 'w-[340px]'
+            }`}
             style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
           >
             <div className="flex justify-end">
@@ -614,15 +716,44 @@ export default function MessengerPage() {
               </button>
             </div>
 
-            <div className="text-center -mt-1">
-              <img
-                src={activeCallUser.avatar}
-                alt={activeCallUser.name}
-                className="w-20 h-20 rounded-full object-cover mx-auto"
-              />
-              <p className="mt-3 text-lg font-semibold text-gray-900">{activeCallUser.name}</p>
-              <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
-            </div>
+            {isVideoCall ? (
+              <>
+                <div className="relative overflow-hidden rounded-xl bg-black h-[360px]">
+                  <video
+                    ref={remoteVideoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover bg-black"
+                  />
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="absolute bottom-3 right-3 w-40 h-28 object-cover rounded-lg border border-white/40 bg-gray-900"
+                  />
+                  {!voiceCall.remoteStream && (
+                    <div className="absolute inset-0 flex items-center justify-center text-sm text-white/80">
+                      Đang chờ video...
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 text-center">
+                  <p className="text-lg font-semibold text-gray-900">{activeCallUser.name}</p>
+                  <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
+                </div>
+              </>
+            ) : (
+              <div className="text-center -mt-1">
+                <img
+                  src={activeCallUser.avatar}
+                  alt={activeCallUser.name}
+                  className="w-20 h-20 rounded-full object-cover mx-auto"
+                />
+                <p className="mt-3 text-lg font-semibold text-gray-900">{activeCallUser.name}</p>
+                <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
+              </div>
+            )}
 
             <div className="mt-6 flex items-center justify-center gap-4">
               <button
@@ -646,6 +777,24 @@ export default function MessengerPage() {
                   <Volume1 className="w-5 h-5 text-gray-700" />
                 )}
               </button>
+
+              {isVideoCall && (
+                <button
+                  onClick={handleToggleCamera}
+                  className={`w-12 h-12 rounded-full transition-colors flex items-center justify-center ${
+                    voiceCall.isCameraEnabled
+                      ? 'bg-blue-600 hover:bg-blue-700'
+                      : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                  title={voiceCall.isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
+                >
+                  {voiceCall.isCameraEnabled ? (
+                    <Video className="w-5 h-5 text-white" />
+                  ) : (
+                    <VideoOff className="w-5 h-5 text-gray-700" />
+                  )}
+                </button>
+              )}
 
               {voiceCall.status === 'in_call' && (
                 <button
@@ -783,7 +932,9 @@ export default function MessengerPage() {
                   <div className="min-w-0">
                     <p className="text-xs font-semibold text-gray-900 truncate max-w-[180px]">{minimizedCallUser.name}</p>
                     {isMinimizedIncoming ? (
-                      <p className="text-xs text-gray-500">Đang có cuộc gọi đến...</p>
+                      <p className="text-xs text-gray-500">
+                        {isIncomingVideoCall ? 'Đang có cuộc gọi video đến...' : 'Đang có cuộc gọi đến...'}
+                      </p>
                     ) : isMinimizedInCall ? (
                       <p className="text-xs text-gray-500">{formatCallDuration(callDurationSec)}</p>
                     ) : (
@@ -833,6 +984,26 @@ export default function MessengerPage() {
                             <Volume1 className="w-4 h-4 text-gray-700" />
                           )}
                         </button>
+                        {isVideoCall && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleCamera();
+                            }}
+                            className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
+                              voiceCall.isCameraEnabled
+                                ? 'bg-blue-600 hover:bg-blue-700'
+                                : 'bg-gray-100 hover:bg-gray-200'
+                            }`}
+                            title={voiceCall.isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
+                          >
+                            {voiceCall.isCameraEnabled ? (
+                              <Video className="w-4 h-4 text-white" />
+                            ) : (
+                              <VideoOff className="w-4 h-4 text-gray-700" />
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -878,6 +1049,26 @@ export default function MessengerPage() {
                             <Volume1 className="w-4 h-4 text-gray-700" />
                           )}
                         </button>
+                        {isVideoCall && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleCamera();
+                            }}
+                            className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
+                              voiceCall.isCameraEnabled
+                                ? 'bg-blue-600 hover:bg-blue-700'
+                                : 'bg-gray-100 hover:bg-gray-200'
+                            }`}
+                            title={voiceCall.isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
+                          >
+                            {voiceCall.isCameraEnabled ? (
+                              <Video className="w-4 h-4 text-white" />
+                            ) : (
+                              <VideoOff className="w-4 h-4 text-gray-700" />
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -905,16 +1096,19 @@ export default function MessengerPage() {
                 onMinimize={handleBackToList}
                 fullScreen
                 callStatus={activeWindowCallStatus}
+                callMediaType={voiceCall.callMediaType}
                 isMuted={voiceCall.isMuted}
                 canStartVoiceCall={
                   !voiceCall.hasActiveCall && !voiceCall.isRinging
                     ? true
                     : voiceCall.activePeerUserId === activeChatUser.id
                 }
+                canStartVideoCall={!voiceCall.hasActiveCall && !voiceCall.isRinging}
                 onStartVoiceCall={handleStartVoiceCall}
+                onStartVideoCall={handleStartVideoCall}
                 onEndVoiceCall={handleEndVoiceCall}
                 onToggleMute={handleToggleMute}
-                onCallAgain={handleStartVoiceCall}
+                onCallAgain={handleCallAgain}
               />
             </div>
           ) : activeChatUserId && loadingConversations ? (

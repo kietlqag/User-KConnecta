@@ -28,12 +28,15 @@ interface ChatWindowProps {
   onMinimize?: () => void;
   fullScreen?: boolean;
   callStatus?: 'idle' | 'calling' | 'ringing' | 'connecting' | 'in_call' | 'ended' | 'error';
+  callMediaType?: 'audio' | 'video';
   isMuted?: boolean;
   canStartVoiceCall?: boolean;
+  canStartVideoCall?: boolean;
   onStartVoiceCall?: () => void;
+  onStartVideoCall?: () => void;
   onEndVoiceCall?: () => void;
   onToggleMute?: () => void;
-  onCallAgain?: () => void;
+  onCallAgain?: (mediaType?: 'audio' | 'video') => void;
 }
 
 export const ChatWindow = ({
@@ -47,9 +50,12 @@ export const ChatWindow = ({
   onMinimize,
   fullScreen,
   callStatus = 'idle',
+  callMediaType = 'audio',
   isMuted = false,
   canStartVoiceCall = true,
+  canStartVideoCall = true,
   onStartVoiceCall,
+  onStartVideoCall,
   onEndVoiceCall,
   onToggleMute,
   onCallAgain,
@@ -82,6 +88,7 @@ export const ChatWindow = ({
 
   const hasActiveVoiceCall = callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'in_call';
   const isStartingVoiceCall = callStatus === 'calling' || callStatus === 'connecting';
+  const isVideoCall = hasActiveVoiceCall && callMediaType === 'video';
 
   const shouldShowSenderAvatar = (index: number) => {
     const current = messages[index];
@@ -162,8 +169,13 @@ export const ChatWindow = ({
               <Phone className={`w-5 h-5 ${isStartingVoiceCall ? 'text-amber-500' : 'text-blue-600'}`} />
             )}
           </button>
-          <button className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Gọi video">
-            <Video className="w-[22px] h-[22px] text-blue-600" />
+          <button
+            onClick={onStartVideoCall}
+            disabled={hasActiveVoiceCall || !connected || !canStartVideoCall}
+            className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Gọi video"
+          >
+            <Video className={`w-[22px] h-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-blue-600'}`} />
           </button>
           {fullScreen && (
             <button className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Thông tin">

@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useRef } from 'react';
-import { Smile, Reply, MoreVertical, PhoneMissed, Phone } from 'lucide-react';
+import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff } from 'lucide-react';
 import { Message } from '../../types/message.types';
 
 interface MessageBubbleProps {
@@ -10,7 +10,7 @@ interface MessageBubbleProps {
   senderName?: string;
   showDeliveryStatus?: boolean;
   deliveryStatusLabel?: string;
-  onCallAgain?: () => void;
+  onCallAgain?: (mediaType?: 'audio' | 'video') => void;
 }
 
 const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
@@ -84,6 +84,7 @@ export const MessageBubble = ({
 
   if (message.systemType === 'call_log' || message.systemType === 'missed_call') {
     const isCompleted = message.callLogKind === 'completed';
+    const isVideoCall = message.callMediaType === 'video' || message.text.toLowerCase().includes('video');
     return (
       <div className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
         <div
@@ -93,9 +94,17 @@ export const MessageBubble = ({
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
               {isCompleted ? (
-                <Phone className="w-4.5 h-4.5 text-gray-700" />
+                isVideoCall ? (
+                  <Video className="w-4.5 h-4.5 text-gray-700" />
+                ) : (
+                  <Phone className="w-4.5 h-4.5 text-gray-700" />
+                )
               ) : (
-                <PhoneMissed className="w-4.5 h-4.5 text-gray-700" />
+                isVideoCall ? (
+                  <VideoOff className="w-4.5 h-4.5 text-gray-700" />
+                ) : (
+                  <PhoneMissed className="w-4.5 h-4.5 text-gray-700" />
+                )
               )}
             </div>
             <div className="min-w-0">
@@ -108,11 +117,11 @@ export const MessageBubble = ({
             </div>
           </div>
           <button
-            onClick={onCallAgain}
+            onClick={() => onCallAgain?.(isVideoCall ? 'video' : 'audio')}
             className="mt-2.5 w-full rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors py-2 text-[15px] font-semibold text-gray-900 flex items-center justify-center gap-2"
           >
-            <Phone className="w-3.5 h-3.5" />
-            Gọi lại
+            {isVideoCall ? <Video className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
+            {isVideoCall ? 'Gọi video lại' : 'Gọi lại'}
           </button>
         </div>
       </div>

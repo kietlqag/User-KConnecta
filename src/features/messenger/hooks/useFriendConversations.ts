@@ -11,6 +11,41 @@ interface UseFriendConversationsResult {
   reload: () => void;
 }
 
+const CALL_LOG_PREFIX = '__CALL_LOG__:';
+
+function mapBackendContentToPreview(content?: string | null) {
+  const raw = content?.trim();
+  if (!raw) return '';
+
+  if (!raw.startsWith(CALL_LOG_PREFIX)) {
+    return raw;
+  }
+
+  try {
+    const payload = JSON.parse(raw.slice(CALL_LOG_PREFIX.length));
+    const mediaType: 'audio' | 'video' =
+      payload?.mediaType === 'video' || String(payload?.label || '').toLowerCase().includes('video')
+        ? 'video'
+        : 'audio';
+
+    if (typeof payload?.label === 'string' && payload.label.trim()) {
+      return payload.label.trim();
+    }
+    if (payload?.kind === 'completed') {
+      return mediaType === 'video' ? 'Cuộc gọi video hoàn thành' : 'Cuộc gọi thoại hoàn thành';
+    }
+    return mediaType === 'video' ? 'Đã bỏ lỡ cuộc gọi video' : 'Đã bỏ lỡ cuộc gọi thoại';
+  } catch {
+    return 'Đã bỏ lỡ cuộc gọi thoại';
+  }
+}
+
+function formatConversationPreview(text: string, isOwn: boolean) {
+  const normalized = text.trim();
+  if (!normalized) return '';
+  return isOwn ? `Bạn: ${normalized}` : normalized;
+}
+
 function formatTimestamp(iso?: string | null) {
   if (!iso) return '';
 
@@ -20,14 +55,14 @@ function formatTimestamp(iso?: string | null) {
   const diffMs = Date.now() - date.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
 
-  if (diffMinutes < 1) return 'Vá»«a xong';
-  if (diffMinutes < 60) return `${diffMinutes} phÃºt`;
+  if (diffMinutes < 1) return 'Vừa xong';
+  if (diffMinutes < 60) return `${diffMinutes} phút`;
 
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} giá»`;
+  if (diffHours < 24) return `${diffHours} giờ`;
 
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} ngÃ y`;
+  if (diffDays < 7) return `${diffDays} ngày`;
 
   return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
@@ -61,6 +96,8 @@ export function useFriendConversations(): UseFriendConversationsResult {
           const historyResult = histories[index];
           const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
           const last = history.length > 0 ? history[history.length - 1] : null;
+          const rawPreview = mapBackendContentToPreview(last?.content);
+          const isOwnLastMessage = Boolean(last?.senderId && currentUser?.id && last.senderId === currentUser.id);
 
           return {
             id: f.friendshipId ?? f.userId,
@@ -73,7 +110,9 @@ export function useFriendConversations(): UseFriendConversationsResult {
                   f.fullName || 'User',
                 )}`,
             },
-            lastMessage: last?.content?.trim() || 'Hai báº¡n Ä‘Ã£ káº¿t báº¡n. HÃ£y báº¯t Ä‘áº§u cuá»™c trÃ² chuyá»‡n.',
+            lastMessage:
+              formatConversationPreview(rawPreview, isOwnLastMessage) ||
+              'Hai bạn đã kết bạn. Hãy bắt đầu cuộc trò chuyện.',
             timestamp: formatTimestamp(last?.createdAt || f.createdAt),
             isUnread: false,
           };

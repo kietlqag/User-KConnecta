@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { MoreHorizontal, MessageCircle, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
-import { postService, type ReactionType } from '@/services/postService';
+import { postService, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { PostDetailModal } from '../posts/PostDetailModal';
 import {
   buildInitialReactionCounts,
   getActiveReactions,
   getTotalReactionCount,
+  mapReactionCounts,
   ReactionButton,
   ReactionSummaryDialog,
   reactions,
@@ -54,6 +55,7 @@ export interface PostProps {
   shares: number;
   isLiked?: boolean;
   currentUserReactionType?: ReactionType | null;
+  reactionCounts?: PostReactionCountResponse[];
   group?: Group;
   commentsData?: Comment[];
 }
@@ -70,6 +72,7 @@ export function Post({
   shares,
   isLiked: initialIsLiked = false,
   currentUserReactionType = null,
+  reactionCounts: serverReactionCounts,
   group,
 }: PostProps) {
   const [isLiked, setIsLiked] = useState(initialIsLiked || !!currentUserReactionType);
@@ -86,7 +89,10 @@ export function Post({
   const [isSharing, setIsSharing] = useState(false);
   const [isReacting, setIsReacting] = useState(false);
   const [reactionCounts, setReactionCounts] = useState<ReactionCountMap>(() =>
-    buildInitialReactionCounts(likes, currentUserReactionType),
+    mapReactionCounts(
+      serverReactionCounts,
+      buildInitialReactionCounts(likes, currentUserReactionType),
+    ),
   );
 
   const mediaUrl = media?.url || image;
@@ -112,7 +118,7 @@ export function Post({
     [author.avatar, author.name, commentCount, content, id, likeCount, mediaUrl, reactionCounts, shareCount, timestamp],
   );
 
-  const handleReactionChange = async (reaction: ReactionOption) => {
+  const handleReactionChange = async (reaction: ReactionOption | null) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để thả cảm xúc');
@@ -121,21 +127,34 @@ export function Post({
 
     try {
       setIsReacting(true);
-      await postService.addReaction(id, {
-        userId: currentUser.id,
-        reactionType: reaction.type as ReactionType,
-      });
+      if (!reaction) {
+        if (!selectedReaction) {
+          return;
+        }
 
-      setReactionCounts((prev) =>
-        updateReactionCounts(prev, selectedReaction?.type ?? null, reaction.type),
-      );
-      setSelectedReaction(reaction);
-      if (!isLiked) {
-        setIsLiked(true);
+        await postService.removeReaction(id, currentUser.id);
+        setReactionCounts((prev) => ({
+          ...prev,
+          [selectedReaction.type]: Math.max(0, prev[selectedReaction.type] - 1),
+        }));
+        setSelectedReaction(null);
+        setIsLiked(false);
+        setLikeCount((prev) => Math.max(0, prev - 1));
+      } else {
+        await postService.addReaction(id, {
+          userId: currentUser.id,
+          reactionType: reaction.type as ReactionType,
+        });
+
+        setReactionCounts((prev) =>
+          updateReactionCounts(prev, selectedReaction?.type ?? null, reaction.type),
+        );
+        setSelectedReaction(reaction);
+        if (!isLiked) {
+          setIsLiked(true);
+        }
+        setLikeCount((prev) => (selectedReaction?.type ? prev : prev + 1));
       }
-      setLikeCount((prev) =>
-        selectedReaction?.type ? prev : prev + 1,
-      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể thả cảm xúc');
     } finally {
@@ -183,7 +202,7 @@ export function Post({
                       <span className="hover:underline cursor-pointer font-medium text-gray-700">
                         {group.name}
                       </span>
-                      <span>·</span>
+                      <span>Â·</span>
                     </>
                   )}
                   <span>{timestamp}</span>
@@ -287,3 +306,5 @@ export function Post({
     </>
   );
 }
+
+

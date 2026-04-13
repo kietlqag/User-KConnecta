@@ -9,7 +9,7 @@ interface CommentInputProps {
 
 export function CommentInput({
   onSubmit,
-  placeholder = 'Bình lu?n...',
+  placeholder = 'Bình luận...',
   userAvatar = 'https://ui-avatars.com/api/?background=random&name=User',
 }: CommentInputProps) {
   const [content, setContent] = useState('');
@@ -63,7 +63,7 @@ export function CommentInput({
             <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Sticker">
               <Sticker className="w-5 h-5 text-gray-600" />
             </button>
-            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="?nh">
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Ảnh">
               <Image className="w-5 h-5 text-gray-600" />
             </button>
             <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="GIF">
@@ -74,7 +74,7 @@ export function CommentInput({
                 type="button"
                 onClick={handleSubmit}
                 className="p-1.5 hover:bg-emerald-50 rounded-full text-emerald-600 hover:text-emerald-700 transition-colors"
-                title="G?i"
+                title="Gửi"
               >
                 <Send className="w-5 h-5 fill-current" />
               </button>

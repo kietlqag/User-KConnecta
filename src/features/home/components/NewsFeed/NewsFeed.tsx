@@ -3,7 +3,7 @@ import { Stories } from '../Stories';
 import { CreatePost } from '../CreatePost';
 import { Post } from '../../../../components/shared';
 import { authService } from '@/services/authService';
-import { postService, type PostResponse } from '@/services/postService';
+import { postService, type PostReactionCountResponse, type PostResponse } from '@/services/postService';
 
 interface HomeFeedPost {
   id: string;
@@ -20,27 +20,28 @@ interface HomeFeedPost {
   shares: number;
   isLiked: boolean;
   currentUserReactionType: PostResponse['currentUserReactionType'];
+  reactionCounts?: PostReactionCountResponse[];
 }
 
 function formatPostTimestamp(dateString?: string | null) {
   if (!dateString) {
-    return 'V?a xong';
+    return 'Vừa xong';
   }
 
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) {
-    return 'V?a xong';
+    return 'Vừa xong';
   }
 
   const diffMs = Date.now() - date.getTime();
   const diffMinutes = Math.max(1, Math.floor(diffMs / 60000));
   if (diffMinutes < 60) {
-    return `${diffMinutes} phút tru?c`;
+    return `${diffMinutes} phút trước`;
   }
 
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) {
-    return `${diffHours} gi? tru?c`;
+    return `${diffHours} giờ trước`;
   }
 
   return new Intl.DateTimeFormat('vi-VN', {
@@ -72,6 +73,7 @@ function mapPost(item: PostResponse): HomeFeedPost {
     shares: item.shareCount,
     isLiked: !!item.currentUserReactionType,
     currentUserReactionType: item.currentUserReactionType,
+    reactionCounts: item.reactionCounts,
   };
 }
 
@@ -100,7 +102,7 @@ export function NewsFeed() {
           return;
         }
 
-        setError(fetchError instanceof Error ? fetchError.message : 'Không th? t?i b?ng tin');
+        setError(fetchError instanceof Error ? fetchError.message : 'Không thể tải bảng tin');
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -122,7 +124,7 @@ export function NewsFeed() {
 
       {isLoading && (
         <div className="rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow">
-          Ðang t?i b?ng tin...
+          Đang tải bảng tin...
         </div>
       )}
 
@@ -134,7 +136,7 @@ export function NewsFeed() {
 
       {!isLoading && !error && posts.length === 0 && (
         <div className="rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow">
-          Chua có bài vi?t trong b?ng tin.
+          Chưa có bài viết trong bảng tin.
         </div>
       )}
 

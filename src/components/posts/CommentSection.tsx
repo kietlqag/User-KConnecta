@@ -92,7 +92,7 @@ export function CommentSection({
         onCommentsLoaded?.(response.length);
       } catch (error) {
         if (isMounted) {
-          toast.error(error instanceof Error ? error.message : 'Không th? t?i bình lu?n');
+          toast.error(error instanceof Error ? error.message : 'Không thể tải bình luận');
         }
       } finally {
         if (isMounted) {
@@ -111,7 +111,7 @@ export function CommentSection({
   const handleAddComment = async (content: string) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
-      toast.error('B?n c?n dang nh?p d? bình lu?n');
+      toast.error('Bạn cần đăng nhập để bình luận');
       return;
     }
 
@@ -132,7 +132,7 @@ export function CommentSection({
             `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(response.userFullName || currentUser.fullName || 'User')}`,
         },
         content: response.content,
-        timestamp: 'V?a xong',
+        timestamp: 'Vừa xong',
         likes: 0,
         replies: [],
       };
@@ -140,7 +140,7 @@ export function CommentSection({
       setComments((prev) => [...prev, newComment]);
       onCommentAdded?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không th? g?i bình lu?n');
+      toast.error(error instanceof Error ? error.message : 'Không thể gửi bình luận');
     } finally {
       setIsSubmitting(false);
     }
@@ -149,7 +149,7 @@ export function CommentSection({
   return (
     <div className="px-4 py-3">
       {isLoading ? (
-        <div className="py-4 text-sm text-gray-500">Ðang t?i bình lu?n...</div>
+        <div className="py-4 text-sm text-gray-500">Đang tải bình luận...</div>
       ) : comments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8">
           <div className="relative mb-3 h-20 w-20">
@@ -158,8 +158,8 @@ export function CommentSection({
               <FileText className="h-10 w-10 text-gray-500" />
             </div>
           </div>
-          <h3 className="mb-1 text-[17px] font-semibold text-gray-800">Chua có bình lu?n nào</h3>
-          <p className="text-[15px] text-gray-600">Hãy là ngu?i d?u tiên bình lu?n.</p>
+          <h3 className="mb-1 text-[17px] font-semibold text-gray-800">Chưa có bình luận nào</h3>
+          <p className="text-[15px] text-gray-600">Hãy là người đầu tiên bình luận.</p>
         </div>
       ) : (
         <div className="mb-4 space-y-4">
@@ -175,7 +175,7 @@ export function CommentSection({
         <CommentInput
           onSubmit={handleAddComment}
           userAvatar={authService.getCurrentUser()?.avatarUrl}
-          placeholder={`Bình lu?n du?i tên ${authService.getCurrentUser()?.fullName || 'b?n'}`}
+          placeholder={`Bình luận dưới tên ${authService.getCurrentUser()?.fullName || 'bạn'}`}
         />
       </div>
     </div>

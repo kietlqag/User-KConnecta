@@ -66,6 +66,7 @@ export interface PostResponse {
   backgroundStyle?: string | null;
   promoted: boolean;
   reactionCount: number;
+  reactionCounts?: PostReactionCountResponse[];
   currentUserReactionType?: ReactionType | null;
   commentCount: number;
   shareCount: number;
@@ -120,6 +121,8 @@ export const postService = {
   createPost: (data: CreatePostPayload) => api.post<PostResponse>('/posts', data),
   addReaction: (postId: string, data: AddReactionPayload) =>
     api.post<PostReactionResponse>(`/posts/${postId}/reactions`, data),
+  removeReaction: (postId: string, userId: string) =>
+    api.delete<void>(`/posts/${postId}/reactions?userId=${encodeURIComponent(userId)}`),
   getReactionDetails: (postId: string) =>
     api.get<PostReactionDetailsResponse>(`/posts/${postId}/reactions/details`),
   getComments: (postId: string) =>

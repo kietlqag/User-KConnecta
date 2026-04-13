@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+﻿import { useRef, useState, useEffect } from 'react';
 import { ThumbsUp } from 'lucide-react';
 import type { ReactionType } from '@/services/postService';
 
@@ -20,7 +20,7 @@ export const reactions: ReactionOption[] = [
 
 interface ReactionButtonProps {
   initialReaction?: ReactionOption | null;
-  onReactionChange?: (reaction: ReactionOption) => void;
+  onReactionChange?: (reaction: ReactionOption | null) => void;
   className?: string;
   buttonClassName?: string;
   disabled?: boolean;
@@ -57,7 +57,7 @@ export function ReactionButton({
     }, 300);
   };
 
-  const applyReaction = (reaction: ReactionOption) => {
+  const applyReaction = (reaction: ReactionOption | null) => {
     setSelectedReaction(reaction);
     onReactionChange?.(reaction);
     setShowReactions(false);
@@ -65,7 +65,11 @@ export function ReactionButton({
 
   const handleButtonClick = () => {
     if (disabled) return;
-    applyReaction(selectedReaction ?? reactions[0]);
+    if (selectedReaction) {
+      applyReaction(null);
+      return;
+    }
+    applyReaction(reactions[0]);
   };
 
   useEffect(() => {
@@ -93,7 +97,9 @@ export function ReactionButton({
           {reactions.map((reaction, index) => (
             <button
               key={reaction.type}
-              onClick={() => applyReaction(reaction)}
+              onClick={() =>
+                applyReaction(selectedReaction?.type === reaction.type ? null : reaction)
+              }
               onMouseEnter={() => setHoveredReaction(index)}
               onMouseLeave={() => setHoveredReaction(null)}
               className={`text-2xl transition-all duration-150 ease-out hover:scale-125 ${
