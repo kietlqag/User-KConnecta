@@ -1,24 +1,27 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+﻿import { useEffect, useRef, useState, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import { getWsBaseUrl } from '@/utils/apiBaseUrl';
-import type { IncomingChatMessage } from '../types/message.types';
+import type {
+  IncomingChatMessage,
+  IncomingCallSignal,
+  OutgoingCallSignal,
+} from '../types/message.types';
 
 /**
- * Quản lý kết nối WebSocket STOMP cho chat realtime.
- *
- * @param token  JWT token của user hiện tại (null = không connect)
- * @param onMessage  Callback được gọi mỗi khi nhận tin nhắn mới
+ * Quản lý kết nối WebSocket STOMP cho chat realtime + signaling call.
  */
 export function useChatSocket(
   token: string | null | undefined,
-  onMessage: (msg: IncomingChatMessage) => void
+  onMessage: (msg: IncomingChatMessage) => void,
+  onCallSignal?: (signal: IncomingCallSignal) => void,
 ) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef<Client | null>(null);
 
-  // Giữ ref để callback luôn mới nhất mà không cần reconnect
   const onMessageRef = useRef(onMessage);
+  const onCallSignalRef = useRef(onCallSignal);
   onMessageRef.current = onMessage;
+  onCallSignalRef.current = onCallSignal;
 
   useEffect(() => {
     if (!token) return;
@@ -31,12 +34,22 @@ export function useChatSocket(
       reconnectDelay: 5000,
       onConnect: () => {
         setConnected(true);
+
         client.subscribe('/user/queue/messages', (frame) => {
           try {
             const msg = JSON.parse(frame.body) as IncomingChatMessage;
             onMessageRef.current(msg);
           } catch (e) {
-            console.error('[useChatSocket] Failed to parse message:', e);
+            console.error('[useChatSocket] Failed to parse chat message:', e);
+          }
+        });
+
+        client.subscribe('/user/queue/call', (frame) => {
+          try {
+            const signal = JSON.parse(frame.body) as IncomingCallSignal;
+            onCallSignalRef.current?.(signal);
+          } catch (e) {
+            console.error('[useChatSocket] Failed to parse call signal:', e);
           }
         });
       },
@@ -70,5 +83,16 @@ export function useChatSocket(
     }
   }, []);
 
-  return { connected, sendMessage };
+  const sendCallSignal = useCallback((signal: OutgoingCallSignal) => {
+    if (clientRef.current?.connected) {
+      clientRef.current.publish({
+        destination: '/app/call.signal',
+        body: JSON.stringify(signal),
+      });
+    } else {
+      console.warn('[useChatSocket] Not connected, cannot send call signal');
+    }
+  }, []);
+
+  return { connected, sendMessage, sendCallSignal };
 }

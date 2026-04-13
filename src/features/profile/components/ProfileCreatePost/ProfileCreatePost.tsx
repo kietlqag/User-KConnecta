@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, Video, Smile, MapPin } from 'lucide-react';
 import { Link } from 'react-router@7.1.3';
 import { ProfileCreatePostModal } from './ProfileCreatePostModal';
+import { CurrentUserAvatar } from '@/components/shared';
 
 interface ProfileCreatePostProps {
   username: string;
@@ -15,9 +16,7 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
     <>
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-            <span className="text-sm font-semibold text-white">QK</span>
-          </div>
+          <CurrentUserAvatar />
           <button
             onClick={() => setIsModalOpen(true)}
             className="flex-1 text-left px-4 py-2 sm:py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full text-gray-500 dark:text-gray-400 transition-colors text-sm sm:text-base"

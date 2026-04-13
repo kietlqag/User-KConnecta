@@ -6,6 +6,7 @@ import { NotificationsPanel } from '../../../notifications/components';
 import { MenuPanel } from '../../../menu/components';
 import { useMenu } from '../../../../contexts/MenuContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
+import { CurrentUserAvatar } from '@/components/shared';
 
 export function MarketplaceHeader() {
   const [showMessenger, setShowMessenger] = useState(false);
@@ -96,8 +97,8 @@ export function MarketplaceHeader() {
               </span>
             </button>
             
-            <button className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white hover:opacity-90 transition-opacity">
-              <span className="text-sm font-semibold">QK</span>
+            <button className="w-10 h-10 rounded-full overflow-hidden hover:opacity-90 transition-opacity">
+              <CurrentUserAvatar className="w-10 h-10" />
             </button>
           </div>
         </div>

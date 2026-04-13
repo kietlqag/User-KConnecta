@@ -1,4 +1,4 @@
-import { useState, useRef, KeyboardEvent } from 'react';
+﻿import { useState, useRef, KeyboardEvent } from 'react';
 import { Smile, Sticker, Image, FileImage, Send } from 'lucide-react';
 
 interface CommentInputProps {
@@ -9,8 +9,8 @@ interface CommentInputProps {
 
 export function CommentInput({
   onSubmit,
-  placeholder = 'Bình luận dưới tên Quốc Kiệt',
-  userAvatar = 'https://images.unsplash.com/photo-1724435811349-32d27f4d5806?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXJzb24lMjBhdmF0YXIlMjBwcm9maWxlfGVufDF8fHx8MTc2OTYxOTc2NHww&ixlib=rb-4.1.0&q=80&w=400',
+  placeholder = 'Bình lu?n...',
+  userAvatar = 'https://ui-avatars.com/api/?background=random&name=User',
 }: CommentInputProps) {
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -57,32 +57,16 @@ export function CommentInput({
           />
 
           <div className="ml-2 flex items-center gap-1">
-            <button
-              type="button"
-              className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
-              title="Emoji"
-            >
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Emoji">
               <Smile className="w-5 h-5 text-gray-600" />
             </button>
-            <button
-              type="button"
-              className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
-              title="Sticker"
-            >
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Sticker">
               <Sticker className="w-5 h-5 text-gray-600" />
             </button>
-            <button
-              type="button"
-              className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
-              title="Ảnh"
-            >
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="?nh">
               <Image className="w-5 h-5 text-gray-600" />
             </button>
-            <button
-              type="button"
-              className="p-1.5 hover:bg-gray-200 rounded-full transition-colors"
-              title="GIF"
-            >
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="GIF">
               <FileImage className="w-5 h-5 text-gray-600" />
             </button>
             {content.trim() && (
@@ -90,7 +74,7 @@ export function CommentInput({
                 type="button"
                 onClick={handleSubmit}
                 className="p-1.5 hover:bg-emerald-50 rounded-full text-emerald-600 hover:text-emerald-700 transition-colors"
-                title="Gửi"
+                title="G?i"
               >
                 <Send className="w-5 h-5 fill-current" />
               </button>
@@ -101,3 +85,4 @@ export function CommentInput({
     </div>
   );
 }
+

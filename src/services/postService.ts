@@ -45,7 +45,8 @@ export interface PostReactionDetailsResponse {
 export interface PostMediaResponse {
   id: string;
   mediaType: 'IMAGE' | 'VIDEO';
-  mediaUrl: string;
+  fileUrl?: string;
+  mediaUrl?: string;
   thumbnailUrl?: string;
   sortOrder: number;
 }
@@ -55,6 +56,7 @@ export interface PostResponse {
   authorId: string;
   authorUsername: string;
   authorFullName: string;
+  authorAvatarUrl?: string | null;
   content: string;
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT';

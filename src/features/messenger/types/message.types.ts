@@ -5,6 +5,9 @@ export interface Message {
   timestamp: Date;
   isOwn: boolean;
   reactions?: string[];
+  systemType?: 'call_log' | 'missed_call';
+  callLogKind?: 'missed' | 'completed';
+  callDurationSec?: number;
 }
 
 export interface ChatUser {
@@ -21,4 +24,37 @@ export interface IncomingChatMessage {
   receiverId: string;
   content: string;
   createdAt: string;  // ISO datetime
+}
+
+export type CallSignalType =
+  | 'CALL_INVITE'
+  | 'CALL_ACCEPT'
+  | 'CALL_REJECT'
+  | 'CALL_CANCEL'
+  | 'CALL_END'
+  | 'CALL_OFFER'
+  | 'CALL_ANSWER'
+  | 'CALL_ICE';
+
+export interface OutgoingCallSignal {
+  receiverId: string;
+  callId: string;
+  type: CallSignalType;
+  sdp?: string;
+  candidate?: string;
+  sdpMid?: string;
+  sdpMLineIndex?: number;
+}
+
+export interface IncomingCallSignal {
+  callId: string;
+  fromUserId: string;
+  toUserId: string;
+  fromUsername: string;
+  type: CallSignalType;
+  sdp?: string;
+  candidate?: string;
+  sdpMid?: string;
+  sdpMLineIndex?: number;
+  createdAt: string;
 }

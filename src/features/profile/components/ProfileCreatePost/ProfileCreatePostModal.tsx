@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
+import { CurrentUserAvatar } from '@/components/shared';
 import { ProfilePostAudienceModal } from './ProfilePostAudienceModal';
 import { ProfilePostSettingsModal } from './ProfilePostSettingsModal';
 
@@ -121,9 +122,7 @@ export function ProfileCreatePostModal({
 
           <div className="p-4">
             <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-500">
-                <span className="text-sm font-semibold text-white">QK</span>
-              </div>
+              <CurrentUserAvatar />
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white">{username}</h3>
                 <button

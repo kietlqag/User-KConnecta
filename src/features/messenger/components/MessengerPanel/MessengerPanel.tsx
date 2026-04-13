@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, MoreHorizontal, ExternalLink, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router@7.1.3';
 import { ConversationItem } from '../ConversationItem';
-import { MessengerFilter } from '../../types/messenger.types';
+import { Conversation, MessengerFilter } from '../../types/messenger.types';
 import { useFriendConversations } from '../../hooks/useFriendConversations';
 
 interface MessengerPanelProps {
@@ -29,8 +29,8 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
     return true;
   });
 
-  const handleConversationClick = () => {
-    navigate('/messages');
+  const handleConversationClick = (conversation: Conversation) => {
+    navigate(`/messages?with=${conversation.user.id}`);
     onClose();
   };
 
@@ -113,7 +113,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
               <ConversationItem
                 key={conversation.id}
                 conversation={conversation}
-                onClick={handleConversationClick}
+                onClick={() => handleConversationClick(conversation)}
               />
             ))
           ) : (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -23,13 +23,13 @@ function formatCommentTime(createdAt: string) {
 }
 
 function mapComment(comment: PostCommentResponse): Comment {
+  const fallbackAvatar = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(comment.userFullName || 'User')}`;
+
   return {
     id: comment.id,
     author: {
       name: comment.userFullName,
-      avatar:
-        comment.userAvatarUrl ||
-        'https://images.unsplash.com/photo-1724435811349-32d27f4d5806?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXJzb24lMjBhdmF0YXIlMjBwcm9maWxlfGVufDF8fHx8MTc2OTYxOTc2NHww&ixlib=rb-4.1.0&q=80&w=400',
+      avatar: comment.userAvatarUrl || fallbackAvatar,
     },
     content: comment.content,
     timestamp: formatCommentTime(comment.createdAt),
@@ -61,7 +61,6 @@ function buildCommentTree(items: PostCommentResponse[]) {
       }
     }
 
-    // Fallback: if parent is missing, still render this comment at root level.
     rootComments.push(mapped);
   });
 
@@ -93,7 +92,7 @@ export function CommentSection({
         onCommentsLoaded?.(response.length);
       } catch (error) {
         if (isMounted) {
-          toast.error(error instanceof Error ? error.message : 'Khong the tai binh luan');
+          toast.error(error instanceof Error ? error.message : 'Không th? t?i bình lu?n');
         }
       } finally {
         if (isMounted) {
@@ -112,7 +111,7 @@ export function CommentSection({
   const handleAddComment = async (content: string) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
-      toast.error('Ban can dang nhap de binh luan');
+      toast.error('B?n c?n dang nh?p d? bình lu?n');
       return;
     }
 
@@ -130,10 +129,10 @@ export function CommentSection({
           avatar:
             response.userAvatarUrl ||
             currentUser.avatarUrl ||
-            'https://images.unsplash.com/photo-1724435811349-32d27f4d5806?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwZXJzb24lMjBhdmF0YXIlMjBwcm9maWxlfGVufDF8fHx8MTc2OTYxOTc2NHww&ixlib=rb-4.1.0&q=80&w=400',
+            `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(response.userFullName || currentUser.fullName || 'User')}`,
         },
         content: response.content,
-        timestamp: 'Vua xong',
+        timestamp: 'V?a xong',
         likes: 0,
         replies: [],
       };
@@ -141,7 +140,7 @@ export function CommentSection({
       setComments((prev) => [...prev, newComment]);
       onCommentAdded?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Khong the gui binh luan');
+      toast.error(error instanceof Error ? error.message : 'Không th? g?i bình lu?n');
     } finally {
       setIsSubmitting(false);
     }
@@ -150,7 +149,7 @@ export function CommentSection({
   return (
     <div className="px-4 py-3">
       {isLoading ? (
-        <div className="py-4 text-sm text-gray-500">Dang tai binh luan...</div>
+        <div className="py-4 text-sm text-gray-500">Ðang t?i bình lu?n...</div>
       ) : comments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8">
           <div className="relative mb-3 h-20 w-20">
@@ -159,8 +158,8 @@ export function CommentSection({
               <FileText className="h-10 w-10 text-gray-500" />
             </div>
           </div>
-          <h3 className="mb-1 text-[17px] font-semibold text-gray-800">Chua co binh luan nao</h3>
-          <p className="text-[15px] text-gray-600">Hay la nguoi dau tien binh luan.</p>
+          <h3 className="mb-1 text-[17px] font-semibold text-gray-800">Chua có bình lu?n nào</h3>
+          <p className="text-[15px] text-gray-600">Hãy là ngu?i d?u tiên bình lu?n.</p>
         </div>
       ) : (
         <div className="mb-4 space-y-4">
@@ -173,8 +172,13 @@ export function CommentSection({
       )}
 
       <div className={isSubmitting ? 'pointer-events-none opacity-70' : ''}>
-        <CommentInput onSubmit={handleAddComment} userAvatar={authService.getCurrentUser()?.avatarUrl} />
+        <CommentInput
+          onSubmit={handleAddComment}
+          userAvatar={authService.getCurrentUser()?.avatarUrl}
+          placeholder={`Bình lu?n du?i tên ${authService.getCurrentUser()?.fullName || 'b?n'}`}
+        />
       </div>
     </div>
   );
 }
+

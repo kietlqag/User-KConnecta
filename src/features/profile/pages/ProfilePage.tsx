@@ -57,16 +57,17 @@ function formatPostTimestamp(dateString?: string | null) {
   }).format(date);
 }
 
-function mapPostToProfileFeed(post: PostResponse, avatarUrl: string): ProfileFeedPost {
+function mapPostToProfileFeed(post: PostResponse): ProfileFeedPost {
   const firstImage = (post.media ?? []).find((item) => item.mediaType === 'IMAGE');
+  const fallbackAvatar = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(post.authorFullName || 'User')}`;
 
   return {
     id: post.id,
     userName: post.authorFullName,
-    userAvatar: avatarUrl,
+    userAvatar: post.authorAvatarUrl || fallbackAvatar,
     timestamp: formatPostTimestamp(post.publishedAt || post.createdAt),
     content: post.content,
-    image: firstImage?.mediaUrl,
+    image: firstImage?.mediaUrl || firstImage?.fileUrl,
     likes: post.reactionCount,
     comments: post.commentCount,
     shares: post.shareCount,
@@ -98,7 +99,7 @@ export function ProfilePage() {
             const rightTime = new Date(right.publishedAt || right.createdAt).getTime();
             return rightTime - leftTime;
           })
-          .map((post) => mapPostToProfileFeed(post, profileData?.avatarUrl || DEFAULT_AVATAR));
+          .map((post) => mapPostToProfileFeed(post));
 
         setPosts(profilePosts);
       } catch (error) {
