@@ -70,6 +70,46 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    public void sendSystemMessage(UUID senderId, UUID receiverId, String content) {
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new RuntimeException("Sender not found"));
+
+        User receiver = userRepository.findById(receiverId)
+                .orElseThrow(() -> new RuntimeException("Receiver not found"));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        ChatMessage message = ChatMessage.builder()
+                .sender(sender)
+                .receiver(receiver)
+                .content(content)
+                .createdAt(now)
+                .seen(false)
+                .build();
+        chatMessageRepository.save(message);
+
+        ChatMessageResponse response = new ChatMessageResponse(
+                sender.getId(),
+                sender.getUsername(),
+                receiver.getId(),
+                content,
+                now
+        );
+
+        messagingTemplate.convertAndSendToUser(
+                receiver.getUsername(),
+                "/queue/messages",
+                response
+        );
+
+        messagingTemplate.convertAndSendToUser(
+                sender.getUsername(),
+                "/queue/messages",
+                response
+        );
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<ChatMessageResponse> getChatHistory(UUID userId1, UUID userId2) {
         return chatMessageRepository.findConversation(userId1, userId2).stream()

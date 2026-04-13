@@ -8,6 +8,7 @@ import java.util.UUID;
 
 public interface ChatService {
     void sendPrivateMessage(String currentUsername, PrivateMessageRequest request);
+    void sendSystemMessage(UUID senderId, UUID receiverId, String content);
 
     List<ChatMessageResponse> getChatHistory(UUID userId1, UUID userId2);
 }

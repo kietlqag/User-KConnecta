@@ -28,8 +28,10 @@ import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
@@ -39,6 +41,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class PostServiceImpl implements PostService {
+    private static final double FRESHNESS_WEIGHT = 0.60;
+    private static final double ENGAGEMENT_WEIGHT = 0.40;
+    private static final double COMMENT_WEIGHT = 2.0;
+    private static final double SHARE_WEIGHT = 2.0;
+    private static final double FRESHNESS_DECAY_HOURS = 6.0;
+    private static final double MAX_ENGAGEMENT_FOR_NORMALIZATION = 80.0;
 
     private final PostRepository postRepository;
     private final PostMediaRepository postMediaRepository;
@@ -94,6 +102,10 @@ public class PostServiceImpl implements PostService {
         return postRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(post -> mapToResponse(post, currentUserId))
+                .sorted(
+                        Comparator.comparingDouble(this::calculateFeedScore).reversed()
+                                .thenComparing(PostResponse::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                )
                 .toList();
     }
 
@@ -315,6 +327,7 @@ public class PostServiceImpl implements PostService {
                 .authorId(post.getAuthor().getId())
                 .authorUsername(post.getAuthor().getUsername())
                 .authorFullName(post.getAuthor().getFullName())
+                .authorAvatarUrl(post.getAuthor().getAvatarUrl())
                 .content(post.getContent())
                 .privacy(post.getPrivacy())
                 .status(post.getStatus())
@@ -341,5 +354,29 @@ public class PostServiceImpl implements PostService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private double calculateFeedScore(PostResponse post) {
+        double freshnessScore = calculateFreshnessScore(post);
+        double engagementScore = calculateEngagementScore(post);
+        return FRESHNESS_WEIGHT * freshnessScore + ENGAGEMENT_WEIGHT * engagementScore;
+    }
+
+    private double calculateFreshnessScore(PostResponse post) {
+        LocalDateTime publishedAt = post.getPublishedAt() != null ? post.getPublishedAt() : post.getCreatedAt();
+        if (publishedAt == null) {
+            return 0.0;
+        }
+
+        long hoursAgo = Math.max(0, ChronoUnit.HOURS.between(publishedAt, LocalDateTime.now()));
+        return 1.0 / (1.0 + (hoursAgo / FRESHNESS_DECAY_HOURS));
+    }
+
+    private double calculateEngagementScore(PostResponse post) {
+        double engagementRaw = post.getReactionCount()
+                + (post.getCommentCount() * COMMENT_WEIGHT)
+                + (post.getShareCount() * SHARE_WEIGHT);
+
+        return Math.min(engagementRaw / MAX_ENGAGEMENT_FOR_NORMALIZATION, 1.0);
     }
 }

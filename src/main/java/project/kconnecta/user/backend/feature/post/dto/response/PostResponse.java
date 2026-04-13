@@ -17,6 +17,7 @@ public class PostResponse {
     private UUID authorId;
     private String authorUsername;
     private String authorFullName;
+    private String authorAvatarUrl;
     private String content;
     private PostPrivacy privacy;
     private PostStatus status;
