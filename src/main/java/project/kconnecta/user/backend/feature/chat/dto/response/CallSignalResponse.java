@@ -18,6 +18,7 @@ public class CallSignalResponse {
     private UUID toUserId;
     private String fromUsername;
     private String type;
+    private String mediaType;
     private String sdp;
     private String candidate;
     private String sdpMid;

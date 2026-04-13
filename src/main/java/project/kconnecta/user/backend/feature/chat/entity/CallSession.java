@@ -50,6 +50,10 @@ public class CallSession {
     private String lastSignalType;
 
     @Builder.Default
+    @Column(name = "call_media_type", length = 16)
+    private String callMediaType = "audio";
+
+    @Builder.Default
     @Column(name = "call_log_sent", nullable = false)
     private Boolean callLogSent = false;
 }

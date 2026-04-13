@@ -13,9 +13,10 @@ public class CallRecordingResponse {
     private UUID callId;
     private UUID ownerUserId;
     private String fileUrl;
+    private String recordingMediaType;
+    private Boolean hasVideo;
     private String mimeType;
     private Long fileSizeBytes;
     private Integer durationSec;
     private LocalDateTime createdAt;
 }
-

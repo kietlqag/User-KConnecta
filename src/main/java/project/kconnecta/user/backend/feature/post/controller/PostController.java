@@ -54,6 +54,15 @@ public class PostController {
         return ResponseEntity.ok(postService.addReaction(id, request));
     }
 
+    @DeleteMapping("/{id}/reactions")
+    public ResponseEntity<Void> removeReaction(
+            @PathVariable UUID id,
+            @RequestParam UUID userId
+    ) {
+        postService.removeReaction(id, userId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/reactions/details")
     public ResponseEntity<PostReactionDetailsResponse> getReactionDetails(@PathVariable UUID id) {
         return ResponseEntity.ok(postService.getReactionDetails(id));

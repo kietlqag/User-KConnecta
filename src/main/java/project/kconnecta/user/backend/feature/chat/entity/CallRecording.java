@@ -31,6 +31,14 @@ public class CallRecording {
     @Column(name = "file_url", nullable = false, columnDefinition = "TEXT")
     private String fileUrl;
 
+    @Builder.Default
+    @Column(name = "recording_media_type", nullable = false, length = 16)
+    private String recordingMediaType = "audio";
+
+    @Builder.Default
+    @Column(name = "has_video", nullable = false)
+    private Boolean hasVideo = false;
+
     @Column(name = "mime_type", length = 120)
     private String mimeType;
 
@@ -43,4 +51,3 @@ public class CallRecording {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 }
-

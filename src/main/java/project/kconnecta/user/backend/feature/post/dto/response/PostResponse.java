@@ -27,6 +27,7 @@ public class PostResponse {
     private String backgroundStyle;
     private boolean promoted;
     private long reactionCount;
+    private List<PostReactionCountResponse> reactionCounts;
     private ReactionType currentUserReactionType;
     private long commentCount;
     private long shareCount;

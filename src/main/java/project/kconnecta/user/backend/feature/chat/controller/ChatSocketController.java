@@ -25,6 +25,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ChatSocketController {
 
+    private static final String MEDIA_TYPE_AUDIO = "audio";
+    private static final String MEDIA_TYPE_VIDEO = "video";
+
     private final ChatService chatService;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
@@ -56,6 +59,7 @@ public class ChatSocketController {
                 receiver.getId(),
                 sender.getUsername(),
                 request.getType(),
+                normalizeMediaType(request.getMediaType()),
                 request.getSdp(),
                 request.getCandidate(),
                 request.getSdpMid(),
@@ -84,6 +88,7 @@ public class ChatSocketController {
                         .startedAt(now)
                         .status("RINGING")
                         .lastSignalType(type)
+                        .callMediaType(MEDIA_TYPE_AUDIO)
                         .build());
 
         if (session.getCaller() == null || session.getCallee() == null) {
@@ -93,6 +98,15 @@ public class ChatSocketController {
         if (session.getStartedAt() == null) {
             session.setStartedAt(now);
         }
+        if (session.getCallMediaType() == null || session.getCallMediaType().isBlank()) {
+            session.setCallMediaType(MEDIA_TYPE_AUDIO);
+        }
+
+        String mediaTypeFromSignal = resolveMediaType(request.getMediaType(), request.getSdp());
+        if (MEDIA_TYPE_VIDEO.equals(mediaTypeFromSignal)) {
+            session.setCallMediaType(MEDIA_TYPE_VIDEO);
+        }
+
         session.setLastSignalType(type);
 
         switch (type) {
@@ -169,14 +183,57 @@ public class ChatSocketController {
         };
     }
 
+    private String inferMediaTypeFromSdp(String sdp) {
+        if (sdp == null || sdp.isBlank()) {
+            return MEDIA_TYPE_AUDIO;
+        }
+        return sdp.toLowerCase().contains("m=video") ? MEDIA_TYPE_VIDEO : MEDIA_TYPE_AUDIO;
+    }
+
+    private String normalizeMediaType(String mediaType) {
+        if (MEDIA_TYPE_VIDEO.equalsIgnoreCase(mediaType)) {
+            return MEDIA_TYPE_VIDEO;
+        }
+        return MEDIA_TYPE_AUDIO;
+    }
+
+    private String resolveMediaType(String mediaType, String sdp) {
+        if (MEDIA_TYPE_VIDEO.equalsIgnoreCase(mediaType)) {
+            return MEDIA_TYPE_VIDEO;
+        }
+        return inferMediaTypeFromSdp(sdp);
+    }
+
     private String buildCallLogContent(CallSession session) {
+        String mediaType = MEDIA_TYPE_VIDEO.equalsIgnoreCase(session.getCallMediaType())
+                ? MEDIA_TYPE_VIDEO
+                : MEDIA_TYPE_AUDIO;
+
         if ("COMPLETED".equals(session.getStatus())) {
             int durationSec = session.getDurationSec() == null ? 0 : session.getDurationSec();
-            return "__CALL_LOG__:{\"kind\":\"completed\",\"label\":\"Cuộc gọi hoàn thành\",\"durationSec\":" + durationSec + "}";
+            String label = MEDIA_TYPE_VIDEO.equals(mediaType)
+                    ? "Cu\u1ed9c g\u1ecdi video ho\u00e0n th\u00e0nh"
+                    : "Cu\u1ed9c g\u1ecdi tho\u1ea1i ho\u00e0n th\u00e0nh";
+            return "__CALL_LOG__:{\"kind\":\"completed\",\"mediaType\":\""
+                    + mediaType
+                    + "\",\"label\":\""
+                    + label
+                    + "\",\"durationSec\":"
+                    + durationSec
+                    + "}";
         }
+
         if ("MISSED".equals(session.getStatus())) {
-            return "__CALL_LOG__:{\"kind\":\"missed\",\"label\":\"Đã bỏ lỡ cuộc gọi thoại\"}";
+            String label = MEDIA_TYPE_VIDEO.equals(mediaType)
+                    ? "\u0110\u00e3 b\u1ecf l\u1ee1 cu\u1ed9c g\u1ecdi video"
+                    : "\u0110\u00e3 b\u1ecf l\u1ee1 cu\u1ed9c g\u1ecdi tho\u1ea1i";
+            return "__CALL_LOG__:{\"kind\":\"missed\",\"mediaType\":\""
+                    + mediaType
+                    + "\",\"label\":\""
+                    + label
+                    + "\"}";
         }
+
         return null;
     }
 
@@ -185,3 +242,4 @@ public class ChatSocketController {
         // Keep websocket handler resilient; client will handle call timeout/retry.
     }
 }
+

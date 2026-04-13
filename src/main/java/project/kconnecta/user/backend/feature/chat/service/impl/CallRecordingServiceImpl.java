@@ -24,6 +24,8 @@ import java.util.UUID;
 public class CallRecordingServiceImpl implements CallRecordingService {
 
     private static final long MAX_RECORDING_SIZE_BYTES = 100L * 1024L * 1024L; // 100MB
+    private static final String MEDIA_TYPE_VIDEO = "video";
+    private static final String MEDIA_TYPE_AUDIO = "audio";
 
     private final UserRepository userRepository;
     private final CallSessionRepository callSessionRepository;
@@ -32,7 +34,7 @@ public class CallRecordingServiceImpl implements CallRecordingService {
 
     @Override
     @Transactional
-    public CallRecordingResponse saveRecording(UUID callId, String username, MultipartFile file, Integer durationSec) {
+    public CallRecordingResponse saveRecording(UUID callId, String username, MultipartFile file, Integer durationSec, String mediaType) {
         if (username == null || username.isBlank()) {
             throw new ValidationException("Unauthenticated request");
         }
@@ -57,12 +59,20 @@ public class CallRecordingServiceImpl implements CallRecordingService {
             throw new ValidationException("You are not a participant of this call");
         }
 
+        boolean hasVideoByFile = contentType != null && contentType.startsWith("video/");
+        boolean hasVideoBySignal = MEDIA_TYPE_VIDEO.equalsIgnoreCase(mediaType);
+        boolean hasVideoBySession = MEDIA_TYPE_VIDEO.equalsIgnoreCase(session.getCallMediaType());
+        boolean hasVideo = hasVideoByFile || hasVideoBySignal || hasVideoBySession;
+        String recordingMediaType = hasVideo ? MEDIA_TYPE_VIDEO : MEDIA_TYPE_AUDIO;
+
         String fileUrl = cloudinaryService.uploadCallRecording(file, callId.toString());
 
         CallRecording recording = CallRecording.builder()
                 .callSession(session)
                 .ownerUser(owner)
                 .fileUrl(fileUrl)
+                .recordingMediaType(recordingMediaType)
+                .hasVideo(hasVideo)
                 .mimeType(contentType)
                 .fileSizeBytes(file.getSize())
                 .durationSec(durationSec == null ? null : Math.max(0, durationSec))
@@ -76,6 +86,8 @@ public class CallRecordingServiceImpl implements CallRecordingService {
                 .callId(session.getCallId())
                 .ownerUserId(owner.getId())
                 .fileUrl(recording.getFileUrl())
+                .recordingMediaType(recording.getRecordingMediaType())
+                .hasVideo(recording.getHasVideo())
                 .mimeType(recording.getMimeType())
                 .fileSizeBytes(recording.getFileSizeBytes())
                 .durationSec(recording.getDurationSec())
@@ -83,4 +95,3 @@ public class CallRecordingServiceImpl implements CallRecordingService {
                 .build();
     }
 }
-

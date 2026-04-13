@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS public.call_sessions (
     duration_sec INTEGER,
     status VARCHAR(32) NOT NULL,
     last_signal_type VARCHAR(32),
+    call_media_type VARCHAR(16) NOT NULL DEFAULT 'audio',
     call_log_sent BOOLEAN NOT NULL DEFAULT FALSE
 );
 
@@ -106,6 +107,8 @@ CREATE TABLE IF NOT EXISTS public.call_recordings (
     call_session_id UUID NOT NULL REFERENCES public.call_sessions(id) ON DELETE CASCADE,
     owner_user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     file_url TEXT NOT NULL,
+    recording_media_type VARCHAR(16) NOT NULL DEFAULT 'audio',
+    has_video BOOLEAN NOT NULL DEFAULT FALSE,
     mime_type VARCHAR(120),
     file_size_bytes BIGINT NOT NULL,
     duration_sec INTEGER,

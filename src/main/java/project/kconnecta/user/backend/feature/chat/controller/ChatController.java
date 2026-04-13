@@ -35,9 +35,10 @@ public class ChatController {
             @PathVariable UUID callId,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "durationSec", required = false) Integer durationSec,
+            @RequestParam(value = "mediaType", required = false) String mediaType,
             Principal principal
     ) {
         String username = principal == null ? null : principal.getName();
-        return ResponseEntity.ok(callRecordingService.saveRecording(callId, username, file, durationSec));
+        return ResponseEntity.ok(callRecordingService.saveRecording(callId, username, file, durationSec, mediaType));
     }
 }

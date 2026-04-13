@@ -6,6 +6,5 @@ import project.kconnecta.user.backend.feature.chat.dto.response.CallRecordingRes
 import java.util.UUID;
 
 public interface CallRecordingService {
-    CallRecordingResponse saveRecording(UUID callId, String username, MultipartFile file, Integer durationSec);
+    CallRecordingResponse saveRecording(UUID callId, String username, MultipartFile file, Integer durationSec, String mediaType);
 }
-

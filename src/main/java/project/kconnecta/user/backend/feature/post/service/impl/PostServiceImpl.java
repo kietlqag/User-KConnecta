@@ -136,6 +136,13 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public void removeReaction(UUID postId, UUID userId) {
+        getPost(postId);
+        getUser(userId, "Reaction user not found");
+        postReactionRepository.deleteByPostIdAndUserId(postId, userId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PostReactionDetailsResponse getReactionDetails(UUID postId) {
         Post post = getPost(postId);
@@ -321,6 +328,10 @@ public class PostServiceImpl implements PostService {
                 : postReactionRepository.findByPostIdAndUserId(post.getId(), currentUserId)
                 .map(PostReaction::getReactionType)
                 .orElse(null);
+        List<PostReactionCountResponse> reactionCounts = buildReactionCounts(post.getId());
+        long totalReactionCount = reactionCounts.stream()
+                .mapToLong(PostReactionCountResponse::getCount)
+                .sum();
 
         return PostResponse.builder()
                 .id(post.getId())
@@ -336,7 +347,8 @@ public class PostServiceImpl implements PostService {
                 .locationText(post.getLocationText())
                 .backgroundStyle(post.getBackgroundStyle())
                 .promoted(post.isPromoted())
-                .reactionCount(postReactionRepository.countByPostId(post.getId()))
+                .reactionCount(totalReactionCount)
+                .reactionCounts(reactionCounts)
                 .currentUserReactionType(currentUserReactionType)
                 .commentCount(postCommentRepository.countByPostId(post.getId()))
                 .shareCount(postShareRepository.countByPostId(post.getId()))
@@ -346,6 +358,21 @@ public class PostServiceImpl implements PostService {
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
+    }
+
+    private List<PostReactionCountResponse> buildReactionCounts(UUID postId) {
+        var rawCounts = postReactionRepository.findReactionCountsByPostId(postId).stream()
+                .collect(Collectors.toMap(
+                        PostReactionRepository.ReactionCountProjection::getReactionType,
+                        PostReactionRepository.ReactionCountProjection::getCount
+                ));
+
+        return Arrays.stream(ReactionType.values())
+                .map(reactionType -> PostReactionCountResponse.builder()
+                        .reactionType(reactionType)
+                        .count(rawCounts.getOrDefault(reactionType, 0L))
+                        .build())
+                .toList();
     }
 
     private String trimToNull(String value) {

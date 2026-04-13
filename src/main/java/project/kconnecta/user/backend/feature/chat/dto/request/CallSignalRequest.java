@@ -11,6 +11,7 @@ public class CallSignalRequest {
     private UUID receiverId;
     private UUID callId;
     private String type;
+    private String mediaType;
     private String sdp;
     private String candidate;
     private String sdpMid;
