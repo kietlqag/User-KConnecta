@@ -1,4 +1,5 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buildRtcConfig } from '@/utils/webrtcConfig';
 import type { CallSignalType, IncomingCallSignal, OutgoingCallSignal } from '../types/message.types';
 
 type CallDirection = 'incoming' | 'outgoing';
@@ -18,9 +19,7 @@ interface UseVoiceCallOptions {
 }
 
 const CALL_TIMEOUT_MS = 30000;
-const rtcConfig: RTCConfiguration = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-};
+const rtcConfig = buildRtcConfig();
 
 function createCallId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -211,7 +210,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       clearCallTimeout();
       callTimeoutRef.current = window.setTimeout(() => {
         sendSignal(peerUserId, callId, 'CALL_CANCEL');
-        setErrorMessage('Cuộc gọi không phản hồi.');
+        setErrorMessage('Cu?c g?i kh�ng ph?n h?i.');
         setStatus('ended');
         cleanup(true);
       }, CALL_TIMEOUT_MS);
@@ -228,7 +227,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         await pc.setLocalDescription(offer);
         sendSignal(peerUserId, callId, 'CALL_OFFER', { sdp: offer.sdp ?? undefined });
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : 'Không thể bắt đầu cuộc gọi');
+        setErrorMessage(error instanceof Error ? error.message : 'Kh�ng th? b?t d?u cu?c g?i');
         setStatus('error');
         cleanup(true);
       }
@@ -274,7 +273,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
       await applyPendingIce();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Không thể nhận cuộc gọi');
+      setErrorMessage(error instanceof Error ? error.message : 'Kh�ng th? nh?n cu?c g?i');
       setStatus('error');
       cleanup(true);
     }
@@ -447,3 +446,4 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     ],
   );
 }
+
