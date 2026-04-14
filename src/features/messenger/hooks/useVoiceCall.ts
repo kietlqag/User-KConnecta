@@ -189,11 +189,23 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       pc.ontrack = (event) => {
         const [stream] = event.streams;
         logWebRtc('remote track received', { callId, trackCount: stream?.getTracks().length ?? 0 });
-        if (stream) setRemoteStream(stream);
+        if (stream) {
+          setRemoteStream(stream);
+          setStatus((prev) => (prev === 'connecting' || prev === 'calling' ? 'in_call' : prev));
+        }
       };
 
       pc.oniceconnectionstatechange = () => {
         logWebRtc('iceConnectionState', { callId, state: pc.iceConnectionState });
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          setStatus('in_call');
+        } else if (
+          pc.iceConnectionState === 'failed' ||
+          pc.iceConnectionState === 'disconnected' ||
+          pc.iceConnectionState === 'closed'
+        ) {
+          setStatus('ended');
+        }
       };
 
       pc.onicegatheringstatechange = () => {
