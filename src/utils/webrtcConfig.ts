@@ -1,5 +1,11 @@
 type EnvValue = string | undefined;
 
+function parseBoolean(value: EnvValue): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+}
+
 function splitCsv(value: EnvValue): string[] {
   if (!value) return [];
   return value
@@ -37,9 +43,14 @@ function fromCompactIceList(value: EnvValue): RTCIceServer[] {
 }
 
 export function buildRtcConfig(): RTCConfiguration {
+  const forceRelay = parseBoolean(import.meta.env.VITE_WEBRTC_FORCE_RELAY);
   const compact = fromCompactIceList(import.meta.env.VITE_WEBRTC_ICE_SERVERS);
   if (compact.length > 0) {
-    return { iceServers: compact, iceCandidatePoolSize: 10 };
+    return {
+      iceServers: compact,
+      iceCandidatePoolSize: 10,
+      iceTransportPolicy: forceRelay ? 'relay' : 'all',
+    };
   }
 
   const stunUrls = splitCsv(import.meta.env.VITE_STUN_URLS);
@@ -68,5 +79,10 @@ export function buildRtcConfig(): RTCConfiguration {
   return {
     iceServers,
     iceCandidatePoolSize: 10,
+    iceTransportPolicy: forceRelay ? 'relay' : 'all',
   };
+}
+
+export function isWebRtcDebugEnabled(): boolean {
+  return parseBoolean(import.meta.env.VITE_WEBRTC_DEBUG);
 }

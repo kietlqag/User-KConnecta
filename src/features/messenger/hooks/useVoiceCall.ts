@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { buildRtcConfig } from '@/utils/webrtcConfig';
+ï»¿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { buildRtcConfig, isWebRtcDebugEnabled } from '@/utils/webrtcConfig';
 import type { CallSignalType, IncomingCallSignal, OutgoingCallSignal } from '../types/message.types';
 
 type CallDirection = 'incoming' | 'outgoing';
@@ -20,6 +20,7 @@ interface UseVoiceCallOptions {
 
 const CALL_TIMEOUT_MS = 30000;
 const rtcConfig = buildRtcConfig();
+const DEBUG_WEBRTC = isWebRtcDebugEnabled();
 
 function createCallId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -30,6 +31,15 @@ function createCallId() {
 
 function hasVideoInSdp(sdp?: string | null) {
   return typeof sdp === 'string' && /\bm=video\b/i.test(sdp);
+}
+
+function extractCandidateType(candidate?: string | null) {
+  if (!candidate) return 'unknown';
+  if (candidate.includes(' typ relay ')) return 'relay';
+  if (candidate.includes(' typ srflx ')) return 'srflx';
+  if (candidate.includes(' typ prflx ')) return 'prflx';
+  if (candidate.includes(' typ host ')) return 'host';
+  return 'unknown';
 }
 
 export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOptions) {
@@ -54,6 +64,15 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       window.clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
     }
+  }, []);
+
+  const logWebRtc = useCallback((message: string, details?: unknown) => {
+    if (!DEBUG_WEBRTC) return;
+    if (details !== undefined) {
+      console.log(`[WebRTC] ${message}`, details);
+      return;
+    }
+    console.log(`[WebRTC] ${message}`);
   }, []);
 
   const sendSignal = useCallback(
@@ -146,9 +165,20 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       if (peerRef.current) return peerRef.current;
 
       const pc = new RTCPeerConnection(rtcConfig);
+      logWebRtc('createPeerConnection', {
+        callId,
+        peerUserId,
+        iceTransportPolicy: rtcConfig.iceTransportPolicy ?? 'all',
+        iceServers: rtcConfig.iceServers,
+      });
 
       pc.onicecandidate = (event) => {
         if (!event.candidate) return;
+        logWebRtc('local ICE candidate', {
+          callId,
+          type: extractCandidateType(event.candidate.candidate),
+          candidate: event.candidate.candidate,
+        });
         sendSignal(peerUserId, callId, 'CALL_ICE', {
           candidate: event.candidate.candidate,
           sdpMid: event.candidate.sdpMid ?? undefined,
@@ -158,10 +188,20 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
       pc.ontrack = (event) => {
         const [stream] = event.streams;
+        logWebRtc('remote track received', { callId, trackCount: stream?.getTracks().length ?? 0 });
         if (stream) setRemoteStream(stream);
       };
 
+      pc.oniceconnectionstatechange = () => {
+        logWebRtc('iceConnectionState', { callId, state: pc.iceConnectionState });
+      };
+
+      pc.onicegatheringstatechange = () => {
+        logWebRtc('iceGatheringState', { callId, state: pc.iceGatheringState });
+      };
+
       pc.onconnectionstatechange = () => {
+        logWebRtc('connectionState', { callId, state: pc.connectionState });
         if (pc.connectionState === 'connected') {
           setStatus('in_call');
         } else if (
@@ -176,7 +216,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       peerRef.current = pc;
       return pc;
     },
-    [sendSignal],
+    [logWebRtc, sendSignal],
   );
 
   const applyPendingIce = useCallback(async () => {
@@ -206,11 +246,12 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       setActiveCall({ callId, peerUserId, direction: 'outgoing', mediaType });
       setStatus('calling');
       sendSignal(peerUserId, callId, 'CALL_INVITE', { mediaType });
+      logWebRtc('send CALL_INVITE', { callId, peerUserId, mediaType });
 
       clearCallTimeout();
       callTimeoutRef.current = window.setTimeout(() => {
         sendSignal(peerUserId, callId, 'CALL_CANCEL');
-        setErrorMessage('Cu?c g?i không ph?n h?i.');
+        setErrorMessage('Cu?c g?i khÃ´ng ph?n h?i.');
         setStatus('ended');
         cleanup(true);
       }, CALL_TIMEOUT_MS);
@@ -225,14 +266,15 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           offerToReceiveVideo: mediaType === 'video',
         });
         await pc.setLocalDescription(offer);
+        logWebRtc('setLocalDescription offer', { callId });
         sendSignal(peerUserId, callId, 'CALL_OFFER', { sdp: offer.sdp ?? undefined });
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : 'Không th? b?t d?u cu?c g?i');
+        setErrorMessage(error instanceof Error ? error.message : 'KhÃ´ng th? b?t d?u cu?c g?i');
         setStatus('error');
         cleanup(true);
       }
     },
-    [cleanup, clearCallTimeout, createPeerConnection, currentUserId, ensureLocalStream, sendSignal, status],
+    [cleanup, clearCallTimeout, createPeerConnection, currentUserId, ensureLocalStream, logWebRtc, sendSignal, status],
   );
 
   const rejectIncoming = useCallback(() => {
@@ -253,6 +295,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     setIncomingSignal(null);
     setIncomingMediaType('audio');
     sendSignal(peerUserId, callId, 'CALL_ACCEPT');
+    logWebRtc('send CALL_ACCEPT', { callId, peerUserId });
 
     try {
       const local = await ensureLocalStream(offerMediaType);
@@ -263,21 +306,23 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       if (pendingOffer) {
         pendingOfferRef.current = null;
         await pc.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+        logWebRtc('setRemoteDescription offer', { callId });
       }
 
       if (pc.remoteDescription?.type === 'offer') {
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        logWebRtc('setLocalDescription answer', { callId });
         sendSignal(peerUserId, callId, 'CALL_ANSWER', { sdp: answer.sdp ?? undefined });
       }
 
       await applyPendingIce();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Không th? nh?n cu?c g?i');
+      setErrorMessage(error instanceof Error ? error.message : 'KhÃ´ng th? nh?n cu?c g?i');
       setStatus('error');
       cleanup(true);
     }
-  }, [applyPendingIce, cleanup, createPeerConnection, ensureLocalStream, incomingMediaType, incomingSignal, sendSignal]);
+  }, [applyPendingIce, cleanup, createPeerConnection, ensureLocalStream, incomingMediaType, incomingSignal, logWebRtc, sendSignal]);
 
   const endCall = useCallback(() => {
     if (activeCall) {
@@ -319,6 +364,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       if (signal.fromUserId === currentUserId) return;
 
       const matchesByCallId = activeCall?.callId === signal.callId;
+      logWebRtc('incoming signal', { callId: signal.callId, type: signal.type });
 
       switch (signal.type) {
         case 'CALL_INVITE':
@@ -340,6 +386,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
         case 'CALL_ACCEPT':
           if (matchesByCallId && activeCall?.direction === 'outgoing') {
+            clearCallTimeout();
             setStatus('connecting');
           }
           break;
@@ -369,7 +416,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
         case 'CALL_ANSWER':
           if (!matchesByCallId || !signal.sdp || !peerRef.current) break;
+          clearCallTimeout();
           await peerRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
+          logWebRtc('setRemoteDescription answer', { callId: signal.callId });
           setStatus('connecting');
           await applyPendingIce();
           break;
@@ -382,11 +431,19 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           };
           if (peerRef.current?.remoteDescription) {
             try {
+              logWebRtc('apply remote ICE', {
+                callId: signal.callId,
+                type: extractCandidateType(signal.candidate),
+              });
               await peerRef.current.addIceCandidate(candidate);
             } catch {
               // Ignore malformed candidate.
             }
           } else {
+            logWebRtc('queue remote ICE (remoteDescription not ready)', {
+              callId: signal.callId,
+              type: extractCandidateType(signal.candidate),
+            });
             pendingIceRef.current.push(candidate);
           }
           break;
@@ -394,7 +451,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
       }
     },
-    [activeCall, applyPendingIce, cleanup, currentUserId, incomingSignal, sendSignal, status],
+    [activeCall, applyPendingIce, cleanup, clearCallTimeout, currentUserId, incomingSignal, logWebRtc, sendSignal, status],
   );
 
   const incomingPeerUserId = incomingSignal?.fromUserId ?? null;
@@ -446,4 +503,5 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     ],
   );
 }
+
 

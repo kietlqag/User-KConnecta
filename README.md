@@ -25,9 +25,13 @@
   VITE_TURN_URLS=turn:turn.your-domain.com:3478,turns:turn.your-domain.com:5349
   VITE_TURN_USERNAME=<turn-username>
   VITE_TURN_CREDENTIAL=<turn-password>
+  # Debug/diagnostic options
+  VITE_WEBRTC_DEBUG=true
+  VITE_WEBRTC_FORCE_RELAY=true
   ```
 
   Notes:
   - `VITE_API_URL` must be `https://...` in production so WebSocket uses `wss://...`.
   - For users on different networks (4G/Wi-Fi khác nhau), TURN server is required for stable call connectivity.
+  - `VITE_WEBRTC_FORCE_RELAY=true` is useful for debugging cross-network calls. Turn it off after verification.
   
