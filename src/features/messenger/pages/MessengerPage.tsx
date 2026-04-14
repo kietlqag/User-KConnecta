@@ -357,10 +357,9 @@ export default function MessengerPage() {
 
   useEffect(() => {
     const canRecord =
-      voiceCall.status === 'in_call' &&
+      (voiceCall.status === 'connecting' || voiceCall.status === 'in_call') &&
       Boolean(voiceCall.activeCallId) &&
-      Boolean(voiceCall.localStream) &&
-      Boolean(voiceCall.remoteStream);
+      Boolean(voiceCall.localStream);
 
     if (!canRecord) {
       if (callRecorderRef.current) {
@@ -376,16 +375,18 @@ export default function MessengerPage() {
     const callId = voiceCall.activeCallId;
     const localStream = voiceCall.localStream;
     const remoteStream = voiceCall.remoteStream;
-    if (!callId || !localStream || !remoteStream) {
+    if (!callId || !localStream) {
       return;
     }
 
     const audioCtx = new AudioContext();
     const destination = audioCtx.createMediaStreamDestination();
     const localSource = audioCtx.createMediaStreamSource(localStream);
-    const remoteSource = audioCtx.createMediaStreamSource(remoteStream);
     localSource.connect(destination);
-    remoteSource.connect(destination);
+    if (remoteStream) {
+      const remoteSource = audioCtx.createMediaStreamSource(remoteStream);
+      remoteSource.connect(destination);
+    }
 
     const recordingStream = new MediaStream();
     destination.stream.getAudioTracks().forEach((track) => {
@@ -394,7 +395,7 @@ export default function MessengerPage() {
 
     const isVideoCallRecording = voiceCall.callMediaType === 'video';
     if (isVideoCallRecording) {
-      const remoteVideoTrack = remoteStream.getVideoTracks().find((track) => track.readyState === 'live');
+      const remoteVideoTrack = remoteStream?.getVideoTracks().find((track) => track.readyState === 'live');
       const localVideoTrack = localStream.getVideoTracks().find((track) => track.readyState === 'live');
       const videoTrack = remoteVideoTrack ?? localVideoTrack;
       if (videoTrack) {
