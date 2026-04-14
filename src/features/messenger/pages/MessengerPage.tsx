@@ -22,12 +22,11 @@ import { Header } from '../../home/components';
 import { ConversationItem } from '../components';
 import { ChatWindow } from '../components';
 import { Conversation, MessengerFilter } from '../types/messenger.types';
-import { ChatUser, IncomingCallSignal, IncomingChatMessage, Message } from '../types/message.types';
-import { useChatSocket } from '../hooks/useChatSocket';
+import { ChatUser, IncomingChatMessage, Message } from '../types/message.types';
 import { useFriendConversations } from '../hooks/useFriendConversations';
-import { useVoiceCall } from '../hooks/useVoiceCall';
 import { authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
+import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
 
@@ -140,7 +139,6 @@ export default function MessengerPage() {
   const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
   const [callDurationSec, setCallDurationSec] = useState(0);
 
-  const callSignalHandlerRef = useRef<(signal: IncomingCallSignal) => void>(() => {});
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -148,6 +146,13 @@ export default function MessengerPage() {
   const callRecorderChunksRef = useRef<Blob[]>([]);
   const callRecorderAudioCtxRef = useRef<AudioContext | null>(null);
   const callRecorderMetaRef = useRef<{ callId: string; startedAt: number; mediaType: 'audio' | 'video' } | null>(null);
+  const callRecorderCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const callRecorderCanvasStreamRef = useRef<MediaStream | null>(null);
+  const callRecorderAnimationFrameRef = useRef<number | null>(null);
+  const callRecorderVideoElementsRef = useRef<{ local: HTMLVideoElement | null; remote: HTMLVideoElement | null }>({
+    local: null,
+    remote: null,
+  });
   const isUploadingRecordingRef = useRef(false);
 
   const conversations: Conversation[] = baseConversations.map((c) => ({
@@ -249,26 +254,13 @@ export default function MessengerPage() {
     [activeChatUserId, currentUser?.id],
   );
 
-  const handleIncomingCallSignalFromSocket = useCallback((signal: IncomingCallSignal) => {
-    callSignalHandlerRef.current(signal);
-  }, []);
-
-  const { connected, sendMessage, sendCallSignal } = useChatSocket(
-    currentUser?.token,
-    handleIncomingMessage,
-    handleIncomingCallSignalFromSocket,
-  );
-
-  const voiceCall = useVoiceCall({
-    currentUserId: currentUser?.id,
-    sendCallSignal,
-  });
+  const { connected, sendMessage, voiceCall, subscribeMessages } = useRealtimeCall();
 
   useEffect(() => {
-    callSignalHandlerRef.current = (signal: IncomingCallSignal) => {
-      void voiceCall.handleIncomingSignal(signal);
-    };
-  }, [voiceCall.handleIncomingSignal]);
+    return subscribeMessages((signalMessage) => {
+      handleIncomingMessage(signalMessage);
+    });
+  }, [handleIncomingMessage, subscribeMessages]);
 
   useEffect(() => {
     const audio = remoteAudioRef.current;
@@ -302,6 +294,25 @@ export default function MessengerPage() {
 
   const stopAndUploadCallRecording = useCallback(
     async (finalCallId?: string | null) => {
+      if (callRecorderAnimationFrameRef.current) {
+        window.cancelAnimationFrame(callRecorderAnimationFrameRef.current);
+        callRecorderAnimationFrameRef.current = null;
+      }
+      callRecorderCanvasStreamRef.current?.getTracks().forEach((track) => track.stop());
+      callRecorderCanvasStreamRef.current = null;
+      callRecorderCanvasRef.current = null;
+      const localVideo = callRecorderVideoElementsRef.current.local;
+      const remoteVideo = callRecorderVideoElementsRef.current.remote;
+      if (localVideo) {
+        localVideo.pause();
+        localVideo.srcObject = null;
+      }
+      if (remoteVideo) {
+        remoteVideo.pause();
+        remoteVideo.srcObject = null;
+      }
+      callRecorderVideoElementsRef.current = { local: null, remote: null };
+
       const recorder = callRecorderRef.current;
       const meta = callRecorderMetaRef.current;
       if (!recorder || !meta) {
@@ -397,9 +408,80 @@ export default function MessengerPage() {
     if (isVideoCallRecording) {
       const remoteVideoTrack = remoteStream?.getVideoTracks().find((track) => track.readyState === 'live');
       const localVideoTrack = localStream.getVideoTracks().find((track) => track.readyState === 'live');
-      const videoTrack = remoteVideoTrack ?? localVideoTrack;
-      if (videoTrack) {
-        recordingStream.addTrack(videoTrack);
+      if (remoteVideoTrack || localVideoTrack) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        const ctx = canvas.getContext('2d');
+
+        if (ctx) {
+          const localVideo = document.createElement('video');
+          localVideo.playsInline = true;
+          localVideo.muted = true;
+          localVideo.autoplay = true;
+          if (localStream) {
+            localVideo.srcObject = localStream;
+            void localVideo.play().catch(() => {});
+          }
+
+          const remoteVideo = document.createElement('video');
+          remoteVideo.playsInline = true;
+          remoteVideo.muted = true;
+          remoteVideo.autoplay = true;
+          if (remoteStream) {
+            remoteVideo.srcObject = remoteStream;
+            void remoteVideo.play().catch(() => {});
+          }
+
+          callRecorderVideoElementsRef.current = { local: localVideo, remote: remoteVideo };
+          callRecorderCanvasRef.current = canvas;
+
+          const drawFrame = () => {
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            const hasRemoteFrame =
+              Boolean(remoteVideoTrack) && remoteVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
+            const hasLocalFrame =
+              Boolean(localVideoTrack) && localVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
+
+            if (hasRemoteFrame) {
+              ctx.drawImage(remoteVideo, 0, 0, w, h);
+            } else if (hasLocalFrame) {
+              ctx.drawImage(localVideo, 0, 0, w, h);
+            }
+
+            if (hasLocalFrame && hasRemoteFrame) {
+              const pipW = Math.floor(w * 0.26);
+              const pipH = Math.floor(h * 0.26);
+              const pipX = w - pipW - 24;
+              const pipY = h - pipH - 24;
+
+              ctx.fillStyle = 'rgba(0,0,0,0.35)';
+              ctx.fillRect(pipX - 4, pipY - 4, pipW + 8, pipH + 8);
+              ctx.drawImage(localVideo, pipX, pipY, pipW, pipH);
+            }
+
+            callRecorderAnimationFrameRef.current = window.requestAnimationFrame(drawFrame);
+          };
+
+          drawFrame();
+
+          const canvasStream = canvas.captureStream(30);
+          callRecorderCanvasStreamRef.current = canvasStream;
+          const composedVideoTrack = canvasStream.getVideoTracks()[0];
+          if (composedVideoTrack) {
+            recordingStream.addTrack(composedVideoTrack);
+          }
+        } else {
+          const fallbackTrack = remoteVideoTrack ?? localVideoTrack;
+          if (fallbackTrack) {
+            recordingStream.addTrack(fallbackTrack);
+          }
+        }
       }
     }
 
