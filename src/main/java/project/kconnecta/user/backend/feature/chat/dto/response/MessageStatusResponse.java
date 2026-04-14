@@ -12,14 +12,11 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatMessageResponse {
-    private UUID id;
+public class MessageStatusResponse {
+    private UUID messageId;
     private UUID senderId;
-    private String senderUsername;
     private UUID receiverId;
-    private String content;
-    private LocalDateTime createdAt;
-    private Boolean delivered;
-    private Boolean seen;
-    private LocalDateTime seenAt;
+    private String status; // SENT | DELIVERED | SEEN
+    private LocalDateTime updatedAt;
 }
+

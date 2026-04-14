@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     receiver_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    delivered BOOLEAN NOT NULL DEFAULT FALSE,
+    delivered_at TIMESTAMP,
+    seen_at TIMESTAMP,
     seen BOOLEAN NOT NULL DEFAULT FALSE
 );
 

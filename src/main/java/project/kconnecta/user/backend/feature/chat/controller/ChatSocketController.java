@@ -6,6 +6,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import project.kconnecta.user.backend.feature.chat.dto.request.CallSignalRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.ConversationSeenRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.MessageDeliveredRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSignalResponse;
 import project.kconnecta.user.backend.feature.chat.entity.CallSession;
@@ -40,6 +42,22 @@ public class ChatSocketController {
             throw new IllegalStateException("Unauthenticated WebSocket session");
         }
         chatService.sendPrivateMessage(principal.getName(), request);
+    }
+
+    @MessageMapping("/chat.delivered")
+    public void markDelivered(MessageDeliveredRequest request, Principal principal) {
+        if (principal == null) {
+            throw new IllegalStateException("Unauthenticated WebSocket session");
+        }
+        chatService.markMessageDelivered(principal.getName(), request.getMessageId());
+    }
+
+    @MessageMapping("/chat.seen")
+    public void markSeen(ConversationSeenRequest request, Principal principal) {
+        if (principal == null) {
+            throw new IllegalStateException("Unauthenticated WebSocket session");
+        }
+        chatService.markConversationSeen(principal.getName(), request.getPeerUserId());
     }
 
     @MessageMapping("/call.signal")

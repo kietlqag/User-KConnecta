@@ -35,5 +35,14 @@ public class ChatMessage {
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
+    private Boolean delivered = false;
+
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
+
+    @Column(nullable = false)
     private Boolean seen = false;
+
+    @Column(name = "seen_at")
+    private LocalDateTime seenAt;
 }
