@@ -86,6 +86,36 @@ export const ChatWindow = ({
     onReactMessage?.(messageId, emoji);
   };
 
+  const formatLastActiveLabel = (isOnline: boolean, lastActiveAt?: string) => {
+    if (isOnline) return 'Đang hoạt động';
+    if (!lastActiveAt) return 'Không hoạt động';
+
+    const date = new Date(lastActiveAt);
+    if (Number.isNaN(date.getTime())) return 'Không hoạt động';
+
+    const now = new Date();
+    const diffMs = Math.max(0, now.getTime() - date.getTime());
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    if (diffMinutes < 1) return 'Hoạt động vừa xong';
+    if (diffMinutes < 60) return `Hoạt động ${diffMinutes} phút trước`;
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `Hoạt động ${diffHours} giờ trước`;
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday =
+      date.getDate() === yesterday.getDate() &&
+      date.getMonth() === yesterday.getMonth() &&
+      date.getFullYear() === yesterday.getFullYear();
+    if (isYesterday) return 'Hoạt động hôm qua';
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `Hoạt động vào ngày ${day}/${month}/${year}`;
+  };
+
   const hasActiveVoiceCall = callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'in_call';
   const isStartingVoiceCall = callStatus === 'calling' || callStatus === 'connecting';
   const isVideoCall = hasActiveVoiceCall && callMediaType === 'video';
@@ -112,9 +142,20 @@ export const ChatWindow = ({
     return null;
   };
 
+  const getLastOwnMessageStatusLabel = () => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      const message = messages[i];
+      if (!message.isOwn || message.systemType) continue;
+      if (message.deliveryStatus === 'SEEN') return 'Đã xem';
+      if (message.deliveryStatus === 'DELIVERED') return 'Đã nhận';
+      return 'Đã gửi';
+    }
+    return 'Đã gửi';
+  };
+
   const lastOwnMessageId = getLastOwnMessageId();
   const isLastMessageFromMe = messages.length > 0 && messages[messages.length - 1].isOwn;
-  const latestOwnMessageStatus = !connected ? 'Đã gửi' : user.isOnline ? 'Đã xem' : 'Đã nhận';
+  const latestOwnMessageStatus = connected ? getLastOwnMessageStatusLabel() : 'Đã gửi';
 
   return (
     <div
@@ -151,7 +192,7 @@ export const ChatWindow = ({
           <div className="min-w-0">
             <h3 className="font-semibold text-sm truncate">{user.name}</h3>
             <p className="text-xs text-gray-500 truncate">
-              {user.isOnline ? 'Đang hoạt động' : 'Không hoạt động'}
+              {formatLastActiveLabel(user.isOnline, user.lastActiveAt)}
             </p>
           </div>
         </div>

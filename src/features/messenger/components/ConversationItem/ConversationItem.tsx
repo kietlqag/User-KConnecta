@@ -18,8 +18,11 @@ export const ConversationItem = ({ conversation, onClick }: ConversationItemProp
           alt={conversation.user.name}
           className="w-14 h-14 rounded-full object-cover"
         />
+        {conversation.user.isOnline && (
+          <div className="absolute bottom-1 right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+        )}
         {conversation.isUnread && (
-          <div className="absolute bottom-0 right-0 w-3 h-3 bg-blue-500 border-2 border-white rounded-full" />
+          <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 border-2 border-white rounded-full" />
         )}
       </div>
 

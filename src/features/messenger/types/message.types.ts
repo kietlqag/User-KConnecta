@@ -4,6 +4,8 @@
   text: string;
   timestamp: Date;
   isOwn: boolean;
+  deliveryStatus?: 'SENT' | 'DELIVERED' | 'SEEN';
+  seenAt?: string;
   reactions?: string[];
   systemType?: 'call_log' | 'missed_call';
   callLogKind?: 'missed' | 'completed';
@@ -16,15 +18,34 @@ export interface ChatUser {
   name: string;
   avatar: string;
   isOnline: boolean;
+  lastActiveAt?: string;
 }
 
 /** Shape của message nhận từ backend qua WebSocket */
 export interface IncomingChatMessage {
+  id: string;
   senderId: string;
   senderUsername: string;
   receiverId: string;
   content: string;
   createdAt: string; // ISO datetime
+  delivered?: boolean;
+  seen?: boolean;
+  seenAt?: string;
+}
+
+export interface IncomingMessageStatus {
+  messageId: string;
+  senderId: string;
+  receiverId: string;
+  status: 'DELIVERED' | 'SEEN';
+  updatedAt?: string;
+}
+
+export interface IncomingPresenceStatus {
+  userId: string;
+  online: boolean;
+  lastActiveAt?: string;
 }
 
 export type CallSignalType =

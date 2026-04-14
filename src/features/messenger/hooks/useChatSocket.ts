@@ -4,6 +4,8 @@ import { getWsBaseUrl } from '@/utils/apiBaseUrl';
 import type {
   IncomingChatMessage,
   IncomingCallSignal,
+  IncomingMessageStatus,
+  IncomingPresenceStatus,
   OutgoingCallSignal,
 } from '../types/message.types';
 
@@ -14,14 +16,20 @@ export function useChatSocket(
   token: string | null | undefined,
   onMessage: (msg: IncomingChatMessage) => void,
   onCallSignal?: (signal: IncomingCallSignal) => void,
+  onMessageStatus?: (status: IncomingMessageStatus) => void,
+  onPresenceStatus?: (status: IncomingPresenceStatus) => void,
 ) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef<Client | null>(null);
 
   const onMessageRef = useRef(onMessage);
   const onCallSignalRef = useRef(onCallSignal);
+  const onMessageStatusRef = useRef(onMessageStatus);
+  const onPresenceStatusRef = useRef(onPresenceStatus);
   onMessageRef.current = onMessage;
   onCallSignalRef.current = onCallSignal;
+  onMessageStatusRef.current = onMessageStatus;
+  onPresenceStatusRef.current = onPresenceStatus;
 
   useEffect(() => {
     if (!token) return;
@@ -51,6 +59,29 @@ export function useChatSocket(
           } catch (e) {
             console.error('[useChatSocket] Failed to parse call signal:', e);
           }
+        });
+
+        client.subscribe('/user/queue/message-status', (frame) => {
+          try {
+            const status = JSON.parse(frame.body) as IncomingMessageStatus;
+            onMessageStatusRef.current?.(status);
+          } catch (e) {
+            console.error('[useChatSocket] Failed to parse message status:', e);
+          }
+        });
+
+        client.subscribe('/user/queue/presence', (frame) => {
+          try {
+            const status = JSON.parse(frame.body) as IncomingPresenceStatus;
+            onPresenceStatusRef.current?.(status);
+          } catch (e) {
+            console.error('[useChatSocket] Failed to parse presence status:', e);
+          }
+        });
+
+        client.publish({
+          destination: '/app/presence.init',
+          body: '{}',
         });
       },
       onDisconnect: () => setConnected(false),
@@ -94,5 +125,25 @@ export function useChatSocket(
     }
   }, []);
 
-  return { connected, sendMessage, sendCallSignal };
+  const sendMessageDelivered = useCallback((messageId: string) => {
+    if (!messageId) return;
+    if (clientRef.current?.connected) {
+      clientRef.current.publish({
+        destination: '/app/chat.delivered',
+        body: JSON.stringify({ messageId }),
+      });
+    }
+  }, []);
+
+  const sendConversationSeen = useCallback((peerUserId: string) => {
+    if (!peerUserId) return;
+    if (clientRef.current?.connected) {
+      clientRef.current.publish({
+        destination: '/app/chat.seen',
+        body: JSON.stringify({ peerUserId }),
+      });
+    }
+  }, []);
+
+  return { connected, sendMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen };
 }

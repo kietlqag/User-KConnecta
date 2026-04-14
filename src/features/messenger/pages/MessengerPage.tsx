@@ -22,7 +22,7 @@ import { Header } from '../../home/components';
 import { ConversationItem } from '../components';
 import { ChatWindow } from '../components';
 import { Conversation, MessengerFilter } from '../types/messenger.types';
-import { ChatUser, IncomingChatMessage, Message } from '../types/message.types';
+import { ChatUser, IncomingChatMessage, IncomingMessageStatus, Message } from '../types/message.types';
 import { useFriendConversations } from '../hooks/useFriendConversations';
 import { authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
@@ -75,6 +75,42 @@ function formatConversationPreview(text: string, isOwn: boolean) {
   return isOwn ? `Bạn: ${normalized}` : normalized;
 }
 
+function formatLastActiveLabel(isOnline: boolean, lastActiveAt?: string) {
+  if (isOnline) return 'Đang hoạt động';
+  if (!lastActiveAt) return 'Không hoạt động';
+
+  const date = new Date(lastActiveAt);
+  if (Number.isNaN(date.getTime())) return 'Không hoạt động';
+
+  const now = new Date();
+  const diffMs = Math.max(0, now.getTime() - date.getTime());
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  if (diffMinutes < 1) return 'Hoạt động vừa xong';
+  if (diffMinutes < 60) return `Hoạt động ${diffMinutes} phút trước`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `Hoạt động ${diffHours} giờ trước`;
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getDate() === yesterday.getDate() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+  if (isYesterday) return 'Hoạt động hôm qua';
+
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `Hoạt động vào ngày ${day}/${month}/${year}`;
+}
+
+function resolveDeliveryStatus(delivered?: boolean, seen?: boolean): Message['deliveryStatus'] {
+  if (seen) return 'SEEN';
+  if (delivered) return 'DELIVERED';
+  return 'SENT';
+}
+
 function ChatInfoPanel({ user }: { user: ChatUser }) {
   return (
     <aside
@@ -88,7 +124,7 @@ function ChatInfoPanel({ user }: { user: ChatUser }) {
           className="w-24 h-24 rounded-full object-cover mx-auto"
         />
         <h3 className="mt-3 text-xl font-semibold text-gray-900 tracking-tight">{user.name}</h3>
-        <p className="text-sm text-gray-500">{user.isOnline ? 'Đang hoạt động' : 'Không hoạt động'}</p>
+        <p className="text-sm text-gray-500">{formatLastActiveLabel(user.isOnline, user.lastActiveAt)}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 text-center">
@@ -131,6 +167,7 @@ export default function MessengerPage() {
   const [overrides, setOverrides] = useState<Record<string, Partial<Conversation>>>({});
   const [searchParams, setSearchParams] = useSearchParams();
   const [messagesByUser, setMessagesByUser] = useState<Record<string, Message[]>>({});
+  const [presenceByUser, setPresenceByUser] = useState<Record<string, { online: boolean; lastActiveAt?: string }>>({});
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [activeFilter, setActiveFilter] = useState<MessengerFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -157,6 +194,11 @@ export default function MessengerPage() {
 
   const conversations: Conversation[] = baseConversations.map((c) => ({
     ...c,
+    user: {
+      ...c.user,
+      isOnline: presenceByUser[c.user.id]?.online ?? false,
+      lastActiveAt: presenceByUser[c.user.id]?.lastActiveAt,
+    },
     ...(overrides[c.user.id] ?? {}),
   }));
 
@@ -170,9 +212,10 @@ export default function MessengerPage() {
       id: conv.user.id,
       name: conv.user.name,
       avatar: conv.user.avatar,
-      isOnline: false,
+      isOnline: presenceByUser[conv.user.id]?.online ?? false,
+      lastActiveAt: presenceByUser[conv.user.id]?.lastActiveAt,
     };
-  }, [activeChatUserId, baseConversations]);
+  }, [activeChatUserId, baseConversations, presenceByUser]);
 
   useEffect(() => {
     if (!activeChatUserId || !currentUser?.id) return;
@@ -187,10 +230,12 @@ export default function MessengerPage() {
         const myId = currentUser.id;
         const msgs: Message[] = history.map((m) => ({
           ...mapBackendContentToMessageFields(m.content),
-          id: `${m.createdAt}-${m.senderId}`,
+          id: m.id,
           senderId: m.senderId,
           timestamp: new Date(m.createdAt),
           isOwn: m.senderId === myId,
+          deliveryStatus: resolveDeliveryStatus(m.delivered, m.seen),
+          seenAt: m.seenAt,
         }));
 
         setMessagesByUser((prev) => ({ ...prev, [activeChatUserId]: msgs }));
@@ -222,6 +267,17 @@ export default function MessengerPage() {
     };
   }, [activeChatUserId, currentUser?.id]);
 
+  const {
+    connected,
+    sendMessage,
+    voiceCall,
+    subscribeMessages,
+    subscribeMessageStatuses,
+    subscribePresenceStatuses,
+    sendMessageDelivered,
+    sendConversationSeen,
+  } = useRealtimeCall();
+
   const handleIncomingMessage = useCallback(
     (msg: IncomingChatMessage) => {
       const myId = currentUser?.id;
@@ -230,10 +286,12 @@ export default function MessengerPage() {
 
       const newMsg: Message = {
         ...parsed,
-        id: `${Date.now()}-${Math.random()}`,
+        id: msg.id,
         senderId: msg.senderId,
         timestamp: new Date(msg.createdAt),
         isOwn: msg.senderId === myId,
+        deliveryStatus: resolveDeliveryStatus(msg.delivered, msg.seen),
+        seenAt: msg.seenAt,
       };
 
       setMessagesByUser((prev) => ({
@@ -250,17 +308,78 @@ export default function MessengerPage() {
           isUnread: activeChatUserId !== otherUserId,
         },
       }));
-    },
-    [activeChatUserId, currentUser?.id],
-  );
 
-  const { connected, sendMessage, voiceCall, subscribeMessages } = useRealtimeCall();
+      if (msg.senderId !== myId) {
+        sendMessageDelivered(msg.id);
+        if (activeChatUserId === otherUserId) {
+          sendConversationSeen(otherUserId);
+        }
+      }
+    },
+    [activeChatUserId, currentUser?.id, sendConversationSeen, sendMessageDelivered],
+  );
 
   useEffect(() => {
     return subscribeMessages((signalMessage) => {
       handleIncomingMessage(signalMessage);
     });
   }, [handleIncomingMessage, subscribeMessages]);
+
+  const handleIncomingMessageStatus = useCallback((status: IncomingMessageStatus) => {
+    setMessagesByUser((prev) => {
+      const next: Record<string, Message[]> = {};
+      let changed = false;
+
+      for (const [peerId, messages] of Object.entries(prev)) {
+        let peerChanged = false;
+        const updated = messages.map((message) => {
+          if (message.id !== status.messageId) return message;
+          const nextStatus: Message['deliveryStatus'] =
+            status.status === 'SEEN' ? 'SEEN' : 'DELIVERED';
+          peerChanged = true;
+          changed = true;
+          return {
+            ...message,
+            deliveryStatus: nextStatus,
+            seenAt: status.status === 'SEEN' ? status.updatedAt : message.seenAt,
+          };
+        });
+        next[peerId] = peerChanged ? updated : messages;
+      }
+
+      return changed ? next : prev;
+    });
+  }, []);
+
+  useEffect(() => {
+    return subscribeMessageStatuses((status) => {
+      handleIncomingMessageStatus(status);
+    });
+  }, [handleIncomingMessageStatus, subscribeMessageStatuses]);
+
+  useEffect(() => {
+    return subscribePresenceStatuses((presence) => {
+      setPresenceByUser((prev) => {
+        const current = prev[presence.userId];
+        if (current?.online === presence.online && current?.lastActiveAt === presence.lastActiveAt) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [presence.userId]: {
+            online: presence.online,
+            lastActiveAt: presence.lastActiveAt,
+          },
+        };
+      });
+    });
+  }, [subscribePresenceStatuses]);
+
+  useEffect(() => {
+    if (!activeChatUserId) return;
+    if (!connected) return;
+    sendConversationSeen(activeChatUserId);
+  }, [activeChatUserId, connected, sendConversationSeen]);
 
   useEffect(() => {
     const audio = remoteAudioRef.current;

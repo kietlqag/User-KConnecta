@@ -13,15 +13,26 @@ import { Phone, PhoneOff, X } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import { useVoiceCall } from '@/features/messenger/hooks/useVoiceCall';
-import type { IncomingCallSignal, IncomingChatMessage } from '@/features/messenger/types/message.types';
+import type {
+  IncomingCallSignal,
+  IncomingChatMessage,
+  IncomingMessageStatus,
+  IncomingPresenceStatus,
+} from '@/features/messenger/types/message.types';
 
 type MessageListener = (msg: IncomingChatMessage) => void;
+type MessageStatusListener = (status: IncomingMessageStatus) => void;
+type PresenceStatusListener = (status: IncomingPresenceStatus) => void;
 
 interface RealtimeCallContextValue {
   connected: boolean;
   sendMessage: (receiverId: string, content: string) => void;
   voiceCall: ReturnType<typeof useVoiceCall>;
   subscribeMessages: (listener: MessageListener) => () => void;
+  subscribeMessageStatuses: (listener: MessageStatusListener) => () => void;
+  subscribePresenceStatuses: (listener: PresenceStatusListener) => () => void;
+  sendMessageDelivered: (messageId: string) => void;
+  sendConversationSeen: (peerUserId: string) => void;
 }
 
 const RealtimeCallContext = createContext<RealtimeCallContextValue | null>(null);
@@ -31,6 +42,8 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
   const listenersRef = useRef<Set<MessageListener>>(new Set());
+  const statusListenersRef = useRef<Set<MessageStatusListener>>(new Set());
+  const presenceListenersRef = useRef<Set<PresenceStatusListener>>(new Set());
   const callSignalHandlerRef = useRef<(signal: IncomingCallSignal) => void>(() => {});
   const desktopNotificationRef = useRef<Notification | null>(null);
   const notifiedCallIdRef = useRef<string | null>(null);
@@ -41,6 +54,14 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
 
   const handleIncomingMessage = useCallback((msg: IncomingChatMessage) => {
     listenersRef.current.forEach((listener) => listener(msg));
+  }, []);
+
+  const handleIncomingMessageStatus = useCallback((status: IncomingMessageStatus) => {
+    statusListenersRef.current.forEach((listener) => listener(status));
+  }, []);
+
+  const handleIncomingPresenceStatus = useCallback((status: IncomingPresenceStatus) => {
+    presenceListenersRef.current.forEach((listener) => listener(status));
   }, []);
 
   const closeDesktopNotification = useCallback(() => {
@@ -108,10 +129,12 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     callSignalHandlerRef.current(signal);
   }, [closeDesktopNotification, maybeShowDesktopNotification]);
 
-  const { connected, sendMessage, sendCallSignal } = useChatSocket(
+  const { connected, sendMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen } = useChatSocket(
     currentUser?.token,
     handleIncomingMessage,
     handleIncomingCallSignal,
+    handleIncomingMessageStatus,
+    handleIncomingPresenceStatus,
   );
 
   const voiceCall = useVoiceCall({
@@ -129,6 +152,20 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     listenersRef.current.add(listener);
     return () => {
       listenersRef.current.delete(listener);
+    };
+  }, []);
+
+  const subscribeMessageStatuses = useCallback((listener: MessageStatusListener) => {
+    statusListenersRef.current.add(listener);
+    return () => {
+      statusListenersRef.current.delete(listener);
+    };
+  }, []);
+
+  const subscribePresenceStatuses = useCallback((listener: PresenceStatusListener) => {
+    presenceListenersRef.current.add(listener);
+    return () => {
+      presenceListenersRef.current.delete(listener);
     };
   }, []);
 
@@ -208,8 +245,21 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       sendMessage,
       voiceCall,
       subscribeMessages,
+      subscribeMessageStatuses,
+      subscribePresenceStatuses,
+      sendMessageDelivered,
+      sendConversationSeen,
     }),
-    [connected, sendMessage, subscribeMessages, voiceCall],
+    [
+      connected,
+      sendConversationSeen,
+      sendMessage,
+      sendMessageDelivered,
+      subscribeMessageStatuses,
+      subscribeMessages,
+      subscribePresenceStatuses,
+      voiceCall,
+    ],
   );
 
   return (

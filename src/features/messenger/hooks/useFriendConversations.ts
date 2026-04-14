@@ -109,6 +109,7 @@ export function useFriendConversations(): UseFriendConversationsResult {
                 `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(
                   f.fullName || 'User',
                 )}`,
+              isOnline: false,
             },
             lastMessage:
               formatConversationPreview(rawPreview, isOwnLastMessage) ||
