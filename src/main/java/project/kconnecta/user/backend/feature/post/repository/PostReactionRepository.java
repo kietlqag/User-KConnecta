@@ -30,4 +30,21 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, UUID
             group by r.reactionType
             """)
     List<ReactionCountProjection> findReactionCountsByPostId(@Param("postId") UUID postId);
+
+    @Query("""
+            select r.post.id as postId, r.reactionType as reactionType, count(r) as count
+            from PostReaction r
+            where r.post.id in :postIds
+            group by r.post.id, r.reactionType
+            """)
+    List<PostReactionCountProjection> findReactionCountsByPostIds(@Param("postIds") List<UUID> postIds);
+
+    interface PostReactionCountProjection {
+        UUID getPostId();
+        ReactionType getReactionType();
+        long getCount();
+    }
+
+    @Query("select r from PostReaction r where r.user.id = :userId and r.post.id in :postIds")
+    List<PostReaction> findAllByUserIdAndPostIdIn(@Param("userId") UUID userId, @Param("postIds") List<UUID> postIds);
 }

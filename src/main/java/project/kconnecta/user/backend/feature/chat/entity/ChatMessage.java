@@ -34,13 +34,15 @@ public class ChatMessage {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean default false")
     private Boolean delivered = false;
 
     @Column(name = "delivered_at")
     private LocalDateTime deliveredAt;
 
-    @Column(nullable = false)
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "boolean default false")
     private Boolean seen = false;
 
     @Column(name = "seen_at")

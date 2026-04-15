@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -99,9 +100,54 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public List<PostResponse> getAllPosts(UUID currentUserId) {
-        return postRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .map(post -> mapToResponse(post, currentUserId))
+        List<Post> posts = postRepository.findAllByOrderByCreatedAtDesc();
+        return processPostsBulk(posts, currentUserId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId) {
+        List<Post> posts = postRepository.findByAuthorId(authorId);
+        return processPostsBulk(posts, currentUserId);
+    }
+
+    private List<PostResponse> processPostsBulk(List<Post> posts, UUID currentUserId) {
+        if (posts.isEmpty()) return Collections.emptyList();
+
+        List<UUID> postIds = posts.stream().map(Post::getId).toList();
+
+        Map<UUID, Map<ReactionType, Long>> reactionCountsMap = postReactionRepository.findReactionCountsByPostIds(postIds).stream()
+                .collect(Collectors.groupingBy(
+                        PostReactionRepository.PostReactionCountProjection::getPostId,
+                        Collectors.toMap(
+                                PostReactionRepository.PostReactionCountProjection::getReactionType,
+                                PostReactionRepository.PostReactionCountProjection::getCount
+                        )
+                ));
+
+        Map<UUID, Long> commentCountsMap = postCommentRepository.countByPostIdIn(postIds).stream()
+                .collect(Collectors.toMap(PostCommentRepository.CountProjection::getPostId, PostCommentRepository.CountProjection::getCount));
+
+        Map<UUID, Long> shareCountsMap = postShareRepository.countByPostIdIn(postIds).stream()
+                .collect(Collectors.toMap(PostShareRepository.CountProjection::getPostId, PostShareRepository.CountProjection::getCount));
+
+        Map<UUID, ReactionType> userReactionsMap = Collections.emptyMap();
+        if (currentUserId != null) {
+            userReactionsMap = postReactionRepository.findAllByUserIdAndPostIdIn(currentUserId, postIds).stream()
+                    .collect(Collectors.toMap(r -> r.getPost().getId(), PostReaction::getReactionType));
+        }
+
+        final Map<UUID, Map<ReactionType, Long>> finalReactionCounts = reactionCountsMap;
+        final Map<UUID, Long> finalCommentCounts = commentCountsMap;
+        final Map<UUID, Long> finalShareCounts = shareCountsMap;
+        final Map<UUID, ReactionType> finalUserReactions = userReactionsMap;
+
+        return posts.stream()
+                .map(post -> mapToResponseOptimized(post, currentUserId,
+                        finalReactionCounts.getOrDefault(post.getId(), Collections.emptyMap()),
+                        finalCommentCounts.getOrDefault(post.getId(), 0L),
+                        finalShareCounts.getOrDefault(post.getId(), 0L),
+                        finalUserReactions.get(post.getId())))
                 .sorted(
                         Comparator.comparingDouble(this::calculateFeedScore).reversed()
                                 .thenComparing(PostResponse::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
@@ -302,7 +348,23 @@ public class PostServiceImpl implements PostService {
     }
 
     private PostResponse mapToResponse(Post post, UUID currentUserId) {
-        List<PostMediaResponse> media = postMediaRepository.findAllByPostIdOrderBySortOrderAsc(post.getId())
+        Map<ReactionType, Long> reactionCounts = buildReactionCountsMap(post.getId());
+        ReactionType currentUserReaction = currentUserId == null ? null :
+                postReactionRepository.findByPostIdAndUserId(post.getId(), currentUserId)
+                        .map(PostReaction::getReactionType)
+                        .orElse(null);
+        long commentCount = postCommentRepository.countByPostId(post.getId());
+        long shareCount = postShareRepository.countByPostId(post.getId());
+
+        return mapToResponseOptimized(post, currentUserId, reactionCounts, commentCount, shareCount, currentUserReaction);
+    }
+
+    private PostResponse mapToResponseOptimized(Post post, UUID currentUserId,
+                                               Map<ReactionType, Long> reactionCountsMap,
+                                               long commentCount,
+                                               long shareCount,
+                                               ReactionType currentUserReactionType) {
+        List<PostMediaResponse> media = post.getMedia()
                 .stream()
                 .map(item -> PostMediaResponse.builder()
                         .id(item.getId())
@@ -313,22 +375,23 @@ public class PostServiceImpl implements PostService {
                         .build())
                 .toList();
 
-        List<UUID> excludedUserIds = postAudienceExclusionRepository.findAllByPostId(post.getId())
+        List<UUID> excludedUserIds = post.getAudienceExclusions()
                 .stream()
                 .map(item -> item.getExcludedUser().getId())
                 .toList();
 
-        List<UUID> taggedUserIds = postMentionRepository.findAllByPostId(post.getId())
+        List<UUID> taggedUserIds = post.getMentions()
                 .stream()
                 .map(item -> item.getTaggedUser().getId())
                 .toList();
 
-        var currentUserReactionType = currentUserId == null
-                ? null
-                : postReactionRepository.findByPostIdAndUserId(post.getId(), currentUserId)
-                .map(PostReaction::getReactionType)
-                .orElse(null);
-        List<PostReactionCountResponse> reactionCounts = buildReactionCounts(post.getId());
+        List<PostReactionCountResponse> reactionCounts = Arrays.stream(ReactionType.values())
+                .map(reactionType -> PostReactionCountResponse.builder()
+                        .reactionType(reactionType)
+                        .count(reactionCountsMap.getOrDefault(reactionType, 0L))
+                        .build())
+                .toList();
+
         long totalReactionCount = reactionCounts.stream()
                 .mapToLong(PostReactionCountResponse::getCount)
                 .sum();
@@ -350,8 +413,8 @@ public class PostServiceImpl implements PostService {
                 .reactionCount(totalReactionCount)
                 .reactionCounts(reactionCounts)
                 .currentUserReactionType(currentUserReactionType)
-                .commentCount(postCommentRepository.countByPostId(post.getId()))
-                .shareCount(postShareRepository.countByPostId(post.getId()))
+                .commentCount(commentCount)
+                .shareCount(shareCount)
                 .media(media)
                 .excludedUserIds(excludedUserIds)
                 .taggedUserIds(taggedUserIds)
@@ -360,19 +423,12 @@ public class PostServiceImpl implements PostService {
                 .build();
     }
 
-    private List<PostReactionCountResponse> buildReactionCounts(UUID postId) {
-        var rawCounts = postReactionRepository.findReactionCountsByPostId(postId).stream()
+    private Map<ReactionType, Long> buildReactionCountsMap(UUID postId) {
+        return postReactionRepository.findReactionCountsByPostId(postId).stream()
                 .collect(Collectors.toMap(
                         PostReactionRepository.ReactionCountProjection::getReactionType,
                         PostReactionRepository.ReactionCountProjection::getCount
                 ));
-
-        return Arrays.stream(ReactionType.values())
-                .map(reactionType -> PostReactionCountResponse.builder()
-                        .reactionType(reactionType)
-                        .count(rawCounts.getOrDefault(reactionType, 0L))
-                        .build())
-                .toList();
     }
 
     private String trimToNull(String value) {
