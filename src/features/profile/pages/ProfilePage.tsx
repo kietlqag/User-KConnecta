@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { authService, type AuthUser } from '@/services/authService';
 import { postService, type PostResponse, type ReactionType } from '@/services/postService';
 import { Header } from '../../home/components/Header';
+import { friendService } from '@/services/friendService';
 import {
   EditProfileDialog,
   FriendsPreview,
@@ -78,22 +79,37 @@ function mapPostToProfileFeed(post: PostResponse): ProfileFeedPost {
 
 export function ProfilePage() {
   const { userId: routeUserId } = useParams();
-  const currentUser = authService.getCurrentUser();
-  const userId = routeUserId || currentUser?.id || '';
+  const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
+  
+  // Sanitize userId: Avoid 'undefined' string and fallback to current user
+  const userId = React.useMemo(() => {
+    if (!routeUserId || routeUserId === 'undefined') {
+      return currentUser?.id || '';
+    }
+    return routeUserId;
+  }, [routeUserId, currentUser?.id]);
+
   const isOwnProfile = currentUser?.id === userId;
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [profile, setProfile] = React.useState<AuthUser | null>(null);
   const [posts, setPosts] = React.useState<ProfileFeedPost[]>([]);
+  const [friends, setFriends] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   const fetchProfilePosts = React.useCallback(
     async (profileData?: AuthUser | null) => {
       try {
-        const allPosts = await postService.getAllPosts(currentUser?.id);
-        const targetAuthorId = normalizeId(profileData?.id || userId);
+        const targetAuthorId = profileData?.id || userId;
+        
+        // Safety check: Don't fetch if ID is invalid or 'undefined'
+        if (!targetAuthorId || targetAuthorId === 'undefined' || targetAuthorId === '') {
+          console.warn('Invalid authorId detected, skipping fetchProfilePosts');
+          return;
+        }
 
-        const profilePosts = allPosts
-          .filter((post) => normalizeId(post.authorId) === targetAuthorId)
+        const profilePostsResponse = await postService.getAllPosts(currentUser?.id, targetAuthorId);
+
+        const profilePosts = profilePostsResponse
           .sort((left, right) => {
             const leftTime = new Date(left.publishedAt || left.createdAt).getTime();
             const rightTime = new Date(right.publishedAt || right.createdAt).getTime();
@@ -107,36 +123,53 @@ export function ProfilePage() {
         setPosts([]);
       }
     },
-    [userId],
+    [userId, currentUser?.id],
   );
 
   React.useEffect(() => {
+    let isMounted = true;
     const fetchProfile = async () => {
+      if (!userId || userId === 'undefined' || userId === '') {
+        setLoading(false);
+        return;
+      }
       try {
-        const response = await authService.getUserById(userId);
-        setProfile(response);
+        const [userResponse, friendsResponse] = await Promise.all([
+          authService.getUserById(userId),
+          friendService.getFriends(userId)
+        ]);
 
-        if (isOwnProfile) {
-          authService.saveCurrentUser(response);
-        }
+        if (!isMounted) return;
+        
+        setProfile(userResponse);
+        
+        const mappedFriends = friendsResponse.map(f => ({
+          id: f.userId,
+          name: f.fullName,
+          avatar: f.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(f.fullName)}&background=random`
+        }));
+        setFriends(mappedFriends);
 
-        await fetchProfilePosts(response);
+        await fetchProfilePosts(userResponse);
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error fetching profile data:', error);
+        if (!isMounted) return;
 
         if (isOwnProfile && currentUser) {
           setProfile(currentUser);
           await fetchProfilePosts(currentUser);
         } else {
           setPosts([]);
+          setFriends([]);
         }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [currentUser, fetchProfilePosts, isOwnProfile, userId]);
+    return () => { isMounted = false; };
+  }, [fetchProfilePosts, isOwnProfile, userId, currentUser?.id]);
 
   const handleAvatarUpload = async (file: File) => {
     if (!currentUser) return;
@@ -158,7 +191,7 @@ export function ProfilePage() {
     username: profile?.username || currentUser?.username || '',
     avatar: profile?.avatarUrl || DEFAULT_AVATAR,
     coverPhoto: profile?.coverPhotoUrl || DEFAULT_COVER,
-    friendsCount: 253,
+    friendsCount: friends.length,
     location: profile?.location || 'Thành phố Hồ Chí Minh',
     school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
     hometown: profile?.hometown || 'Tịnh An, An Giang, Vietnam',
@@ -177,17 +210,6 @@ export function ProfilePage() {
     { id: '3', url: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400' },
   ];
 
-  const friends = [
-    { id: '1', name: 'Lê Lộc', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-    { id: '2', name: 'Ngọc Tuyền', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150' },
-    { id: '3', name: 'Đặng Thị Thúy An', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150' },
-    { id: '4', name: 'Dương Trần Thái Duy', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150' },
-    { id: '5', name: 'Ngô Gia Hân', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150' },
-    { id: '6', name: 'Nguyễn Chí Tài', avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150' },
-    { id: '7', name: 'Cẩm Liên', avatar: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=150' },
-    { id: '8', name: 'Phạm Gia Huy', avatar: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=150' },
-    { id: '9', name: 'Hoàng Phi', avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150' },
-  ];
 
   const photos = [
     { id: '1', url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400' },

@@ -184,9 +184,13 @@ export function ProfileHeader({
 
             {/* Name and Basic Info */}
             <div className="flex-1 min-w-0 text-center md:text-left mb-2 md:pb-2">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center justify-center md:justify-start gap-2">
-                {fullName}
-                {username && <span className="text-gray-500 dark:text-gray-400 font-normal text-2xl">({username})</span>}
+              <h1 className="text-3xl md:text-3xl font-bold text-gray-900 dark:text-white flex flex-wrap items-baseline justify-center md:justify-start gap-x-3 gap-y-1">
+                <span className="break-words">{fullName}</span>
+                {username && (
+                  <span className="text-gray-500 dark:text-gray-400 font-normal text-xl md:text-2xl leading-none">
+                    ({username})
+                  </span>
+                )}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 font-semibold mt-1">
                 {friendsCount} người bạn

@@ -8,8 +8,16 @@ import { authService } from '@/services/authService';
 
 export function ProfilePhotosPage() {
   const { userId: routeUserId } = useParams();
-  const currentUser = authService.getCurrentUser();
-  const userId = routeUserId || currentUser?.id || '';
+  const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
+  
+  // Sanitize userId: Avoid 'undefined' string and fallback to current user
+  const userId = React.useMemo(() => {
+    if (!routeUserId || routeUserId === 'undefined') {
+      return currentUser?.id || '';
+    }
+    return routeUserId;
+  }, [routeUserId, currentUser?.id]);
+
   const isOwnProfile = currentUser?.id === userId;
   const [profile, setProfile] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);

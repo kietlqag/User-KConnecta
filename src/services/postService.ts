@@ -114,10 +114,12 @@ export interface PostReactionResponse {
 }
 
 export const postService = {
-  getAllPosts: (currentUserId?: string) =>
-    api.get<PostResponse[]>(
-      currentUserId ? `/posts?currentUserId=${encodeURIComponent(currentUserId)}` : '/posts',
-    ),
+  getAllPosts: (currentUserId?: string, authorId?: string) => {
+    const params = new URLSearchParams();
+    if (currentUserId) params.append('currentUserId', currentUserId);
+    if (authorId) params.append('authorId', authorId);
+    return api.get<PostResponse[]>(`/posts?${params.toString()}`);
+  },
   createPost: (data: CreatePostPayload) => api.post<PostResponse>('/posts', data),
   addReaction: (postId: string, data: AddReactionPayload) =>
     api.post<PostReactionResponse>(`/posts/${postId}/reactions`, data),

@@ -8,39 +8,45 @@ import { authService } from '@/services/authService';
 import { Play } from 'lucide-react';
 
 export function ProfileReelsPage() {
-  const { username: urlUsername } = useParams();
-  const currentUser = authService.getCurrentUser();
-  const username = urlUsername || currentUser?.username || '';
-  const isOwnProfile = currentUser?.username === username;
+  const { userId: routeUserId } = useParams();
+  const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
+  
+  // Sanitize userId: Avoid 'undefined' string and fallback to current user
+  const userId = React.useMemo(() => {
+    if (!routeUserId || routeUserId === 'undefined') {
+      return currentUser?.id || '';
+    }
+    return routeUserId;
+  }, [routeUserId, currentUser?.id]);
+
+  const isOwnProfile = currentUser?.id === userId;
   const [profile, setProfile] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<'yours' | 'saved'>('yours');
 
   React.useEffect(() => {
     const fetchProfile = async () => {
+      if (!userId || userId === 'undefined') {
+        setLoading(false);
+        return;
+      }
       try {
-        const response = await authService.getUserByUsername(username);
+        const response = await authService.getUserById(userId);
         setProfile(response);
-        if (isOwnProfile) {
-          authService.saveCurrentUser(response);
-        }
       } catch (error) {
         console.error('Error fetching profile:', error);
-        if (isOwnProfile) {
-          setProfile(currentUser);
-        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [username, isOwnProfile]);
+  }, [userId]);
 
   const userProfile = {
-    id: profile?.id || username,
+    id: profile?.id || userId,
     fullName: profile?.fullName || 'Người dùng',
-    username: profile?.username || username,
+    username: profile?.username || '',
     avatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
     coverPhoto: profile?.coverPhotoUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
     friendsCount: 253,
@@ -92,7 +98,7 @@ export function ProfileReelsPage() {
           isOwnProfile={isOwnProfile}
         />
 
-        <ProfileTabs username={username} isOwnProfile={isOwnProfile} />
+        <ProfileTabs userId={userId} isOwnProfile={isOwnProfile} />
 
         <div className="max-w-[1100px] mx-auto px-4 py-6">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">

@@ -47,24 +47,32 @@ export interface RegisterData {
 }
 
 export const authService = {
-  updateProfile: (id: string, data: Partial<RegisterData>) =>
-    api.put<AuthUser>(`/users/${id}`, data),
-  getUserById: (id: string) =>
-    api.get<AuthUser>(`/users/${id}`),
+  updateProfile: (id: string, data: Partial<RegisterData>) => {
+    if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
+    return api.put<AuthUser>(`/users/${id}`, data);
+  },
+  getUserById: (id: string) => {
+    if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
+    return api.get<AuthUser>(`/users/${id}`);
+  },
 
   uploadAvatar: (id: string, file: File) => {
+    if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
     const formData = new FormData();
     formData.append('file', file);
     return api.postMultipart<AuthUser>(`/users/${id}/avatar`, formData);
   },
 
   uploadCoverPhoto: (id: string, file: File) => {
+    if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
     const formData = new FormData();
     formData.append('file', file);
     return api.postMultipart<AuthUser>(`/users/${id}/cover`, formData);
   },
-  getUserByUsername: (username: string) =>
-    api.get<AuthUser>(`/users/username/${username}`),
+  getUserByUsername: (username: string) => {
+    if (!username || username === 'undefined') return Promise.reject(new Error('Invalid username'));
+    return api.get<AuthUser>(`/users/username/${username}`);
+  },
   checkEmailExists: (email: string) =>
     api.get<{ exists: boolean }>(`/auth/check-email?email=${encodeURIComponent(email)}`),
 
