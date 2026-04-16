@@ -43,6 +43,20 @@ public class CloudinaryService {
         }
     }
 
+    public String uploadStory(MultipartFile file) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/stories"
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload story media failed", e);
+        }
+    }
+
     public String uploadCallRecording(MultipartFile file, String callId) {
         try {
             Map<?, ?> result = cloudinary.uploader().upload(
