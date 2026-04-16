@@ -9,12 +9,14 @@ import project.kconnecta.user.backend.feature.chat.dto.request.CallSignalRequest
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationSeenRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageDeliveredRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSignalResponse;
 import project.kconnecta.user.backend.feature.chat.entity.CallSession;
 import project.kconnecta.user.backend.feature.chat.entity.CallSignalEvent;
 import project.kconnecta.user.backend.feature.chat.repository.CallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.repository.CallSignalEventRepository;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
+import project.kconnecta.user.backend.feature.chat.service.impl.ChatServiceImpl;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -71,6 +73,11 @@ public class ChatSocketController {
         User receiver = userRepository.findById(request.getReceiverId())
                 .orElseThrow(() -> new IllegalStateException("Receiver not found"));
 
+        LocalDateTime now = LocalDateTime.now();
+        CallSession session = persistCallData(request, sender, receiver, now);
+        CallSessionSnapshotResponse snapshot = session == null
+                ? new CallSessionSnapshotResponse(request.getCallId(), null, null, null, null, null, null)
+                : ChatServiceImpl.toSnapshot(session, now);
         CallSignalResponse response = new CallSignalResponse(
                 request.getCallId(),
                 sender.getId(),
@@ -82,20 +89,24 @@ public class ChatSocketController {
                 request.getCandidate(),
                 request.getSdpMid(),
                 request.getSdpMLineIndex(),
-                LocalDateTime.now()
+                now,
+                snapshot.getStatus(),
+                snapshot.getMediaType(),
+                snapshot.getStartedAt(),
+                snapshot.getAnsweredAt(),
+                snapshot.getEndedAt(),
+                snapshot.getDurationSec()
         );
-
-        persistCallData(request, sender, receiver, response.getCreatedAt());
 
         messagingTemplate.convertAndSendToUser(receiver.getUsername(), "/queue/call", response);
         messagingTemplate.convertAndSendToUser(sender.getUsername(), "/queue/call", response);
     }
 
-    private void persistCallData(CallSignalRequest request, User sender, User receiver, LocalDateTime now) {
+    private CallSession persistCallData(CallSignalRequest request, User sender, User receiver, LocalDateTime now) {
         UUID callId = request.getCallId();
         String type = request.getType();
         if (callId == null || type == null) {
-            return;
+            return null;
         }
 
         CallSession session = callSessionRepository.findByCallId(callId)
@@ -127,6 +138,12 @@ public class ChatSocketController {
 
         session.setLastSignalType(type);
 
+        if (isTerminalStatus(session.getStatus()) && !"CALL_END".equals(type)) {
+            session = callSessionRepository.save(session);
+            persistCallEvent(request, sender, receiver, session, type, now);
+            return session;
+        }
+
         switch (type) {
             case "CALL_INVITE" -> {
                 session.setCaller(sender);
@@ -141,7 +158,13 @@ public class ChatSocketController {
             }
             case "CALL_REJECT", "CALL_CANCEL" -> {
                 session.setEndedAt(now);
-                session.setStatus("MISSED");
+                if (session.getAnsweredAt() != null) {
+                    int durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
+                    session.setDurationSec(Math.max(durationSec, 0));
+                    session.setStatus("COMPLETED");
+                } else {
+                    session.setStatus("MISSED");
+                }
             }
             case "CALL_END" -> {
                 session.setEndedAt(now);
@@ -162,7 +185,21 @@ public class ChatSocketController {
         }
 
         session = callSessionRepository.save(session);
+        persistCallEvent(request, sender, receiver, session, type, now);
 
+        if (("CALL_END".equals(type) || "CALL_REJECT".equals(type) || "CALL_CANCEL".equals(type))
+                && !Boolean.TRUE.equals(session.getCallLogSent())) {
+            String callLogContent = buildCallLogContent(session);
+            if (callLogContent != null) {
+                chatService.sendSystemMessage(session.getCaller().getId(), session.getCallee().getId(), callLogContent);
+                session.setCallLogSent(true);
+                callSessionRepository.save(session);
+            }
+        }
+        return session;
+    }
+
+    private void persistCallEvent(CallSignalRequest request, User sender, User receiver, CallSession session, String type, LocalDateTime now) {
         CallSignalEvent event = CallSignalEvent.builder()
                 .callSession(session)
                 .fromUser(sender)
@@ -175,16 +212,10 @@ public class ChatSocketController {
                 .createdAt(now)
                 .build();
         callSignalEventRepository.save(event);
+    }
 
-        if (("CALL_END".equals(type) || "CALL_REJECT".equals(type) || "CALL_CANCEL".equals(type))
-                && !Boolean.TRUE.equals(session.getCallLogSent())) {
-            String callLogContent = buildCallLogContent(session);
-            if (callLogContent != null) {
-                chatService.sendSystemMessage(session.getCaller().getId(), session.getCallee().getId(), callLogContent);
-                session.setCallLogSent(true);
-                callSessionRepository.save(session);
-            }
-        }
+    private boolean isTerminalStatus(String status) {
+        return "COMPLETED".equals(status) || "MISSED".equals(status);
     }
 
     private User inferCaller(String type, User sender, User receiver) {

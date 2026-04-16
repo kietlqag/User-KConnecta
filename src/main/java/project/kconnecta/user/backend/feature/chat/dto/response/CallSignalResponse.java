@@ -24,4 +24,10 @@ public class CallSignalResponse {
     private String sdpMid;
     private Integer sdpMLineIndex;
     private LocalDateTime createdAt;
+    private String sessionStatus;
+    private String sessionMediaType;
+    private LocalDateTime sessionStartedAt;
+    private LocalDateTime sessionAnsweredAt;
+    private LocalDateTime sessionEndedAt;
+    private Integer sessionDurationSec;
 }

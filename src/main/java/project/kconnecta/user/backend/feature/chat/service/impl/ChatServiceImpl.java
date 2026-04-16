@@ -1,30 +1,41 @@
 package project.kconnecta.user.backend.feature.chat.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.MessageStatusResponse;
+import project.kconnecta.user.backend.feature.chat.entity.CallSession;
 import project.kconnecta.user.backend.feature.chat.entity.ChatMessage;
+import project.kconnecta.user.backend.feature.chat.repository.CallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.repository.ChatMessageRepository;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
+    private static final int DEFAULT_HISTORY_LIMIT = 30;
+    private static final int MIN_HISTORY_LIMIT = 10;
+    private static final int MAX_HISTORY_LIMIT = 100;
 
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final CallSessionRepository callSessionRepository;
 
     @Override
     public void sendPrivateMessage(String currentUsername, PrivateMessageRequest request) {
@@ -206,19 +217,67 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ChatMessageResponse> getChatHistory(UUID userId1, UUID userId2) {
-        return chatMessageRepository.findConversation(userId1, userId2).stream()
-                .map(m -> new ChatMessageResponse(
-                        m.getId(),
-                        m.getSender().getId(),
-                        m.getSender().getUsername(),
-                        m.getReceiver().getId(),
-                        m.getContent(),
-                        m.getCreatedAt(),
-                        m.getDelivered(),
-                        m.getSeen(),
-                        m.getSeenAt()
-                ))
-                .collect(Collectors.toList());
+    public ChatHistoryPageResponse getChatHistory(UUID userId1, UUID userId2, LocalDateTime beforeCreatedAt, Integer limit) {
+        int normalizedLimit = normalizeHistoryLimit(limit);
+        List<ChatMessageResponse> chunkDesc = chatMessageRepository.findConversationChunk(
+                userId1,
+                userId2,
+                beforeCreatedAt,
+                PageRequest.of(0, normalizedLimit + 1)
+        );
+
+        boolean hasMore = chunkDesc.size() > normalizedLimit;
+        if (hasMore) {
+            chunkDesc = new ArrayList<>(chunkDesc.subList(0, normalizedLimit));
+        }
+
+        Collections.reverse(chunkDesc);
+        List<ChatMessageResponse> messages = chunkDesc;
+
+        LocalDateTime nextBeforeCreatedAt = messages.isEmpty() ? null : messages.get(0).getCreatedAt();
+        return new ChatHistoryPageResponse(messages, hasMore, nextBeforeCreatedAt);
+    }
+
+    private int normalizeHistoryLimit(Integer limit) {
+        if (limit == null) return DEFAULT_HISTORY_LIMIT;
+        if (limit < MIN_HISTORY_LIMIT) return MIN_HISTORY_LIMIT;
+        return Math.min(limit, MAX_HISTORY_LIMIT);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CallSessionSnapshotResponse getCallSessionSnapshot(String currentUsername, UUID callId) {
+        if (callId == null) {
+            throw new RuntimeException("Call ID is required");
+        }
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        CallSession session = callSessionRepository.findByCallIdWithUsers(callId)
+                .orElseThrow(() -> new RuntimeException("Call session not found"));
+
+        UUID userId = currentUser.getId();
+        boolean isParticipant = session.getCaller().getId().equals(userId) || session.getCallee().getId().equals(userId);
+        if (!isParticipant) {
+            throw new RuntimeException("Forbidden");
+        }
+
+        return toSnapshot(session, LocalDateTime.now());
+    }
+
+    public static CallSessionSnapshotResponse toSnapshot(CallSession session, LocalDateTime now) {
+        Integer durationSec = session.getDurationSec();
+        if ("ONGOING".equals(session.getStatus()) && session.getAnsweredAt() != null && session.getEndedAt() == null) {
+            durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
+            if (durationSec < 0) durationSec = 0;
+        }
+        return new CallSessionSnapshotResponse(
+                session.getCallId(),
+                session.getStatus(),
+                session.getCallMediaType(),
+                session.getStartedAt(),
+                session.getAnsweredAt(),
+                session.getEndedAt(),
+                durationSec
+        );
     }
 }

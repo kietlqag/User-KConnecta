@@ -8,7 +8,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "chat_messages")
+@Table(
+        name = "chat_messages",
+        indexes = {
+                @Index(name = "idx_chat_messages_sender_receiver_created_at", columnList = "sender_id, receiver_id, created_at"),
+                @Index(name = "idx_chat_messages_receiver_sender_created_at", columnList = "receiver_id, sender_id, created_at")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor

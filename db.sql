@@ -67,6 +67,10 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
 CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_id ON public.chat_messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver_id ON public.chat_messages(receiver_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON public.chat_messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_receiver_created_at
+    ON public.chat_messages(sender_id, receiver_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver_sender_created_at
+    ON public.chat_messages(receiver_id, sender_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS public.call_sessions (
     id UUID PRIMARY KEY,

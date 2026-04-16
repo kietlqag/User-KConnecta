@@ -1,17 +1,19 @@
 package project.kconnecta.user.backend.feature.chat.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallRecordingResponse;
-import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
 import project.kconnecta.user.backend.feature.chat.service.CallRecordingService;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 
 import java.security.Principal;
-import java.util.List;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @RestController
@@ -23,11 +25,13 @@ public class ChatController {
     private final CallRecordingService callRecordingService;
 
     @GetMapping("/history")
-    public ResponseEntity<List<ChatMessageResponse>> getChatHistory(
+    public ResponseEntity<ChatHistoryPageResponse> getChatHistory(
             @RequestParam UUID userId1,
-            @RequestParam UUID userId2
+            @RequestParam UUID userId2,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime beforeCreatedAt,
+            @RequestParam(required = false) Integer limit
     ) {
-        return ResponseEntity.ok(chatService.getChatHistory(userId1, userId2));
+        return ResponseEntity.ok(chatService.getChatHistory(userId1, userId2, beforeCreatedAt, limit));
     }
 
     @PostMapping(value = "/calls/{callId}/recordings", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -40,5 +44,16 @@ public class ChatController {
     ) {
         String username = principal == null ? null : principal.getName();
         return ResponseEntity.ok(callRecordingService.saveRecording(callId, username, file, durationSec, mediaType));
+    }
+
+    @GetMapping("/calls/{callId}/session")
+    public ResponseEntity<CallSessionSnapshotResponse> getCallSessionSnapshot(
+            @PathVariable UUID callId,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getCallSessionSnapshot(principal.getName(), callId));
     }
 }
