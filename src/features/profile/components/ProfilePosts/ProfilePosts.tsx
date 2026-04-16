@@ -6,6 +6,7 @@ interface ProfilePostsProps {
   posts: Array<{
     id: string;
     userName: string;
+    authorId: string;
     userAvatar: string;
     timestamp: string;
     content: string;

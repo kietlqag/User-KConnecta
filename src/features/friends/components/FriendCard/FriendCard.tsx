@@ -22,7 +22,7 @@ export const FriendCard = ({
 }: FriendCardProps) => {
   return (
     <div className="flex bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all p-3 gap-4">
-      <Link to={`/profile/${friend.id}`} className="relative flex-shrink-0">
+      <Link to={`/profile/${friend.userId}`} className="relative flex-shrink-0">
         <div className="w-24 h-24 md:w-28 md:h-28 rounded-lg overflow-hidden border dark:border-gray-700">
           <ImageWithFallback
             src={friend.avatar}
@@ -42,7 +42,8 @@ export const FriendCard = ({
       
       <div className="flex-1 flex flex-col justify-between py-1 min-w-0">
         <div>
-          <Link to={`/profile/${friend.id}`} className="block">
+          <Link to={`/profile/${friend.userId}`} className="block">
+
             <h3 className="font-bold text-gray-900 dark:text-white mb-0.5 hover:underline truncate">
               {friend.name}
             </h3>

@@ -1,5 +1,6 @@
 export interface Friend {
   id: string;
+  userId: string;
   name: string;
   avatar: string;
   mutualFriends: number;
@@ -8,6 +9,7 @@ export interface Friend {
 
 export interface FriendRequest {
   id: string;
+  userId: string;
   name: string;
   avatar: string;
   mutualFriends: number;

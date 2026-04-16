@@ -1,4 +1,5 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MoreHorizontal, MessageCircle, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -75,6 +76,7 @@ export function Post({
   reactionCounts: serverReactionCounts,
   group,
 }: PostProps) {
+  const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(initialIsLiked || !!currentUserReactionType);
   const [likeCount, setLikeCount] = useState(likes);
   const [commentCount, setCommentCount] = useState(comments);
@@ -186,14 +188,18 @@ export function Post({
       <div className="bg-white rounded-lg shadow mb-4">
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 group">
               <ImageWithFallback
                 src={author.avatar}
                 alt={author.name}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-10 h-10 rounded-full object-cover cursor-pointer"
+                onClick={() => navigate(`/profile/${author.id}`)}
               />
-              <div>
-                <h3 className="font-semibold text-gray-900 hover:underline cursor-pointer">
+              <div 
+                className="cursor-pointer"
+                onClick={() => navigate(`/profile/${author.id}`)}
+              >
+                <h3 className="font-semibold text-gray-900 group-hover:underline">
                   {author.name}
                 </h3>
                 <div className="flex items-center gap-1 text-xs text-gray-500">

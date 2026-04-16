@@ -9,7 +9,7 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
-  const isHomePage = location.pathname === '/home';
+  const isHomePage = location.pathname === '/home' || location.pathname === '/home/';
 
   return (
     <div className="min-h-screen bg-gray-100">

@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { FriendRequest } from '../../types/friends.types';
 
 interface FriendRequestCardProps {
@@ -11,11 +12,13 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
       <div className="relative">
-        <img
-          src={request.avatar}
-          alt={request.name}
-          className="w-full h-[280px] object-cover"
-        />
+        <Link to={`/profile/${request.userId}`}>
+          <img
+            src={request.avatar}
+            alt={request.name}
+            className="w-full h-[280px] object-cover"
+          />
+        </Link>
         <button
           onClick={() => onDelete(request.id)}
           className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
@@ -25,9 +28,12 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
       </div>
       
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-1 hover:underline cursor-pointer">
-          {request.name}
-        </h3>
+        <Link to={`/profile/${request.userId}`}>
+          <h3 className="font-semibold text-gray-900 mb-1 hover:underline cursor-pointer">
+            {request.name}
+          </h3>
+        </Link>
+
         <p className="text-sm text-gray-600 mb-3">
           {request.mutualFriends} bạn chung
         </p>

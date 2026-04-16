@@ -36,6 +36,7 @@ export const FriendsPage = () => {
         setFriendRequests(
           requestsData.map((r) => ({
             id: r.friendshipId!,
+            userId: r.userId,
             name: r.fullName,
             avatar: r.avatarUrl ?? DEFAULT_AVATAR,
             mutualFriends: r.mutualFriends,
@@ -48,6 +49,7 @@ export const FriendsPage = () => {
         setSuggestions(
           suggestionsData.map((s) => ({
             id: s.userId,
+            userId: s.userId,
             name: s.fullName,
             avatar: s.avatarUrl ?? DEFAULT_AVATAR,
             mutualFriends: s.mutualFriends,
@@ -58,6 +60,7 @@ export const FriendsPage = () => {
         setFriends(
           friendsData.map((f) => ({
             id: f.friendshipId!,
+            userId: f.userId,
             name: f.fullName,
             avatar: f.avatarUrl ?? DEFAULT_AVATAR,
             mutualFriends: f.mutualFriends,

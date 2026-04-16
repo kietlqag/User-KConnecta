@@ -1,9 +1,5 @@
-import { useState } from 'react';
-import { Header } from '../components/Header';
-import { LeftSidebar } from '../components/LeftSidebar';
 import { RightSidebar } from '../components/RightSidebar';
 import { NewsFeed } from '../components/NewsFeed';
-import { useSidebar } from '../../../contexts/SidebarContext';
 import { MainLayout } from '../../../layouts';
 
 export function HomePage() {

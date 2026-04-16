@@ -2,9 +2,19 @@
 
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { authService } from "@/services/authService";
 
 export function NotFoundPage() {
   const navigate = useNavigate();
+
+  const handleHomeClick = () => {
+    const user = authService.getCurrentUser();
+    if (user) {
+      navigate("/home");
+    } else {
+      navigate("/");
+    }
+  };
 
   return (
     <section className="bg-white dark:bg-gray-900 min-h-screen flex items-center justify-center">
@@ -30,11 +40,12 @@ export function NotFoundPage() {
 
               <Button
                 variant="default"
-                onClick={() => navigate("/")}
+                onClick={handleHomeClick}
                 className="my-5 bg-green-600 hover:bg-green-700 text-white px-8 h-11"
               >
                 Về trang chủ
               </Button>
+
             </div>
           </div>
         </div>

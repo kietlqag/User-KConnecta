@@ -18,6 +18,7 @@ import {
 interface ProfileFeedPost {
   id: string;
   userName: string;
+  authorId: string;
   userAvatar: string;
   timestamp: string;
   content: string;
@@ -65,6 +66,7 @@ function mapPostToProfileFeed(post: PostResponse): ProfileFeedPost {
   return {
     id: post.id,
     userName: post.authorFullName,
+    authorId: post.authorId,
     userAvatar: post.authorAvatarUrl || fallbackAvatar,
     timestamp: formatPostTimestamp(post.publishedAt || post.createdAt),
     content: post.content,

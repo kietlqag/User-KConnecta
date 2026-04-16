@@ -1,7 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { AuthLayout } from '../layouts';
 import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth/pages';
-import { WelcomePage } from '../pages';
+import { WelcomePage, CreateStoryPage, StoryViewerPage } from '../pages';
 import { HomePage } from '../features/home/pages';
 import { ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage, ProfileReelsPage, ProfileLikesPage } from '../features/profile/pages';
 import { FriendsPage } from '../features/friends/pages';
@@ -76,6 +76,14 @@ export const router = createBrowserRouter([
       {
         path: '/messages',
         Component: MessengerPage,
+      },
+      {
+        path: '/stories/create',
+        Component: CreateStoryPage,
+      },
+      {
+        path: '/stories/:authorId?',
+        Component: StoryViewerPage,
       },
     ],
   },
