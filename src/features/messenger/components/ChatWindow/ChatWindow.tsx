@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { MessageBubble } from '../MessageBubble';
+import { formatLastActiveLabel } from '../../utils/presenceLabel';
 
 interface ChatWindowProps {
   user: ChatUser;
@@ -154,36 +155,6 @@ export const ChatWindow = ({
 
   const handleReact = (messageId: string, emoji: string) => {
     onReactMessage?.(messageId, emoji);
-  };
-
-  const formatLastActiveLabel = (isOnline: boolean, lastActiveAt?: string) => {
-    if (isOnline) return 'Đang hoạt động';
-    if (!lastActiveAt) return 'Không hoạt động';
-
-    const date = new Date(lastActiveAt);
-    if (Number.isNaN(date.getTime())) return 'Không hoạt động';
-
-    const now = new Date();
-    const diffMs = Math.max(0, now.getTime() - date.getTime());
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    if (diffMinutes < 1) return 'Hoạt động vừa xong';
-    if (diffMinutes < 60) return `Hoạt động ${diffMinutes} phút trước`;
-
-    const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `Hoạt động ${diffHours} giờ trước`;
-
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const isYesterday =
-      date.getDate() === yesterday.getDate() &&
-      date.getMonth() === yesterday.getMonth() &&
-      date.getFullYear() === yesterday.getFullYear();
-    if (isYesterday) return 'Hoạt động hôm qua';
-
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `Hoạt động vào ngày ${day}/${month}/${year}`;
   };
 
   const hasActiveVoiceCall = callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'in_call';

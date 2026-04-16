@@ -17,6 +17,7 @@ import { useFriendConversations } from '../hooks/useFriendConversations';
 import { authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
+import { formatLastActiveLabel } from '../utils/presenceLabel';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
 const HISTORY_PAGE_SIZE = 30;
@@ -64,36 +65,6 @@ function formatConversationPreview(text: string, isOwn: boolean) {
   const normalized = text.trim();
   if (!normalized) return '';
   return isOwn ? `Bạn: ${normalized}` : normalized;
-}
-
-function formatLastActiveLabel(isOnline: boolean, lastActiveAt?: string) {
-  if (isOnline) return 'Đang hoạt động';
-  if (!lastActiveAt) return 'Không hoạt động';
-
-  const date = new Date(lastActiveAt);
-  if (Number.isNaN(date.getTime())) return 'Không hoạt động';
-
-  const now = new Date();
-  const diffMs = Math.max(0, now.getTime() - date.getTime());
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  if (diffMinutes < 1) return 'Hoạt động vừa xong';
-  if (diffMinutes < 60) return `Hoạt động ${diffMinutes} phút trước`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `Hoạt động ${diffHours} giờ trước`;
-
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  const isYesterday =
-    date.getDate() === yesterday.getDate() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getFullYear() === yesterday.getFullYear();
-  if (isYesterday) return 'Hoạt động hôm qua';
-
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = date.getFullYear();
-  return `Hoạt động vào ngày ${day}/${month}/${year}`;
 }
 
 function resolveDeliveryStatus(delivered?: boolean, seen?: boolean): Message['deliveryStatus'] {
@@ -190,6 +161,7 @@ export default function MessengerPage() {
   const [messagesByUser, setMessagesByUser] = useState<Record<string, Message[]>>({});
   const [historyByUser, setHistoryByUser] = useState<Record<string, HistoryState>>({});
   const [presenceByUser, setPresenceByUser] = useState<Record<string, { online: boolean; lastActiveAt?: string }>>({});
+  const [, setPresenceClockTick] = useState(0);
   const [activeFilter, setActiveFilter] = useState<MessengerFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const callRecorderRef = useRef<MediaRecorder | null>(null);
@@ -206,6 +178,13 @@ export default function MessengerPage() {
   const isUploadingRecordingRef = useRef(false);
   const initialHistoryInFlightRef = useRef<Set<string>>(new Set());
   const olderHistoryInFlightRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setPresenceClockTick((prev) => prev + 1);
+    }, 30000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const conversations: Conversation[] = baseConversations.map((c) => ({
     ...c,
@@ -728,13 +707,13 @@ export default function MessengerPage() {
 
   const handleStartVoiceCall = useCallback(() => {
     if (!activeChatUserId) return;
-    void voiceCall.startCall(activeChatUserId, 'audio');
-  }, [activeChatUserId, voiceCall]);
+    void voiceCall.startCall(activeChatUserId, 'audio', activeChatUser?.name, activeChatUser?.avatar);
+  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, voiceCall]);
 
   const handleStartVideoCall = useCallback(() => {
     if (!activeChatUserId) return;
-    void voiceCall.startCall(activeChatUserId, 'video');
-  }, [activeChatUserId, voiceCall]);
+    void voiceCall.startCall(activeChatUserId, 'video', activeChatUser?.name, activeChatUser?.avatar);
+  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, voiceCall]);
 
   const handleCallAgain = useCallback(
     (mediaType: 'audio' | 'video' = 'audio') => {

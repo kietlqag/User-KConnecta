@@ -10,6 +10,8 @@ type CallMediaType = 'audio' | 'video';
 interface ActiveCall {
   callId: string;
   peerUserId: string;
+  peerDisplayName?: string;
+  peerAvatarUrl?: string;
   direction: CallDirection;
   mediaType: CallMediaType;
 }
@@ -351,14 +353,19 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   }, []);
 
   const startCall = useCallback(
-    async (peerUserId: string, mediaType: CallMediaType = 'audio') => {
+    async (
+      peerUserId: string,
+      mediaType: CallMediaType = 'audio',
+      peerDisplayName?: string,
+      peerAvatarUrl?: string,
+    ) => {
       if (!currentUserId) return;
       if (status !== 'idle' && status !== 'ended') return;
 
       setErrorMessage(null);
 
       const callId = createCallId();
-      setActiveCall({ callId, peerUserId, direction: 'outgoing', mediaType });
+      setActiveCall({ callId, peerUserId, peerDisplayName, peerAvatarUrl, direction: 'outgoing', mediaType });
       hasRetriedIceRestartRef.current = false;
       setCallStartedAtMs(null);
       setAuthoritativeSessionStatus('RINGING');
@@ -556,6 +563,11 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
         case 'CALL_ACCEPT':
           if (matchesByCallId && activeCall?.direction === 'outgoing') {
+            setActiveCall((prev) =>
+              prev && prev.callId === signal.callId
+                ? { ...prev, peerDisplayName: prev.peerDisplayName || signal.fromUsername }
+                : prev,
+            );
             clearCallTimeout();
             applyAuthoritativeSnapshot({
               status: signal.sessionStatus,
@@ -592,6 +604,11 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
         case 'CALL_ANSWER':
           if (!matchesByCallId || !signal.sdp || !peerRef.current) break;
+          setActiveCall((prev) =>
+            prev && prev.callId === signal.callId
+              ? { ...prev, peerDisplayName: prev.peerDisplayName || signal.fromUsername }
+              : prev,
+          );
           clearCallTimeout();
           applyAuthoritativeSnapshot({
             status: signal.sessionStatus,
@@ -677,6 +694,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       incomingPeerUserId,
       incomingFromUsername: incomingSignal?.fromUsername ?? null,
       activePeerUserId: activeCall?.peerUserId ?? null,
+      activePeerDisplayName: activeCall?.peerDisplayName ?? null,
+      activePeerAvatarUrl: activeCall?.peerAvatarUrl ?? null,
       hasActiveCall: status === 'calling' || status === 'connecting' || status === 'in_call',
       isRinging: status === 'ringing',
       startCall,
@@ -692,6 +711,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       acceptIncoming,
       activeCall?.callId,
       activeCall?.mediaType,
+      activeCall?.peerAvatarUrl,
+      activeCall?.peerDisplayName,
       activeCall?.peerUserId,
       endCall,
       errorMessage,

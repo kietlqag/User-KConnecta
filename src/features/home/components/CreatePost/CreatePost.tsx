@@ -1,13 +1,23 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Image, Video, Smile } from 'lucide-react';
 import { Link } from 'react-router@7.1.3';
 import { ProfileCreatePostModal } from '../../../profile/components/ProfileCreatePost/ProfileCreatePostModal';
-import { authService } from '@/services/authService';
+import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { CurrentUserAvatar } from '@/components/shared';
 
 export function CreatePost() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const currentUser = authService.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+
+  useEffect(() => {
+    const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+    window.addEventListener('storage', syncAuthUser);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+      window.removeEventListener('storage', syncAuthUser);
+    };
+  }, []);
 
   return (
     <>
@@ -57,4 +67,5 @@ export function CreatePost() {
     </>
   );
 }
+
 

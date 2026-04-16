@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router@7.1.3';
 import { Search, Home, Users, Video, Store, Grid3x3, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
@@ -9,8 +9,9 @@ import { SearchSuggestions } from '../../../search/components';
 import { RecentSearchItem } from '../../../search/types/search.types';
 import { useMenu } from '../../../../contexts/MenuContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
-import { authService } from '@/services/authService';
+import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
+import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
 export function Header() {
   const [showMessenger, setShowMessenger] = useState(false);
@@ -18,10 +19,20 @@ export function Header() {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const navigate = useNavigate();
   const { isMenuOpen, toggleMenu, setMenuOpen } = useMenu();
-  const currentUser = authService.getCurrentUser();
   const userAvatar = currentUser?.avatarUrl || avatarImage;
+
+  useEffect(() => {
+    const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+    window.addEventListener('storage', syncAuthUser);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+      window.removeEventListener('storage', syncAuthUser);
+    };
+  }, []);
 
   const navItems = [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
@@ -38,9 +49,7 @@ export function Header() {
           {/* Left Section - Logo & Search */}
           <div className="flex items-center gap-2 flex-1 max-w-[320px]">
             <Link to="/home" className="flex items-center gap-2 hover:bg-gray-100 rounded-full p-2 transition-colors">
-              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-full flex items-center justify-center">
-                <span className="text-xl font-bold text-white">K</span>
-              </div>
+              <img src={logoV2} alt="KConnecta Logo V2" className="w-10 h-10 object-contain" />
             </Link>
             
             <div className="flex-1 relative">

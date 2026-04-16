@@ -1,7 +1,7 @@
 import { Settings, HelpCircle, AlertCircle, Moon, LogOut, ChevronRight } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '@/services/authService';
+import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 
 interface AccountMenuProps {
@@ -11,6 +11,7 @@ interface AccountMenuProps {
 export function AccountMenu({ onClose }: AccountMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -38,13 +39,22 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
     };
   }, [onClose]);
 
+  useEffect(() => {
+    const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+    window.addEventListener('storage', syncAuthUser);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+      window.removeEventListener('storage', syncAuthUser);
+    };
+  }, []);
+
   const handleLogout = () => {
     authService.logout();
     onClose();
     navigate('/auth/login');
   };
 
-  const currentUser = authService.getCurrentUser();
   const profileLink = currentUser ? `/profile/${currentUser.id}` : '/auth/login';
   const fullName = currentUser?.fullName || 'Người dùng';
   const avatarUrl = currentUser?.avatarUrl || avatarImage;

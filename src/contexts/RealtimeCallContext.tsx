@@ -36,6 +36,11 @@ interface RealtimeCallContextValue {
   sendConversationSeen: (peerUserId: string) => void;
 }
 
+interface PeerProfile {
+  fullName: string;
+  avatarUrl?: string;
+}
+
 const RealtimeCallContext = createContext<RealtimeCallContextValue | null>(null);
 
 export function RealtimeCallProvider({ children }: { children: ReactNode }) {
@@ -44,6 +49,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const listenersRef = useRef<Set<MessageListener>>(new Set());
   const statusListenersRef = useRef<Set<MessageStatusListener>>(new Set());
   const presenceListenersRef = useRef<Set<PresenceStatusListener>>(new Set());
+  const latestPresenceByUserRef = useRef<Record<string, IncomingPresenceStatus>>({});
   const callSignalHandlerRef = useRef<(signal: IncomingCallSignal) => void>(() => {});
   const desktopNotificationRef = useRef<Notification | null>(null);
   const notifiedCallIdRef = useRef<string | null>(null);
@@ -54,6 +60,8 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const [speakerMode, setSpeakerMode] = useState<'inner' | 'outer'>('inner');
   const [callDurationSec, setCallDurationSec] = useState(0);
   const [authoritativeStatusText, setAuthoritativeStatusText] = useState<string | null>(null);
+  const [peerProfiles, setPeerProfiles] = useState<Record<string, PeerProfile>>({});
+  const peerProfileLoadingRef = useRef<Set<string>>(new Set());
 
   const formatCallDuration = useCallback((totalSec: number) => {
     const min = Math.floor(totalSec / 60);
@@ -70,6 +78,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleIncomingPresenceStatus = useCallback((status: IncomingPresenceStatus) => {
+    latestPresenceByUserRef.current[status.userId] = status;
     presenceListenersRef.current.forEach((listener) => listener(status));
   }, []);
 
@@ -101,11 +110,31 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       if (permission !== 'granted') return;
 
       closeDesktopNotification();
+      let callerName = peerProfiles[signal.fromUserId]?.fullName || signal.fromUsername || 'Người dùng';
+      if (!peerProfiles[signal.fromUserId] && !peerProfileLoadingRef.current.has(signal.fromUserId)) {
+        peerProfileLoadingRef.current.add(signal.fromUserId);
+        try {
+          const profile = await authService.getUserById(signal.fromUserId);
+          const resolvedName = profile.fullName || profile.username || 'Người dùng';
+          callerName = resolvedName;
+          setPeerProfiles((prev) => ({
+            ...prev,
+            [signal.fromUserId]: {
+              fullName: resolvedName,
+              avatarUrl: profile.avatarUrl,
+            },
+          }));
+        } catch {
+          // keep fallback display name
+        } finally {
+          peerProfileLoadingRef.current.delete(signal.fromUserId);
+        }
+      }
 
       const notif = new Notification(
         signal.mediaType === 'video' ? 'Cuộc gọi video đến' : 'Cuộc gọi thoại đến',
         {
-          body: `${signal.fromUsername || 'Người dùng'} đang gọi cho bạn`,
+          body: `${callerName} đang gọi cho bạn`,
           tag: `call-${signal.callId}`,
           requireInteraction: true,
         },
@@ -127,7 +156,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       desktopNotificationRef.current = notif;
       notifiedCallIdRef.current = signal.callId;
     },
-    [closeDesktopNotification, currentUser?.id, navigate],
+    [closeDesktopNotification, currentUser?.id, navigate, peerProfiles],
   );
 
   const handleIncomingCallSignal = useCallback(
@@ -176,6 +205,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
 
   const subscribePresenceStatuses = useCallback((listener: PresenceStatusListener) => {
     presenceListenersRef.current.add(listener);
+    Object.values(latestPresenceByUserRef.current).forEach((presence) => listener(presence));
     return () => {
       presenceListenersRef.current.delete(listener);
     };
@@ -211,9 +241,43 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     video.srcObject = shouldShowLocalVideo ? voiceCall.localStream : null;
   }, [voiceCall.callMediaType, voiceCall.localStream]);
 
+  const effectiveCallStatus =
+    voiceCall.authoritativeSessionStatus === 'ONGOING' &&
+    (voiceCall.status === 'calling' || voiceCall.status === 'connecting')
+      ? 'in_call'
+      : voiceCall.status;
+
   const isCallOngoing =
-    voiceCall.status === 'calling' || voiceCall.status === 'connecting' || voiceCall.status === 'in_call';
-  const isCallConnected = voiceCall.status === 'in_call';
+    effectiveCallStatus === 'calling' || effectiveCallStatus === 'connecting' || effectiveCallStatus === 'in_call';
+  const isCallConnected = effectiveCallStatus === 'in_call';
+
+  useEffect(() => {
+    const peerIds = [voiceCall.incomingPeerUserId, voiceCall.activePeerUserId].filter(
+      (id): id is string => Boolean(id),
+    );
+    if (peerIds.length === 0) return;
+
+    peerIds.forEach((peerId) => {
+      if (peerProfiles[peerId] || peerProfileLoadingRef.current.has(peerId)) return;
+      peerProfileLoadingRef.current.add(peerId);
+      void (async () => {
+        try {
+          const profile = await authService.getUserById(peerId);
+          setPeerProfiles((prev) => ({
+            ...prev,
+            [peerId]: {
+              fullName: profile.fullName || profile.username || 'Người dùng',
+              avatarUrl: profile.avatarUrl,
+            },
+          }));
+        } catch {
+          // keep fallback display name/avatar
+        } finally {
+          peerProfileLoadingRef.current.delete(peerId);
+        }
+      })();
+    });
+  }, [peerProfiles, voiceCall.activePeerUserId, voiceCall.incomingPeerUserId]);
 
   useEffect(() => {
     if (voiceCall.isRinging) {
@@ -320,19 +384,28 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
 
   const callStatusText =
     authoritativeStatusText ||
-    (voiceCall.status === 'calling'
+    (effectiveCallStatus === 'calling'
       ? 'Đang gọi...'
-      : voiceCall.status === 'connecting'
+      : effectiveCallStatus === 'connecting'
         ? 'Đang kết nối...'
         : formatCallDuration(callDurationSec));
 
-  const incomingName = voiceCall.incomingFromUsername || 'Người dùng';
-  const incomingAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingName)}&background=random`;
-  const activeName = voiceCall.incomingFromUsername || 'Người dùng';
-  const activeAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(activeName)}&background=random`;
+  const incomingProfile = voiceCall.incomingPeerUserId ? peerProfiles[voiceCall.incomingPeerUserId] : undefined;
+  const activeProfile = voiceCall.activePeerUserId ? peerProfiles[voiceCall.activePeerUserId] : undefined;
+
+  const incomingName = incomingProfile?.fullName || voiceCall.incomingFromUsername || 'Người dùng';
+  const incomingAvatar =
+    incomingProfile?.avatarUrl ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingName)}&background=random`;
+  const activeName =
+    activeProfile?.fullName || voiceCall.activePeerDisplayName || voiceCall.incomingFromUsername || 'Người dùng';
+  const activeAvatar =
+    activeProfile?.avatarUrl ||
+    voiceCall.activePeerAvatarUrl ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(activeName)}&background=random`;
   const isVideoCall = isCallOngoing && voiceCall.callMediaType === 'video';
   const showGlobalMinimizedBar = !showCallModal && (voiceCall.isRinging || isCallOngoing);
-  const minimizedMode = voiceCall.isRinging ? 'incoming' : voiceCall.status === 'in_call' ? 'in_call' : 'outgoing';
+  const minimizedMode = voiceCall.isRinging ? 'incoming' : effectiveCallStatus === 'in_call' ? 'in_call' : 'outgoing';
   const incomingCallText =
     voiceCall.incomingMediaType === 'video' ? 'Đang có cuộc gọi video đến...' : 'Đang có cuộc gọi đến...';
 
@@ -411,7 +484,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
           mode="ongoing"
           show={showCallModal}
           user={{ name: activeName, avatar: activeAvatar }}
-          callStatus={voiceCall.status}
+          callStatus={effectiveCallStatus}
           callStatusText={callStatusText}
           isVideoCall={isVideoCall}
           hasRemoteStream={Boolean(voiceCall.remoteStream)}

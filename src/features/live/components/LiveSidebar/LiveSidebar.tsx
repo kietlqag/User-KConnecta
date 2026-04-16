@@ -1,6 +1,6 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
-import { authService } from '@/services/authService';
+import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { CurrentUserAvatar } from '@/components/shared';
 import { LiveDestination, LiveDestinationOption } from '../../types/live.types';
 
@@ -28,7 +28,17 @@ const destinationOptions: LiveDestinationOption[] = [
 export const LiveSidebar = () => {
   const [selectedDestination, setSelectedDestination] = useState<LiveDestination>('profile');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const currentUser = authService.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+
+  useEffect(() => {
+    const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+    window.addEventListener('storage', syncAuthUser);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+      window.removeEventListener('storage', syncAuthUser);
+    };
+  }, []);
 
   const selectedOption = destinationOptions.find((opt) => opt.id === selectedDestination);
 
@@ -95,4 +105,5 @@ export const LiveSidebar = () => {
     </div>
   );
 };
+
 

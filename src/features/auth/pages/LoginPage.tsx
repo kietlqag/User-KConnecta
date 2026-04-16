@@ -1,11 +1,12 @@
 ﻿import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Sparkles } from "lucide-react";
-import { authService } from "@/services/authService";
+import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { authService, type AuthUser } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import logoV1 from "@/assets/LogoKConnecta_V1.png";
 
 interface LoginFormData {
   email: string;
@@ -171,6 +172,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const authLockRef = useRef(false);
 
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
@@ -181,6 +183,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const isAuthenticating = isLoading || isGoogleLoading;
 
   const [showPassword, setShowPassword] = useState(false);
   const [mouseX, setMouseX] = useState<number>(0);
@@ -215,20 +218,23 @@ export function LoginPage() {
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async ({ credential }) => {
+          if (authLockRef.current) return;
           if (!credential) {
             setGoogleError("Google không trả về token đăng nhập");
             return;
           }
 
+          authLockRef.current = true;
           setGoogleError(null);
           setIsGoogleLoading(true);
           try {
             const user = await authService.googleLogin(credential);
-            authService.saveCurrentUser(user, !!formData.rememberMe);
+            await persistAndHydrateUser(user);
             navigate(redirectTo, { replace: true });
           } catch (err) {
             setGoogleError(err instanceof Error ? err.message : "Đăng nhập Google thất bại");
           } finally {
+            authLockRef.current = false;
             setIsGoogleLoading(false);
           }
         },
@@ -237,8 +243,8 @@ export function LoginPage() {
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         type: "standard",
         theme: "outline",
-        text: "signin_with",
-        shape: "rectangular",
+        text: "continue_with",
+        shape: "pill",
         size: "large",
         width: Math.min(380, googleButtonRef.current.offsetWidth || 380),
         logo_alignment: "left",
@@ -376,33 +382,50 @@ export function LoginPage() {
     return true;
   };
 
+  const persistAndHydrateUser = async (authUser: AuthUser) => {
+    authService.saveCurrentUser(authUser, !!formData.rememberMe);
+    try {
+      const profile = await authService.getUserById(authUser.id);
+      authService.saveCurrentUser(
+        {
+          ...profile,
+          token: authUser.token,
+          hasPassword: authUser.hasPassword,
+        },
+        !!formData.rememberMe,
+      );
+    } catch {
+      // fallback to auth response when profile API is not available
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (authLockRef.current) return;
     setError("");
 
     if (!validate()) return;
 
+    authLockRef.current = true;
     setIsLoading(true);
     try {
       const user = await authService.login(formData.email, formData.password);
-      authService.saveCurrentUser(user, !!formData.rememberMe);
+      await persistAndHydrateUser(user);
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
     } finally {
+      authLockRef.current = false;
       setIsLoading(false);
     }
   };
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden flex-col justify-between bg-gradient-to-br from-primary/90 via-primary to-primary/80 p-12 text-primary-foreground lg:flex">
+      <div className="relative hidden flex-col justify-between bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 p-12 text-white lg:flex">
         <div className="relative z-20">
-          <div className="flex items-center gap-2 text-lg font-semibold">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary-foreground/10 backdrop-blur-sm">
-              <Sparkles className="size-4" />
-            </div>
-            <span>KConnecta</span>
+          <div className="inline-flex items-center rounded-xl bg-white/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
+            <img src={logoV1} alt="KConnecta Logo V1" className="h-9 w-auto" />
           </div>
         </div>
 
@@ -601,50 +624,54 @@ export function LoginPage() {
       </div>
 
       <div className="flex items-center justify-center bg-background p-8">
-        <div className="w-full max-w-[420px]">
-          <div className="mb-12 flex items-center justify-center gap-2 text-lg font-semibold lg:hidden">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
-              <Sparkles className="size-4 text-primary" />
-            </div>
-            <span>KConnecta</span>
+        <div className="relative w-full max-w-[420px]">
+          {isAuthenticating && <div className="absolute inset-0 z-20 cursor-wait" />}
+          <div className="mb-12 flex items-center justify-center lg:hidden">
+            <img src={logoV1} alt="KConnecta Logo V1" className="h-10 w-auto" />
           </div>
 
           <div className="mb-10 text-center">
             <h1 className="mb-2 text-3xl font-bold tracking-tight">Chào mừng bạn quay lại!</h1>
-            <p className="text-sm text-muted-foreground">Vui lòng nhập thông tin đăng nhập</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="anna@gmail.com"
-                value={formData.email}
-                autoComplete="off"
-                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                onFocus={() => setIsTyping(true)}
-                onBlur={() => setIsTyping(false)}
-                required
-                className="h-12 border-border/60 bg-background focus:border-primary"
-              />
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="anna@gmail.com"
+                  value={formData.email}
+                  autoComplete="off"
+                  disabled={isAuthenticating}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                  onFocus={() => setIsTyping(true)}
+                  onBlur={() => setIsTyping(false)}
+                  required
+                  className="h-12 border-border/60 bg-background pl-10 focus:border-primary"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">Mật khẩu</Label>
               <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={formData.password}
+                  disabled={isAuthenticating}
                   onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                   required
-                  className="h-12 border-border/60 bg-background pr-10 focus:border-primary"
+                  className="h-12 border-border/60 bg-background pl-10 pr-10 focus:border-primary"
                 />
                 <button
                   type="button"
+                  disabled={isAuthenticating}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                 >
@@ -657,19 +684,23 @@ export function LoginPage() {
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="remember"
+                  disabled={isAuthenticating}
                   checked={formData.rememberMe}
                   onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, rememberMe: checked === true }))}
                 />
                 <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">Ghi nhớ đăng nhập</Label>
               </div>
-              <Link to="/auth/forgot-password" className="text-sm font-medium text-primary hover:underline">
+              <Link
+                to="/auth/forgot-password"
+                className={`text-sm font-medium text-primary hover:underline ${isAuthenticating ? "pointer-events-none opacity-50" : ""}`}
+              >
                 Quên mật khẩu?
               </Link>
             </div>
 
             {error && <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">{error}</div>}
 
-            <Button type="submit" className="h-12 w-full text-base font-medium" size="lg" disabled={isLoading}>
+            <Button type="submit" className="h-12 w-full text-base font-medium" size="lg" disabled={isAuthenticating}>
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
           </form>
@@ -684,14 +715,20 @@ export function LoginPage() {
           </div>
 
           <div className="space-y-3">
-            <div ref={googleButtonRef} className="flex min-h-[44px] items-center justify-center" />
+            <div
+              ref={googleButtonRef}
+              className={`flex min-h-[44px] items-center justify-center ${isAuthenticating ? "pointer-events-none opacity-60" : ""}`}
+            />
             {isGoogleLoading && <p className="text-center text-sm text-muted-foreground">Đang xác thực với Google...</p>}
             {googleError && <p className="text-center text-sm text-red-500">{googleError}</p>}
           </div>
 
           <div className="mt-8 text-center text-sm text-muted-foreground">
             Chưa có tài khoản? {" "}
-            <Link to="/auth/register" className="font-medium text-foreground hover:underline">
+            <Link
+              to="/auth/register"
+              className={`font-medium text-foreground hover:underline ${isAuthenticating ? "pointer-events-none opacity-50" : ""}`}
+            >
               Đăng ký ngay
             </Link>
           </div>

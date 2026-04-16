@@ -2,6 +2,12 @@ import { api } from './api';
 
 const AUTH_USER_KEY = 'authUser';
 const REMEMBER_ME_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+export const AUTH_USER_CHANGED_EVENT = 'auth-user-changed';
+
+const notifyAuthUserChanged = () => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(AUTH_USER_CHANGED_EVENT));
+};
 
 interface StoredAuthUser {
   user: AuthUser;
@@ -171,11 +177,13 @@ export const authService = {
       };
       localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
       sessionStorage.removeItem(AUTH_USER_KEY);
+      notifyAuthUserChanged();
       return;
     }
 
     sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(mergedUser));
     localStorage.removeItem(AUTH_USER_KEY);
+    notifyAuthUserChanged();
   },
 
   getCurrentUser: (): AuthUser | null => {
@@ -218,5 +226,6 @@ export const authService = {
   logout: () => {
     localStorage.removeItem(AUTH_USER_KEY);
     sessionStorage.removeItem(AUTH_USER_KEY);
+    notifyAuthUserChanged();
   },
 };
