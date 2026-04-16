@@ -1,6 +1,7 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildRtcConfig, isWebRtcDebugEnabled } from '@/utils/webrtcConfig';
 import type { CallSignalType, IncomingCallSignal, OutgoingCallSignal } from '../types/message.types';
+import type { CallSessionSnapshotResponse } from '@/services/chatService';
 
 type CallDirection = 'incoming' | 'outgoing';
 type CallStatus = 'idle' | 'calling' | 'ringing' | 'connecting' | 'in_call' | 'ended' | 'error';
@@ -18,7 +19,8 @@ interface UseVoiceCallOptions {
   sendCallSignal: (signal: OutgoingCallSignal) => void;
 }
 
-const CALL_TIMEOUT_MS = 30000;
+const CALL_RING_TIMEOUT_MS = 30000;
+const CALL_CONNECT_TIMEOUT_MS = 20000;
 const rtcConfig = buildRtcConfig();
 const DEBUG_WEBRTC = isWebRtcDebugEnabled();
 
@@ -52,17 +54,31 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [callStartedAtMs, setCallStartedAtMs] = useState<number | null>(null);
+  const [authoritativeSessionStatus, setAuthoritativeSessionStatus] = useState<
+    'RINGING' | 'ONGOING' | 'MISSED' | 'COMPLETED' | null
+  >(null);
+  const [authoritativeDurationSec, setAuthoritativeDurationSec] = useState<number | null>(null);
 
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const callTimeoutRef = useRef<number | null>(null);
+  const connectTimeoutRef = useRef<number | null>(null);
+  const hasRetriedIceRestartRef = useRef(false);
 
   const clearCallTimeout = useCallback(() => {
     if (callTimeoutRef.current) {
       window.clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearConnectTimeout = useCallback(() => {
+    if (connectTimeoutRef.current) {
+      window.clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = null;
     }
   }, []);
 
@@ -74,6 +90,34 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     }
     console.log(`[WebRTC] ${message}`);
   }, []);
+
+  const toEpochMs = useCallback((isoDate?: string | null) => {
+    if (!isoDate) return null;
+    const time = new Date(isoDate).getTime();
+    return Number.isFinite(time) ? time : null;
+  }, []);
+
+  const applyAuthoritativeSnapshot = useCallback(
+    (snapshot?: { status?: string | null; answeredAt?: string | null; durationSec?: number | null } | null) => {
+      if (!snapshot) return;
+      const normalizedStatus =
+        snapshot.status === 'RINGING' ||
+        snapshot.status === 'ONGOING' ||
+        snapshot.status === 'MISSED' ||
+        snapshot.status === 'COMPLETED'
+          ? snapshot.status
+          : null;
+      setAuthoritativeSessionStatus(normalizedStatus);
+      if (typeof snapshot.durationSec === 'number' && Number.isFinite(snapshot.durationSec)) {
+        setAuthoritativeDurationSec(Math.max(0, Math.floor(snapshot.durationSec)));
+      }
+      const answeredAtMs = toEpochMs(snapshot.answeredAt);
+      if (answeredAtMs) {
+        setCallStartedAtMs(answeredAtMs);
+      }
+    },
+    [toEpochMs],
+  );
 
   const sendSignal = useCallback(
     (receiverId: string, callId: string, type: CallSignalType, extra?: Partial<OutgoingCallSignal>) => {
@@ -90,6 +134,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   const cleanup = useCallback(
     (keepStatus = false) => {
       clearCallTimeout();
+      clearConnectTimeout();
       peerRef.current?.close();
       peerRef.current = null;
 
@@ -100,8 +145,12 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
       pendingOfferRef.current = null;
       pendingIceRef.current = [];
+      hasRetriedIceRestartRef.current = false;
       setLocalStream(null);
       setRemoteStream(null);
+      setCallStartedAtMs(null);
+      setAuthoritativeSessionStatus(null);
+      setAuthoritativeDurationSec(null);
       setIncomingSignal(null);
       setIncomingMediaType('audio');
       setActiveCall(null);
@@ -111,24 +160,39 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         setStatus('idle');
       }
     },
-    [clearCallTimeout],
+    [clearCallTimeout, clearConnectTimeout],
+  );
+
+  const armConnectTimeout = useCallback(
+    (peerUserId: string, callId: string) => {
+      clearConnectTimeout();
+      connectTimeoutRef.current = window.setTimeout(() => {
+        sendSignal(peerUserId, callId, 'CALL_END');
+        setErrorMessage('Kết nối cuộc gọi quá lâu. Vui lòng thử lại.');
+        setStatus('ended');
+        cleanup(true);
+      }, CALL_CONNECT_TIMEOUT_MS);
+    },
+    [clearConnectTimeout, cleanup, sendSignal],
   );
 
   useEffect(() => {
     if (status === 'in_call' || status === 'ended' || status === 'error' || status === 'idle') {
       clearCallTimeout();
+      clearConnectTimeout();
     }
-  }, [clearCallTimeout, status]);
+  }, [clearCallTimeout, clearConnectTimeout, status]);
 
   useEffect(
     () => () => {
       clearCallTimeout();
+      clearConnectTimeout();
       peerRef.current?.close();
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     },
-    [clearCallTimeout],
+    [clearCallTimeout, clearConnectTimeout],
   );
 
   const ensureLocalStream = useCallback(async (mediaType: CallMediaType) => {
@@ -198,13 +262,50 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       pc.oniceconnectionstatechange = () => {
         logWebRtc('iceConnectionState', { callId, state: pc.iceConnectionState });
         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          clearConnectTimeout();
+          hasRetriedIceRestartRef.current = false;
           setStatus('in_call');
         } else if (
           pc.iceConnectionState === 'failed' ||
-          pc.iceConnectionState === 'disconnected' ||
           pc.iceConnectionState === 'closed'
         ) {
-          setStatus('ended');
+          if (pc.iceConnectionState === 'failed' && !hasRetriedIceRestartRef.current) {
+            hasRetriedIceRestartRef.current = true;
+            armConnectTimeout(peerUserId, callId);
+            void (async () => {
+              try {
+                const offer = await pc.createOffer({
+                  iceRestart: true,
+                  offerToReceiveAudio: true,
+                  offerToReceiveVideo: true,
+                });
+                await pc.setLocalDescription(offer);
+                sendSignal(peerUserId, callId, 'CALL_OFFER', { sdp: offer.sdp ?? undefined });
+                setStatus('connecting');
+              } catch {
+                setStatus('ended');
+              }
+            })();
+          } else {
+            setStatus('ended');
+          }
+        } else if (pc.iceConnectionState === 'disconnected' && !hasRetriedIceRestartRef.current) {
+          hasRetriedIceRestartRef.current = true;
+          armConnectTimeout(peerUserId, callId);
+          setStatus((prev) => (prev === 'in_call' ? 'connecting' : prev));
+          void (async () => {
+            try {
+              const offer = await pc.createOffer({
+                iceRestart: true,
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true,
+              });
+              await pc.setLocalDescription(offer);
+              sendSignal(peerUserId, callId, 'CALL_OFFER', { sdp: offer.sdp ?? undefined });
+            } catch {
+              // keep waiting for recovery / timeout
+            }
+          })();
         }
       };
 
@@ -215,6 +316,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       pc.onconnectionstatechange = () => {
         logWebRtc('connectionState', { callId, state: pc.connectionState });
         if (pc.connectionState === 'connected') {
+          clearConnectTimeout();
+          hasRetriedIceRestartRef.current = false;
           setStatus('in_call');
         } else if (
           pc.connectionState === 'failed' ||
@@ -228,7 +331,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       peerRef.current = pc;
       return pc;
     },
-    [logWebRtc, sendSignal],
+    [armConnectTimeout, clearConnectTimeout, logWebRtc, sendSignal],
   );
 
   const applyPendingIce = useCallback(async () => {
@@ -256,6 +359,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
       const callId = createCallId();
       setActiveCall({ callId, peerUserId, direction: 'outgoing', mediaType });
+      hasRetriedIceRestartRef.current = false;
+      setCallStartedAtMs(null);
+      setAuthoritativeSessionStatus('RINGING');
+      setAuthoritativeDurationSec(null);
       setStatus('calling');
       sendSignal(peerUserId, callId, 'CALL_INVITE', { mediaType });
       logWebRtc('send CALL_INVITE', { callId, peerUserId, mediaType });
@@ -263,10 +370,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       clearCallTimeout();
       callTimeoutRef.current = window.setTimeout(() => {
         sendSignal(peerUserId, callId, 'CALL_CANCEL');
-        setErrorMessage('Cu?c g?i không ph?n h?i.');
+        setErrorMessage('Cuộc gọi không phản hồi.');
         setStatus('ended');
         cleanup(true);
-      }, CALL_TIMEOUT_MS);
+      }, CALL_RING_TIMEOUT_MS);
 
       try {
         const local = await ensureLocalStream(mediaType);
@@ -281,7 +388,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         logWebRtc('setLocalDescription offer', { callId });
         sendSignal(peerUserId, callId, 'CALL_OFFER', { sdp: offer.sdp ?? undefined });
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : 'Không th? b?t d?u cu?c g?i');
+        setErrorMessage(error instanceof Error ? error.message : 'Không thể bắt đầu cuộc gọi');
         setStatus('error');
         cleanup(true);
       }
@@ -303,10 +410,15 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
     setErrorMessage(null);
     setActiveCall({ callId, peerUserId, direction: 'incoming', mediaType: offerMediaType });
+    hasRetriedIceRestartRef.current = false;
+    setCallStartedAtMs(Date.now());
+    setAuthoritativeSessionStatus('ONGOING');
+    setAuthoritativeDurationSec(0);
     setStatus('connecting');
     setIncomingSignal(null);
     setIncomingMediaType('audio');
     sendSignal(peerUserId, callId, 'CALL_ACCEPT');
+    armConnectTimeout(peerUserId, callId);
     logWebRtc('send CALL_ACCEPT', { callId, peerUserId });
 
     try {
@@ -330,11 +442,21 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
       await applyPendingIce();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Không th? nh?n cu?c g?i');
+      setErrorMessage(error instanceof Error ? error.message : 'Không thể nhận cuộc gọi');
       setStatus('error');
       cleanup(true);
     }
-  }, [applyPendingIce, cleanup, createPeerConnection, ensureLocalStream, incomingMediaType, incomingSignal, logWebRtc, sendSignal]);
+  }, [
+    applyPendingIce,
+    armConnectTimeout,
+    cleanup,
+    createPeerConnection,
+    ensureLocalStream,
+    incomingMediaType,
+    incomingSignal,
+    logWebRtc,
+    sendSignal,
+  ]);
 
   const endCall = useCallback(() => {
     if (activeCall) {
@@ -383,15 +505,51 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           if (status === 'idle' || status === 'ended') {
             setIncomingSignal(signal);
             setIncomingMediaType(signal.mediaType === 'video' ? 'video' : 'audio');
+            applyAuthoritativeSnapshot({
+              status: signal.sessionStatus,
+              answeredAt: signal.sessionAnsweredAt,
+              durationSec: signal.sessionDurationSec,
+            });
             setStatus('ringing');
           } else {
             sendSignal(signal.fromUserId, signal.callId, 'CALL_REJECT');
           }
           break;
         case 'CALL_CANCEL':
+          if (incomingSignal?.callId === signal.callId || matchesByCallId) {
+            if (matchesByCallId && status === 'in_call') {
+              break;
+            }
+            applyAuthoritativeSnapshot({
+              status: signal.sessionStatus,
+              answeredAt: signal.sessionAnsweredAt,
+              durationSec: signal.sessionDurationSec,
+            });
+            setStatus('ended');
+            cleanup(true);
+          }
+          break;
         case 'CALL_REJECT':
+          if (incomingSignal?.callId === signal.callId || matchesByCallId) {
+            if (matchesByCallId && status === 'in_call') {
+              break;
+            }
+            applyAuthoritativeSnapshot({
+              status: signal.sessionStatus,
+              answeredAt: signal.sessionAnsweredAt,
+              durationSec: signal.sessionDurationSec,
+            });
+            setStatus('ended');
+            cleanup(true);
+          }
+          break;
         case 'CALL_END':
           if (incomingSignal?.callId === signal.callId || matchesByCallId) {
+            applyAuthoritativeSnapshot({
+              status: signal.sessionStatus,
+              answeredAt: signal.sessionAnsweredAt,
+              durationSec: signal.sessionDurationSec,
+            });
             setStatus('ended');
             cleanup(true);
           }
@@ -399,7 +557,13 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         case 'CALL_ACCEPT':
           if (matchesByCallId && activeCall?.direction === 'outgoing') {
             clearCallTimeout();
+            applyAuthoritativeSnapshot({
+              status: signal.sessionStatus,
+              answeredAt: signal.sessionAnsweredAt ?? signal.createdAt,
+              durationSec: signal.sessionDurationSec,
+            });
             setStatus('connecting');
+            armConnectTimeout(signal.fromUserId, signal.callId);
           }
           break;
         case 'CALL_OFFER':
@@ -429,9 +593,15 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         case 'CALL_ANSWER':
           if (!matchesByCallId || !signal.sdp || !peerRef.current) break;
           clearCallTimeout();
+          applyAuthoritativeSnapshot({
+            status: signal.sessionStatus,
+            answeredAt: signal.sessionAnsweredAt ?? signal.createdAt,
+            durationSec: signal.sessionDurationSec,
+          });
           await peerRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
           logWebRtc('setRemoteDescription answer', { callId: signal.callId });
           setStatus('connecting');
+          armConnectTimeout(signal.fromUserId, signal.callId);
           await applyPendingIce();
           break;
         case 'CALL_ICE':
@@ -463,8 +633,30 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
       }
     },
-    [activeCall, applyPendingIce, cleanup, clearCallTimeout, currentUserId, incomingSignal, logWebRtc, sendSignal, status],
+    [
+      activeCall,
+      applyAuthoritativeSnapshot,
+      applyPendingIce,
+      cleanup,
+      clearCallTimeout,
+      currentUserId,
+      incomingSignal,
+      logWebRtc,
+      armConnectTimeout,
+      sendSignal,
+      status,
+      toEpochMs,
+    ],
   );
+
+  const syncAuthoritativeSession = useCallback((snapshot: CallSessionSnapshotResponse | null | undefined) => {
+    if (!snapshot) return;
+    applyAuthoritativeSnapshot({
+      status: snapshot.status,
+      answeredAt: snapshot.answeredAt ?? null,
+      durationSec: snapshot.durationSec ?? null,
+    });
+  }, [applyAuthoritativeSnapshot]);
 
   const incomingPeerUserId = incomingSignal?.fromUserId ?? null;
 
@@ -476,6 +668,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       isCameraEnabled,
       localStream,
       remoteStream,
+      callStartedAtMs,
+      authoritativeSessionStatus,
+      authoritativeDurationSec,
       callMediaType: activeCall?.mediaType ?? incomingMediaType,
       incomingMediaType,
       activeCallId: activeCall?.callId ?? null,
@@ -491,6 +686,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       toggleMute,
       toggleCamera,
       handleIncomingSignal,
+      syncAuthoritativeSession,
     }),
     [
       acceptIncoming,
@@ -508,6 +704,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       localStream,
       rejectIncoming,
       remoteStream,
+      callStartedAtMs,
+      authoritativeSessionStatus,
+      authoritativeDurationSec,
+      syncAuthoritativeSession,
       startCall,
       status,
       toggleCamera,

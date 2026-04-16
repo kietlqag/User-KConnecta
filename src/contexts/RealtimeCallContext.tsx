@@ -1,4 +1,4 @@
-import {
+﻿import {
   createContext,
   useCallback,
   useContext,
@@ -8,9 +8,10 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { Phone, PhoneOff, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
+import { chatService } from '@/services/chatService';
+import { CallMinimizedBar, CallOverlayModal } from '@/features/messenger/components';
 import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import { useVoiceCall } from '@/features/messenger/hooks/useVoiceCall';
 import type {
@@ -38,7 +39,6 @@ interface RealtimeCallContextValue {
 const RealtimeCallContext = createContext<RealtimeCallContextValue | null>(null);
 
 export function RealtimeCallProvider({ children }: { children: ReactNode }) {
-  const location = useLocation();
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
   const listenersRef = useRef<Set<MessageListener>>(new Set());
@@ -48,9 +48,18 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const desktopNotificationRef = useRef<Notification | null>(null);
   const notifiedCallIdRef = useRef<string | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const [showCallModal, setShowCallModal] = useState(true);
-  const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
+  const [speakerMode, setSpeakerMode] = useState<'inner' | 'outer'>('inner');
   const [callDurationSec, setCallDurationSec] = useState(0);
+  const [authoritativeStatusText, setAuthoritativeStatusText] = useState<string | null>(null);
+
+  const formatCallDuration = useCallback((totalSec: number) => {
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }, []);
 
   const handleIncomingMessage = useCallback((msg: IncomingChatMessage) => {
     listenersRef.current.forEach((listener) => listener(msg));
@@ -121,13 +130,16 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     [closeDesktopNotification, currentUser?.id, navigate],
   );
 
-  const handleIncomingCallSignal = useCallback((signal: IncomingCallSignal) => {
-    void maybeShowDesktopNotification(signal);
-    if (signal.type === 'CALL_CANCEL' || signal.type === 'CALL_REJECT' || signal.type === 'CALL_END') {
-      closeDesktopNotification();
-    }
-    callSignalHandlerRef.current(signal);
-  }, [closeDesktopNotification, maybeShowDesktopNotification]);
+  const handleIncomingCallSignal = useCallback(
+    (signal: IncomingCallSignal) => {
+      void maybeShowDesktopNotification(signal);
+      if (signal.type === 'CALL_CANCEL' || signal.type === 'CALL_REJECT' || signal.type === 'CALL_END') {
+        closeDesktopNotification();
+      }
+      callSignalHandlerRef.current(signal);
+    },
+    [closeDesktopNotification, maybeShowDesktopNotification],
+  );
 
   const { connected, sendMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen } = useChatSocket(
     currentUser?.token,
@@ -178,6 +190,27 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     };
   }, [voiceCall.remoteStream]);
 
+  useEffect(() => {
+    const audio = remoteAudioRef.current;
+    if (!audio) return;
+    audio.muted = false;
+    audio.volume = speakerMode === 'outer' ? 1 : 0.45;
+  }, [speakerMode]);
+
+  useEffect(() => {
+    const video = remoteVideoRef.current;
+    if (!video) return;
+    const shouldShowRemoteVideo = voiceCall.callMediaType === 'video' && Boolean(voiceCall.remoteStream);
+    video.srcObject = shouldShowRemoteVideo ? voiceCall.remoteStream : null;
+  }, [voiceCall.callMediaType, voiceCall.remoteStream]);
+
+  useEffect(() => {
+    const video = localVideoRef.current;
+    if (!video) return;
+    const shouldShowLocalVideo = voiceCall.callMediaType === 'video' && Boolean(voiceCall.localStream);
+    video.srcObject = shouldShowLocalVideo ? voiceCall.localStream : null;
+  }, [voiceCall.callMediaType, voiceCall.localStream]);
+
   const isCallOngoing =
     voiceCall.status === 'calling' || voiceCall.status === 'connecting' || voiceCall.status === 'in_call';
   const isCallConnected = voiceCall.status === 'in_call';
@@ -185,10 +218,11 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (voiceCall.isRinging) {
       setShowCallModal(true);
+      setSpeakerMode(voiceCall.incomingMediaType === 'video' ? 'outer' : 'inner');
     } else {
       closeDesktopNotification();
     }
-  }, [closeDesktopNotification, voiceCall.isRinging]);
+  }, [closeDesktopNotification, voiceCall.incomingMediaType, voiceCall.isRinging]);
 
   useEffect(() => {
     return () => {
@@ -198,46 +232,109 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isCallOngoing) {
-      setCallStartedAt(null);
       setCallDurationSec(0);
       setShowCallModal(true);
       return;
     }
     if (!isCallConnected) {
-      setCallStartedAt(null);
       setCallDurationSec(0);
       return;
     }
-    setCallStartedAt((prev) => prev ?? Date.now());
   }, [isCallConnected, isCallOngoing]);
 
   useEffect(() => {
-    if (!isCallConnected || !callStartedAt) {
+    if (!isCallConnected || !voiceCall.callStartedAtMs) {
       setCallDurationSec(0);
       return;
     }
-    const tick = () => setCallDurationSec(Math.floor((Date.now() - callStartedAt) / 1000));
+
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - voiceCall.callStartedAtMs) / 1000);
+      setCallDurationSec(Math.max(0, elapsed));
+    };
+
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [callStartedAt, isCallConnected]);
+  }, [isCallConnected, voiceCall.callStartedAtMs]);
 
-  const formatCallDuration = (totalSec: number) => {
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-    return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  };
+  useEffect(() => {
+    if (!voiceCall.activeCallId) {
+      setAuthoritativeStatusText(null);
+      return;
+    }
+
+    let cancelled = false;
+    const syncSession = async () => {
+      try {
+        const snapshot = await chatService.getCallSessionSnapshot(voiceCall.activeCallId);
+        if (cancelled) return;
+
+        voiceCall.syncAuthoritativeSession(snapshot);
+
+        if (snapshot.status === 'RINGING') {
+          setAuthoritativeStatusText('Đang gọi...');
+          return;
+        }
+
+        if (snapshot.status === 'ONGOING') {
+          if (typeof snapshot.durationSec === 'number' && Number.isFinite(snapshot.durationSec)) {
+            const safeDuration = Math.max(0, Math.floor(snapshot.durationSec));
+            setCallDurationSec(safeDuration);
+            setAuthoritativeStatusText(formatCallDuration(safeDuration));
+          } else {
+            setAuthoritativeStatusText(null);
+          }
+          return;
+        }
+
+        if (snapshot.status === 'MISSED') {
+          setAuthoritativeStatusText('Cuộc gọi nhỡ');
+          return;
+        }
+
+        if (snapshot.status === 'COMPLETED') {
+          const safeDuration =
+            typeof snapshot.durationSec === 'number' && Number.isFinite(snapshot.durationSec)
+              ? Math.max(0, Math.floor(snapshot.durationSec))
+              : 0;
+          setCallDurationSec(safeDuration);
+          setAuthoritativeStatusText(formatCallDuration(safeDuration));
+          return;
+        }
+
+        setAuthoritativeStatusText(null);
+      } catch {
+        // no-op
+      }
+    };
+
+    void syncSession();
+    const interval = window.setInterval(syncSession, isCallConnected ? 3000 : 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [formatCallDuration, isCallConnected, voiceCall.activeCallId, voiceCall.syncAuthoritativeSession]);
 
   const callStatusText =
-    voiceCall.status === 'calling'
+    authoritativeStatusText ||
+    (voiceCall.status === 'calling'
       ? 'Đang gọi...'
       : voiceCall.status === 'connecting'
-      ? 'Đang kết nối...'
-      : formatCallDuration(callDurationSec);
+        ? 'Đang kết nối...'
+        : formatCallDuration(callDurationSec));
 
   const incomingName = voiceCall.incomingFromUsername || 'Người dùng';
   const incomingAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingName)}&background=random`;
-  const shouldRenderGlobalModal = location.pathname !== '/messages';
+  const activeName = voiceCall.incomingFromUsername || 'Người dùng';
+  const activeAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(activeName)}&background=random`;
+  const isVideoCall = isCallOngoing && voiceCall.callMediaType === 'video';
+  const showGlobalMinimizedBar = !showCallModal && (voiceCall.isRinging || isCallOngoing);
+  const minimizedMode = voiceCall.isRinging ? 'incoming' : voiceCall.status === 'in_call' ? 'in_call' : 'outgoing';
+  const incomingCallText =
+    voiceCall.incomingMediaType === 'video' ? 'Đang có cuộc gọi video đến...' : 'Đang có cuộc gọi đến...';
 
   const contextValue = useMemo<RealtimeCallContextValue>(
     () => ({
@@ -266,75 +363,70 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     <RealtimeCallContext.Provider value={contextValue}>
       {children}
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
+      <video ref={remoteVideoRef} autoPlay playsInline className="hidden" />
+      <video ref={localVideoRef} autoPlay muted playsInline className="hidden" />
 
-      {shouldRenderGlobalModal && voiceCall.isRinging && showCallModal && (
-        <div className="fixed inset-0 z-[200] bg-black/20 flex items-center justify-center">
-          <div className="w-[340px] rounded-2xl bg-white border border-gray-200 shadow-2xl p-5">
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowCallModal(false)}
-                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
-                title="Thu gọn"
-              >
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-            <div className="text-center">
-              <img src={incomingAvatar} alt={incomingName} className="w-20 h-20 rounded-full object-cover mx-auto" />
-              <p className="mt-3 text-lg font-semibold text-gray-900">{incomingName}</p>
-              <p className="mt-1 text-sm text-gray-500">
-                {voiceCall.incomingMediaType === 'video' ? 'Đang gọi video cho bạn' : 'Đang gọi thoại cho bạn'}
-              </p>
-            </div>
-            <div className="mt-6 flex items-center justify-center gap-4">
-              <button
-                onClick={() => voiceCall.rejectIncoming()}
-                className="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-                title="Từ chối"
-              >
-                <PhoneOff className="w-5 h-5 text-white" />
-              </button>
-              <button
-                onClick={() => {
-                  void voiceCall.acceptIncoming();
-                }}
-                className="w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center"
-                title="Nghe máy"
-              >
-                <Phone className="w-5 h-5 text-white" />
-              </button>
-            </div>
-          </div>
-        </div>
+      <CallMinimizedBar
+        show={showGlobalMinimizedBar}
+        user={{ name: voiceCall.isRinging ? incomingName : activeName, avatar: voiceCall.isRinging ? incomingAvatar : activeAvatar }}
+        mode={minimizedMode}
+        statusText={callStatusText}
+        incomingText={incomingCallText}
+        isVideoCall={isVideoCall}
+        speakerMode={speakerMode}
+        isCameraEnabled={voiceCall.isCameraEnabled}
+        isMuted={voiceCall.isMuted}
+        containerClassName="fixed top-16 left-1/2 -translate-x-1/2 z-[210] w-[min(560px,calc(100%-20px))]"
+        onOpen={() => setShowCallModal(true)}
+        onRejectIncoming={() => voiceCall.rejectIncoming()}
+        onAcceptIncoming={() => {
+          setShowCallModal(true);
+          setSpeakerMode(voiceCall.incomingMediaType === 'video' ? 'outer' : 'inner');
+          void voiceCall.acceptIncoming();
+        }}
+        onToggleSpeaker={() => setSpeakerMode((prev) => (prev === 'outer' ? 'inner' : 'outer'))}
+        onToggleCamera={() => voiceCall.toggleCamera()}
+        onToggleMute={() => voiceCall.toggleMute()}
+        onEndCall={() => voiceCall.endCall()}
+      />
+
+      {voiceCall.isRinging && (
+        <CallOverlayModal
+          mode="incoming"
+          show={showCallModal}
+          user={{ name: incomingName, avatar: incomingAvatar }}
+          incomingMediaType={voiceCall.incomingMediaType}
+          zIndexClassName="z-[200]"
+          onMinimize={() => setShowCallModal(false)}
+          onRejectIncoming={() => voiceCall.rejectIncoming()}
+          onAcceptIncoming={() => {
+            setSpeakerMode(voiceCall.incomingMediaType === 'video' ? 'outer' : 'inner');
+            void voiceCall.acceptIncoming();
+          }}
+        />
       )}
 
-      {shouldRenderGlobalModal && isCallOngoing && !voiceCall.isRinging && showCallModal && (
-        <div className="fixed inset-0 z-[200] bg-black/20 flex items-center justify-center">
-          <div className="w-[340px] rounded-2xl bg-white border border-gray-200 shadow-2xl p-5">
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowCallModal(false)}
-                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center"
-                title="Thu gọn"
-              >
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-            <div className="text-center">
-              <p className="mt-2 text-lg font-semibold text-gray-900">Cuộc gọi đang diễn ra</p>
-              <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
-            </div>
-            <div className="mt-6 flex items-center justify-center gap-4">
-              <button
-                onClick={() => voiceCall.endCall()}
-                className="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-                title="Kết thúc"
-              >
-                <PhoneOff className="w-5 h-5 text-white" />
-              </button>
-            </div>
-          </div>
-        </div>
+      {isCallOngoing && !voiceCall.isRinging && (
+        <CallOverlayModal
+          mode="ongoing"
+          show={showCallModal}
+          user={{ name: activeName, avatar: activeAvatar }}
+          callStatus={voiceCall.status}
+          callStatusText={callStatusText}
+          isVideoCall={isVideoCall}
+          hasRemoteStream={Boolean(voiceCall.remoteStream)}
+          speakerMode={speakerMode}
+          isCameraEnabled={voiceCall.isCameraEnabled}
+          isMuted={voiceCall.isMuted}
+          remoteVideoRef={remoteVideoRef}
+          localVideoRef={localVideoRef}
+          zIndexClassName="z-[200]"
+          onMinimize={() => setShowCallModal(false)}
+          onToggleSpeaker={() => setSpeakerMode((prev) => (prev === 'outer' ? 'inner' : 'outer'))}
+          onToggleCamera={() => voiceCall.toggleCamera()}
+          onToggleMute={() => voiceCall.toggleMute()}
+          onEndCall={() => voiceCall.endCall()}
+        />
       )}
     </RealtimeCallContext.Provider>
   );

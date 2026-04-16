@@ -7,20 +7,10 @@ import {
   RefreshCw,
   BellOff,
   ChevronDown,
-  Phone,
-  PhoneOff,
-  Volume1,
-  Volume2,
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  X,
   Search as SearchIcon,
 } from 'lucide-react';
 import { Header } from '../../home/components';
-import { ConversationItem } from '../components';
-import { ChatWindow } from '../components';
+import { ConversationItem, ChatWindow } from '../components';
 import { Conversation, MessengerFilter } from '../types/messenger.types';
 import { ChatUser, IncomingChatMessage, IncomingMessageStatus, Message } from '../types/message.types';
 import { useFriendConversations } from '../hooks/useFriendConversations';
@@ -29,6 +19,7 @@ import { chatService } from '@/services/chatService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
+const HISTORY_PAGE_SIZE = 30;
 
 function mapBackendContentToMessageFields(
   content: string,
@@ -111,6 +102,36 @@ function resolveDeliveryStatus(delivered?: boolean, seen?: boolean): Message['de
   return 'SENT';
 }
 
+function mapIncomingToMessage(raw: IncomingChatMessage, currentUserId?: string | null): Message {
+  return {
+    ...mapBackendContentToMessageFields(raw.content),
+    id: raw.id,
+    senderId: raw.senderId,
+    timestamp: new Date(raw.createdAt),
+    isOwn: raw.senderId === currentUserId,
+    deliveryStatus: resolveDeliveryStatus(raw.delivered, raw.seen),
+    seenAt: raw.seenAt,
+  };
+}
+
+interface HistoryState {
+  initialized: boolean;
+  loadingInitial: boolean;
+  loadingOlder: boolean;
+  hasMore: boolean;
+  nextBeforeCreatedAt: string | null;
+}
+
+function defaultHistoryState(): HistoryState {
+  return {
+    initialized: false,
+    loadingInitial: false,
+    loadingOlder: false,
+    hasMore: true,
+    nextBeforeCreatedAt: null,
+  };
+}
+
 function ChatInfoPanel({ user }: { user: ChatUser }) {
   return (
     <aside
@@ -167,18 +188,10 @@ export default function MessengerPage() {
   const [overrides, setOverrides] = useState<Record<string, Partial<Conversation>>>({});
   const [searchParams, setSearchParams] = useSearchParams();
   const [messagesByUser, setMessagesByUser] = useState<Record<string, Message[]>>({});
+  const [historyByUser, setHistoryByUser] = useState<Record<string, HistoryState>>({});
   const [presenceByUser, setPresenceByUser] = useState<Record<string, { online: boolean; lastActiveAt?: string }>>({});
-  const [loadingMessages, setLoadingMessages] = useState(false);
   const [activeFilter, setActiveFilter] = useState<MessengerFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCallModal, setShowCallModal] = useState(true);
-  const [speakerMode, setSpeakerMode] = useState<'inner' | 'outer'>('inner');
-  const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
-  const [callDurationSec, setCallDurationSec] = useState(0);
-
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const callRecorderRef = useRef<MediaRecorder | null>(null);
   const callRecorderChunksRef = useRef<Blob[]>([]);
   const callRecorderAudioCtxRef = useRef<AudioContext | null>(null);
@@ -191,6 +204,8 @@ export default function MessengerPage() {
     remote: null,
   });
   const isUploadingRecordingRef = useRef(false);
+  const initialHistoryInFlightRef = useRef<Set<string>>(new Set());
+  const olderHistoryInFlightRef = useRef<Set<string>>(new Set());
 
   const conversations: Conversation[] = baseConversations.map((c) => ({
     ...c,
@@ -217,35 +232,45 @@ export default function MessengerPage() {
     };
   }, [activeChatUserId, baseConversations, presenceByUser]);
 
-  useEffect(() => {
-    if (!activeChatUserId || !currentUser?.id) return;
-    let cancelled = false;
+  const loadInitialHistory = useCallback(
+    async (peerUserId: string) => {
+      if (!currentUser?.id) return;
+      if (initialHistoryInFlightRef.current.has(peerUserId)) return;
+      const current = historyByUser[peerUserId] ?? defaultHistoryState();
+      if (current.initialized || current.loadingInitial) return;
+      initialHistoryInFlightRef.current.add(peerUserId);
 
-    setLoadingMessages(true);
-    chatService
-      .getChatHistory(currentUser.id, activeChatUserId)
-      .then((history) => {
-        if (cancelled) return;
+      setHistoryByUser((prev) => ({
+        ...prev,
+        [peerUserId]: {
+          ...(prev[peerUserId] ?? defaultHistoryState()),
+          loadingInitial: true,
+        },
+      }));
 
-        const myId = currentUser.id;
-        const msgs: Message[] = history.map((m) => ({
-          ...mapBackendContentToMessageFields(m.content),
-          id: m.id,
-          senderId: m.senderId,
-          timestamp: new Date(m.createdAt),
-          isOwn: m.senderId === myId,
-          deliveryStatus: resolveDeliveryStatus(m.delivered, m.seen),
-          seenAt: m.seenAt,
+      try {
+        const historyPage = await chatService.getChatHistory(currentUser.id, peerUserId, {
+          limit: HISTORY_PAGE_SIZE,
+        });
+        const msgs = historyPage.messages.map((m) => mapIncomingToMessage(m, currentUser.id));
+        setMessagesByUser((prev) => ({ ...prev, [peerUserId]: msgs }));
+        setHistoryByUser((prev) => ({
+          ...prev,
+          [peerUserId]: {
+            initialized: true,
+            loadingInitial: false,
+            loadingOlder: false,
+            hasMore: historyPage.hasMore,
+            nextBeforeCreatedAt: historyPage.nextBeforeCreatedAt ?? null,
+          },
         }));
-
-        setMessagesByUser((prev) => ({ ...prev, [activeChatUserId]: msgs }));
 
         if (msgs.length > 0) {
           const last = msgs[msgs.length - 1];
           setOverrides((prev) => ({
             ...prev,
-            [activeChatUserId]: {
-              ...(prev[activeChatUserId] ?? {}),
+            [peerUserId]: {
+              ...(prev[peerUserId] ?? {}),
               lastMessage: formatConversationPreview(last.text, last.isOwn),
               timestamp: last.timestamp.toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
@@ -254,18 +279,93 @@ export default function MessengerPage() {
             },
           }));
         }
-      })
-      .catch(() => {
-        if (cancelled) return;
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingMessages(false);
-      });
+      } catch {
+        setHistoryByUser((prev) => ({
+          ...prev,
+          [peerUserId]: {
+            ...(prev[peerUserId] ?? defaultHistoryState()),
+            loadingInitial: false,
+          },
+        }));
+      } finally {
+        initialHistoryInFlightRef.current.delete(peerUserId);
+      }
+    },
+    [currentUser?.id, historyByUser],
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [activeChatUserId, currentUser?.id]);
+  const loadOlderHistory = useCallback(
+    async (peerUserId: string) => {
+      if (!currentUser?.id) return;
+      if (olderHistoryInFlightRef.current.has(peerUserId)) return;
+      const current = historyByUser[peerUserId] ?? defaultHistoryState();
+      if (!current.initialized || current.loadingOlder || !current.hasMore) return;
+      olderHistoryInFlightRef.current.add(peerUserId);
+
+      const beforeCreatedAt = current.nextBeforeCreatedAt;
+      setHistoryByUser((prev) => ({
+        ...prev,
+        [peerUserId]: {
+          ...(prev[peerUserId] ?? defaultHistoryState()),
+          loadingOlder: true,
+        },
+      }));
+      if (!beforeCreatedAt) {
+        setHistoryByUser((prev) => ({
+          ...prev,
+          [peerUserId]: {
+            ...(prev[peerUserId] ?? defaultHistoryState()),
+            loadingOlder: false,
+            hasMore: false,
+          },
+        }));
+        olderHistoryInFlightRef.current.delete(peerUserId);
+        return;
+      }
+
+      try {
+        const historyPage = await chatService.getChatHistory(currentUser.id, peerUserId, {
+          limit: HISTORY_PAGE_SIZE,
+          beforeCreatedAt,
+        });
+        const olderMessages = historyPage.messages.map((m) => mapIncomingToMessage(m, currentUser.id));
+        const existingMessages = messagesByUser[peerUserId] ?? [];
+        const existingIds = new Set(existingMessages.map((m) => m.id));
+        const dedupOlder = olderMessages.filter((m) => !existingIds.has(m.id));
+        setMessagesByUser((prev) => {
+          const existing = prev[peerUserId] ?? [];
+          if (dedupOlder.length === 0) return prev;
+          return { ...prev, [peerUserId]: [...dedupOlder, ...existing] };
+        });
+
+        setHistoryByUser((prev) => ({
+          ...prev,
+          [peerUserId]: {
+            ...(prev[peerUserId] ?? defaultHistoryState()),
+            loadingOlder: false,
+            hasMore: dedupOlder.length > 0 && historyPage.hasMore,
+            nextBeforeCreatedAt: historyPage.nextBeforeCreatedAt ?? null,
+          },
+        }));
+      } catch {
+        setHistoryByUser((prev) => ({
+          ...prev,
+          [peerUserId]: {
+            ...(prev[peerUserId] ?? defaultHistoryState()),
+            loadingOlder: false,
+          },
+        }));
+      } finally {
+        olderHistoryInFlightRef.current.delete(peerUserId);
+      }
+    },
+    [currentUser?.id, historyByUser, messagesByUser],
+  );
+
+  useEffect(() => {
+    if (!activeChatUserId) return;
+    void loadInitialHistory(activeChatUserId);
+  }, [activeChatUserId, loadInitialHistory]);
 
   const {
     connected,
@@ -283,28 +383,20 @@ export default function MessengerPage() {
       console.log("🔥 incoming", msg);
       const myId = currentUser?.id;
       const otherUserId = msg.senderId === myId ? msg.receiverId : msg.senderId;
-      const parsed = mapBackendContentToMessageFields(msg.content);
-
-      const newMsg: Message = {
-        ...parsed,
-        id: msg.id,
-        senderId: msg.senderId,
-        timestamp: new Date(msg.createdAt),
-        isOwn: msg.senderId === myId,
-        deliveryStatus: resolveDeliveryStatus(msg.delivered, msg.seen),
-        seenAt: msg.seenAt,
-      };
+      const newMsg = mapIncomingToMessage(msg, myId);
 
       setMessagesByUser((prev) => ({
         ...prev,
-        [otherUserId]: [...(prev[otherUserId] ?? []), newMsg],
+        [otherUserId]: (prev[otherUserId] ?? []).some((m) => m.id === newMsg.id)
+          ? prev[otherUserId] ?? []
+          : [...(prev[otherUserId] ?? []), newMsg],
       }));
 
       setOverrides((prev) => ({
         ...prev,
         [otherUserId]: {
           ...(prev[otherUserId] ?? {}),
-          lastMessage: formatConversationPreview(parsed.text, msg.senderId === myId),
+          lastMessage: formatConversationPreview(newMsg.text, msg.senderId === myId),
           timestamp: 'Vừa xong',
           isUnread: activeChatUserId !== otherUserId,
         },
@@ -381,36 +473,6 @@ export default function MessengerPage() {
     if (!connected) return;
     sendConversationSeen(activeChatUserId);
   }, [activeChatUserId, connected, sendConversationSeen]);
-
-  useEffect(() => {
-    const audio = remoteAudioRef.current;
-    if (!audio) return;
-    audio.srcObject = voiceCall.remoteStream;
-    return () => {
-      audio.srcObject = null;
-    };
-  }, [voiceCall.remoteStream]);
-
-  useEffect(() => {
-    const audio = remoteAudioRef.current;
-    if (!audio) return;
-    audio.muted = false;
-    audio.volume = speakerMode === 'outer' ? 1 : 0.45;
-  }, [speakerMode, voiceCall.remoteStream]);
-
-  useEffect(() => {
-    const video = remoteVideoRef.current;
-    if (!video) return;
-    const shouldShowRemoteVideo = voiceCall.callMediaType === 'video' && Boolean(voiceCall.remoteStream);
-    video.srcObject = shouldShowRemoteVideo ? voiceCall.remoteStream : null;
-  }, [voiceCall.callMediaType, voiceCall.remoteStream]);
-
-  useEffect(() => {
-    const video = localVideoRef.current;
-    if (!video) return;
-    const shouldShowLocalVideo = voiceCall.callMediaType === 'video' && Boolean(voiceCall.localStream);
-    video.srcObject = shouldShowLocalVideo ? voiceCall.localStream : null;
-  }, [voiceCall.callMediaType, voiceCall.localStream]);
 
   const stopAndUploadCallRecording = useCallback(
     async (finalCallId?: string | null) => {
@@ -666,15 +728,11 @@ export default function MessengerPage() {
 
   const handleStartVoiceCall = useCallback(() => {
     if (!activeChatUserId) return;
-    setShowCallModal(true);
-    setSpeakerMode('inner');
     void voiceCall.startCall(activeChatUserId, 'audio');
   }, [activeChatUserId, voiceCall]);
 
   const handleStartVideoCall = useCallback(() => {
     if (!activeChatUserId) return;
-    setShowCallModal(true);
-    setSpeakerMode('outer');
     void voiceCall.startCall(activeChatUserId, 'video');
   }, [activeChatUserId, voiceCall]);
 
@@ -695,23 +753,6 @@ export default function MessengerPage() {
 
   const handleToggleMute = useCallback(() => {
     voiceCall.toggleMute();
-  }, [voiceCall]);
-
-  const handleToggleCamera = useCallback(() => {
-    voiceCall.toggleCamera();
-  }, [voiceCall]);
-
-  const handleAcceptIncomingCall = useCallback(() => {
-    if (voiceCall.incomingPeerUserId) {
-      setSearchParams({ with: voiceCall.incomingPeerUserId });
-    }
-    setShowCallModal(true);
-    setSpeakerMode(voiceCall.incomingMediaType === 'video' ? 'outer' : 'inner');
-    void voiceCall.acceptIncoming();
-  }, [setSearchParams, voiceCall]);
-
-  const handleRejectIncomingCall = useCallback(() => {
-    voiceCall.rejectIncoming();
   }, [voiceCall]);
 
   const handleReactMessage = useCallback(
@@ -742,16 +783,15 @@ export default function MessengerPage() {
   });
 
   const activeMessages = activeChatUserId ? (messagesByUser[activeChatUserId] ?? []) : [];
+  const activeHistory = activeChatUserId ? historyByUser[activeChatUserId] : undefined;
+  const loadingMessages = Boolean(activeChatUserId && activeHistory?.loadingInitial && activeMessages.length === 0);
+  const loadingOlderMessages = Boolean(activeChatUserId && activeHistory?.loadingOlder);
+  const hasOlderMessages = Boolean(activeChatUserId && activeHistory?.hasMore);
 
-  const incomingCallUser = useMemo(() => {
-    if (!voiceCall.incomingPeerUserId) return null;
-    const conv = conversations.find((c) => c.user.id === voiceCall.incomingPeerUserId);
-    const name = conv?.user.name || voiceCall.incomingFromUsername || 'Người dùng';
-    const avatar =
-      conv?.user.avatar ||
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
-    return { id: voiceCall.incomingPeerUserId, name, avatar };
-  }, [conversations, voiceCall.incomingFromUsername, voiceCall.incomingPeerUserId]);
+  const handleLoadOlderMessages = useCallback(async () => {
+    if (!activeChatUserId) return;
+    await loadOlderHistory(activeChatUserId);
+  }, [activeChatUserId, loadOlderHistory]);
 
   const activeWindowCallStatus = useMemo<
     'idle' | 'calling' | 'ringing' | 'connecting' | 'in_call' | 'ended' | 'error'
@@ -768,266 +808,12 @@ export default function MessengerPage() {
     voiceCall.status,
   ]);
 
-  const isCallOngoing =
-    voiceCall.status === 'calling' || voiceCall.status === 'connecting' || voiceCall.status === 'in_call';
-  const isCallConnected = voiceCall.status === 'in_call';
-
-  useEffect(() => {
-    if (voiceCall.isRinging) {
-      setShowCallModal(true);
-    }
-  }, [voiceCall.isRinging]);
-
-  useEffect(() => {
-    if (!isCallOngoing) {
-      setCallStartedAt(null);
-      setCallDurationSec(0);
-      setShowCallModal(true);
-      return;
-    }
-
-    if (!isCallConnected) {
-      setCallStartedAt(null);
-      setCallDurationSec(0);
-      return;
-    }
-
-    setCallStartedAt((prev) => prev ?? Date.now());
-  }, [isCallConnected, isCallOngoing]);
-
-  useEffect(() => {
-    if (!isCallConnected || !callStartedAt) {
-      setCallDurationSec(0);
-      return;
-    }
-
-    const tick = () => {
-      setCallDurationSec(Math.floor((Date.now() - callStartedAt) / 1000));
-    };
-
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [isCallConnected, callStartedAt]);
-
-  const activeCallUser = useMemo(() => {
-    const targetId = voiceCall.activePeerUserId ?? voiceCall.incomingPeerUserId;
-    if (!targetId) return null;
-
-    const conv = conversations.find((c) => c.user.id === targetId);
-    const name = conv?.user.name || voiceCall.incomingFromUsername || 'Người dùng';
-    const avatar =
-      conv?.user.avatar ||
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`;
-
-    return { id: targetId, name, avatar };
-  }, [conversations, voiceCall.activePeerUserId, voiceCall.incomingFromUsername, voiceCall.incomingPeerUserId]);
-
-  const formatCallDuration = (totalSec: number) => {
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
-    return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  };
-
-  const callStatusText =
-    voiceCall.status === 'calling'
-      ? 'Đang gọi...'
-      : voiceCall.status === 'connecting'
-        ? 'Đang kết nối...'
-        : formatCallDuration(callDurationSec);
-  const isVideoCall = isCallOngoing && voiceCall.callMediaType === 'video';
-  const isIncomingVideoCall = voiceCall.isRinging && voiceCall.incomingMediaType === 'video';
-
-  const showMinimizedCallBar = !showCallModal && (voiceCall.isRinging || isCallOngoing);
-  const minimizedCallUser = voiceCall.isRinging ? incomingCallUser : activeCallUser;
-  const isMinimizedIncoming = voiceCall.isRinging;
-  const isMinimizedInCall = isCallOngoing && voiceCall.status === 'in_call';
-  const isMinimizedOutgoing = isCallOngoing && voiceCall.status !== 'in_call';
-
   return (
     <div
       className="h-screen bg-gray-100 overflow-hidden"
       style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
     >
       <Header />
-      <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
-
-      {voiceCall.isRinging && incomingCallUser && showCallModal && (
-        <div className="fixed inset-0 z-[130] bg-black/20 flex items-center justify-center">
-          <div
-            className="w-[340px] rounded-2xl bg-white border border-gray-200 shadow-2xl p-5"
-            style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
-          >
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowCallModal(false)}
-                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-                title="Thu gọn cuộc gọi"
-              >
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-
-            <div className="text-center">
-              <img
-                src={incomingCallUser.avatar}
-                alt={incomingCallUser.name}
-                className="w-20 h-20 rounded-full object-cover mx-auto"
-              />
-              <p className="mt-3 text-lg font-semibold text-gray-900">{incomingCallUser.name}</p>
-              <p className="mt-1 text-sm text-gray-500">
-                {isIncomingVideoCall ? 'Đang gọi video cho bạn' : 'Đang gọi thoại cho bạn'}
-              </p>
-            </div>
-
-            <div className="mt-6 flex items-center justify-center gap-4">
-              <button
-                onClick={handleRejectIncomingCall}
-                className="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-                title="Từ chối"
-              >
-                <PhoneOff className="w-5 h-5 text-white" />
-              </button>
-              <button
-                onClick={handleAcceptIncomingCall}
-                className="w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center"
-                title="Nghe máy"
-              >
-                <Phone className="w-5 h-5 text-white" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {isCallOngoing && activeCallUser && showCallModal && (
-        <div className="fixed inset-0 z-[130] bg-black/20 flex items-center justify-center">
-          <div
-            className={`rounded-2xl bg-white border border-gray-200 shadow-2xl p-5 ${
-              isVideoCall ? 'w-[680px]' : 'w-[340px]'
-            }`}
-            style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
-          >
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowCallModal(false)}
-                className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-                title="Thu gọn cuộc gọi"
-              >
-                <X className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
-
-            {isVideoCall ? (
-              <>
-                <div className="relative overflow-hidden rounded-xl bg-black h-[360px]">
-                  <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-cover bg-black"
-                  />
-                  <video
-                    ref={localVideoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="absolute bottom-3 right-3 w-40 h-28 object-cover rounded-lg border border-white/40 bg-gray-900"
-                  />
-                  {!voiceCall.remoteStream && (
-                    <div className="absolute inset-0 flex items-center justify-center text-sm text-white/80">
-                      Đang chờ video...
-                    </div>
-                  )}
-                </div>
-                <div className="mt-3 text-center">
-                  <p className="text-lg font-semibold text-gray-900">{activeCallUser.name}</p>
-                  <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
-                </div>
-              </>
-            ) : (
-              <div className="text-center -mt-1">
-                <img
-                  src={activeCallUser.avatar}
-                  alt={activeCallUser.name}
-                  className="w-20 h-20 rounded-full object-cover mx-auto"
-                />
-                <p className="mt-3 text-lg font-semibold text-gray-900">{activeCallUser.name}</p>
-                <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
-              </div>
-            )}
-
-            <div className="mt-6 flex items-center justify-center gap-4">
-              <button
-                onClick={() =>
-                  setSpeakerMode((prev) => (prev === 'outer' ? 'inner' : 'outer'))
-                }
-                className={`w-12 h-12 rounded-full transition-colors flex items-center justify-center ${
-                  speakerMode === 'outer'
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-gray-100 hover:bg-gray-200'
-                }`}
-                title={
-                  speakerMode === 'outer'
-                    ? 'Đang loa ngoài, bấm để chuyển loa trong'
-                    : 'Đang loa trong, bấm để chuyển loa ngoài'
-                }
-              >
-                {speakerMode === 'outer' ? (
-                  <Volume2 className="w-5 h-5 text-white" />
-                ) : (
-                  <Volume1 className="w-5 h-5 text-gray-700" />
-                )}
-              </button>
-
-              {isVideoCall && (
-                <button
-                  onClick={handleToggleCamera}
-                  className={`w-12 h-12 rounded-full transition-colors flex items-center justify-center ${
-                    voiceCall.isCameraEnabled
-                      ? 'bg-blue-600 hover:bg-blue-700'
-                      : 'bg-gray-100 hover:bg-gray-200'
-                  }`}
-                  title={voiceCall.isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
-                >
-                  {voiceCall.isCameraEnabled ? (
-                    <Video className="w-5 h-5 text-white" />
-                  ) : (
-                    <VideoOff className="w-5 h-5 text-gray-700" />
-                  )}
-                </button>
-              )}
-
-              {voiceCall.status === 'in_call' && (
-                <button
-                  onClick={handleToggleMute}
-                  className={`w-12 h-12 rounded-full transition-colors flex items-center justify-center ${
-                    voiceCall.isMuted
-                      ? 'bg-gray-100 hover:bg-gray-200'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                  title={voiceCall.isMuted ? 'Bật mic' : 'Tắt mic'}
-                >
-                  {voiceCall.isMuted ? (
-                    <MicOff className="w-5 h-5 text-gray-700" />
-                  ) : (
-                    <Mic className="w-5 h-5 text-white" />
-                  )}
-                </button>
-              )}
-
-              <button
-                onClick={handleEndVoiceCall}
-                className="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-                title="Kết thúc cuộc gọi"
-              >
-                <PhoneOff className="w-5 h-5 text-white" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
 
       <div className="flex h-[calc(100vh-56px)] mt-14 overflow-hidden p-2 gap-2">
@@ -1124,176 +910,15 @@ export default function MessengerPage() {
         <div className="flex-1 min-w-0 flex gap-2 relative">
           {activeChatUser ? (
             <div className="flex-1 min-w-0 relative">
-              {showMinimizedCallBar && minimizedCallUser && (
-                <div
-                  onClick={() => setShowCallModal(true)}
-                  className="absolute top-2 left-1/2 -translate-x-1/2 z-[90] w-[min(560px,calc(100%-20px))] bg-white border border-gray-200 shadow-lg rounded-xl px-3 py-2 flex items-center gap-2 cursor-pointer"
-                  style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
-                  title="Mở lại cuộc gọi"
-                >
-                  <img src={minimizedCallUser.avatar} alt={minimizedCallUser.name} className="w-8 h-8 rounded-full object-cover" />
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-gray-900 truncate max-w-[180px]">{minimizedCallUser.name}</p>
-                    {isMinimizedIncoming ? (
-                      <p className="text-xs text-gray-500">
-                        {isIncomingVideoCall ? 'Đang có cuộc gọi video đến...' : 'Đang có cuộc gọi đến...'}
-                      </p>
-                    ) : isMinimizedInCall ? (
-                      <p className="text-xs text-gray-500">{formatCallDuration(callDurationSec)}</p>
-                    ) : (
-                      <p className="text-xs text-gray-500">{callStatusText}</p>
-                    )}
-                  </div>
-
-                  <div className="ml-auto flex items-center gap-2">
-                    {isMinimizedIncoming ? (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRejectIncomingCall();
-                          }}
-                          className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-                          title="Từ chối"
-                        >
-                          <PhoneOff className="w-4 h-4 text-white" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAcceptIncomingCall();
-                          }}
-                          className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center"
-                          title="Nghe máy"
-                        >
-                          <Phone className="w-4 h-4 text-white" />
-                        </button>
-                      </>
-                    ) : isMinimizedInCall ? (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSpeakerMode((prev) => (prev === 'outer' ? 'inner' : 'outer'));
-                          }}
-                          className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                            speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
-                          }`}
-                          title={speakerMode === 'outer' ? 'Đang loa ngoài' : 'Đang loa trong'}
-                        >
-                          {speakerMode === 'outer' ? (
-                            <Volume2 className="w-4 h-4 text-white" />
-                          ) : (
-                            <Volume1 className="w-4 h-4 text-gray-700" />
-                          )}
-                        </button>
-                        {isVideoCall && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleCamera();
-                            }}
-                            className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                              voiceCall.isCameraEnabled
-                                ? 'bg-blue-600 hover:bg-blue-700'
-                                : 'bg-gray-100 hover:bg-gray-200'
-                            }`}
-                            title={voiceCall.isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
-                          >
-                            {voiceCall.isCameraEnabled ? (
-                              <Video className="w-4 h-4 text-white" />
-                            ) : (
-                              <VideoOff className="w-4 h-4 text-gray-700" />
-                            )}
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleMute();
-                          }}
-                          className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                            voiceCall.isMuted ? 'bg-gray-100 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700'
-                          }`}
-                          title={voiceCall.isMuted ? 'Bật mic' : 'Tắt mic'}
-                        >
-                          {voiceCall.isMuted ? (
-                            <MicOff className="w-4 h-4 text-gray-700" />
-                          ) : (
-                            <Mic className="w-4 h-4 text-white" />
-                          )}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEndVoiceCall();
-                          }}
-                          className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-                          title="Kết thúc cuộc gọi"
-                        >
-                          <PhoneOff className="w-4 h-4 text-white" />
-                        </button>
-                      </>
-                    ) : isMinimizedOutgoing ? (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSpeakerMode((prev) => (prev === 'outer' ? 'inner' : 'outer'));
-                          }}
-                          className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                            speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
-                          }`}
-                          title={speakerMode === 'outer' ? 'Đang loa ngoài' : 'Đang loa trong'}
-                        >
-                          {speakerMode === 'outer' ? (
-                            <Volume2 className="w-4 h-4 text-white" />
-                          ) : (
-                            <Volume1 className="w-4 h-4 text-gray-700" />
-                          )}
-                        </button>
-                        {isVideoCall && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleCamera();
-                            }}
-                            className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                              voiceCall.isCameraEnabled
-                                ? 'bg-blue-600 hover:bg-blue-700'
-                                : 'bg-gray-100 hover:bg-gray-200'
-                            }`}
-                            title={voiceCall.isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
-                          >
-                            {voiceCall.isCameraEnabled ? (
-                              <Video className="w-4 h-4 text-white" />
-                            ) : (
-                              <VideoOff className="w-4 h-4 text-gray-700" />
-                            )}
-                          </button>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEndVoiceCall();
-                          }}
-                          className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-                          title="Kết thúc cuộc gọi"
-                        >
-                          <PhoneOff className="w-4 h-4 text-white" />
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              )}
-
               <ChatWindow
                 user={activeChatUser}
                 messages={activeMessages}
                 loading={loadingMessages}
+                loadingOlder={loadingOlderMessages}
+                hasOlder={hasOlderMessages}
                 connected={connected}
                 onSendMessage={handleSendMessage}
+                onLoadOlder={handleLoadOlderMessages}
                 onReactMessage={handleReactMessage}
                 onClose={handleBackToList}
                 onMinimize={handleBackToList}

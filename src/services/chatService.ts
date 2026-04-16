@@ -14,9 +14,79 @@ export interface CallRecordingResponse {
   createdAt: string;
 }
 
+export interface ChatHistoryPageResponse {
+  messages: IncomingChatMessage[];
+  hasMore: boolean;
+  nextBeforeCreatedAt?: string | null;
+}
+
+export interface CallSessionSnapshotResponse {
+  callId: string;
+  status?: 'RINGING' | 'ONGOING' | 'MISSED' | 'COMPLETED';
+  mediaType?: 'audio' | 'video';
+  startedAt?: string | null;
+  answeredAt?: string | null;
+  endedAt?: string | null;
+  durationSec?: number | null;
+}
+
+function normalizeChatHistoryResponse(payload: unknown): ChatHistoryPageResponse {
+  if (Array.isArray(payload)) {
+    const messages = payload as IncomingChatMessage[];
+    return {
+      messages,
+      hasMore: false,
+      nextBeforeCreatedAt: messages.length > 0 ? messages[0].createdAt : null,
+    };
+  }
+
+  if (payload && typeof payload === 'object') {
+    const obj = payload as Partial<ChatHistoryPageResponse>;
+    const messages = Array.isArray(obj.messages) ? obj.messages : [];
+    return {
+      messages,
+      hasMore: typeof obj.hasMore === 'boolean' ? obj.hasMore : false,
+      nextBeforeCreatedAt:
+        typeof obj.nextBeforeCreatedAt === 'string' || obj.nextBeforeCreatedAt === null
+          ? obj.nextBeforeCreatedAt
+          : messages.length > 0
+            ? messages[0].createdAt
+            : null,
+    };
+  }
+
+  return {
+    messages: [],
+    hasMore: false,
+    nextBeforeCreatedAt: null,
+  };
+}
+
 export const chatService = {
-  getChatHistory: (userId1: string, userId2: string) =>
-    api.get<IncomingChatMessage[]>(`/chat/history?userId1=${userId1}&userId2=${userId2}`),
+  getChatHistory: (
+    userId1: string,
+    userId2: string,
+    options?: {
+      beforeCreatedAt?: string | null;
+      limit?: number;
+    },
+  ) => {
+    const params = new URLSearchParams({
+      userId1,
+      userId2,
+    });
+
+    if (options?.beforeCreatedAt) {
+      params.set('beforeCreatedAt', options.beforeCreatedAt);
+    }
+    if (typeof options?.limit === 'number') {
+      params.set('limit', String(options.limit));
+    }
+
+    return api
+      .get<ChatHistoryPageResponse | IncomingChatMessage[]>(`/chat/history?${params.toString()}`)
+      .then(normalizeChatHistoryResponse);
+  },
 
   uploadCallRecording: (callId: string, file: File, durationSec?: number, mediaType?: 'audio' | 'video') => {
     const formData = new FormData();
@@ -28,5 +98,9 @@ export const chatService = {
       formData.append('mediaType', mediaType);
     }
     return api.postMultipart<CallRecordingResponse>(`/chat/calls/${callId}/recordings`, formData);
+  },
+
+  getCallSessionSnapshot: (callId: string) => {
+    return api.get<CallSessionSnapshotResponse>(`/chat/calls/${callId}/session`);
   },
 };

@@ -1,17 +1,11 @@
-﻿import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Sparkles } from "lucide-react";
-import { authService } from "@/services/authService";
+﻿"use client";
+
+import { useState, useEffect, useRef, type FormEvent, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-
-interface LoginFormData {
-  email: string;
-  password: string;
-  rememberMe: boolean;
-}
+import { Eye, EyeOff, Mail, Sparkles } from "lucide-react";
 
 interface PupilProps {
   size?: number;
@@ -39,7 +33,9 @@ const Pupil = ({
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
   }, []);
 
   const calculatePupilPosition = () => {
@@ -58,10 +54,10 @@ const Pupil = ({
     const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
 
     const angle = Math.atan2(deltaY, deltaX);
-    return {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-    };
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance;
+
+    return { x, y };
   };
 
   const pupilPosition = calculatePupilPosition();
@@ -113,7 +109,9 @@ const EyeBall = ({
     };
 
     window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
   }, []);
 
   const calculatePupilPosition = () => {
@@ -132,10 +130,10 @@ const EyeBall = ({
     const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
 
     const angle = Math.atan2(deltaY, deltaX);
-    return {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-    };
+    const x = Math.cos(angle) * distance;
+    const y = Math.sin(angle) * distance;
+
+    return { x, y };
   };
 
   const pupilPosition = calculatePupilPosition();
@@ -167,22 +165,12 @@ const EyeBall = ({
   );
 };
 
-export function LoginPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const googleButtonRef = useRef<HTMLDivElement | null>(null);
-
-  const [formData, setFormData] = useState<LoginFormData>({
-    email: "",
-    password: "",
-    rememberMe: false,
-  });
+export function AnimatedCharactersLoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [googleError, setGoogleError] = useState<string | null>(null);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-
-  const [showPassword, setShowPassword] = useState(false);
   const [mouseX, setMouseX] = useState<number>(0);
   const [mouseY, setMouseY] = useState<number>(0);
   const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
@@ -190,79 +178,10 @@ export function LoginPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
   const [isPurplePeeking, setIsPurplePeeking] = useState(false);
-
   const purpleRef = useRef<HTMLDivElement>(null);
   const blackRef = useRef<HTMLDivElement>(null);
   const yellowRef = useRef<HTMLDivElement>(null);
   const orangeRef = useRef<HTMLDivElement>(null);
-
-  const redirectTo = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || "/home";
-
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      setGoogleError("Thiếu VITE_GOOGLE_CLIENT_ID ở frontend");
-      return;
-    }
-
-    let cancelled = false;
-    let script = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
-
-    const renderGoogleButton = () => {
-      if (cancelled || !window.google?.accounts.id || !googleButtonRef.current) return;
-
-      googleButtonRef.current.innerHTML = "";
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async ({ credential }) => {
-          if (!credential) {
-            setGoogleError("Google không trả về token đăng nhập");
-            return;
-          }
-
-          setGoogleError(null);
-          setIsGoogleLoading(true);
-          try {
-            const user = await authService.googleLogin(credential);
-            authService.saveCurrentUser(user, !!formData.rememberMe);
-            navigate(redirectTo, { replace: true });
-          } catch (err) {
-            setGoogleError(err instanceof Error ? err.message : "Đăng nhập Google thất bại");
-          } finally {
-            setIsGoogleLoading(false);
-          }
-        },
-      });
-
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        type: "standard",
-        theme: "outline",
-        text: "signin_with",
-        shape: "rectangular",
-        size: "large",
-        width: Math.min(380, googleButtonRef.current.offsetWidth || 380),
-        logo_alignment: "left",
-      });
-    };
-
-    if (script) {
-      script.addEventListener("load", renderGoogleButton);
-      renderGoogleButton();
-    } else {
-      script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
-      script.async = true;
-      script.defer = true;
-      script.onload = renderGoogleButton;
-      script.onerror = () => setGoogleError("Không tải được Google Identity Services");
-      document.head.appendChild(script);
-    }
-
-    return () => {
-      cancelled = true;
-      if (script) script.removeEventListener("load", renderGoogleButton);
-    };
-  }, [formData.rememberMe, navigate, redirectTo]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -315,24 +234,33 @@ export function LoginPage() {
   useEffect(() => {
     if (isTyping) {
       setIsLookingAtEachOther(true);
-      const timer = setTimeout(() => setIsLookingAtEachOther(false), 800);
+      const timer = setTimeout(() => {
+        setIsLookingAtEachOther(false);
+      }, 800);
       return () => clearTimeout(timer);
     }
+
     setIsLookingAtEachOther(false);
   }, [isTyping]);
 
   useEffect(() => {
-    if (formData.password.length > 0 && showPassword) {
-      const peekInterval = setTimeout(() => {
-        setIsPurplePeeking(true);
-        setTimeout(() => setIsPurplePeeking(false), 800);
-      }, Math.random() * 3000 + 2000);
+    if (password.length > 0 && showPassword) {
+      const schedulePeek = () => {
+        const peekInterval = setTimeout(() => {
+          setIsPurplePeeking(true);
+          setTimeout(() => {
+            setIsPurplePeeking(false);
+          }, 800);
+        }, Math.random() * 3000 + 2000);
+        return peekInterval;
+      };
 
-      return () => clearTimeout(peekInterval);
+      const firstPeek = schedulePeek();
+      return () => clearTimeout(firstPeek);
     }
 
     setIsPurplePeeking(false);
-  }, [formData.password, showPassword, isPurplePeeking]);
+  }, [password, showPassword, isPurplePeeking]);
 
   const calculatePosition = (ref: RefObject<HTMLDivElement | null>) => {
     if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
@@ -356,42 +284,20 @@ export function LoginPage() {
   const yellowPos = calculatePosition(yellowRef);
   const orangePos = calculatePosition(orangeRef);
 
-  const validate = (): boolean => {
-    if (!formData.email) {
-      setError("Email là bắt buộc");
-      return false;
-    }
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setError("Email không hợp lệ");
-      return false;
-    }
-    if (!formData.password) {
-      setError("Mật khẩu là bắt buộc");
-      return false;
-    }
-    if (formData.password.length < 6) {
-      setError("Mật khẩu phải có ít nhất 6 ký tự");
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-
-    if (!validate()) return;
-
     setIsLoading(true);
-    try {
-      const user = await authService.login(formData.email, formData.password);
-      authService.saveCurrentUser(user, !!formData.rememberMe);
-      navigate(redirectTo, { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
-    } finally {
-      setIsLoading(false);
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    if (email === "erik@gmail.com" && password === "1234") {
+      alert("Đăng nhập thành công! Chào mừng Erik!");
+    } else {
+      setError("Email hoặc mật khẩu chưa đúng. Vui lòng thử lại.");
     }
+
+    setIsLoading(false);
   };
 
   return (
@@ -414,14 +320,14 @@ export function LoginPage() {
               style={{
                 left: "70px",
                 width: "180px",
-                height: isTyping || (formData.password.length > 0 && !showPassword) ? "440px" : "400px",
+                height: isTyping || (password.length > 0 && !showPassword) ? "440px" : "400px",
                 backgroundColor: "#6C3FF5",
                 borderRadius: "10px 10px 0 0",
                 zIndex: 1,
                 transform:
-                  formData.password.length > 0 && showPassword
+                  password.length > 0 && showPassword
                     ? "skewX(0deg)"
-                    : isTyping || (formData.password.length > 0 && !showPassword)
+                    : isTyping || (password.length > 0 && !showPassword)
                       ? `skewX(${(purplePos.bodySkew || 0) - 12}deg) translateX(40px)`
                       : `skewX(${purplePos.bodySkew || 0}deg)`,
                 transformOrigin: "bottom center",
@@ -431,13 +337,13 @@ export function LoginPage() {
                 className="absolute flex gap-8 transition-all duration-700 ease-in-out"
                 style={{
                   left:
-                    formData.password.length > 0 && showPassword
+                    password.length > 0 && showPassword
                       ? `${20}px`
                       : isLookingAtEachOther
                         ? `${55}px`
                         : `${45 + purplePos.faceX}px`,
                   top:
-                    formData.password.length > 0 && showPassword
+                    password.length > 0 && showPassword
                       ? `${35}px`
                       : isLookingAtEachOther
                         ? `${65}px`
@@ -451,8 +357,8 @@ export function LoginPage() {
                   eyeColor="white"
                   pupilColor="#2D2D2D"
                   isBlinking={isPurpleBlinking}
-                  forceLookX={formData.password.length > 0 && showPassword ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
-                  forceLookY={formData.password.length > 0 && showPassword ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
+                  forceLookX={password.length > 0 && showPassword ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
+                  forceLookY={password.length > 0 && showPassword ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
                 />
                 <EyeBall
                   size={18}
@@ -461,8 +367,8 @@ export function LoginPage() {
                   eyeColor="white"
                   pupilColor="#2D2D2D"
                   isBlinking={isPurpleBlinking}
-                  forceLookX={formData.password.length > 0 && showPassword ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
-                  forceLookY={formData.password.length > 0 && showPassword ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
+                  forceLookX={password.length > 0 && showPassword ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
+                  forceLookY={password.length > 0 && showPassword ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
                 />
               </div>
             </div>
@@ -478,11 +384,11 @@ export function LoginPage() {
                 borderRadius: "8px 8px 0 0",
                 zIndex: 2,
                 transform:
-                  formData.password.length > 0 && showPassword
+                  password.length > 0 && showPassword
                     ? "skewX(0deg)"
                     : isLookingAtEachOther
                       ? `skewX(${(blackPos.bodySkew || 0) * 1.5 + 10}deg) translateX(20px)`
-                      : isTyping || (formData.password.length > 0 && !showPassword)
+                      : isTyping || (password.length > 0 && !showPassword)
                         ? `skewX(${(blackPos.bodySkew || 0) * 1.5}deg)`
                         : `skewX(${blackPos.bodySkew || 0}deg)`,
                 transformOrigin: "bottom center",
@@ -492,13 +398,13 @@ export function LoginPage() {
                 className="absolute flex gap-6 transition-all duration-700 ease-in-out"
                 style={{
                   left:
-                    formData.password.length > 0 && showPassword
+                    password.length > 0 && showPassword
                       ? `${10}px`
                       : isLookingAtEachOther
                         ? `${32}px`
                         : `${26 + blackPos.faceX}px`,
                   top:
-                    formData.password.length > 0 && showPassword
+                    password.length > 0 && showPassword
                       ? `${28}px`
                       : isLookingAtEachOther
                         ? `${12}px`
@@ -512,8 +418,8 @@ export function LoginPage() {
                   eyeColor="white"
                   pupilColor="#2D2D2D"
                   isBlinking={isBlackBlinking}
-                  forceLookX={formData.password.length > 0 && showPassword ? -4 : isLookingAtEachOther ? 0 : undefined}
-                  forceLookY={formData.password.length > 0 && showPassword ? -4 : isLookingAtEachOther ? -4 : undefined}
+                  forceLookX={password.length > 0 && showPassword ? -4 : isLookingAtEachOther ? 0 : undefined}
+                  forceLookY={password.length > 0 && showPassword ? -4 : isLookingAtEachOther ? -4 : undefined}
                 />
                 <EyeBall
                   size={16}
@@ -522,8 +428,8 @@ export function LoginPage() {
                   eyeColor="white"
                   pupilColor="#2D2D2D"
                   isBlinking={isBlackBlinking}
-                  forceLookX={formData.password.length > 0 && showPassword ? -4 : isLookingAtEachOther ? 0 : undefined}
-                  forceLookY={formData.password.length > 0 && showPassword ? -4 : isLookingAtEachOther ? -4 : undefined}
+                  forceLookX={password.length > 0 && showPassword ? -4 : isLookingAtEachOther ? 0 : undefined}
+                  forceLookY={password.length > 0 && showPassword ? -4 : isLookingAtEachOther ? -4 : undefined}
                 />
               </div>
             </div>
@@ -538,19 +444,19 @@ export function LoginPage() {
                 zIndex: 3,
                 backgroundColor: "#FF9B6B",
                 borderRadius: "120px 120px 0 0",
-                transform: formData.password.length > 0 && showPassword ? "skewX(0deg)" : `skewX(${orangePos.bodySkew || 0}deg)`,
+                transform: password.length > 0 && showPassword ? "skewX(0deg)" : `skewX(${orangePos.bodySkew || 0}deg)`,
                 transformOrigin: "bottom center",
               }}
             >
               <div
                 className="absolute flex gap-8 transition-all duration-200 ease-out"
                 style={{
-                  left: formData.password.length > 0 && showPassword ? `${50}px` : `${82 + (orangePos.faceX || 0)}px`,
-                  top: formData.password.length > 0 && showPassword ? `${85}px` : `${90 + (orangePos.faceY || 0)}px`,
+                  left: password.length > 0 && showPassword ? `${50}px` : `${82 + (orangePos.faceX || 0)}px`,
+                  top: password.length > 0 && showPassword ? `${85}px` : `${90 + (orangePos.faceY || 0)}px`,
                 }}
               >
-                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={formData.password.length > 0 && showPassword ? -5 : undefined} forceLookY={formData.password.length > 0 && showPassword ? -4 : undefined} />
-                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={formData.password.length > 0 && showPassword ? -5 : undefined} forceLookY={formData.password.length > 0 && showPassword ? -4 : undefined} />
+                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={password.length > 0 && showPassword ? -5 : undefined} forceLookY={password.length > 0 && showPassword ? -4 : undefined} />
+                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={password.length > 0 && showPassword ? -5 : undefined} forceLookY={password.length > 0 && showPassword ? -4 : undefined} />
               </div>
             </div>
 
@@ -564,25 +470,25 @@ export function LoginPage() {
                 backgroundColor: "#E8D754",
                 borderRadius: "70px 70px 0 0",
                 zIndex: 4,
-                transform: formData.password.length > 0 && showPassword ? "skewX(0deg)" : `skewX(${yellowPos.bodySkew || 0}deg)`,
+                transform: password.length > 0 && showPassword ? "skewX(0deg)" : `skewX(${yellowPos.bodySkew || 0}deg)`,
                 transformOrigin: "bottom center",
               }}
             >
               <div
                 className="absolute flex gap-6 transition-all duration-200 ease-out"
                 style={{
-                  left: formData.password.length > 0 && showPassword ? `${20}px` : `${52 + (yellowPos.faceX || 0)}px`,
-                  top: formData.password.length > 0 && showPassword ? `${35}px` : `${40 + (yellowPos.faceY || 0)}px`,
+                  left: password.length > 0 && showPassword ? `${20}px` : `${52 + (yellowPos.faceX || 0)}px`,
+                  top: password.length > 0 && showPassword ? `${35}px` : `${40 + (yellowPos.faceY || 0)}px`,
                 }}
               >
-                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={formData.password.length > 0 && showPassword ? -5 : undefined} forceLookY={formData.password.length > 0 && showPassword ? -4 : undefined} />
-                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={formData.password.length > 0 && showPassword ? -5 : undefined} forceLookY={formData.password.length > 0 && showPassword ? -4 : undefined} />
+                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={password.length > 0 && showPassword ? -5 : undefined} forceLookY={password.length > 0 && showPassword ? -4 : undefined} />
+                <Pupil size={12} maxDistance={5} pupilColor="#2D2D2D" forceLookX={password.length > 0 && showPassword ? -5 : undefined} forceLookY={password.length > 0 && showPassword ? -4 : undefined} />
               </div>
               <div
                 className="absolute h-[4px] w-20 rounded-full bg-[#2D2D2D] transition-all duration-200 ease-out"
                 style={{
-                  left: formData.password.length > 0 && showPassword ? `${10}px` : `${40 + (yellowPos.faceX || 0)}px`,
-                  top: formData.password.length > 0 && showPassword ? `${88}px` : `${88 + (yellowPos.faceY || 0)}px`,
+                  left: password.length > 0 && showPassword ? `${10}px` : `${40 + (yellowPos.faceX || 0)}px`,
+                  top: password.length > 0 && showPassword ? `${88}px` : `${88 + (yellowPos.faceY || 0)}px`,
                 }}
               />
             </div>
@@ -590,9 +496,15 @@ export function LoginPage() {
         </div>
 
         <div className="relative z-20 flex items-center gap-8 text-sm text-primary-foreground/60">
-          <a href="#" className="transition-colors hover:text-primary-foreground">Chính sách bảo mật</a>
-          <a href="#" className="transition-colors hover:text-primary-foreground">Điều khoản dịch vụ</a>
-          <a href="#" className="transition-colors hover:text-primary-foreground">Liên hệ</a>
+          <a href="#" className="transition-colors hover:text-primary-foreground">
+            Chính sách bảo mật
+          </a>
+          <a href="#" className="transition-colors hover:text-primary-foreground">
+            Điều khoản dịch vụ
+          </a>
+          <a href="#" className="transition-colors hover:text-primary-foreground">
+            Liên hệ
+          </a>
         </div>
 
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
@@ -616,14 +528,16 @@ export function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="anna@gmail.com"
-                value={formData.email}
+                value={email}
                 autoComplete="off"
-                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => setEmail(e.target.value)}
                 onFocus={() => setIsTyping(true)}
                 onBlur={() => setIsTyping(false)}
                 required
@@ -632,14 +546,16 @@ export function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Mật khẩu</Label>
+              <Label htmlFor="password" className="text-sm font-medium">
+                Mật khẩu
+              </Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                   className="h-12 border-border/60 bg-background pr-10 focus:border-primary"
                 />
@@ -655,48 +571,48 @@ export function LoginPage() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={formData.rememberMe}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, rememberMe: checked === true }))}
-                />
-                <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">Ghi nhớ đăng nhập</Label>
+                <Checkbox id="remember" />
+                <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">
+                  Ghi nhớ trong 30 ngày
+                </Label>
               </div>
-              <Link to="/auth/forgot-password" className="text-sm font-medium text-primary hover:underline">
+              <a href="#" className="text-sm font-medium text-primary hover:underline">
                 Quên mật khẩu?
-              </Link>
+              </a>
             </div>
 
-            {error && <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">{error}</div>}
+            {error && (
+              <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">{error}</div>
+            )}
 
             <Button type="submit" className="h-12 w-full text-base font-medium" size="lg" disabled={isLoading}>
               {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
             </Button>
           </form>
 
-          <div className="my-6 relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-background px-4 text-muted-foreground">Hoặc</span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div ref={googleButtonRef} className="flex min-h-[44px] items-center justify-center" />
-            {isGoogleLoading && <p className="text-center text-sm text-muted-foreground">Đang xác thực với Google...</p>}
-            {googleError && <p className="text-center text-sm text-red-500">{googleError}</p>}
+          <div className="mt-6">
+            <Button
+              variant="outline"
+              className="h-12 w-full border-border/60 bg-background hover:bg-accent"
+              type="button"
+            >
+              <Mail className="mr-2 size-5" />
+              Đăng nhập với Google
+            </Button>
           </div>
 
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            Chưa có tài khoản? {" "}
-            <Link to="/auth/register" className="font-medium text-foreground hover:underline">
+            Chưa có tài khoản?{" "}
+            <a href="#" className="font-medium text-foreground hover:underline">
               Đăng ký ngay
-            </Link>
+            </a>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
+export const Component = AnimatedCharactersLoginPage;
+
+export default AnimatedCharactersLoginPage;

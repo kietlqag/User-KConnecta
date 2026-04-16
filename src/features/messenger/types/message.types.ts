@@ -81,4 +81,10 @@ export interface IncomingCallSignal {
   sdpMid?: string;
   sdpMLineIndex?: number;
   createdAt: string;
+  sessionStatus?: 'RINGING' | 'ONGOING' | 'MISSED' | 'COMPLETED';
+  sessionMediaType?: 'audio' | 'video';
+  sessionStartedAt?: string;
+  sessionAnsweredAt?: string;
+  sessionEndedAt?: string;
+  sessionDurationSec?: number;
 }

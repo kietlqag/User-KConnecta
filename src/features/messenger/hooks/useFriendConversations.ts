@@ -89,12 +89,12 @@ export function useFriendConversations(): UseFriendConversationsResult {
       .getFriends(currentUser.id)
       .then(async (friends) => {
         const histories = await Promise.allSettled(
-          friends.map((f) => chatService.getChatHistory(currentUser.id, f.userId)),
+          friends.map((f) => chatService.getChatHistory(currentUser.id, f.userId, { limit: 1 })),
         );
 
         const mapped: Conversation[] = friends.map((f, index) => {
           const historyResult = histories[index];
-          const history = historyResult.status === 'fulfilled' ? historyResult.value : [];
+          const history = historyResult.status === 'fulfilled' ? historyResult.value.messages : [];
           const last = history.length > 0 ? history[history.length - 1] : null;
           const rawPreview = mapBackendContentToPreview(last?.content);
           const isOwnLastMessage = Boolean(last?.senderId && currentUser?.id && last.senderId === currentUser.id);

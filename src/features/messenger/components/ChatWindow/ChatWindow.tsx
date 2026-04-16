@@ -13,6 +13,7 @@ import {
   Send,
   ArrowLeft,
   Info,
+  ChevronDown,
 } from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { MessageBubble } from '../MessageBubble';
@@ -21,8 +22,11 @@ interface ChatWindowProps {
   user: ChatUser;
   messages: Message[];
   loading?: boolean;
+  loadingOlder?: boolean;
+  hasOlder?: boolean;
   connected: boolean;
   onSendMessage: (content: string) => void;
+  onLoadOlder?: () => Promise<void> | void;
   onReactMessage?: (messageId: string, emoji: string) => void;
   onClose: () => void;
   onMinimize?: () => void;
@@ -43,8 +47,11 @@ export const ChatWindow = ({
   user,
   messages,
   loading = false,
+  loadingOlder = false,
+  hasOlder = false,
   connected,
   onSendMessage,
+  onLoadOlder,
   onReactMessage,
   onClose,
   onMinimize,
@@ -62,11 +69,74 @@ export const ChatWindow = ({
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const loadingOlderRef = useRef(false);
+  const initializedRef = useRef(false);
+  const previousMessageCountRef = useRef(0);
+  const shouldStickToBottomRef = useRef(true);
+  const prependScrollAdjustRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null);
+
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    const list = messageListRef.current;
+    if (!list) return;
+    list.scrollTo({ top: list.scrollHeight, behavior });
+    setShowJumpToLatest(false);
+  };
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    initializedRef.current = false;
+    previousMessageCountRef.current = 0;
+    shouldStickToBottomRef.current = true;
+    prependScrollAdjustRef.current = null;
+    loadingOlderRef.current = false;
+  }, [user.id]);
+
+  useEffect(() => {
+    if (loading || initializedRef.current || messages.length === 0) return;
+    scrollToBottom('auto');
+    initializedRef.current = true;
+    previousMessageCountRef.current = messages.length;
+  }, [loading, messages.length]);
+
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (!list) return;
+
+    if (prependScrollAdjustRef.current) {
+      const { scrollTop, scrollHeight } = prependScrollAdjustRef.current;
+      const delta = list.scrollHeight - scrollHeight;
+      list.scrollTop = scrollTop + delta;
+      prependScrollAdjustRef.current = null;
+      previousMessageCountRef.current = messages.length;
+      return;
+    }
+
+    const appended = messages.length > previousMessageCountRef.current;
+    if (appended && shouldStickToBottomRef.current) {
+      scrollToBottom('smooth');
+    }
+    previousMessageCountRef.current = messages.length;
   }, [messages]);
+
+  const handleListScroll = () => {
+    const list = messageListRef.current;
+    if (!list) return;
+
+    const distanceToBottom = list.scrollHeight - (list.scrollTop + list.clientHeight);
+    shouldStickToBottomRef.current = distanceToBottom < 120;
+    setShowJumpToLatest(distanceToBottom > 320);
+
+    if (!onLoadOlder || !hasOlder || loadingOlder || loadingOlderRef.current || list.scrollTop > 200) {
+      return;
+    }
+
+    loadingOlderRef.current = true;
+    prependScrollAdjustRef.current = { scrollTop: list.scrollTop, scrollHeight: list.scrollHeight };
+    Promise.resolve(onLoadOlder()).finally(() => {
+      loadingOlderRef.current = false;
+    });
+  };
 
   const handleSend = () => {
     const text = inputText.trim();
@@ -165,7 +235,7 @@ export const ChatWindow = ({
             ? 'w-full h-full flex flex-col rounded-2xl border border-gray-200 bg-white overflow-hidden'
             : 'fixed bottom-0 right-6 w-[360px] h-[520px] rounded-t-xl shadow-2xl animate-in slide-in-from-bottom-4 z-50'
         }
-        flex flex-col
+        relative flex flex-col
       `}
     >
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
@@ -254,6 +324,8 @@ export const ChatWindow = ({
       </div>
 
       <div
+        ref={messageListRef}
+        onScroll={handleListScroll}
         className={`flex-1 overflow-y-auto px-4 py-4 space-y-1 bg-gradient-to-b from-[#f5f8ff] to-[#eef4ff] ${
           fullScreen ? '' : ''
         }`}
@@ -271,24 +343,45 @@ export const ChatWindow = ({
             Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện.
           </div>
         ) : (
-          messages.map((message, index) => (
-            <MessageBubble
-              key={message.id}
-              message={message}
-              onReact={handleReact}
-              showSenderAvatar={shouldShowSenderAvatar(index)}
-              senderAvatar={user.avatar}
-              senderName={user.name}
-              showDeliveryStatus={
-                isLastMessageFromMe && message.isOwn && message.id === lastOwnMessageId && !message.systemType
-              }
-              deliveryStatusLabel={latestOwnMessageStatus}
-              onCallAgain={onCallAgain}
-            />
-          ))
+          <>
+            {!hasOlder && (
+              <div className="flex items-center justify-center py-2 text-xs text-gray-500">
+                Đã xem hết tin nhắn cũ
+              </div>
+            )}
+            {loadingOlder && (
+              <div className="flex items-center justify-center py-2 text-xs text-gray-500">
+                Đang tải tin nhắn cũ...
+              </div>
+            )}
+            {messages.map((message, index) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                onReact={handleReact}
+                showSenderAvatar={shouldShowSenderAvatar(index)}
+                senderAvatar={user.avatar}
+                senderName={user.name}
+                showDeliveryStatus={
+                  isLastMessageFromMe && message.isOwn && message.id === lastOwnMessageId && !message.systemType
+                }
+                deliveryStatusLabel={latestOwnMessageStatus}
+                onCallAgain={onCallAgain}
+              />
+            ))}
+          </>
         )}
-        <div ref={messagesEndRef} />
       </div>
+
+      {showJumpToLatest && (
+        <button
+          onClick={() => scrollToBottom('smooth')}
+          className="absolute right-4 bottom-[84px] w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md hover:bg-gray-50 transition-colors flex items-center justify-center"
+          title="Về tin nhắn mới nhất"
+        >
+          <ChevronDown className="w-5 h-5 text-blue-600" />
+        </button>
+      )}
 
       <div className="px-3 py-3 border-t border-gray-200 bg-white relative">
         <div className="flex items-center gap-2">

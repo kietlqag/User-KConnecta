@@ -1,0 +1,1 @@
+export { CallMinimizedBar } from './CallMinimizedBar';
