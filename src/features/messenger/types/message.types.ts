@@ -7,6 +7,8 @@
   deliveryStatus?: 'SENT' | 'DELIVERED' | 'SEEN';
   seenAt?: string;
   reactions?: string[];
+  deleted?: boolean;
+  deletedAt?: string;
   systemType?: 'call_log' | 'missed_call';
   callLogKind?: 'missed' | 'completed';
   callDurationSec?: number;
@@ -32,6 +34,9 @@ export interface IncomingChatMessage {
   delivered?: boolean;
   seen?: boolean;
   seenAt?: string;
+  deleted?: boolean;
+  deletedAt?: string;
+  reactions?: string[];
 }
 
 export interface IncomingMessageStatus {

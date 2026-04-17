@@ -82,6 +82,9 @@ function mapIncomingToMessage(raw: IncomingChatMessage, currentUserId?: string |
     isOwn: raw.senderId === currentUserId,
     deliveryStatus: resolveDeliveryStatus(raw.delivered, raw.seen),
     seenAt: raw.seenAt,
+    deleted: raw.deleted,
+    deletedAt: raw.deletedAt,
+    reactions: raw.reactions ?? [],
   };
 }
 
@@ -178,6 +181,9 @@ export default function MessengerPage() {
   const isUploadingRecordingRef = useRef(false);
   const initialHistoryInFlightRef = useRef<Set<string>>(new Set());
   const olderHistoryInFlightRef = useRef<Set<string>>(new Set());
+  const pendingMessageStatusRef = useRef<
+    Record<string, { status: IncomingMessageStatus['status']; updatedAt?: string }>
+  >({});
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -362,13 +368,31 @@ export default function MessengerPage() {
       console.log("🔥 incoming", msg);
       const myId = currentUser?.id;
       const otherUserId = msg.senderId === myId ? msg.receiverId : msg.senderId;
-      const newMsg = mapIncomingToMessage(msg, myId);
+      const pendingStatus = pendingMessageStatusRef.current[msg.id];
+      const newMsgBase = mapIncomingToMessage(msg, myId);
+      const newMsg = pendingStatus
+        ? {
+            ...newMsgBase,
+            deliveryStatus: pendingStatus.status === 'SEEN' ? 'SEEN' : 'DELIVERED',
+            seenAt: pendingStatus.status === 'SEEN' ? pendingStatus.updatedAt : newMsgBase.seenAt,
+          }
+        : newMsgBase;
+      if (pendingStatus) {
+        delete pendingMessageStatusRef.current[msg.id];
+      }
 
       setMessagesByUser((prev) => ({
         ...prev,
-        [otherUserId]: (prev[otherUserId] ?? []).some((m) => m.id === newMsg.id)
-          ? prev[otherUserId] ?? []
-          : [...(prev[otherUserId] ?? []), newMsg],
+        [otherUserId]: (() => {
+          const existing = prev[otherUserId] ?? [];
+          const existingIndex = existing.findIndex((m) => m.id === newMsg.id);
+          if (existingIndex === -1) {
+            return [...existing, newMsg];
+          }
+          const next = [...existing];
+          next[existingIndex] = { ...next[existingIndex], ...newMsg };
+          return next;
+        })(),
       }));
 
       setOverrides((prev) => ({
@@ -398,6 +422,7 @@ export default function MessengerPage() {
   }, [handleIncomingMessage, subscribeMessages]);
 
   const handleIncomingMessageStatus = useCallback((status: IncomingMessageStatus) => {
+    let hasMatchedMessage = false;
     setMessagesByUser((prev) => {
       const next: Record<string, Message[]> = {};
       let changed = false;
@@ -410,6 +435,7 @@ export default function MessengerPage() {
             status.status === 'SEEN' ? 'SEEN' : 'DELIVERED';
           peerChanged = true;
           changed = true;
+          hasMatchedMessage = true;
           return {
             ...message,
             deliveryStatus: nextStatus,
@@ -421,6 +447,12 @@ export default function MessengerPage() {
 
       return changed ? next : prev;
     });
+    if (!hasMatchedMessage) {
+      pendingMessageStatusRef.current[status.messageId] = {
+        status: status.status,
+        updatedAt: status.updatedAt,
+      };
+    }
   }, []);
 
   useEffect(() => {
@@ -451,6 +483,14 @@ export default function MessengerPage() {
     if (!activeChatUserId) return;
     if (!connected) return;
     sendConversationSeen(activeChatUserId);
+  }, [activeChatUserId, connected, sendConversationSeen]);
+
+  useEffect(() => {
+    if (!activeChatUserId || !connected) return;
+    const intervalId = window.setInterval(() => {
+      sendConversationSeen(activeChatUserId);
+    }, 5000);
+    return () => window.clearInterval(intervalId);
   }, [activeChatUserId, connected, sendConversationSeen]);
 
   const stopAndUploadCallRecording = useCallback(
@@ -735,20 +775,35 @@ export default function MessengerPage() {
   }, [voiceCall]);
 
   const handleReactMessage = useCallback(
-    (messageId: string, emoji: string) => {
-      if (!activeChatUserId) return;
-      setMessagesByUser((prev) => {
-        const msgs = prev[activeChatUserId] ?? [];
-        return {
-          ...prev,
-          [activeChatUserId]: msgs.map((m) =>
-            m.id === messageId ? { ...m, reactions: emoji === '' ? [] : [emoji] } : m,
-          ),
-        };
-      });
+    async (messageId: string, emoji: string) => {
+      try {
+        await chatService.updateMessageReaction(messageId, emoji || null);
+      } catch {
+        // keep old state when update fails
+      }
     },
-    [activeChatUserId],
+    [],
   );
+
+  const handleDeleteMessage = useCallback(
+    async (messageId: string) => {
+      try {
+        await chatService.deleteMessage(messageId);
+      } catch {
+        // keep old state when delete fails
+      }
+    },
+    [],
+  );
+
+  const handleReportMessage = useCallback(async (messageId: string) => {
+    try {
+      await chatService.reportMessage(messageId, 'reported-from-messenger-ui');
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
 
   const filters: { key: MessengerFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
@@ -899,6 +954,8 @@ export default function MessengerPage() {
                 onSendMessage={handleSendMessage}
                 onLoadOlder={handleLoadOlderMessages}
                 onReactMessage={handleReactMessage}
+                onDeleteMessage={handleDeleteMessage}
+                onReportMessage={handleReportMessage}
                 onClose={handleBackToList}
                 onMinimize={handleBackToList}
                 fullScreen

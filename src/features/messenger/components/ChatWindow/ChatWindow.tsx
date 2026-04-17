@@ -29,6 +29,8 @@ interface ChatWindowProps {
   onSendMessage: (content: string) => void;
   onLoadOlder?: () => Promise<void> | void;
   onReactMessage?: (messageId: string, emoji: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
+  onReportMessage?: (messageId: string) => Promise<boolean> | boolean;
   onClose: () => void;
   onMinimize?: () => void;
   fullScreen?: boolean;
@@ -54,6 +56,8 @@ export const ChatWindow = ({
   onSendMessage,
   onLoadOlder,
   onReactMessage,
+  onDeleteMessage,
+  onReportMessage,
   onClose,
   onMinimize,
   fullScreen,
@@ -69,6 +73,8 @@ export const ChatWindow = ({
   onCallAgain,
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -142,8 +148,12 @@ export const ChatWindow = ({
   const handleSend = () => {
     const text = inputText.trim();
     if (!text || !connected) return;
-    onSendMessage(text);
+    const payload = replyToMessage
+      ? `Trả lời "${replyToMessage.text.slice(0, 80)}": ${text}`
+      : text;
+    onSendMessage(payload);
     setInputText('');
+    setReplyToMessage(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -155,6 +165,38 @@ export const ChatWindow = ({
 
   const handleReact = (messageId: string, emoji: string) => {
     onReactMessage?.(messageId, emoji);
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyToMessage(message);
+    setShowEmojiPicker(false);
+  };
+
+  const handleDelete = (messageId: string) => {
+    onDeleteMessage?.(messageId);
+  };
+
+  const handleForward = (message: Message) => {
+    if (!message.text?.trim()) return;
+    const prefix = message.systemType ? '' : 'Chuyển tiếp: ';
+    setInputText((prev) => {
+      const normalizedPrev = prev.trim();
+      if (!normalizedPrev) return `${prefix}${message.text}`.trim();
+      return `${normalizedPrev}\n${prefix}${message.text}`.trim();
+    });
+  };
+
+  const handleReport = async (message: Message) => {
+    const excerpt = message.text.slice(0, 40);
+    const ok = await Promise.resolve(onReportMessage?.(message.id) ?? true);
+    setReportNotice(
+      ok
+        ? `Đã báo cáo: "${excerpt}${message.text.length > 40 ? '...' : ''}"`
+        : 'Không thể báo cáo tin nhắn lúc này',
+    );
+    window.setTimeout(() => {
+      setReportNotice(null);
+    }, 1800);
   };
 
   const hasActiveVoiceCall = callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'in_call';
@@ -330,6 +372,10 @@ export const ChatWindow = ({
                 key={message.id}
                 message={message}
                 onReact={handleReact}
+                onReply={handleReply}
+                onDelete={handleDelete}
+                onForward={handleForward}
+                onReport={handleReport}
                 showSenderAvatar={shouldShowSenderAvatar(index)}
                 senderAvatar={user.avatar}
                 senderName={user.name}
@@ -355,6 +401,26 @@ export const ChatWindow = ({
       )}
 
       <div className="px-3 py-3 border-t border-gray-200 bg-white relative">
+        {replyToMessage && (
+          <div className="mb-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <p className="truncate text-xs text-gray-700">
+                Đang trả lời: <span className="font-medium">{replyToMessage.text}</span>
+              </p>
+              <button
+                onClick={() => setReplyToMessage(null)}
+                className="shrink-0 text-xs text-blue-600 hover:underline"
+              >
+                Bỏ
+              </button>
+            </div>
+          </div>
+        )}
+        {reportNotice && (
+          <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            {reportNotice}
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Gửi tin nhắn thoại">

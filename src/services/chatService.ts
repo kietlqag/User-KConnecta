@@ -103,4 +103,16 @@ export const chatService = {
   getCallSessionSnapshot: (callId: string) => {
     return api.get<CallSessionSnapshotResponse>(`/chat/calls/${callId}/session`);
   },
+
+  updateMessageReaction: (messageId: string, emoji: string | null) => {
+    return api.put<IncomingChatMessage>(`/chat/messages/${messageId}/reaction`, { emoji });
+  },
+
+  deleteMessage: (messageId: string) => {
+    return api.delete<IncomingChatMessage>(`/chat/messages/${messageId}`);
+  },
+
+  reportMessage: (messageId: string, reason?: string) => {
+    return api.post<void>(`/chat/messages/${messageId}/report`, { reason: reason?.trim() || null });
+  },
 };
