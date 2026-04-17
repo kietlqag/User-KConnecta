@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -22,4 +23,7 @@ public class ChatMessageResponse {
     private Boolean delivered;
     private Boolean seen;
     private LocalDateTime seenAt;
+    private Boolean deleted;
+    private LocalDateTime deletedAt;
+    private List<String> reactions;
 }

@@ -6,9 +6,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallRecordingResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.service.CallRecordingService;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 
@@ -55,5 +58,41 @@ public class ChatController {
             return ResponseEntity.status(401).build();
         }
         return ResponseEntity.ok(chatService.getCallSessionSnapshot(principal.getName(), callId));
+    }
+
+    @PutMapping("/messages/{messageId}/reaction")
+    public ResponseEntity<ChatMessageResponse> updateMessageReaction(
+            @PathVariable UUID messageId,
+            @RequestBody(required = false) MessageReactionRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.updateMessageReaction(principal.getName(), messageId, request));
+    }
+
+    @DeleteMapping("/messages/{messageId}")
+    public ResponseEntity<ChatMessageResponse> deleteMessage(
+            @PathVariable UUID messageId,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.deleteMessage(principal.getName(), messageId));
+    }
+
+    @PostMapping("/messages/{messageId}/report")
+    public ResponseEntity<Void> reportMessage(
+            @PathVariable UUID messageId,
+            @RequestBody(required = false) MessageReportRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        chatService.reportMessage(principal.getName(), messageId, request);
+        return ResponseEntity.ok().build();
     }
 }

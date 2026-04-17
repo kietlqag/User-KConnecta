@@ -34,7 +34,10 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
                 m.createdAt,
                 m.delivered,
                 m.seen,
-                m.seenAt
+                m.seenAt,
+                m.deleted,
+                m.deletedAt,
+                null
             )
             FROM ChatMessage m
             JOIN m.sender s

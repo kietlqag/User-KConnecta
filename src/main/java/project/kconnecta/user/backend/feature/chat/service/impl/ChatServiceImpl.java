@@ -5,6 +5,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
@@ -12,8 +14,12 @@ import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageRespo
 import project.kconnecta.user.backend.feature.chat.dto.response.MessageStatusResponse;
 import project.kconnecta.user.backend.feature.chat.entity.CallSession;
 import project.kconnecta.user.backend.feature.chat.entity.ChatMessage;
+import project.kconnecta.user.backend.feature.chat.entity.ChatMessageReaction;
+import project.kconnecta.user.backend.feature.chat.entity.ChatMessageReport;
 import project.kconnecta.user.backend.feature.chat.repository.CallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.repository.ChatMessageRepository;
+import project.kconnecta.user.backend.feature.chat.repository.ChatMessageReactionRepository;
+import project.kconnecta.user.backend.feature.chat.repository.ChatMessageReportRepository;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
@@ -22,7 +28,9 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -35,6 +43,8 @@ public class ChatServiceImpl implements ChatService {
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatMessageReactionRepository chatMessageReactionRepository;
+    private final ChatMessageReportRepository chatMessageReportRepository;
     private final CallSessionRepository callSessionRepository;
 
     @Override
@@ -61,17 +71,7 @@ public class ChatServiceImpl implements ChatService {
                 .build();
         message = chatMessageRepository.save(message);
 
-        ChatMessageResponse response = new ChatMessageResponse(
-                message.getId(),
-                sender.getId(),
-                sender.getUsername(),
-                receiver.getId(),
-                request.getContent(),
-                now,
-                message.getDelivered(),
-                message.getSeen(),
-                message.getSeenAt()
-        );
+        ChatMessageResponse response = toMessageResponse(message);
 
         // gửi cho receiver
         messagingTemplate.convertAndSendToUser(
@@ -110,17 +110,7 @@ public class ChatServiceImpl implements ChatService {
                 .build();
         message = chatMessageRepository.save(message);
 
-        ChatMessageResponse response = new ChatMessageResponse(
-                message.getId(),
-                sender.getId(),
-                sender.getUsername(),
-                receiver.getId(),
-                content,
-                now,
-                message.getDelivered(),
-                message.getSeen(),
-                message.getSeenAt()
-        );
+        ChatMessageResponse response = toMessageResponse(message);
 
         messagingTemplate.convertAndSendToUser(
                 receiver.getUsername(),
@@ -216,6 +206,91 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    @Transactional
+    public ChatMessageResponse updateMessageReaction(String currentUsername, UUID messageId, MessageReactionRequest request) {
+        if (messageId == null) {
+            throw new RuntimeException("Message ID is required");
+        }
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        ChatMessage message = chatMessageRepository.findByIdWithUsers(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+        validateParticipant(message, actor);
+
+        String emoji = request == null ? null : normalizeEmoji(request.getEmoji());
+        if (emoji == null) {
+            chatMessageReactionRepository.deleteByMessageIdAndUserId(messageId, actor.getId());
+        } else {
+            ChatMessageReaction reaction = chatMessageReactionRepository
+                    .findByMessageIdAndUserId(messageId, actor.getId())
+                    .orElseGet(() -> ChatMessageReaction.builder()
+                            .message(message)
+                            .user(actor)
+                            .createdAt(LocalDateTime.now())
+                            .build());
+            reaction.setEmoji(emoji);
+            if (reaction.getCreatedAt() == null) {
+                reaction.setCreatedAt(LocalDateTime.now());
+            }
+            chatMessageReactionRepository.save(reaction);
+        }
+
+        ChatMessageResponse updated = toMessageResponse(message);
+        broadcastMessageUpdate(message, updated);
+        return updated;
+    }
+
+    @Override
+    @Transactional
+    public ChatMessageResponse deleteMessage(String currentUsername, UUID messageId) {
+        if (messageId == null) {
+            throw new RuntimeException("Message ID is required");
+        }
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        ChatMessage message = chatMessageRepository.findByIdWithUsers(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+
+        if (!message.getSender().getId().equals(actor.getId())) {
+            throw new RuntimeException("Only sender can delete this message");
+        }
+
+        if (!Boolean.TRUE.equals(message.getDeleted())) {
+            message.setDeleted(true);
+            message.setDeletedAt(LocalDateTime.now());
+            message.setContent("Tin nhắn đã được gỡ");
+            chatMessageRepository.save(message);
+            chatMessageReactionRepository.deleteByMessageId(messageId);
+        }
+
+        ChatMessageResponse updated = toMessageResponse(message);
+        broadcastMessageUpdate(message, updated);
+        return updated;
+    }
+
+    @Override
+    @Transactional
+    public void reportMessage(String currentUsername, UUID messageId, MessageReportRequest request) {
+        if (messageId == null) {
+            throw new RuntimeException("Message ID is required");
+        }
+        User reporter = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        ChatMessage message = chatMessageRepository.findByIdWithUsers(messageId)
+                .orElseThrow(() -> new RuntimeException("Message not found"));
+        validateParticipant(message, reporter);
+
+        String reason = request == null ? null : normalizeReason(request.getReason());
+        ChatMessageReport report = ChatMessageReport.builder()
+                .message(message)
+                .reporter(reporter)
+                .reason(reason)
+                .createdAt(LocalDateTime.now())
+                .build();
+        chatMessageReportRepository.save(report);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public ChatHistoryPageResponse getChatHistory(UUID userId1, UUID userId2, LocalDateTime beforeCreatedAt, Integer limit) {
         int normalizedLimit = normalizeHistoryLimit(limit);
@@ -233,6 +308,7 @@ public class ChatServiceImpl implements ChatService {
 
         Collections.reverse(chunkDesc);
         List<ChatMessageResponse> messages = chunkDesc;
+        enrichReactions(messages);
 
         LocalDateTime nextBeforeCreatedAt = messages.isEmpty() ? null : messages.get(0).getCreatedAt();
         return new ChatHistoryPageResponse(messages, hasMore, nextBeforeCreatedAt);
@@ -279,5 +355,79 @@ public class ChatServiceImpl implements ChatService {
                 session.getEndedAt(),
                 durationSec
         );
+    }
+
+    private ChatMessageResponse toMessageResponse(ChatMessage message) {
+        List<String> reactions = chatMessageReactionRepository.findByMessageId(message.getId())
+                .stream()
+                .map(ChatMessageReaction::getEmoji)
+                .toList();
+        return new ChatMessageResponse(
+                message.getId(),
+                message.getSender().getId(),
+                message.getSender().getUsername(),
+                message.getReceiver().getId(),
+                message.getContent(),
+                message.getCreatedAt(),
+                message.getDelivered(),
+                message.getSeen(),
+                message.getSeenAt(),
+                message.getDeleted(),
+                message.getDeletedAt(),
+                reactions
+        );
+    }
+
+    private void broadcastMessageUpdate(ChatMessage message, ChatMessageResponse response) {
+        messagingTemplate.convertAndSendToUser(
+                message.getReceiver().getUsername(),
+                "/queue/messages",
+                response
+        );
+        messagingTemplate.convertAndSendToUser(
+                message.getSender().getUsername(),
+                "/queue/messages",
+                response
+        );
+    }
+
+    private void validateParticipant(ChatMessage message, User actor) {
+        UUID actorId = actor.getId();
+        if (!message.getSender().getId().equals(actorId) && !message.getReceiver().getId().equals(actorId)) {
+            throw new RuntimeException("Forbidden");
+        }
+    }
+
+    private String normalizeEmoji(String emoji) {
+        if (emoji == null) return null;
+        String normalized = emoji.trim();
+        if (normalized.isEmpty()) return null;
+        if (normalized.length() > 16) {
+            return normalized.substring(0, 16);
+        }
+        return normalized;
+    }
+
+    private String normalizeReason(String reason) {
+        if (reason == null) return null;
+        String normalized = reason.trim();
+        if (normalized.isEmpty()) return null;
+        return normalized.length() > 1000 ? normalized.substring(0, 1000) : normalized;
+    }
+
+    private void enrichReactions(List<ChatMessageResponse> messages) {
+        if (messages == null || messages.isEmpty()) return;
+        List<UUID> messageIds = messages.stream().map(ChatMessageResponse::getId).toList();
+        Map<UUID, List<String>> reactionsByMessage = new HashMap<>();
+        for (Object[] row : chatMessageReactionRepository.findReactionsByMessageIds(messageIds)) {
+            if (row == null || row.length < 2) continue;
+            UUID messageId = (UUID) row[0];
+            String emoji = (String) row[1];
+            if (messageId == null || emoji == null || emoji.isBlank()) continue;
+            reactionsByMessage.computeIfAbsent(messageId, key -> new ArrayList<>()).add(emoji);
+        }
+        messages.forEach(message -> message.setReactions(
+                reactionsByMessage.getOrDefault(message.getId(), Collections.emptyList())
+        ));
     }
 }
