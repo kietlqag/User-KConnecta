@@ -27,7 +27,7 @@ public class Story {
     @Column(name = "image_url", length = 1000)
     private String imageUrl;
 
-    @Column(name = "background_color", length = 50)
+    @Column(name = "background_color", length = 500)
     private String backgroundColor;
 
     @Column(name = "text_content", columnDefinition = "TEXT")
