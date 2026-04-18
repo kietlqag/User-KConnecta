@@ -1,6 +1,6 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, Video, Smile } from 'lucide-react';
-import { Link } from 'react-router@7.1.3';
+import { Link } from 'react-router-dom';
 import { ProfileCreatePostModal } from '../../../profile/components/ProfileCreatePost/ProfileCreatePostModal';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { CurrentUserAvatar } from '@/components/shared';
@@ -29,7 +29,7 @@ export function CreatePost() {
             onClick={() => setIsModalOpen(true)}
             className="flex-1 text-left px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors cursor-pointer"
           >
-            Bạn đang nghĩ gì?
+            B?n �ang ngh? g??
           </button>
         </div>
 
@@ -41,20 +41,20 @@ export function CreatePost() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex-1 justify-center cursor-pointer"
           >
             <Video className="w-6 h-6 text-red-500" />
-            <span className="text-gray-600 font-medium hidden sm:inline">Video trực tiếp</span>
+            <span className="text-gray-600 font-medium hidden sm:inline">Video tr?c ti?p</span>
             <span className="text-gray-600 font-medium sm:hidden">Video</span>
           </Link>
 
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex-1 justify-center cursor-pointer">
             <Image className="w-6 h-6 text-green-500" />
-            <span className="text-gray-600 font-medium hidden sm:inline">Ảnh/video</span>
-            <span className="text-gray-600 font-medium sm:hidden">Ảnh</span>
+            <span className="text-gray-600 font-medium hidden sm:inline">?nh/video</span>
+            <span className="text-gray-600 font-medium sm:hidden">?nh</span>
           </button>
 
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex-1 justify-center cursor-pointer">
             <Smile className="w-6 h-6 text-yellow-500" />
-            <span className="text-gray-600 font-medium hidden sm:inline">Cảm xúc/hoạt động</span>
-            <span className="text-gray-600 font-medium sm:hidden">Cảm xúc</span>
+            <span className="text-gray-600 font-medium hidden sm:inline">C?m x�c/ho?t �?ng</span>
+            <span className="text-gray-600 font-medium sm:hidden">C?m x�c</span>
           </button>
         </div>
       </div>
@@ -62,7 +62,7 @@ export function CreatePost() {
       <ProfileCreatePostModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        username={currentUser?.fullName || 'Người dùng'}
+        username={currentUser?.fullName || 'Ng�?i d�ng'}
       />
     </>
   );

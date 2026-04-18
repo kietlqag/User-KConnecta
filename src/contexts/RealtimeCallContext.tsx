@@ -1,4 +1,4 @@
-﻿import {
+import {
   createContext,
   useCallback,
   useContext,
@@ -110,12 +110,12 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       if (permission !== 'granted') return;
 
       closeDesktopNotification();
-      let callerName = peerProfiles[signal.fromUserId]?.fullName || signal.fromUsername || 'Người dùng';
+      let callerName = peerProfiles[signal.fromUserId]?.fullName || signal.fromUsername || 'Ng�?i d�ng';
       if (!peerProfiles[signal.fromUserId] && !peerProfileLoadingRef.current.has(signal.fromUserId)) {
         peerProfileLoadingRef.current.add(signal.fromUserId);
         try {
           const profile = await authService.getUserById(signal.fromUserId);
-          const resolvedName = profile.fullName || profile.username || 'Người dùng';
+          const resolvedName = profile.fullName || profile.username || 'Ng�?i d�ng';
           callerName = resolvedName;
           setPeerProfiles((prev) => ({
             ...prev,
@@ -132,9 +132,9 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       }
 
       const notif = new Notification(
-        signal.mediaType === 'video' ? 'Cuộc gọi video đến' : 'Cuộc gọi thoại đến',
+        signal.mediaType === 'video' ? 'Cu?c g?i video �?n' : 'Cu?c g?i tho?i �?n',
         {
-          body: `${callerName} đang gọi cho bạn`,
+          body: `${callerName} �ang g?i cho b?n`,
           tag: `call-${signal.callId}`,
           requireInteraction: true,
         },
@@ -266,7 +266,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
           setPeerProfiles((prev) => ({
             ...prev,
             [peerId]: {
-              fullName: profile.fullName || profile.username || 'Người dùng',
+              fullName: profile.fullName || profile.username || 'Ng�?i d�ng',
               avatarUrl: profile.avatarUrl,
             },
           }));
@@ -337,7 +337,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
         voiceCall.syncAuthoritativeSession(snapshot);
 
         if (snapshot.status === 'RINGING') {
-          setAuthoritativeStatusText('Đang gọi...');
+          setAuthoritativeStatusText('�ang g?i...');
           return;
         }
 
@@ -353,7 +353,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
         }
 
         if (snapshot.status === 'MISSED') {
-          setAuthoritativeStatusText('Cuộc gọi nhỡ');
+          setAuthoritativeStatusText('Cu?c g?i nh?');
           return;
         }
 
@@ -385,20 +385,20 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const callStatusText =
     authoritativeStatusText ||
     (effectiveCallStatus === 'calling'
-      ? 'Đang gọi...'
+      ? '�ang g?i...'
       : effectiveCallStatus === 'connecting'
-        ? 'Đang kết nối...'
+        ? '�ang k?t n?i...'
         : formatCallDuration(callDurationSec));
 
   const incomingProfile = voiceCall.incomingPeerUserId ? peerProfiles[voiceCall.incomingPeerUserId] : undefined;
   const activeProfile = voiceCall.activePeerUserId ? peerProfiles[voiceCall.activePeerUserId] : undefined;
 
-  const incomingName = incomingProfile?.fullName || voiceCall.incomingFromUsername || 'Người dùng';
+  const incomingName = incomingProfile?.fullName || voiceCall.incomingFromUsername || 'Ng�?i d�ng';
   const incomingAvatar =
     incomingProfile?.avatarUrl ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingName)}&background=random`;
   const activeName =
-    activeProfile?.fullName || voiceCall.activePeerDisplayName || voiceCall.incomingFromUsername || 'Người dùng';
+    activeProfile?.fullName || voiceCall.activePeerDisplayName || voiceCall.incomingFromUsername || 'Ng�?i d�ng';
   const activeAvatar =
     activeProfile?.avatarUrl ||
     voiceCall.activePeerAvatarUrl ||
@@ -407,7 +407,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const showGlobalMinimizedBar = !showCallModal && (voiceCall.isRinging || isCallOngoing);
   const minimizedMode = voiceCall.isRinging ? 'incoming' : effectiveCallStatus === 'in_call' ? 'in_call' : 'outgoing';
   const incomingCallText =
-    voiceCall.incomingMediaType === 'video' ? 'Đang có cuộc gọi video đến...' : 'Đang có cuộc gọi đến...';
+    voiceCall.incomingMediaType === 'video' ? '�ang c� cu?c g?i video �?n...' : '�ang c� cu?c g?i �?n...';
 
   const contextValue = useMemo<RealtimeCallContextValue>(
     () => ({

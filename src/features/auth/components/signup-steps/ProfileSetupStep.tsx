@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, AtSign, Calendar, MapPin, User } from 'lucide-react';
-import { useNavigate } from 'react-router@7.1.3';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { AuthInput } from '../AuthInput';
 

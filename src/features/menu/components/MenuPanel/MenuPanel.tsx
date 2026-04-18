@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Search, Calendar, Users, Flag, Rss, FileText, Gamepad2, Video, Play, Edit, BookOpen, Image as ImageIcon, Film, PlusCircle, Store, TrendingUp, UserPlus, CalendarPlus } from 'lucide-react';
-import { useNavigate } from 'react-router@7.1.3';
+import { useNavigate } from 'react-router-dom';
 import { MenuItemCard } from '../MenuItemCard';
 import { CreateItemCard } from '../CreateItemCard';
 import { MenuItem, CreateItem } from '../../types/menu.types';

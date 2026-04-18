@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -38,11 +38,11 @@ function mapBackendContentToMessageFields(
     const fallbackLabel =
       payload?.kind === 'completed'
         ? mediaType === 'video'
-          ? 'Cuộc gọi video hoàn thành'
-          : 'Cuộc gọi thoại hoàn thành'
+          ? 'Cu?c g?i video ho�n th�nh'
+          : 'Cu?c g?i tho?i ho�n th�nh'
         : mediaType === 'video'
-          ? 'Đã bỏ lỡ cuộc gọi video'
-          : 'Đã bỏ lỡ cuộc gọi thoại';
+          ? '�? b? l? cu?c g?i video'
+          : '�? b? l? cu?c g?i tho?i';
 
     return {
       text: payload?.label || fallbackLabel,
@@ -53,7 +53,7 @@ function mapBackendContentToMessageFields(
     };
   } catch {
     return {
-      text: 'Đã bỏ lỡ cuộc gọi thoại',
+      text: '�? b? l? cu?c g?i tho?i',
       systemType: 'call_log',
       callLogKind: 'missed',
       callMediaType: 'audio',
@@ -64,7 +64,7 @@ function mapBackendContentToMessageFields(
 function formatConversationPreview(text: string, isOwn: boolean) {
   const normalized = text.trim();
   if (!normalized) return '';
-  return isOwn ? `Bạn: ${normalized}` : normalized;
+  return isOwn ? `B?n: ${normalized}` : normalized;
 }
 
 function resolveDeliveryStatus(delivered?: boolean, seen?: boolean): Message['deliveryStatus'] {
@@ -125,24 +125,24 @@ function ChatInfoPanel({ user }: { user: ChatUser }) {
       <div className="grid grid-cols-2 gap-3 text-center">
         <button
           className="rounded-xl bg-gray-100 h-14 flex items-center justify-center hover:bg-gray-200 transition-colors"
-          title="Tắt thông báo"
+          title="T?t th�ng b�o"
         >
           <BellOff className="w-5 h-5 text-gray-700" />
         </button>
         <button
           className="rounded-xl bg-gray-100 h-14 flex items-center justify-center hover:bg-gray-200 transition-colors"
-          title="Tìm kiếm"
+          title="T?m ki?m"
         >
           <SearchIcon className="w-5 h-5 text-gray-700" />
         </button>
       </div>
 
       <button className="w-full flex items-center justify-between rounded-lg px-2 py-3 hover:bg-gray-50 transition-colors text-left">
-        <span className="text-[15px] font-medium text-gray-800">File phương tiện & file</span>
+        <span className="text-[15px] font-medium text-gray-800">File ph��ng ti?n & file</span>
         <ChevronDown className="w-5 h-5 text-gray-500" />
       </button>
       <button className="w-full flex items-center justify-between rounded-lg px-2 py-3 hover:bg-gray-50 transition-colors text-left">
-        <span className="text-[15px] font-medium text-gray-800">Quyền riêng tư và hỗ trợ</span>
+        <span className="text-[15px] font-medium text-gray-800">Quy?n ri�ng t� v� h? tr?</span>
         <ChevronDown className="w-5 h-5 text-gray-500" />
       </button>
     </aside>
@@ -365,7 +365,7 @@ export default function MessengerPage() {
 
   const handleIncomingMessage = useCallback(
     (msg: IncomingChatMessage) => {
-      console.log("🔥 incoming", msg);
+      console.log("?? incoming", msg);
       const myId = currentUser?.id;
       const otherUserId = msg.senderId === myId ? msg.receiverId : msg.senderId;
       const pendingStatus = pendingMessageStatusRef.current[msg.id];
@@ -400,7 +400,7 @@ export default function MessengerPage() {
         [otherUserId]: {
           ...(prev[otherUserId] ?? {}),
           lastMessage: formatConversationPreview(newMsg.text, msg.senderId === myId),
-          timestamp: 'Vừa xong',
+          timestamp: 'V?a xong',
           isUnread: activeChatUserId !== otherUserId,
         },
       }));
@@ -806,8 +806,8 @@ export default function MessengerPage() {
   }, []);
 
   const filters: { key: MessengerFilter; label: string }[] = [
-    { key: 'all', label: 'Tất cả' },
-    { key: 'unread', label: 'Chưa đọc' },
+    { key: 'all', label: 'T?t c?' },
+    { key: 'unread', label: 'Ch�a �?c' },
   ];
 
   const filteredConversations = conversations.filter((conv) => {
@@ -860,10 +860,10 @@ export default function MessengerPage() {
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-[1.75rem] font-semibold tracking-tight">Đoạn chat</h1>
+                  <h1 className="text-[1.75rem] font-semibold tracking-tight">�o?n chat</h1>
                   <span
                     className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`}
-                    title={connected ? 'Đã kết nối realtime' : 'Chưa kết nối'}
+                    title={connected ? '�? k?t n?i realtime' : 'Ch�a k?t n?i'}
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -871,7 +871,7 @@ export default function MessengerPage() {
                     onClick={loadFriends}
                     disabled={loadingConversations}
                     className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors disabled:opacity-50"
-                    title="Tải lại danh sách"
+                    title="T?i l?i danh s�ch"
                   >
                     <RefreshCw className={`w-5 h-5 text-gray-600 ${loadingConversations ? 'animate-spin' : ''}`} />
                   </button>
@@ -888,7 +888,7 @@ export default function MessengerPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Tìm kiếm trên Messenger"
+                  placeholder="T?m ki?m tr�n Messenger"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:bg-gray-200 transition-colors"
@@ -914,12 +914,12 @@ export default function MessengerPage() {
 
             <div className="flex-1 overflow-y-auto p-2">
               {loadingConversations ? (
-                <div className="text-center py-8 text-gray-400 text-sm">Đang tải...</div>
+                <div className="text-center py-8 text-gray-400 text-sm">�ang t?i...</div>
               ) : friendsError ? (
                 <div className="text-center py-8 text-sm">
-                  <p className="text-red-500 mb-2">Không thể tải danh sách bạn bè</p>
+                  <p className="text-red-500 mb-2">Kh�ng th? t?i danh s�ch b?n b�</p>
                   <button onClick={loadFriends} className="text-blue-500 hover:underline text-sm">
-                    Thử lại
+                    Th? l?i
                   </button>
                 </div>
               ) : filteredConversations.length > 0 ? (
@@ -933,8 +933,8 @@ export default function MessengerPage() {
               ) : (
                 <div className="text-center py-8 text-gray-500 text-sm">
                   {conversations.length === 0
-                    ? 'Chưa có bạn bè nào. Kết bạn để bắt đầu chat.'
-                    : 'Không tìm thấy cuộc trò chuyện'}
+                    ? 'Ch�a c� b?n b� n�o. K?t b?n �? b?t �?u chat.'
+                    : 'Kh�ng t?m th?y cu?c tr? chuy?n'}
                 </div>
               )}
             </div>
@@ -977,7 +977,7 @@ export default function MessengerPage() {
             </div>
           ) : activeChatUserId && loadingConversations ? (
             <div className="flex-1 flex items-center justify-center text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
-              Đang tải...
+              �ang t?i...
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-gray-200">
@@ -985,8 +985,8 @@ export default function MessengerPage() {
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Edit className="w-12 h-12 text-gray-400" />
                 </div>
-                <h2 className="text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
-                <p className="text-gray-500 text-sm">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
+                <h2 className="text-xl font-semibold mb-2">Tin nh?n c?a b?n</h2>
+                <p className="text-gray-500 text-sm">Ch?n m?t cu?c tr? chuy?n �? b?t �?u nh?n tin</p>
               </div>
             </div>
           )}

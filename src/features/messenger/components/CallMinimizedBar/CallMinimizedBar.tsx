@@ -1,4 +1,4 @@
-﻿import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume1, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume1, Volume2 } from 'lucide-react';
 
 type CallMode = 'incoming' | 'in_call' | 'outgoing';
 
@@ -53,7 +53,7 @@ export function CallMinimizedBar({
       onClick={onOpen}
       className={`${containerClassName} bg-white border border-gray-200 shadow-lg rounded-xl px-3 py-2 flex items-center gap-2 cursor-pointer`}
       style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
-      title="Mở lại cuộc gọi"
+      title="M? l?i cu?c g?i"
     >
       <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
       <div className="min-w-0">
@@ -70,7 +70,7 @@ export function CallMinimizedBar({
                 onRejectIncoming?.();
               }}
               className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-              title="Từ chối"
+              title="T? ch?i"
             >
               <PhoneOff className="w-4 h-4 text-white" />
             </button>
@@ -80,7 +80,7 @@ export function CallMinimizedBar({
                 onAcceptIncoming?.();
               }}
               className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center"
-              title="Nghe máy"
+              title="Nghe m�y"
             >
               <Phone className="w-4 h-4 text-white" />
             </button>
@@ -95,7 +95,7 @@ export function CallMinimizedBar({
               className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                 speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
               }`}
-              title={speakerMode === 'outer' ? 'Đang loa ngoài' : 'Đang loa trong'}
+              title={speakerMode === 'outer' ? '�ang loa ngo�i' : '�ang loa trong'}
             >
               {speakerMode === 'outer' ? (
                 <Volume2 className="w-4 h-4 text-white" />
@@ -112,7 +112,7 @@ export function CallMinimizedBar({
                 className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                   isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
-                title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
+                title={isCameraEnabled ? 'T?t camera' : 'B?t camera'}
               >
                 {isCameraEnabled ? <Video className="w-4 h-4 text-white" /> : <VideoOff className="w-4 h-4 text-gray-700" />}
               </button>
@@ -125,7 +125,7 @@ export function CallMinimizedBar({
               className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                 isMuted ? 'bg-gray-100 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700'
               }`}
-              title={isMuted ? 'Bật mic' : 'Tắt mic'}
+              title={isMuted ? 'B?t mic' : 'T?t mic'}
             >
               {isMuted ? <MicOff className="w-4 h-4 text-gray-700" /> : <Mic className="w-4 h-4 text-white" />}
             </button>
@@ -135,7 +135,7 @@ export function CallMinimizedBar({
                 onEndCall?.();
               }}
               className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-              title="Kết thúc cuộc gọi"
+              title="K?t th�c cu?c g?i"
             >
               <PhoneOff className="w-4 h-4 text-white" />
             </button>
@@ -150,7 +150,7 @@ export function CallMinimizedBar({
               className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                 speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
               }`}
-              title={speakerMode === 'outer' ? 'Đang loa ngoài' : 'Đang loa trong'}
+              title={speakerMode === 'outer' ? '�ang loa ngo�i' : '�ang loa trong'}
             >
               {speakerMode === 'outer' ? (
                 <Volume2 className="w-4 h-4 text-white" />
@@ -167,7 +167,7 @@ export function CallMinimizedBar({
                 className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                   isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
-                title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
+                title={isCameraEnabled ? 'T?t camera' : 'B?t camera'}
               >
                 {isCameraEnabled ? <Video className="w-4 h-4 text-white" /> : <VideoOff className="w-4 h-4 text-gray-700" />}
               </button>
@@ -178,7 +178,7 @@ export function CallMinimizedBar({
                 onEndCall?.();
               }}
               className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
-              title="Kết thúc cuộc gọi"
+              title="K?t th�c cu?c g?i"
             >
               <PhoneOff className="w-4 h-4 text-white" />
             </button>

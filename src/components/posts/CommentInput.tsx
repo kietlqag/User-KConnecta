@@ -1,4 +1,4 @@
-﻿import { useState, useRef, KeyboardEvent } from 'react';
+import { useState, useRef, KeyboardEvent } from 'react';
 import { Smile, Sticker, Image, FileImage, Send } from 'lucide-react';
 
 interface CommentInputProps {
@@ -9,7 +9,7 @@ interface CommentInputProps {
 
 export function CommentInput({
   onSubmit,
-  placeholder = 'Bình luận...',
+  placeholder = 'B?nh lu?n...',
   userAvatar = 'https://ui-avatars.com/api/?background=random&name=User',
 }: CommentInputProps) {
   const [content, setContent] = useState('');
@@ -63,7 +63,7 @@ export function CommentInput({
             <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Sticker">
               <Sticker className="w-5 h-5 text-gray-600" />
             </button>
-            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Ảnh">
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="?nh">
               <Image className="w-5 h-5 text-gray-600" />
             </button>
             <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="GIF">
@@ -74,7 +74,7 @@ export function CommentInput({
                 type="button"
                 onClick={handleSubmit}
                 className="p-1.5 hover:bg-emerald-50 rounded-full text-emerald-600 hover:text-emerald-700 transition-colors"
-                title="Gửi"
+                title="G?i"
               >
                 <Send className="w-5 h-5 fill-current" />
               </button>

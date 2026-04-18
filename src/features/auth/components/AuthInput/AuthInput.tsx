@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
-interface AuthInputProps extends React.InputHTMLProperties<HTMLInputElement> {
+interface AuthInputProps extends React.ComponentProps<'input'> {
   label: string;
   error?: string;
   icon?: React.ReactNode;

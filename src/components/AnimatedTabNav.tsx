@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router@7.1.3';
+import { Link, useLocation } from 'react-router-dom';
 
 interface TabItem {
   icon: React.ReactNode;

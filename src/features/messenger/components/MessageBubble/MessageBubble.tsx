@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff } from 'lucide-react';
 import { Message } from '../../types/message.types';
 
@@ -17,8 +17,8 @@ interface MessageBubbleProps {
   onCallAgain?: (mediaType?: 'audio' | 'video') => void;
 }
 
-const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-const extraReactions = ['🔥', '👏', '🤩', '😎', '😡', '💯', '🎉', '✅'];
+const quickReactions = ['??', '??', '??', '??', '??', '??'];
+const extraReactions = ['??', '??', '??', '??', '??', '??', '??', '?'];
 
 export const MessageBubble = ({
   message,
@@ -31,7 +31,7 @@ export const MessageBubble = ({
   senderAvatar,
   senderName = 'Sender',
   showDeliveryStatus = false,
-  deliveryStatusLabel = 'Đã gửi',
+  deliveryStatusLabel = '�? g?i',
   onCallAgain,
 }: MessageBubbleProps) => {
   const [showReactions, setShowReactions] = useState(false);
@@ -81,12 +81,12 @@ export const MessageBubble = ({
       setShowExtraReactions(false);
       return;
     }
-    // Chỉ giữ 1 reaction duy nhất - nếu click lại reaction đang có thì xóa, nếu click reaction khác thì thay thế.
+    // Ch? gi? 1 reaction duy nh?t - n?u click l?i reaction �ang c� th? x�a, n?u click reaction kh�c th? thay th?.
     if (message.reactions && message.reactions.length === 1 && message.reactions[0] === emoji) {
-      // Nếu click lại reaction đang có thì xóa hết.
+      // N?u click l?i reaction �ang c� th? x�a h?t.
       onReact?.(message.id, '');
     } else {
-      // Nếu click reaction khác thì thay thế.
+      // N?u click reaction kh�c th? thay th?.
       onReact?.(message.id, emoji);
     }
     setShowReactions(false);
@@ -137,7 +137,7 @@ export const MessageBubble = ({
             className="mt-2.5 w-full rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors py-2 text-[15px] font-semibold text-gray-900 flex items-center justify-center gap-2"
           >
             {isVideoCall ? <Video className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
-            {isVideoCall ? 'Gọi video lại' : 'Gọi lại'}
+            {isVideoCall ? 'G?i video l?i' : 'G?i l?i'}
           </button>
         </div>
       </div>
@@ -182,7 +182,7 @@ export const MessageBubble = ({
             }`}
           >
             <p className={`text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
-              {message.deleted ? 'Tin nhắn đã được gỡ' : message.text}
+              {message.deleted ? 'Tin nh?n �? ��?c g?' : message.text}
             </p>
           </div>
 
@@ -213,7 +213,7 @@ export const MessageBubble = ({
                   setShowReactions(!showReactions);
                 }}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-                title="Thả cảm xúc"
+                title="Th? c?m x�c"
                 disabled={message.deleted}
               >
                 <Smile className="w-3.5 h-3.5 text-gray-600" />
@@ -222,7 +222,7 @@ export const MessageBubble = ({
               <button
                 onClick={() => !message.deleted && onReply?.(message)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-                title="Trả lời"
+                title="Tr? l?i"
                 disabled={message.deleted}
               >
                 <Reply className="w-3.5 h-3.5 text-gray-600" />
@@ -231,7 +231,7 @@ export const MessageBubble = ({
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer relative"
-                title="Tùy chọn khác"
+                title="T�y ch?n kh�c"
               >
                 <MoreVertical className="w-3.5 h-3.5 text-gray-600" />
               </button>
@@ -258,7 +258,7 @@ export const MessageBubble = ({
               <button
                 onClick={() => setShowExtraReactions((prev) => !prev)}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-                title="Thêm emoji khác"
+                title="Th�m emoji kh�c"
               >
                 <span className="text-xl text-gray-600">+</span>
               </button>
@@ -299,7 +299,7 @@ export const MessageBubble = ({
                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
                 disabled={message.deleted || !message.isOwn}
               >
-                {message.isOwn ? 'Gỡ' : 'Chỉ gỡ tin nhắn của bạn'}
+                {message.isOwn ? 'G?' : 'Ch? g? tin nh?n c?a b?n'}
               </button>
               <button
                 onClick={() => {
@@ -308,7 +308,7 @@ export const MessageBubble = ({
                 }}
                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
               >
-                Chuyển tiếp
+                Chuy?n ti?p
               </button>
               <button
                 onClick={() => {
@@ -317,7 +317,7 @@ export const MessageBubble = ({
                 }}
                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
               >
-                Báo cáo
+                B�o c�o
               </button>
             </div>
           )}

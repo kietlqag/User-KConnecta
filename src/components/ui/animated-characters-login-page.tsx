@@ -1,4 +1,4 @@
-ï»¿"use client";
+"use client";
 
 import { useState, useEffect, useRef, type FormEvent, type RefObject } from "react";
 import { Button } from "@/components/ui/button";
@@ -292,9 +292,9 @@ export function AnimatedCharactersLoginPage() {
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     if (email === "erik@gmail.com" && password === "1234") {
-      alert("ÄÄƒng nháº­p thÃ nh cÃ´ng! ChÃ o má»«ng Erik!");
+      alert("Ğãng nh?p thành công! Chào m?ng Erik!");
     } else {
-      setError("Email hoáº·c máº­t kháº©u chÆ°a Ä‘Ãºng. Vui lÃ²ng thá»­ láº¡i.");
+      setError("Email ho?c m?t kh?u chıa ğúng. Vui l?ng th? l?i.");
     }
 
     setIsLoading(false);
@@ -497,13 +497,13 @@ export function AnimatedCharactersLoginPage() {
 
         <div className="relative z-20 flex items-center gap-8 text-sm text-primary-foreground/60">
           <a href="#" className="transition-colors hover:text-primary-foreground">
-            ChÃ­nh sÃ¡ch báº£o máº­t
+            Chính sách b?o m?t
           </a>
           <a href="#" className="transition-colors hover:text-primary-foreground">
-            Äiá»u khoáº£n dá»‹ch vá»¥
+            Ği?u kho?n d?ch v?
           </a>
           <a href="#" className="transition-colors hover:text-primary-foreground">
-            LiÃªn há»‡
+            Liên h?
           </a>
         </div>
 
@@ -522,8 +522,8 @@ export function AnimatedCharactersLoginPage() {
           </div>
 
           <div className="mb-10 text-center">
-            <h1 className="mb-2 text-3xl font-bold tracking-tight">ChÃ o má»«ng báº¡n quay láº¡i!</h1>
-            <p className="text-sm text-muted-foreground">Vui lÃ²ng nháº­p thÃ´ng tin Ä‘Äƒng nháº­p</p>
+            <h1 className="mb-2 text-3xl font-bold tracking-tight">Chào m?ng b?n quay l?i!</h1>
+            <p className="text-sm text-muted-foreground">Vui l?ng nh?p thông tin ğãng nh?p</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -547,13 +547,13 @@ export function AnimatedCharactersLoginPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">
-                Máº­t kháº©u
+                M?t kh?u
               </Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -573,11 +573,11 @@ export function AnimatedCharactersLoginPage() {
               <div className="flex items-center space-x-2">
                 <Checkbox id="remember" />
                 <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">
-                  Ghi nhá»› trong 30 ngÃ y
+                  Ghi nh? trong 30 ngày
                 </Label>
               </div>
               <a href="#" className="text-sm font-medium text-primary hover:underline">
-                QuÃªn máº­t kháº©u?
+                Quên m?t kh?u?
               </a>
             </div>
 
@@ -586,7 +586,7 @@ export function AnimatedCharactersLoginPage() {
             )}
 
             <Button type="submit" className="h-12 w-full text-base font-medium" size="lg" disabled={isLoading}>
-              {isLoading ? "Äang Ä‘Äƒng nháº­p..." : "ÄÄƒng nháº­p"}
+              {isLoading ? "Ğang ğãng nh?p..." : "Ğãng nh?p"}
             </Button>
           </form>
 
@@ -597,14 +597,14 @@ export function AnimatedCharactersLoginPage() {
               type="button"
             >
               <Mail className="mr-2 size-5" />
-              ÄÄƒng nháº­p vá»›i Google
+              Ğãng nh?p v?i Google
             </Button>
           </div>
 
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            ChÆ°a cÃ³ tÃ i khoáº£n?{" "}
+            Chıa có tài kho?n?{" "}
             <a href="#" className="font-medium text-foreground hover:underline">
-              ÄÄƒng kÃ½ ngay
+              Ğãng k? ngay
             </a>
           </div>
         </div>

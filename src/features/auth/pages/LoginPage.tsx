@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
+import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { authService, type AuthUser } from "@/services/authService";
@@ -7,166 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
+import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
 
 interface LoginFormData {
   email: string;
   password: string;
   rememberMe: boolean;
 }
-
-interface PupilProps {
-  size?: number;
-  maxDistance?: number;
-  pupilColor?: string;
-  forceLookX?: number;
-  forceLookY?: number;
-}
-
-const Pupil = ({
-  size = 12,
-  maxDistance = 5,
-  pupilColor = "black",
-  forceLookX,
-  forceLookY,
-}: PupilProps) => {
-  const [mouseX, setMouseX] = useState<number>(0);
-  const [mouseY, setMouseY] = useState<number>(0);
-  const pupilRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX);
-      setMouseY(e.clientY);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  const calculatePupilPosition = () => {
-    if (!pupilRef.current) return { x: 0, y: 0 };
-
-    if (forceLookX !== undefined && forceLookY !== undefined) {
-      return { x: forceLookX, y: forceLookY };
-    }
-
-    const pupil = pupilRef.current.getBoundingClientRect();
-    const pupilCenterX = pupil.left + pupil.width / 2;
-    const pupilCenterY = pupil.top + pupil.height / 2;
-
-    const deltaX = mouseX - pupilCenterX;
-    const deltaY = mouseY - pupilCenterY;
-    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
-
-    const angle = Math.atan2(deltaY, deltaX);
-    return {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-    };
-  };
-
-  const pupilPosition = calculatePupilPosition();
-
-  return (
-    <div
-      ref={pupilRef}
-      className="rounded-full"
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        backgroundColor: pupilColor,
-        transform: `translate(${pupilPosition.x}px, ${pupilPosition.y}px)`,
-        transition: "transform 0.1s ease-out",
-      }}
-    />
-  );
-};
-
-interface EyeBallProps {
-  size?: number;
-  pupilSize?: number;
-  maxDistance?: number;
-  eyeColor?: string;
-  pupilColor?: string;
-  isBlinking?: boolean;
-  forceLookX?: number;
-  forceLookY?: number;
-}
-
-const EyeBall = ({
-  size = 48,
-  pupilSize = 16,
-  maxDistance = 10,
-  eyeColor = "white",
-  pupilColor = "black",
-  isBlinking = false,
-  forceLookX,
-  forceLookY,
-}: EyeBallProps) => {
-  const [mouseX, setMouseX] = useState<number>(0);
-  const [mouseY, setMouseY] = useState<number>(0);
-  const eyeRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX);
-      setMouseY(e.clientY);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
-  const calculatePupilPosition = () => {
-    if (!eyeRef.current) return { x: 0, y: 0 };
-
-    if (forceLookX !== undefined && forceLookY !== undefined) {
-      return { x: forceLookX, y: forceLookY };
-    }
-
-    const eye = eyeRef.current.getBoundingClientRect();
-    const eyeCenterX = eye.left + eye.width / 2;
-    const eyeCenterY = eye.top + eye.height / 2;
-
-    const deltaX = mouseX - eyeCenterX;
-    const deltaY = mouseY - eyeCenterY;
-    const distance = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2), maxDistance);
-
-    const angle = Math.atan2(deltaY, deltaX);
-    return {
-      x: Math.cos(angle) * distance,
-      y: Math.sin(angle) * distance,
-    };
-  };
-
-  const pupilPosition = calculatePupilPosition();
-
-  return (
-    <div
-      ref={eyeRef}
-      className="flex items-center justify-center rounded-full transition-all duration-150"
-      style={{
-        width: `${size}px`,
-        height: isBlinking ? "2px" : `${size}px`,
-        backgroundColor: eyeColor,
-        overflow: "hidden",
-      }}
-    >
-      {!isBlinking && (
-        <div
-          className="rounded-full"
-          style={{
-            width: `${pupilSize}px`,
-            height: `${pupilSize}px`,
-            backgroundColor: pupilColor,
-            transform: `translate(${pupilPosition.x}px, ${pupilPosition.y}px)`,
-            transition: "transform 0.1s ease-out",
-          }}
-        />
-      )}
-    </div>
-  );
-};
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -687,6 +534,7 @@ export function LoginPage() {
                   disabled={isAuthenticating}
                   checked={formData.rememberMe}
                   onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, rememberMe: checked === true }))}
+                  className="cursor-pointer"
                 />
                 <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">Ghi nhớ đăng nhập</Label>
               </div>

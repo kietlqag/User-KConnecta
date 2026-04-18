@@ -1,11 +1,18 @@
-import { useEffect, useRef, useState, type ChangeEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import React, { useEffect, useRef, useState, type ChangeEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { Camera, Check, ChevronRight, Crop, Globe, Music, Search, Settings, Sparkles, Type, UserPlus, Users, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authService, AuthUser } from '@/services/authService';
-import { storyService } from '@/services/storyService';
+import { useCreateStoryMutation } from '@/features/stories/hooks/useStories';
+import bgImg1 from './backgroundImage/000ecac94d4fa09a8369747056ce72f0.jpg';
+import bgImg2 from './backgroundImage/2886e1de8d8637a139478d903feb0643.jpg';
+import bgImg3 from './backgroundImage/60b39f8c265cc15e17009e2b539249c7.jpg';
+import bgImg4 from './backgroundImage/84f90761646e060beb685c3a51c65e5e.jpg';
+import bgImg5 from './backgroundImage/992d312079803e982fed2aa32d3f6992.jpg';
+import bgImg6 from './backgroundImage/bb693fb7f6b569c4821a018d9bdcf242.jpg';
+import bgImg7 from './backgroundImage/e46e6b20a5944479a9ee44cbb495567c.jpg';
 
-type StoryEditorTool = 'text' | 'music' | 'alt-text' | 'image';
+type StoryEditorTool = 'text' | 'music' | 'alt-text' | 'image' | 'background';
 
 interface MusicTrack {
   id: string;
@@ -24,8 +31,48 @@ const musicTracks: MusicTrack[] = [
 
 const textColorPalette = ['#FFFFFF', '#000000', '#F43F5E', '#F59E0B', '#22C55E', '#3B82F6', '#8B5CF6', '#F97316'];
 
+const bgImagePresets = [bgImg1, bgImg2, bgImg3, bgImg4, bgImg5, bgImg6, bgImg7];
+
+const bgPresets: Array<{ id: string; type: 'gradient' | 'solid'; value: string }> = [
+  { id: 'purple-pink',   type: 'gradient', value: 'linear-gradient(135deg, #7c3aed 0%, #db2777 100%)' },
+  { id: 'blue-purple',   type: 'gradient', value: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)' },
+  { id: 'cyan-blue',     type: 'gradient', value: 'linear-gradient(135deg, #0891b2 0%, #2563eb 100%)' },
+  { id: 'green-teal',    type: 'gradient', value: 'linear-gradient(135deg, #16a34a 0%, #0d9488 100%)' },
+  { id: 'yellow-green',  type: 'gradient', value: 'linear-gradient(135deg, #ca8a04 0%, #16a34a 100%)' },
+  { id: 'orange-yellow', type: 'gradient', value: 'linear-gradient(135deg, #ea580c 0%, #ca8a04 100%)' },
+  { id: 'red-orange',    type: 'gradient', value: 'linear-gradient(135deg, #dc2626 0%, #ea580c 100%)' },
+  { id: 'pink-red',      type: 'gradient', value: 'linear-gradient(135deg, #db2777 0%, #dc2626 100%)' },
+  { id: 'midnight',      type: 'gradient', value: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' },
+  { id: 'slate',         type: 'gradient', value: 'linear-gradient(135deg, #1e293b 0%, #475569 100%)' },
+  { id: 'black',         type: 'solid',    value: '#000000' },
+  { id: 'white',         type: 'solid',    value: '#FFFFFF' },
+];
+
+interface BgState {
+  type: 'image' | 'gradient' | 'solid';
+  value: string; // image src | gradient CSS | hex color
+}
+
+const DEFAULT_BG: BgState = { type: 'gradient', value: bgPresets[0].value };
+
+function getBgStyle(bg: BgState): React.CSSProperties {
+  if (bg.type === 'image') {
+    return {
+      backgroundImage: `url(${bg.value})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    };
+  }
+  if (bg.type === 'gradient') {
+    return { backgroundImage: bg.value };
+  }
+  return { backgroundColor: bg.value };
+}
+
 export function CreateStoryPage() {
   const navigate = useNavigate();
+  const createStory = useCreateStoryMutation();
   const [currentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
   const userAvatar = currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14';
   const userFullName = currentUser?.fullName || 'Khang Nguyen';
@@ -40,7 +87,8 @@ export function CreateStoryPage() {
   const lastScaleRef = useRef(100);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTextStoryMode, setIsTextStoryMode] = useState(false);
+
   const [activeTool, setActiveTool] = useState<StoryEditorTool>('text');
   const [storyText, setStoryText] = useState('');
   const [textSize, setTextSize] = useState(72);
@@ -59,6 +107,7 @@ export function CreateStoryPage() {
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [privacySetting, setPrivacySetting] = useState<'public' | 'friends' | 'custom'>('friends');
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
+  const [selectedBg, setSelectedBg] = useState<BgState>(DEFAULT_BG);
 
   const handleOpenImagePicker = () => {
     imageInputRef.current?.click();
@@ -91,37 +140,43 @@ export function CreateStoryPage() {
     setStoryText('');
     setImageScale(100);
     lastScaleRef.current = 100;
+    setIsTextStoryMode(false);
   };
 
-  const handleSubmitStory = async () => {
+  const handleCreateTextStory = () => {
+    setIsTextStoryMode(true);
+    setActiveTool('background');
+    setStoryText('Bắt đầu gõ...');
+    setTextPosition({ x: 50, y: 50 });
+    setSelectedBg(DEFAULT_BG);
+  };
+
+  const handleSubmitStory = () => {
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để đăng tin');
       return;
     }
-    if (!selectedImageFile && !storyText.trim()) {
+    if (!selectedImageFile && !isTextStoryMode) {
       toast.error('Tin cần có ảnh hoặc văn bản');
       return;
     }
-    try {
-      setIsSubmitting(true);
-      await storyService.createStory({
-        userId: currentUser.id,
-        image: selectedImageFile ?? undefined,
-        textContent: storyText.trim() || undefined,
-        textColor: storyText.trim() ? textColor : undefined,
-        textSize: storyText.trim() ? textSize : undefined,
-        textPosX: storyText.trim() ? textPosition.x : undefined,
-        textPosY: storyText.trim() ? textPosition.y : undefined,
-        musicTrackId: selectedTrackId ?? undefined,
-        altText: altText.trim() || undefined,
-      });
-      toast.success('Đã đăng tin thành công!');
-      navigate('/home');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể đăng tin');
-    } finally {
-      setIsSubmitting(false);
-    }
+
+    const hasText = storyText.trim().length > 0;
+
+    createStory.mutate({
+      userId: currentUser.id,
+      image: selectedImageFile ?? undefined,
+      textContent: hasText ? storyText.trim() : undefined,
+      textColor: hasText ? textColor : undefined,
+      textSize: hasText ? textSize : undefined,
+      textPosX: hasText ? textPosition.x : undefined,
+      textPosY: hasText ? textPosition.y : undefined,
+      musicTrackId: selectedTrackId ?? undefined,
+      altText: altText.trim() || undefined,
+      backgroundColor: isTextStoryMode ? selectedBg.value : undefined,
+    });
+
+    navigate('/home');
   };
 
   useEffect(() => {
@@ -139,6 +194,7 @@ export function CreateStoryPage() {
   }, [storyText]);
 
   const hasSelectedImage = Boolean(selectedImageUrl);
+  const isActive = hasSelectedImage || isTextStoryMode;
   const filteredTracks = musicTracks.filter((track) =>
     `${track.title} ${track.artist}`.toLowerCase().includes(musicKeyword.toLowerCase())
   );
@@ -149,23 +205,22 @@ export function CreateStoryPage() {
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
+    if (lastScaleRef.current === imageScale) return;
+    lastScaleRef.current = imageScale;
 
-    const oldScale = lastScaleRef.current;
-    const newScale = imageScale;
-    if (oldScale === newScale) return;
-
-    const ratio = newScale / oldScale;
-    const viewportW = container.clientWidth;
-    const viewportH = container.clientHeight;
-
-    // Maintain center point during zoom
-    const targetScrollLeft = (container.scrollLeft + viewportW / 2) * ratio - viewportW / 2;
-    const targetScrollTop = (container.scrollTop + viewportH / 2) * ratio - viewportH / 2;
-
-    container.scrollLeft = targetScrollLeft;
-    container.scrollTop = targetScrollTop;
-    lastScaleRef.current = newScale;
-  }, [imageScale]);
+    // Center on image after every zoom change.
+    // The formula (scrollLeft + W/2) * ratio - W/2 breaks when the content
+    // wrapper is larger than the image (due to min-w/h-full flex-centering),
+    // because the image origin shifts non-linearly. Direct centering is correct.
+    requestAnimationFrame(() => {
+      const c = scrollContainerRef.current;
+      if (!c) return;
+      const scaledW = (contentSize.width * imageScale) / 100;
+      const scaledH = (contentSize.height * imageScale) / 100;
+      c.scrollLeft = Math.max(0, (scaledW - c.clientWidth) / 2);
+      c.scrollTop  = Math.max(0, (scaledH - c.clientHeight) / 2);
+    });
+  }, [imageScale, contentSize]);
 
   const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
     const { naturalWidth, naturalHeight } = event.currentTarget;
@@ -380,7 +435,7 @@ export function CreateStoryPage() {
               <span className="font-medium text-gray-900">{userFullName}</span>
             </div>
 
-            {hasSelectedImage && (
+            {isActive && (
               <div className="space-y-1 border-t border-gray-200 pt-3">
                 <button
                   type="button"
@@ -402,26 +457,42 @@ export function CreateStoryPage() {
                   <Music className="h-5 w-5" />
                   <span className="text-sm font-medium">Thêm nhạc</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTool('alt-text')}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${
-                    activeTool === 'alt-text' ? 'bg-gray-100' : ''
-                  }`}
-                >
-                  <Sparkles className="h-5 w-5" />
-                  <span className="text-sm font-medium">Văn bản thay thế</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTool('image')}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${
-                    activeTool === 'image' ? 'bg-gray-100' : ''
-                  }`}
-                >
-                  <Crop className="h-5 w-5" />
-                  <span className="text-sm font-medium">Kích thước ảnh</span>
-                </button>
+                {isTextStoryMode && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTool('background')}
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${
+                      activeTool === 'background' ? 'bg-gray-100' : ''
+                    }`}
+                  >
+                    <Sparkles className="h-5 w-5" />
+                    <span className="text-sm font-medium">Phông nền</span>
+                  </button>
+                )}
+                {hasSelectedImage && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTool('alt-text')}
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${
+                        activeTool === 'alt-text' ? 'bg-gray-100' : ''
+                      }`}
+                    >
+                      <Sparkles className="h-5 w-5" />
+                      <span className="text-sm font-medium">Văn bản thay thế</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTool('image')}
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${
+                        activeTool === 'image' ? 'bg-gray-100' : ''
+                      }`}
+                    >
+                      <Crop className="h-5 w-5" />
+                      <span className="text-sm font-medium">Kích thước ảnh</span>
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
@@ -459,7 +530,7 @@ export function CreateStoryPage() {
               </div>
             )}
 
-            {hasSelectedImage && activeTool === 'text' && (
+            {isActive && activeTool === 'text' && (
               <div className="mt-4 space-y-2 text-sm">
                 <p className="text-gray-600">Click chữ để sửa, giữ rồi kéo để di chuyển, hover text để hiện 4 góc kéo kích thước.</p>
                 <div>
@@ -480,24 +551,61 @@ export function CreateStoryPage() {
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min={24}
-                    max={96}
-                    value={textSize}
-                    onChange={(event) => setTextSize(Number(event.target.value))}
-                    aria-label="Chỉnh kích thước văn bản"
-                    title="Chỉnh kích thước văn bản"
-                    className="w-full"
-                  />
-                  <span className="w-12 text-right text-xs text-gray-600">{textSize}px</span>
+              </div>
+            )}
+
+            {isTextStoryMode && activeTool === 'background' && (
+              <div className="mt-4 space-y-4 text-sm">
+                <div>
+                  <p className="mb-2 text-xs font-medium text-gray-600">Ảnh nền</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {bgImagePresets.map((src) => {
+                      const isSelected = selectedBg.type === 'image' && selectedBg.value === src;
+                      return (
+                        <button
+                          key={src}
+                          type="button"
+                          onClick={() => setSelectedBg({ type: 'image', value: src })}
+                          className={`h-14 w-full cursor-pointer rounded-lg border-2 overflow-hidden transition-transform hover:scale-105 ${
+                            isSelected ? 'border-blue-500 shadow-md' : 'border-transparent'
+                          }`}
+                          aria-label="Chọn ảnh nền"
+                        >
+                          <img src={src} alt="" className="h-full w-full object-cover" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-xs font-medium text-gray-600">Màu nền</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {bgPresets.map((preset) => {
+                      const isSelected = selectedBg.type === preset.type && selectedBg.value === preset.value;
+                      const swatchStyle: React.CSSProperties = preset.type === 'gradient'
+                        ? { backgroundImage: preset.value }
+                        : { backgroundColor: preset.value };
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => setSelectedBg({ type: preset.type, value: preset.value })}
+                          className={`h-14 w-full cursor-pointer rounded-lg border-2 transition-transform hover:scale-105 ${
+                            isSelected ? 'border-blue-500 shadow-md' : 'border-transparent'
+                          }`}
+                          style={swatchStyle}
+                          aria-label={`Chọn phông nền ${preset.id}`}
+                          title={preset.id}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
-          {hasSelectedImage && (
+          {isActive && (
             <div className="absolute right-0 bottom-0 left-0 flex gap-3 border-t border-gray-200 bg-white px-4 py-3">
               <button
                 type="button"
@@ -509,17 +617,17 @@ export function CreateStoryPage() {
               <button
                 type="button"
                 onClick={handleSubmitStory}
-                disabled={isSubmitting}
+                disabled={createStory.isPending}
                 className="flex-1 cursor-pointer rounded-md bg-blue-600 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Đang đăng...' : 'Chia sẻ lên tin'}
+                {createStory.isPending ? 'Đang đăng...' : 'Chia sẻ lên tin'}
               </button>
             </div>
           )}
         </aside>
 
         <main className="flex flex-1 items-center justify-center p-6 overflow-hidden">
-          {!hasSelectedImage ? (
+          {!isActive ? (
             <div className="flex gap-4">
               <button
                 type="button"
@@ -537,6 +645,7 @@ export function CreateStoryPage() {
 
               <button
                 type="button"
+                onClick={handleCreateTextStory}
                 className="group relative h-[320px] w-[190px] cursor-pointer overflow-hidden rounded-xl bg-gradient-to-br from-purple-600 via-fuchsia-500 to-pink-500 text-white shadow-md transition hover:-translate-y-1"
               >
                 <div className="absolute inset-0 bg-black/5" />
@@ -558,52 +667,61 @@ export function CreateStoryPage() {
                   ref={previewFrameRef}
                 >
                   <div className="absolute inset-0 touch-none">
-                    {/* 🔥 BACKGROUND BLUR */}
-                    <div
-                      className="absolute inset-[1px] scale-125 pointer-events-none"
-                      style={{
-                        backgroundImage: `url(${selectedImageUrl})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        filter: 'blur(40px) brightness(0.7)',
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-black/40" />
-
-                    {/* 🔥 SCROLL CONTAINER */}
-                    <div
-                      ref={scrollContainerRef}
-                      className={`absolute inset-0 overflow-auto scrollbar-none touch-none select-none bg-transparent ${
-                        imageScale > 100 || (scrollContainerRef.current && (scrollContainerRef.current.scrollWidth > scrollContainerRef.current.clientWidth || scrollContainerRef.current.scrollHeight > scrollContainerRef.current.clientHeight)) 
-                        ? (isGrabbing ? 'cursor-grabbing' : 'cursor-grab') : ''
-                      }`}
-                      onPointerDown={handleScrollPointerDown}
-                      onPointerMove={handleScrollPointerMove}
-                      onPointerUp={handleScrollPointerUp}
-                      onPointerCancel={handleScrollPointerUp}
-                    >
-                      <div 
-                        className="flex items-center justify-center min-w-full min-h-full bg-transparent"
-                        style={{
-                          width: `${(contentSize.width * imageScale) / 100}px`,
-                          height: `${(contentSize.height * imageScale) / 100}px`,
-                          margin: 'auto'
-                        }}
-                      >
-                        <img
-                          src={selectedImageUrl ?? ''}
-                          alt="Story preview"
-                          onLoad={handleImageLoad}
-                          className="select-none outline-none max-w-none"
+                    {isTextStoryMode ? (
+                      <div
+                        className="absolute inset-0 pointer-events-none"
+                        style={getBgStyle(selectedBg)}
+                      />
+                    ) : (
+                      <>
+                        {/* 🔥 BACKGROUND BLUR */}
+                        <div
+                          className="absolute inset-[1px] scale-125 pointer-events-none"
                           style={{
-                            width: `${(contentSize.width * imageScale) / 100}px`,
-                            height: `${(contentSize.height * imageScale) / 100}px`,
-                            objectFit: 'contain',
-                            pointerEvents: 'none'
+                            backgroundImage: `url(${selectedImageUrl})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            filter: 'blur(40px) brightness(0.7)',
                           }}
                         />
-                      </div>
-                    </div>
+                        <div className="absolute inset-0 bg-black/40" />
+
+                        {/* 🔥 SCROLL CONTAINER */}
+                        <div
+                          ref={scrollContainerRef}
+                          className={`absolute inset-0 overflow-auto scrollbar-none touch-none select-none bg-transparent ${
+                            imageScale > 100 || (scrollContainerRef.current && (scrollContainerRef.current.scrollWidth > scrollContainerRef.current.clientWidth || scrollContainerRef.current.scrollHeight > scrollContainerRef.current.clientHeight)) 
+                            ? (isGrabbing ? 'cursor-grabbing' : 'cursor-grab') : ''
+                          }`}
+                          onPointerDown={handleScrollPointerDown}
+                          onPointerMove={handleScrollPointerMove}
+                          onPointerUp={handleScrollPointerUp}
+                          onPointerCancel={handleScrollPointerUp}
+                        >
+                          <div 
+                            className="flex items-center justify-center min-w-full min-h-full bg-transparent"
+                            style={{
+                              width: `${(contentSize.width * imageScale) / 100}px`,
+                              height: `${(contentSize.height * imageScale) / 100}px`,
+                              margin: 'auto'
+                            }}
+                          >
+                            <img
+                              src={selectedImageUrl ?? ''}
+                              alt="Story preview"
+                              onLoad={handleImageLoad}
+                              className="select-none outline-none max-w-none"
+                              style={{
+                                width: `${(contentSize.width * imageScale) / 100}px`,
+                                height: `${(contentSize.height * imageScale) / 100}px`,
+                                objectFit: 'contain',
+                                pointerEvents: 'none'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {(storyText.length > 0 || isEditingText) && (
@@ -700,6 +818,23 @@ export function CreateStoryPage() {
                       className="flex-1 accent-blue-500 h-1 rounded-lg cursor-pointer"
                     />
                     <span className="text-xs font-mono font-bold text-white w-10 text-right">{imageScale}%</span>
+                  </div>
+                )}
+
+                {activeTool === 'text' && (
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 px-6 py-3 rounded-full bg-black/60 backdrop-blur-md border border-white/20 shadow-xl w-[320px]">
+                    <span className="text-xs font-bold text-white/90 shrink-0">Cỡ chữ</span>
+                    <input
+                      type="range"
+                      min={24}
+                      max={96}
+                      value={textSize}
+                      onChange={(event) => setTextSize(Number(event.target.value))}
+                      aria-label="Chỉnh kích thước văn bản"
+                      title="Chỉnh kích thước văn bản"
+                      className="flex-1 accent-blue-500 h-1 rounded-lg cursor-pointer"
+                    />
+                    <span className="text-xs font-mono font-bold text-white w-10 text-right">{textSize}px</span>
                   </div>
                 )}
 

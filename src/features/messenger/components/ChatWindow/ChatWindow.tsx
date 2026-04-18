@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Phone,
   PhoneOff,
@@ -149,7 +149,7 @@ export const ChatWindow = ({
     const text = inputText.trim();
     if (!text || !connected) return;
     const payload = replyToMessage
-      ? `Trả lời "${replyToMessage.text.slice(0, 80)}": ${text}`
+      ? `Tr? l?i "${replyToMessage.text.slice(0, 80)}": ${text}`
       : text;
     onSendMessage(payload);
     setInputText('');
@@ -178,7 +178,7 @@ export const ChatWindow = ({
 
   const handleForward = (message: Message) => {
     if (!message.text?.trim()) return;
-    const prefix = message.systemType ? '' : 'Chuyển tiếp: ';
+    const prefix = message.systemType ? '' : 'Chuy?n ti?p: ';
     setInputText((prev) => {
       const normalizedPrev = prev.trim();
       if (!normalizedPrev) return `${prefix}${message.text}`.trim();
@@ -191,8 +191,8 @@ export const ChatWindow = ({
     const ok = await Promise.resolve(onReportMessage?.(message.id) ?? true);
     setReportNotice(
       ok
-        ? `Đã báo cáo: "${excerpt}${message.text.length > 40 ? '...' : ''}"`
-        : 'Không thể báo cáo tin nhắn lúc này',
+        ? `�? b�o c�o: "${excerpt}${message.text.length > 40 ? '...' : ''}"`
+        : 'Kh�ng th? b�o c�o tin nh?n l�c n�y',
     );
     window.setTimeout(() => {
       setReportNotice(null);
@@ -229,16 +229,16 @@ export const ChatWindow = ({
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       const message = messages[i];
       if (!message.isOwn || message.systemType) continue;
-      if (message.deliveryStatus === 'SEEN') return 'Đã xem';
-      if (message.deliveryStatus === 'DELIVERED') return 'Đã nhận';
-      return 'Đã gửi';
+      if (message.deliveryStatus === 'SEEN') return '�? xem';
+      if (message.deliveryStatus === 'DELIVERED') return '�? nh?n';
+      return '�? g?i';
     }
-    return 'Đã gửi';
+    return '�? g?i';
   };
 
   const lastOwnMessageId = getLastOwnMessageId();
   const isLastMessageFromMe = messages.length > 0 && messages[messages.length - 1].isOwn;
-  const latestOwnMessageStatus = connected ? getLastOwnMessageStatusLabel() : 'Đã gửi';
+  const latestOwnMessageStatus = connected ? getLastOwnMessageStatusLabel() : '�? g?i';
 
   return (
     <div
@@ -257,7 +257,7 @@ export const ChatWindow = ({
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors -ml-2 cursor-pointer"
-              title="Quay lại danh sách chat"
+              title="Quay l?i danh s�ch chat"
             >
               <ArrowLeft className="w-5 h-5 text-gray-700" />
             </button>
@@ -285,7 +285,7 @@ export const ChatWindow = ({
             onClick={hasActiveVoiceCall ? onEndVoiceCall : onStartVoiceCall}
             disabled={hasActiveVoiceCall ? false : !connected || !canStartVoiceCall}
             className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            title={hasActiveVoiceCall ? 'Kết thúc cuộc gọi' : 'Gọi thoại'}
+            title={hasActiveVoiceCall ? 'K?t th�c cu?c g?i' : 'G?i tho?i'}
           >
             {hasActiveVoiceCall ? (
               <PhoneOff className="w-5 h-5 text-red-500" />
@@ -297,12 +297,12 @@ export const ChatWindow = ({
             onClick={onStartVideoCall}
             disabled={hasActiveVoiceCall || !connected || !canStartVideoCall}
             className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Gọi video"
+            title="G?i video"
           >
             <Video className={`w-[22px] h-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-blue-600'}`} />
           </button>
           {fullScreen && (
-            <button className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Thông tin">
+            <button className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Th�ng tin">
               <Info className="w-5 h-5 text-blue-600" />
             </button>
           )}
@@ -310,7 +310,7 @@ export const ChatWindow = ({
             <button
               onClick={onToggleMute}
               className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title={isMuted ? 'Bật mic' : 'Tắt mic'}
+              title={isMuted ? 'B?t mic' : 'T?t mic'}
             >
               <Mic className={`w-5 h-5 ${isMuted ? 'text-red-500' : 'text-blue-600'}`} />
             </button>
@@ -319,7 +319,7 @@ export const ChatWindow = ({
             <button
               onClick={onMinimize}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title="Thu nhỏ"
+              title="Thu nh?"
             >
               <Minus className="w-4 h-4 text-blue-600" />
             </button>
@@ -328,7 +328,7 @@ export const ChatWindow = ({
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title="Đóng"
+              title="��ng"
             >
               <X className="w-4 h-4 text-blue-600" />
             </button>
@@ -349,22 +349,22 @@ export const ChatWindow = ({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
             </svg>
-            Đang tải tin nhắn...
+            �ang t?i tin nh?n...
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-            Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện.
+            Ch�a c� tin nh?n n�o. H?y b?t �?u cu?c tr? chuy?n.
           </div>
         ) : (
           <>
             {!hasOlder && (
               <div className="flex items-center justify-center py-2 text-xs text-gray-500">
-                Đã xem hết tin nhắn cũ
+                �? xem h?t tin nh?n c?
               </div>
             )}
             {loadingOlder && (
               <div className="flex items-center justify-center py-2 text-xs text-gray-500">
-                Đang tải tin nhắn cũ...
+                �ang t?i tin nh?n c?...
               </div>
             )}
             {messages.map((message, index) => (
@@ -394,7 +394,7 @@ export const ChatWindow = ({
         <button
           onClick={() => scrollToBottom('smooth')}
           className="absolute right-4 bottom-[84px] w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md hover:bg-gray-50 transition-colors flex items-center justify-center"
-          title="Về tin nhắn mới nhất"
+          title="V? tin nh?n m?i nh?t"
         >
           <ChevronDown className="w-5 h-5 text-blue-600" />
         </button>
@@ -405,13 +405,13 @@ export const ChatWindow = ({
           <div className="mb-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
             <div className="flex items-center justify-between gap-3">
               <p className="truncate text-xs text-gray-700">
-                Đang trả lời: <span className="font-medium">{replyToMessage.text}</span>
+                �ang tr? l?i: <span className="font-medium">{replyToMessage.text}</span>
               </p>
               <button
                 onClick={() => setReplyToMessage(null)}
                 className="shrink-0 text-xs text-blue-600 hover:underline"
               >
-                Bỏ
+                B?
               </button>
             </div>
           </div>
@@ -423,10 +423,10 @@ export const ChatWindow = ({
         )}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Gửi tin nhắn thoại">
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="G?i tin nh?n tho?i">
               <Mic className="w-5 h-5 text-blue-600" />
             </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Đính kèm ảnh">
+            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="��nh k�m ?nh">
               <ImageIcon className="w-5 h-5 text-blue-600" />
             </button>
             <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Sticker">
@@ -443,7 +443,7 @@ export const ChatWindow = ({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={connected ? 'Aa' : 'Đang kết nối...'}
+              placeholder={connected ? 'Aa' : '�ang k?t n?i...'}
               disabled={!connected}
               className="w-full px-3 py-2 pr-11 bg-gray-100 rounded-full outline-none focus:bg-gray-200 transition-colors text-sm disabled:opacity-50"
             />
@@ -464,7 +464,7 @@ export const ChatWindow = ({
                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
                 : 'text-blue-400 cursor-not-allowed'
             }`}
-            title="Gửi"
+            title="G?i"
           >
             <Send className="w-5 h-5" />
           </button>
@@ -472,7 +472,7 @@ export const ChatWindow = ({
 
         {showEmojiPicker && (
           <div className="absolute bottom-full right-4 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 p-3 grid grid-cols-8 gap-2 z-10">
-            {['😀', '😂', '😍', '🥰', '😊', '😎', '🤔', '😢', '😭', '😡', '👍', '❤️', '🔥', '✨', '🎉', '👏'].map((emoji) => (
+            {['??', '??', '??', '??', '??', '??', '??', '??', '??', '??', '??', '??', '??', '?', '??', '??'].map((emoji) => (
               <button
                 key={emoji}
                 onClick={() => {

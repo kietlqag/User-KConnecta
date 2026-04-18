@@ -1,8 +1,8 @@
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, AuthUser } from '../../../../services/authService';
-import { storyService, type StoryResponse } from '../../../../services/storyService';
+import { useStoriesQuery, type OptimisticStory } from '../../../stories/hooks/useStories';
 
 interface StoryGroup {
   userId: string;
@@ -11,48 +11,48 @@ interface StoryGroup {
   thumbnail: string | null;
   backgroundColor: string | null;
   count: number;
+  isPending?: boolean;
+}
+
+function buildGroups(stories: OptimisticStory[], currentUserId?: string): StoryGroup[] {
+  const map = new Map<string, StoryGroup>();
+  for (const s of stories) {
+    if (!map.has(s.userId)) {
+      map.set(s.userId, {
+        userId: s.userId,
+        userFullName: s.userFullName,
+        userAvatarUrl: s.userAvatarUrl,
+        thumbnail: s.imageUrl,
+        backgroundColor: s.backgroundColor,
+        count: 1,
+        isPending: s.isPending,
+      });
+    } else {
+      const g = map.get(s.userId)!;
+      g.count++;
+      if (!g.thumbnail && s.imageUrl) g.thumbnail = s.imageUrl;
+      if (s.isPending) g.isPending = true;
+    }
+  }
+  const groups = Array.from(map.values());
+  groups.sort((a, b) => {
+    if (a.userId === currentUserId) return -1;
+    if (b.userId === currentUserId) return 1;
+    return 0;
+  });
+  return groups;
 }
 
 export function Stories() {
   const navigate = useNavigate();
   const [currentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
-  const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    storyService.getAllActiveStories().then((stories: StoryResponse[]) => {
-      const map = new Map<string, StoryGroup>();
-      for (const s of stories) {
-        if (!map.has(s.userId)) {
-          map.set(s.userId, {
-            userId: s.userId,
-            userFullName: s.userFullName,
-            userAvatarUrl: s.userAvatarUrl,
-            thumbnail: s.imageUrl,
-            backgroundColor: s.backgroundColor,
-            count: 1,
-          });
-        } else {
-          map.get(s.userId)!.count++;
-          if (!map.get(s.userId)!.thumbnail && s.imageUrl) {
-            map.get(s.userId)!.thumbnail = s.imageUrl;
-          }
-        }
-      }
-
-      const groups = Array.from(map.values());
-      // Current user's stories first
-      groups.sort((a, b) => {
-        if (a.userId === currentUser?.id) return -1;
-        if (b.userId === currentUser?.id) return 1;
-        return 0;
-      });
-      setStoryGroups(groups);
-    }).catch(() => {});
-  }, [currentUser?.id]);
+  const { data: stories = [] } = useStoriesQuery();
+  const storyGroups = buildGroups(stories, currentUser?.id);
 
   const STORIES_TO_SKIP = 3;
   const STORY_WIDTH = 120;
@@ -148,9 +148,9 @@ export function Stories() {
           <div
             key={group.userId}
             className="flex-shrink-0 w-[112px] cursor-pointer group"
-            onClick={() => navigate(`/stories/${group.userId}`)}
+            onClick={() => !group.isPending && navigate(`/stories/${group.userId}`)}
           >
-            <div className="relative w-[112px] h-[160px] rounded-xl overflow-hidden border-[3px] border-emerald-500 group-hover:border-emerald-600 transition-colors">
+            <div className={`relative w-[112px] h-[160px] rounded-xl overflow-hidden border-[3px] border-emerald-500 group-hover:border-emerald-600 transition-colors ${group.isPending ? 'opacity-60' : ''}`}>
               {group.thumbnail ? (
                 <img
                   src={group.thumbnail}
@@ -162,6 +162,11 @@ export function Stories() {
                   className="w-full h-full flex items-center justify-center"
                   style={{ backgroundColor: group.backgroundColor || '#1877f2' }}
                 />
+              )}
+              {group.isPending && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                </div>
               )}
               <div className="absolute top-2 left-2 w-10 h-10 rounded-full border-[3px] border-emerald-500 bg-white overflow-hidden">
                 <img

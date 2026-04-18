@@ -12,7 +12,7 @@ export interface Story {
   isViewed: boolean;
 }
 
-export interface Post {
+export interface HomePost {
   id: string;
   user: User;
   content: string;

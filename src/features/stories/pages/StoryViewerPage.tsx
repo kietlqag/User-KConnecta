@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -86,6 +86,24 @@ function timeAgo(isoString: string): string {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours} giờ`;
   return `${Math.floor(hours / 24)} ngày`;
+}
+
+// Parses the stored backgroundColor value (hex, gradient CSS, or image URL)
+// and returns the correct CSS properties to apply it.
+function parseBgStyle(value: string | null): CSSProperties {
+  const v = value ?? '#1877f2';
+  if (v.startsWith('linear-gradient') || v.startsWith('radial-gradient')) {
+    return { backgroundImage: v };
+  }
+  if (v.startsWith('/') || v.startsWith('http') || v.startsWith('blob:') || v.startsWith('data:')) {
+    return {
+      backgroundImage: `url(${v})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+    };
+  }
+  return { backgroundColor: v };
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -300,7 +318,7 @@ export function StoryViewerPage() {
 
         {/* Story Card */}
         <div className="relative select-none" style={{ width: '360px', height: '600px' }}>
-          {/* Background */}
+          {/* Background layer */}
           {slide.imageUrl ? (
             <div
               className="absolute inset-0 scale-110 rounded-2xl"
@@ -314,11 +332,11 @@ export function StoryViewerPage() {
           ) : (
             <div
               className="absolute inset-0 rounded-2xl"
-              style={{ backgroundColor: slide.backgroundColor || '#1877f2' }}
+              style={parseBgStyle(slide.backgroundColor)}
             />
           )}
 
-          {/* Image or Color fill */}
+          {/* Content layer */}
           {slide.imageUrl ? (
             <img
               src={slide.imageUrl}
@@ -329,7 +347,7 @@ export function StoryViewerPage() {
           ) : (
             <div
               className="relative z-10 h-full w-full rounded-2xl"
-              style={{ backgroundColor: slide.backgroundColor || '#1877f2' }}
+              style={parseBgStyle(slide.backgroundColor)}
             />
           )}
 

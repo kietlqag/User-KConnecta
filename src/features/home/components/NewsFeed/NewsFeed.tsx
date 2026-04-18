@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Stories } from '../Stories';
 import { CreatePost } from '../CreatePost';
 import { Post } from '../../../../components/shared';
@@ -25,23 +25,23 @@ interface HomeFeedPost {
 
 function formatPostTimestamp(dateString?: string | null) {
   if (!dateString) {
-    return 'Vừa xong';
+    return 'V?a xong';
   }
 
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) {
-    return 'Vừa xong';
+    return 'V?a xong';
   }
 
   const diffMs = Date.now() - date.getTime();
   const diffMinutes = Math.max(1, Math.floor(diffMs / 60000));
   if (diffMinutes < 60) {
-    return `${diffMinutes} phút trước`;
+    return `${diffMinutes} ph�t tr�?c`;
   }
 
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) {
-    return `${diffHours} giờ trước`;
+    return `${diffHours} gi? tr�?c`;
   }
 
   return new Intl.DateTimeFormat('vi-VN', {
@@ -102,7 +102,7 @@ export function NewsFeed() {
           return;
         }
 
-        setError(fetchError instanceof Error ? fetchError.message : 'Không thể tải bảng tin');
+        setError(fetchError instanceof Error ? fetchError.message : 'Kh�ng th? t?i b?ng tin');
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -124,7 +124,7 @@ export function NewsFeed() {
 
       {isLoading && (
         <div className="rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow">
-          Đang tải bảng tin...
+          �ang t?i b?ng tin...
         </div>
       )}
 
@@ -136,7 +136,7 @@ export function NewsFeed() {
 
       {!isLoading && !error && posts.length === 0 && (
         <div className="rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow">
-          Chưa có bài viết trong bảng tin.
+          Ch�a c� b�i vi?t trong b?ng tin.
         </div>
       )}
 
