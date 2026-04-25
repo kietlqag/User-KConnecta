@@ -73,6 +73,23 @@ public class CloudinaryService {
         }
     }
 
+    public String uploadChatFile(MultipartFile file) {
+        try {
+            String publicId = "chat-file-" + System.currentTimeMillis() + "-" + normalizeFilename(file.getOriginalFilename());
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/chat-files",
+                            "resource_type", "raw",
+                            "public_id", publicId
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload chat file failed", e);
+        }
+    }
+
     public String uploadCallRecording(MultipartFile file, String callId) {
         try {
             Map<?, ?> result = cloudinary.uploader().upload(
@@ -157,5 +174,24 @@ public class CloudinaryService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private String normalizeFilename(String originalFilename) {
+        String fallback = "file";
+        if (originalFilename == null || originalFilename.isBlank()) {
+            return fallback;
+        }
+
+        String sanitized = originalFilename
+                .trim()
+                .replace("\\", "-")
+                .replace("/", "-")
+                .replaceAll("[^A-Za-z0-9._-]", "-")
+                .replaceAll("-+", "-");
+
+        if (sanitized.equals(".") || sanitized.equals("..") || sanitized.isBlank()) {
+            return fallback;
+        }
+        return sanitized;
     }
 }

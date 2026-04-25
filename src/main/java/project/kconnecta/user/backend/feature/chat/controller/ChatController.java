@@ -11,6 +11,7 @@ import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallRecordingResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatFileUploadResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatImageUploadResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
@@ -30,6 +31,7 @@ public class ChatController {
 
     private static final long MAX_VOICE_MESSAGE_BYTES = 8L * 1024L * 1024L;
     private static final long MAX_CHAT_IMAGE_BYTES = 10L * 1024L * 1024L;
+    private static final long MAX_CHAT_FILE_BYTES = 25L * 1024L * 1024L;
 
     private final ChatService chatService;
     private final CallRecordingService callRecordingService;
@@ -119,6 +121,36 @@ public class ChatController {
         return ResponseEntity.ok(
                 ChatImageUploadResponse.builder()
                         .imageUrl(imageUrl)
+                        .mimeType(contentType)
+                        .fileSizeBytes(file.getSize())
+                        .build()
+        );
+    }
+
+    @PostMapping(value = "/messages/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ChatFileUploadResponse> uploadChatFile(
+            @RequestParam("file") MultipartFile file,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        if (file == null || file.isEmpty()) {
+            throw new ValidationException("File is required");
+        }
+        if (file.getSize() > MAX_CHAT_FILE_BYTES) {
+            throw new ValidationException("File is too large");
+        }
+
+        String fileUrl = cloudinaryService.uploadChatFile(file);
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        String safeFilename = originalFilename == null || originalFilename.isBlank() ? "file" : originalFilename;
+
+        return ResponseEntity.ok(
+                ChatFileUploadResponse.builder()
+                        .fileUrl(fileUrl)
+                        .fileName(safeFilename)
                         .mimeType(contentType)
                         .fileSizeBytes(file.getSize())
                         .build()
