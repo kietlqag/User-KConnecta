@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import logoV1 from '@/assets/LogoKConnecta_V1.png';
@@ -38,9 +38,9 @@ export function WelcomePage() {
               isContentVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
             }`}
           >
-            M?ng x? h?i k?t n?i m?i ng�?i
+            Mạng xã hội kết nối mọi người
             <br />
-            <span className="text-lg text-gray-500">Chia s? kho?nh kh?c, k?t n?i y�u th��ng</span>
+            <span className="text-lg text-gray-500">Chia sẻ khoảnh khắc, kết nối yêu thương</span>
           </p>
 
           <div
@@ -54,7 +54,7 @@ export function WelcomePage() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 opacity-0 transition-opacity group-hover:opacity-100"></div>
               <span className="relative flex items-center justify-center gap-2">
-                B?t �?u ngay
+                Bắt đầu ngay
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </span>
             </Link>
@@ -63,7 +63,7 @@ export function WelcomePage() {
               to="/auth/login"
               className="w-full rounded-2xl border-2 border-gray-200 bg-white px-8 py-4 font-semibold text-gray-700 transition-all duration-300 hover:scale-105 hover:border-emerald-300 hover:bg-gray-50 hover:shadow-lg active:scale-95 sm:w-auto"
             >
-              ��ng nh?p
+              Đăng nhập
             </Link>
           </div>
         </div>
@@ -113,3 +113,4 @@ export function WelcomePage() {
     </div>
   );
 }
+

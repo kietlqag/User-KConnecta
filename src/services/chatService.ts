@@ -14,6 +14,19 @@ export interface CallRecordingResponse {
   createdAt: string;
 }
 
+export interface VoiceMessageUploadResponse {
+  audioUrl: string;
+  mimeType?: string;
+  fileSizeBytes: number;
+  durationSec?: number;
+}
+
+export interface ChatImageUploadResponse {
+  imageUrl: string;
+  mimeType?: string;
+  fileSizeBytes: number;
+}
+
 export interface ChatHistoryPageResponse {
   messages: IncomingChatMessage[];
   hasMore: boolean;
@@ -98,6 +111,21 @@ export const chatService = {
       formData.append('mediaType', mediaType);
     }
     return api.postMultipart<CallRecordingResponse>(`/chat/calls/${callId}/recordings`, formData);
+  },
+
+  uploadVoiceMessage: (file: File, durationSec?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (typeof durationSec === 'number' && Number.isFinite(durationSec)) {
+      formData.append('durationSec', String(Math.max(0, Math.floor(durationSec))));
+    }
+    return api.postMultipart<VoiceMessageUploadResponse>('/chat/messages/voice', formData);
+  },
+
+  uploadChatImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.postMultipart<ChatImageUploadResponse>('/chat/messages/images', formData);
   },
 
   getCallSessionSnapshot: (callId: string) => {

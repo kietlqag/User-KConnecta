@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+﻿import { useRef, useState, useEffect } from 'react';
 import { ThumbsUp } from 'lucide-react';
 import type { ReactionType } from '@/services/postService';
 
@@ -10,12 +10,12 @@ export interface ReactionOption {
 }
 
 export const reactions: ReactionOption[] = [
-  { type: 'LIKE', emoji: '??', label: 'Th�ch', color: 'text-blue-500' },
-  { type: 'LOVE', emoji: '??', label: 'Y�u th�ch', color: 'text-red-500' },
-  { type: 'HAHA', emoji: '??', label: 'Haha', color: 'text-yellow-500' },
-  { type: 'WOW', emoji: '??', label: 'Wow', color: 'text-yellow-500' },
-  { type: 'SAD', emoji: '??', label: 'Bu?n', color: 'text-yellow-500' },
-  { type: 'ANGRY', emoji: '??', label: 'Ph?n n?', color: 'text-orange-500' },
+  { type: 'LIKE', emoji: '👍', label: 'Thích', color: 'text-blue-500' },
+  { type: 'LOVE', emoji: '❤️', label: 'Yêu thích', color: 'text-red-500' },
+  { type: 'HAHA', emoji: '😆', label: 'Haha', color: 'text-yellow-500' },
+  { type: 'WOW', emoji: '😮', label: 'Wow', color: 'text-yellow-500' },
+  { type: 'SAD', emoji: '😢', label: 'Buồn', color: 'text-yellow-500' },
+  { type: 'ANGRY', emoji: '😡', label: 'Phẫn nộ', color: 'text-orange-500' },
 ];
 
 interface ReactionButtonProps {
@@ -131,10 +131,11 @@ export function ReactionButton({
         ) : (
           <>
             <ThumbsUp className="w-5 h-5" />
-            <span className="font-medium">Th�ch</span>
+            <span className="font-medium">Thích</span>
           </>
         )}
       </button>
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -8,6 +8,10 @@ import {
   BellOff,
   ChevronDown,
   Search as SearchIcon,
+  Image as ImageIcon,
+  FileText,
+  Link as LinkIcon,
+  Video,
 } from 'lucide-react';
 import { Header } from '../../home/components';
 import { ConversationItem, ChatWindow } from '../components';
@@ -20,12 +24,76 @@ import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { formatLastActiveLabel } from '../utils/presenceLabel';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
+const REPLY_PREFIX = '__REPLY__:';
+const VOICE_MESSAGE_PREFIX = '__VOICE__:';
+const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const HISTORY_PAGE_SIZE = 30;
 
 function mapBackendContentToMessageFields(
   content: string,
-): Pick<Message, 'text' | 'systemType' | 'callLogKind' | 'callDurationSec' | 'callMediaType'> {
+): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'callLogKind' | 'callDurationSec' | 'callMediaType'> {
   if (!content?.startsWith(CALL_LOG_PREFIX)) {
+    if (content?.startsWith(REPLY_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(REPLY_PREFIX.length));
+        const messageText = typeof payload?.text === 'string' ? payload.text : '';
+        const replyPreview = typeof payload?.replyPreview === 'string' ? payload.replyPreview : undefined;
+        const replyToMessageId = typeof payload?.replyToMessageId === 'string' ? payload.replyToMessageId : undefined;
+        return {
+          text: messageText,
+          replyPreview,
+          replyToMessageId,
+        };
+      } catch {
+        return { text: content };
+      }
+    }
+    if (content?.startsWith(VOICE_MESSAGE_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(VOICE_MESSAGE_PREFIX.length));
+        const voiceAudioUrl =
+          typeof payload?.audioUrl === 'string'
+            ? payload.audioUrl
+            : typeof payload?.audioDataUrl === 'string'
+              ? payload.audioDataUrl
+              : undefined;
+        const voiceDurationSec =
+          typeof payload?.durationSec === 'number' && Number.isFinite(payload.durationSec)
+            ? Math.max(0, Math.floor(payload.durationSec))
+            : undefined;
+        const voiceMimeType = typeof payload?.mimeType === 'string' ? payload.mimeType : undefined;
+        return {
+          text: 'Tin nhắn thoại',
+          voiceAudioUrl,
+          voiceDurationSec,
+          voiceMimeType,
+        };
+      } catch {
+        return { text: 'Tin nhắn thoại' };
+      }
+    }
+    if (content?.startsWith(IMAGE_MESSAGE_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(IMAGE_MESSAGE_PREFIX.length));
+        const imageUrl = typeof payload?.imageUrl === 'string' ? payload.imageUrl : undefined;
+        const imageUrls = Array.isArray(payload?.imageUrls)
+          ? payload.imageUrls.filter((url: unknown): url is string => typeof url === 'string' && url.trim().length > 0)
+          : imageUrl
+            ? [imageUrl]
+            : undefined;
+        const imageMimeType = typeof payload?.mimeType === 'string' ? payload.mimeType : undefined;
+        const imageCaption = typeof payload?.caption === 'string' ? payload.caption.trim() : undefined;
+        return {
+          text: imageCaption || 'Ảnh',
+          imageUrl: imageUrls?.[0],
+          imageUrls,
+          imageMimeType,
+          imageCaption,
+        };
+      } catch {
+        return { text: 'Ảnh' };
+      }
+    }
     return { text: content };
   }
 
@@ -38,11 +106,11 @@ function mapBackendContentToMessageFields(
     const fallbackLabel =
       payload?.kind === 'completed'
         ? mediaType === 'video'
-          ? 'Cu?c g?i video ho�n th�nh'
-          : 'Cu?c g?i tho?i ho�n th�nh'
+          ? 'Cuộc gọi video hoàn thành'
+          : 'Cuộc gọi thoại hoàn thành'
         : mediaType === 'video'
-          ? '�? b? l? cu?c g?i video'
-          : '�? b? l? cu?c g?i tho?i';
+          ? 'Đã bỏ lỡ cuộc gọi video'
+          : 'Đã bỏ lỡ cuộc gọi thoại';
 
     return {
       text: payload?.label || fallbackLabel,
@@ -53,7 +121,7 @@ function mapBackendContentToMessageFields(
     };
   } catch {
     return {
-      text: '�? b? l? cu?c g?i tho?i',
+      text: 'Đã bỏ lỡ cuộc gọi thoại',
       systemType: 'call_log',
       callLogKind: 'missed',
       callMediaType: 'audio',
@@ -64,7 +132,7 @@ function mapBackendContentToMessageFields(
 function formatConversationPreview(text: string, isOwn: boolean) {
   const normalized = text.trim();
   if (!normalized) return '';
-  return isOwn ? `B?n: ${normalized}` : normalized;
+  return isOwn ? `Bạn: ${normalized}` : normalized;
 }
 
 function resolveDeliveryStatus(delivered?: boolean, seen?: boolean): Message['deliveryStatus'] {
@@ -106,7 +174,93 @@ function defaultHistoryState(): HistoryState {
   };
 }
 
-function ChatInfoPanel({ user }: { user: ChatUser }) {
+type InfoPanelTab = 'media' | 'files' | 'links';
+
+function extractLinksFromText(text?: string | null) {
+  if (!text) return [];
+  const matches = text.match(/https?:\/\/[^\s<>"']+/g) ?? [];
+  return matches.map((link) => link.replace(/[),.;!?]+$/, ''));
+}
+
+function ChatInfoPanel({ user, messages }: { user: ChatUser; messages: Message[] }) {
+  const [activeTab, setActiveTab] = useState<InfoPanelTab>('media');
+  const [expandedTabs, setExpandedTabs] = useState<Record<InfoPanelTab, boolean>>({
+    media: false,
+    files: false,
+    links: false,
+  });
+
+  const mediaItems = useMemo(
+    () =>
+      messages.flatMap((message) => {
+        if (message.deleted) return [];
+        const urls = message.imageUrls?.length ? message.imageUrls : message.imageUrl ? [message.imageUrl] : [];
+        return urls.map((url, index) => ({
+          id: `${message.id}-media-${index}`,
+          url,
+          type: message.imageMimeType?.startsWith('video/') ? 'video' : 'image',
+        }));
+      }),
+    [messages],
+  );
+
+  const fileItems = useMemo(
+    () =>
+      messages.flatMap((message) => {
+        if (message.deleted || !message.voiceAudioUrl) return [];
+        return [
+          {
+            id: `${message.id}-voice`,
+            url: message.voiceAudioUrl,
+            label: 'Tin nhắn thoại',
+            meta: message.voiceDurationSec ? `${Math.floor(message.voiceDurationSec / 60)}:${String(message.voiceDurationSec % 60).padStart(2, '0')}` : 'Audio',
+          },
+        ];
+      }),
+    [messages],
+  );
+
+  const linkItems = useMemo(
+    () =>
+      messages.flatMap((message) => {
+        if (message.deleted) return [];
+        return extractLinksFromText(message.imageCaption || message.text).map((url, index) => ({
+          id: `${message.id}-link-${index}`,
+          url,
+          host: (() => {
+            try {
+              return new URL(url).hostname.replace(/^www\./, '');
+            } catch {
+              return url;
+            }
+          })(),
+        }));
+      }),
+    [messages],
+  );
+
+  const tabs: { key: InfoPanelTab; label: string; count: number }[] = [
+    { key: 'media', label: 'Ảnh/Video', count: mediaItems.length },
+    { key: 'files', label: 'File', count: fileItems.length },
+    { key: 'links', label: 'Link', count: linkItems.length },
+  ];
+  const visibleMediaItems = expandedTabs.media ? mediaItems : mediaItems.slice(0, 9);
+  const visibleFileItems = expandedTabs.files ? fileItems : fileItems.slice(0, 9);
+  const visibleLinkItems = expandedTabs.links ? linkItems : linkItems.slice(0, 9);
+
+  const renderSeeMoreButton = (tab: InfoPanelTab, total: number) => {
+    if (expandedTabs[tab] || total <= 9) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => setExpandedTabs((prev) => ({ ...prev, [tab]: true }))}
+        className="mt-3 w-full rounded-full bg-gray-100 px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+      >
+        Xem thêm {total - 9}
+      </button>
+    );
+  };
+
   return (
     <aside
       className="hidden xl:flex w-[320px] shrink-0 border-l border-gray-200 bg-white p-5 flex-col gap-5"
@@ -125,27 +279,144 @@ function ChatInfoPanel({ user }: { user: ChatUser }) {
       <div className="grid grid-cols-2 gap-3 text-center">
         <button
           className="rounded-xl bg-gray-100 h-14 flex items-center justify-center hover:bg-gray-200 transition-colors"
-          title="T?t th�ng b�o"
+          title="Tắt thông báo"
         >
           <BellOff className="w-5 h-5 text-gray-700" />
         </button>
         <button
           className="rounded-xl bg-gray-100 h-14 flex items-center justify-center hover:bg-gray-200 transition-colors"
-          title="T?m ki?m"
+          title="Tìm kiếm"
         >
           <SearchIcon className="w-5 h-5 text-gray-700" />
         </button>
       </div>
 
+      <section className="rounded-xl border border-gray-100 bg-white">
+        <div className="flex items-center justify-between px-2 py-3">
+          <span className="text-[15px] font-medium text-gray-800">File phương tiện & file</span>
+          <ChevronDown className="w-5 h-5 text-gray-500" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-1 rounded-full bg-gray-100 p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`rounded-full px-2 py-1.5 text-[12px] font-semibold transition-colors ${
+                activeTab === tab.key ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {tab.label}
+              {tab.count > 0 && <span className="ml-1 text-[11px] opacity-70">{tab.count}</span>}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 max-h-[360px] overflow-y-auto px-1 pb-2">
+          {activeTab === 'media' && (
+            mediaItems.length > 0 ? (
+              <>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {visibleMediaItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+                      className="relative aspect-square overflow-hidden rounded-lg bg-gray-100"
+                      title="Mở media"
+                    >
+                      <img src={item.url} alt="Media đã gửi" className="h-full w-full object-cover" loading="lazy" />
+                      {item.type === 'video' && (
+                        <span className="absolute bottom-1 right-1 rounded-full bg-black/60 p-1 text-white">
+                          <Video className="h-3 w-3" />
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {renderSeeMoreButton('media', mediaItems.length)}
+              </>
+            ) : (
+              <EmptyInfoTab icon={<ImageIcon className="h-5 w-5" />} text="Chưa có ảnh hoặc video" />
+            )
+          )}
+
+          {activeTab === 'files' && (
+            fileItems.length > 0 ? (
+              <>
+                <div className="space-y-2">
+                  {visibleFileItems.map((item) => (
+                    <a
+                      key={item.id}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-2 hover:bg-gray-100"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                        <FileText className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-gray-900">{item.label}</span>
+                        <span className="block text-xs text-gray-500">{item.meta}</span>
+                      </span>
+                    </a>
+                  ))}
+                </div>
+                {renderSeeMoreButton('files', fileItems.length)}
+              </>
+            ) : (
+              <EmptyInfoTab icon={<FileText className="h-5 w-5" />} text="Chưa có file" />
+            )
+          )}
+
+          {activeTab === 'links' && (
+            linkItems.length > 0 ? (
+              <>
+                <div className="space-y-2">
+                  {visibleLinkItems.map((item) => (
+                    <a
+                      key={item.id}
+                      href={item.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-2 hover:bg-gray-100"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                        <LinkIcon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-gray-900">{item.host}</span>
+                        <span className="block truncate text-xs text-gray-500">{item.url}</span>
+                      </span>
+                    </a>
+                  ))}
+                </div>
+                {renderSeeMoreButton('links', linkItems.length)}
+              </>
+            ) : (
+              <EmptyInfoTab icon={<LinkIcon className="h-5 w-5" />} text="Chưa có link" />
+            )
+          )}
+        </div>
+      </section>
       <button className="w-full flex items-center justify-between rounded-lg px-2 py-3 hover:bg-gray-50 transition-colors text-left">
-        <span className="text-[15px] font-medium text-gray-800">File ph��ng ti?n & file</span>
-        <ChevronDown className="w-5 h-5 text-gray-500" />
-      </button>
-      <button className="w-full flex items-center justify-between rounded-lg px-2 py-3 hover:bg-gray-50 transition-colors text-left">
-        <span className="text-[15px] font-medium text-gray-800">Quy?n ri�ng t� v� h? tr?</span>
+        <span className="text-[15px] font-medium text-gray-800">Quyền riêng tư và hỗ trợ</span>
         <ChevronDown className="w-5 h-5 text-gray-500" />
       </button>
     </aside>
+  );
+}
+
+function EmptyInfoTab({ icon, text }: { icon: ReactNode; text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+      <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-400 shadow-sm">
+        {icon}
+      </div>
+      {text}
+    </div>
   );
 }
 
@@ -365,7 +636,7 @@ export default function MessengerPage() {
 
   const handleIncomingMessage = useCallback(
     (msg: IncomingChatMessage) => {
-      console.log("?? incoming", msg);
+      console.log("[incoming]", msg);
       const myId = currentUser?.id;
       const otherUserId = msg.senderId === myId ? msg.receiverId : msg.senderId;
       const pendingStatus = pendingMessageStatusRef.current[msg.id];
@@ -400,7 +671,7 @@ export default function MessengerPage() {
         [otherUserId]: {
           ...(prev[otherUserId] ?? {}),
           lastMessage: formatConversationPreview(newMsg.text, msg.senderId === myId),
-          timestamp: 'V?a xong',
+          timestamp: 'Vừa xong',
           isUnread: activeChatUserId !== otherUserId,
         },
       }));
@@ -806,8 +1077,8 @@ export default function MessengerPage() {
   }, []);
 
   const filters: { key: MessengerFilter; label: string }[] = [
-    { key: 'all', label: 'T?t c?' },
-    { key: 'unread', label: 'Ch�a �?c' },
+    { key: 'all', label: 'Tất cả' },
+    { key: 'unread', label: 'Chưa đọc' },
   ];
 
   const filteredConversations = conversations.filter((conv) => {
@@ -860,10 +1131,10 @@ export default function MessengerPage() {
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-[1.75rem] font-semibold tracking-tight">�o?n chat</h1>
+                  <h1 className="text-[1.75rem] font-semibold tracking-tight">Đoạn chat</h1>
                   <span
                     className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300'}`}
-                    title={connected ? '�? k?t n?i realtime' : 'Ch�a k?t n?i'}
+                    title={connected ? 'Đã kết nối realtime' : 'Chưa kết nối'}
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -871,7 +1142,7 @@ export default function MessengerPage() {
                     onClick={loadFriends}
                     disabled={loadingConversations}
                     className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors disabled:opacity-50"
-                    title="T?i l?i danh s�ch"
+                    title="Tải lại danh sách"
                   >
                     <RefreshCw className={`w-5 h-5 text-gray-600 ${loadingConversations ? 'animate-spin' : ''}`} />
                   </button>
@@ -888,7 +1159,7 @@ export default function MessengerPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="T?m ki?m tr�n Messenger"
+                  placeholder="Tìm kiếm trên Messenger"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:bg-gray-200 transition-colors"
@@ -914,12 +1185,12 @@ export default function MessengerPage() {
 
             <div className="flex-1 overflow-y-auto p-2">
               {loadingConversations ? (
-                <div className="text-center py-8 text-gray-400 text-sm">�ang t?i...</div>
+                <div className="text-center py-8 text-gray-400 text-sm">Đang tải...</div>
               ) : friendsError ? (
                 <div className="text-center py-8 text-sm">
-                  <p className="text-red-500 mb-2">Kh�ng th? t?i danh s�ch b?n b�</p>
+                  <p className="text-red-500 mb-2">Không thể tải danh sách bạn bè</p>
                   <button onClick={loadFriends} className="text-blue-500 hover:underline text-sm">
-                    Th? l?i
+                    Thử lại
                   </button>
                 </div>
               ) : filteredConversations.length > 0 ? (
@@ -933,8 +1204,8 @@ export default function MessengerPage() {
               ) : (
                 <div className="text-center py-8 text-gray-500 text-sm">
                   {conversations.length === 0
-                    ? 'Ch�a c� b?n b� n�o. K?t b?n �? b?t �?u chat.'
-                    : 'Kh�ng t?m th?y cu?c tr? chuy?n'}
+                    ? 'Chưa có bạn bè nào. Kết bạn để bắt đầu chat.'
+                    : 'Không tìm thấy cuộc trò chuyện'}
                 </div>
               )}
             </div>
@@ -977,7 +1248,7 @@ export default function MessengerPage() {
             </div>
           ) : activeChatUserId && loadingConversations ? (
             <div className="flex-1 flex items-center justify-center text-gray-400 text-sm bg-white rounded-xl border border-gray-200">
-              �ang t?i...
+              Đang tải...
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-gray-200">
@@ -985,16 +1256,17 @@ export default function MessengerPage() {
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Edit className="w-12 h-12 text-gray-400" />
                 </div>
-                <h2 className="text-xl font-semibold mb-2">Tin nh?n c?a b?n</h2>
-                <p className="text-gray-500 text-sm">Ch?n m?t cu?c tr? chuy?n �? b?t �?u nh?n tin</p>
+                <h2 className="text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
+                <p className="text-gray-500 text-sm">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
               </div>
             </div>
           )}
 
-          {activeChatUser && <ChatInfoPanel user={activeChatUser} />}
+          {activeChatUser && <ChatInfoPanel user={activeChatUser} messages={activeMessages} />}
         </div>
       </div>
     </div>
   );
 }
+
 

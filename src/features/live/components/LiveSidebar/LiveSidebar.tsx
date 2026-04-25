@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { CurrentUserAvatar } from '@/components/shared';
@@ -7,21 +7,21 @@ import { LiveDestination, LiveDestinationOption } from '../../types/live.types';
 const destinationOptions: LiveDestinationOption[] = [
   {
     id: 'profile',
-    label: '��ng l�n trang c� nh�n',
-    description: 'Ng�?i t? ch?c - Trang c� nh�n c?a b?n',
-    icon: '??',
+    label: 'Đăng lên trang cá nhân',
+    description: 'Người tổ chức - Trang cá nhân của bạn',
+    icon: '👤',
   },
   {
     id: 'page',
-    label: '��ng l�n trang b?n qu?n l?',
-    description: 'Chia s? �?n trang c?a b?n',
-    icon: '??',
+    label: 'Đăng lên trang bạn quản lý',
+    description: 'Chia sẻ đến trang của bạn',
+    icon: '📄',
   },
   {
     id: 'group',
-    label: '��ng trong nh�m',
-    description: 'Chia s? trong c�c nh�m',
-    icon: '??',
+    label: 'Đăng trong nhóm',
+    description: 'Chia sẻ trong các nhóm',
+    icon: '👥',
   },
 ];
 
@@ -44,18 +44,18 @@ export const LiveSidebar = () => {
 
   return (
     <div className="w-80 bg-white border-r border-gray-200 p-4">
-      <h2 className="text-xl font-bold mb-6">T?o video tr?c ti?p</h2>
+      <h2 className="text-xl font-bold mb-6">Tạo video trực tiếp</h2>
 
       <div className="flex items-center gap-3 mb-6">
         <CurrentUserAvatar />
         <div className="flex-1">
-          <h3 className="font-semibold text-sm">{currentUser?.fullName || 'Ng�?i d�ng'}</h3>
-          <p className="text-xs text-gray-500">Ng�?i t? ch?c - Trang c� nh�n c?a b?n</p>
+          <h3 className="font-semibold text-sm">{currentUser?.fullName || 'Người dùng'}</h3>
+          <p className="text-xs text-gray-500">Người tổ chức - Trang cá nhân của bạn</p>
         </div>
       </div>
 
       <div className="mb-6">
-        <label className="text-sm font-medium text-gray-700 mb-2 block">Ch?n n�i ��ng</label>
+        <label className="text-sm font-medium text-gray-700 mb-2 block">Chọn nơi đăng</label>
         <div className="relative">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -94,16 +94,17 @@ export const LiveSidebar = () => {
       </div>
 
       <div className="mt-8 p-4 bg-blue-50 rounded-lg">
-        <h4 className="text-sm font-semibold mb-2 text-blue-900">M?o ph�t tr?c ti?p</h4>
+        <h4 className="text-sm font-semibold mb-2 text-blue-900">Mẹo phát trực tiếp</h4>
         <ul className="space-y-2 text-xs text-blue-800">
-          <li>- Ki?m tra k?t n?i internet c?a b?n</li>
-          <li>- �?m b?o �nh s�ng �?y �?</li>
-          <li>- Chu?n b? n?i dung tr�?c khi b?t �?u</li>
-          <li>- T��ng t�c v?i ng�?i xem</li>
+          <li>- Kiểm tra kết nối internet của bạn</li>
+          <li>- Đảm bảo ánh sáng đầy đủ</li>
+          <li>- Chuẩn bị nội dung trước khi bắt đầu</li>
+          <li>- Tương tác với người xem</li>
         </ul>
       </div>
     </div>
   );
 };
+
 
 

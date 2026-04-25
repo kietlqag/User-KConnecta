@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Header } from '../../home/components/Header';
 import { ReelPlayer, ReelNavigation } from '../components';
 import { Reel, ReelComment } from '../types/watch.types';
@@ -12,13 +12,13 @@ const mockReels: Reel[] = [
     thumbnail: reelImage,
     creator: {
       id: '101',
-      name: 'Sinh vi�n HCMUTE - Tr�?ng �H C�ng ngh? K? thu?t TPHCM',
+      name: 'Sinh viên HCMUTE - Trường ĐH Công nghệ Kỹ thuật TPHCM',
       avatar: 'https://images.unsplash.com/photo-1695800998493-ccff5ea292ea?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHByb2Zlc3Npb25hbCUyMEFzaWFuJTIweG91bmclMjBtYW58ZW58MXx8fHwxNzY5NjY2MzY5fDA&ixlib=rb-4.1.0&q=80&w=1080',
       verified: true,
     },
-    caption: 'L? t?t nghi?p HCMUTE n�m nay... Xem th�m',
+    caption: 'Lễ tốt nghiệp HCMUTE năm nay... Xem thêm',
     music: {
-      name: 'Nh?c truy?n th?ng',
+      name: 'Nhạc truyền thống',
       artist: 'HCMUTE',
     },
     likes: 2400,
@@ -37,9 +37,9 @@ const mockReels: Reel[] = [
       avatar: 'https://images.unsplash.com/photo-1738566061505-556830f8b8f5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMGJ1c2luZXNzJTIwQXNpYW4lMjBtYW58ZW58MXx8fHwxNzY5NjY2MzcxfDA&ixlib=rb-4.1.0&q=80&w=1080',
       verified: true,
     },
-    caption: 'Ch?ng ��?ng tr?i nghi?m �?y c?m x�c, xem �?n cu?i nh�!',
+    caption: 'Chặng đường trải nghiệm đầy cảm xúc, xem đến cuối nhé!',
     music: {
-      name: '�m thanh g?c',
+      name: 'Âm thanh gốc',
       artist: 'Etang Rendezvous',
     },
     likes: 90800,
@@ -54,11 +54,11 @@ const mockReels: Reel[] = [
     thumbnail: 'https://images.unsplash.com/photo-1718307701476-bf46ac964396?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMGNhc3VhbCUyMFZpZXRuYW1lc2UlMjB3b21hbnxlbnwxfHx8fDE3Njk2NjYzNzB8MA&ixlib=rb-4.1.0&q=80&w=1080',
     creator: {
       id: '103',
-      name: 'Thu H�',
+      name: 'Thu Hà',
       avatar: 'https://images.unsplash.com/photo-1718307701476-bf46ac964396?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMGNhc3VhbCUyMFZpZXRuYW1lc2UlMjB3b21hbnxlbnwxfHx8fDE3Njk2NjYzNzB8MA&ixlib=rb-4.1.0&q=80&w=1080',
       verified: true,
     },
-    caption: 'H�?ng d?n trang �i?m t? nhi�n cho m�a h� ?? #makeup #beauty',
+    caption: 'Hướng dẫn trang điểm tự nhiên cho mùa hè 💄 #makeup #beauty',
     music: {
       name: 'Summer Vibes',
       artist: 'Chill Beats',
@@ -78,22 +78,22 @@ const mockCommentsMap: Record<string, ReelComment[]> = {
       id: 'c1',
       author: {
         id: 'u1',
-        name: 'Tr?n B�ch V�n',
+        name: 'Trần Bích Vân',
         avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMEFzaWFuJTIwd29tYW58ZW58MXx8fHwxNzY5NjY2MzY5fDA&ixlib=rb-4.1.0&q=80&w=400',
       },
-      content: 'C� l? ��y l� m?t trong nh?ng kho?nh kh?c �?p nh?t c?a tr�?ng. Xem th�m',
-      timestamp: '3 ng�y',
+      content: 'Có lẽ đây là một trong những khoảnh khắc đẹp nhất của trường. Xem thêm',
+      timestamp: '3 ngày',
       likes: 21,
     },
     {
       id: 'c2',
       author: {
         id: 'u2',
-        name: 'Tr?n Kim Tuy?n',
+        name: 'Trần Kim Tuyền',
         avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMEFzaWFuJTIwbWFufGVufDF8fHx8MTc2OTY2NjM2OXww&ixlib=rb-4.1.0&q=80&w=400',
       },
-      content: 'Hai m? con r?t vui, c?m �n Minh Th?.',
-      timestamp: '4 ng�y',
+      content: 'Hai mẹ con rất vui, cảm ơn Minh Thư.',
+      timestamp: '4 ngày',
       likes: 13,
     },
     {
@@ -103,8 +103,8 @@ const mockCommentsMap: Record<string, ReelComment[]> = {
         name: 'Minh Hoa',
         avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwzfHxwb3J0cmFpdCUyMEFzaWFuJTIwd29tYW58ZW58MXx8fHwxNzY5NjY2MzY5fDA&ixlib=rb-4.1.0&q=80&w=400',
       },
-      content: 'C� b� n�i gi?ng mi?n Trung, kh�ng bi?t l� B?nh �?nh hay Ph� Th? ta ??',
-      timestamp: '4 ng�y',
+      content: 'Cô bé nói giọng miền Trung, không biết là Bình Định hay Phú Thọ ta 😄',
+      timestamp: '4 ngày',
       likes: 13,
     },
     {
@@ -114,8 +114,8 @@ const mockCommentsMap: Record<string, ReelComment[]> = {
         name: 'Thanh Dung',
         avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHw0fHxwb3J0cmFpdCUyMEFzaWFuJTIwbWFufGVufDF8fHx8MTc2OTY2NjM2OXww&ixlib=rb-4.1.0&q=80&w=400',
       },
-      content: 'Vi?t l�nh lu�n...',
-      timestamp: '5 ng�y',
+      content: 'Viết lành luôn...',
+      timestamp: '5 ngày',
       likes: 8,
     },
   ],
@@ -124,21 +124,21 @@ const mockCommentsMap: Record<string, ReelComment[]> = {
       id: 'c5',
       author: {
         id: 'u5',
-        name: 'Nguy?n V�n A',
+        name: 'Nguyễn Văn A',
         avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHw1fHxwb3J0cmFpdCUyMEFzaWFuJTIwbWFufGVufDF8fHx8MTc2OTY2NjM2OXww&ixlib=rb-4.1.0&q=80&w=400',
       },
-      content: 'N?i dung r?t hay v� ? ngh?a!',
-      timestamp: '2 gi?',
+      content: 'Nội dung rất hay và ý nghĩa!',
+      timestamp: '2 giờ',
       likes: 45,
     },
     {
       id: 'c6',
       author: {
         id: 'u6',
-        name: 'L� Th? B',
+        name: 'Lê Thị B',
         avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHw2fHxwb3J0cmFpdCUyMEFzaWFuJTIwd29tYW58ZW58MXx8fHwxNzY5NjY2MzY5fDA&ixlib=rb-4.1.0&q=80&w=400',
       },
-      content: 'C?m �n �? chia s? ??',
+      content: 'Cảm ơn đã chia sẻ ❤️',
       timestamp: '5 gi?',
       likes: 32,
     },
@@ -151,8 +151,8 @@ const mockCommentsMap: Record<string, ReelComment[]> = {
         name: 'Mai Anh',
         avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHw3fHxwb3J0cmFpdCUyMEFzaWFuJTIwd29tYW58ZW58MXx8fHwxNzY5NjY2MzY5fDA&ixlib=rb-4.1.0&q=80&w=400',
       },
-      content: 'Tutorial r?t d? hi?u, c?m �n b?n!',
-      timestamp: '1 ng�y',
+      content: 'Tutorial rất dễ hiểu, cảm ơn bạn!',
+      timestamp: '1 ngày',
       likes: 89,
     },
   ],
@@ -217,3 +217,4 @@ export const WatchPage = () => {
     </div>
   );
 };
+

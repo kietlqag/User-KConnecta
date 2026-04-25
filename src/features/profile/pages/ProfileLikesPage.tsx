@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
 import { ProfileHeader } from '../components/ProfileHeader';
@@ -9,7 +9,7 @@ import { MoreHorizontal } from 'lucide-react';
 export function ProfileLikesPage() {
   const { userId: routeUserId } = useParams();
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
-  
+
   // Sanitize userId: Avoid 'undefined' string and fallback to current user
   const userId = React.useMemo(() => {
     if (!routeUserId || routeUserId === 'undefined') {

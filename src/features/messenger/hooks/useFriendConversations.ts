@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { friendService } from '@/services/friendService';
 import { authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
@@ -12,10 +12,30 @@ interface UseFriendConversationsResult {
 }
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
+const REPLY_PREFIX = '__REPLY__:';
+const VOICE_MESSAGE_PREFIX = '__VOICE__:';
+const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 
 function mapBackendContentToPreview(content?: string | null) {
   const raw = content?.trim();
   if (!raw) return '';
+
+  if (raw.startsWith(VOICE_MESSAGE_PREFIX)) {
+    return 'Tin nhắn thoại';
+  }
+
+  if (raw.startsWith(IMAGE_MESSAGE_PREFIX)) {
+    return 'Ảnh';
+  }
+
+  if (raw.startsWith(REPLY_PREFIX)) {
+    try {
+      const payload = JSON.parse(raw.slice(REPLY_PREFIX.length));
+      return typeof payload?.text === 'string' ? payload.text.trim() : raw;
+    } catch {
+      return raw;
+    }
+  }
 
   if (!raw.startsWith(CALL_LOG_PREFIX)) {
     return raw;

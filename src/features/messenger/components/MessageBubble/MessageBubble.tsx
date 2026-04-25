@@ -1,37 +1,41 @@
 import { useState, useEffect, useRef } from 'react';
-import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff } from 'lucide-react';
+import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Message } from '../../types/message.types';
 
 interface MessageBubbleProps {
   message: Message;
   onReact?: (messageId: string, emoji: string) => void;
   onReply?: (message: Message) => void;
+  onJumpToMessage?: (messageId: string) => void;
   onDelete?: (messageId: string) => void;
   onForward?: (message: Message) => void;
   onReport?: (message: Message) => void;
   showSenderAvatar?: boolean;
   senderAvatar?: string;
   senderName?: string;
+  replyContextLabel?: string;
   showDeliveryStatus?: boolean;
   deliveryStatusLabel?: string;
   onCallAgain?: (mediaType?: 'audio' | 'video') => void;
 }
 
-const quickReactions = ['??', '??', '??', '??', '??', '??'];
-const extraReactions = ['??', '??', '??', '??', '??', '??', '??', '?'];
+const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '😡'];
+const extraReactions = ['👏', '🎉', '🔥', '🥰', '😎', '🤔', '🙏', '💯'];
 
 export const MessageBubble = ({
   message,
   onReact,
   onReply,
+  onJumpToMessage,
   onDelete,
   onForward,
   onReport,
   showSenderAvatar = false,
   senderAvatar,
   senderName = 'Sender',
+  replyContextLabel,
   showDeliveryStatus = false,
-  deliveryStatusLabel = '�? g?i',
+  deliveryStatusLabel = 'Đã gửi',
   onCallAgain,
 }: MessageBubbleProps) => {
   const [showReactions, setShowReactions] = useState(false);
@@ -39,8 +43,12 @@ export const MessageBubble = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [showExtraReactions, setShowExtraReactions] = useState(false);
+  const [isVoicePlaying, setIsVoicePlaying] = useState(false);
+  const [voiceProgress, setVoiceProgress] = useState(0);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const reactionRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Click outside to close menu and reactions
   useEffect(() => {
@@ -62,6 +70,12 @@ export const MessageBubble = ({
     };
   }, [showMenu, showReactions]);
 
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, []);
+
   const formatTime = (date: Date) => {
     return new Intl.DateTimeFormat('vi-VN', {
       hour: '2-digit',
@@ -81,12 +95,12 @@ export const MessageBubble = ({
       setShowExtraReactions(false);
       return;
     }
-    // Ch? gi? 1 reaction duy nh?t - n?u click l?i reaction �ang c� th? x�a, n?u click reaction kh�c th? thay th?.
+    // Chỉ giữ 1 reaction duy nhất: click lại reaction hiện tại để xóa, click reaction khác để thay thế.
     if (message.reactions && message.reactions.length === 1 && message.reactions[0] === emoji) {
-      // N?u click l?i reaction �ang c� th? x�a h?t.
+      // Nếu click lại reaction hiện tại thì xóa hết.
       onReact?.(message.id, '');
     } else {
-      // N?u click reaction kh�c th? thay th?.
+      // Nếu click reaction khác thì thay thế.
       onReact?.(message.id, emoji);
     }
     setShowReactions(false);
@@ -97,6 +111,43 @@ export const MessageBubble = ({
     setShowTimestamp(false);
     setIsHovering(false);
   };
+
+  const toggleVoicePlayback = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (isVoicePlaying) {
+      audio.pause();
+      setIsVoicePlaying(false);
+      return;
+    }
+
+    try {
+      await audio.play();
+      setIsVoicePlaying(true);
+    } catch {
+      setIsVoicePlaying(false);
+    }
+  };
+
+  const imageUrls = message.imageUrls?.length ? message.imageUrls : message.imageUrl ? [message.imageUrl] : [];
+  const activeLightboxImage = lightboxIndex === null ? null : imageUrls[lightboxIndex];
+  const renderImageButton = (imageUrl: string, index: number, className = '') => (
+    <button
+      key={`${imageUrl}-${index}`}
+      type="button"
+      onClick={() => setLightboxIndex(index)}
+      className={`block overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm ${className}`}
+      title="Mở ảnh"
+    >
+      <img
+        src={imageUrl}
+        alt={`Ảnh đã gửi ${index + 1}`}
+        className="h-full w-full object-cover"
+        loading="lazy"
+      />
+    </button>
+  );
 
   if (message.systemType === 'call_log' || message.systemType === 'missed_call') {
     const isCompleted = message.callLogKind === 'completed';
@@ -137,7 +188,7 @@ export const MessageBubble = ({
             className="mt-2.5 w-full rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors py-2 text-[15px] font-semibold text-gray-900 flex items-center justify-center gap-2"
           >
             {isVideoCall ? <Video className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
-            {isVideoCall ? 'G?i video l?i' : 'G?i l?i'}
+            {isVideoCall ? 'Gọi video lại' : 'Gọi lại'}
           </button>
         </div>
       </div>
@@ -172,19 +223,114 @@ export const MessageBubble = ({
         <span className="text-xs text-gray-500 self-end pb-0.5">{formatTime(message.timestamp)}</span>
       )}
 
-      <div className="max-w-[70%]">
-        <div className="relative group">
-          <div
-            className={`px-3 py-2 rounded-2xl break-words ${
-              message.isOwn
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-900'
-            }`}
-          >
-            <p className={`text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
-              {message.deleted ? 'Tin nh?n �? ��?c g?' : message.text}
-            </p>
+      <div className={`max-w-[70%] flex flex-col ${message.isOwn ? 'items-end' : 'items-start'}`}>
+        {message.replyPreview && (
+          <div className={`${message.isOwn ? 'text-right' : 'text-left'}`}>
+            <div
+              className={`flex items-center gap-1 text-xs text-gray-500 ${
+                message.isOwn ? 'justify-end pr-1' : 'justify-start pl-1'
+              }`}
+            >
+              <CornerUpLeft className="h-3.5 w-3.5" />
+              <span>{replyContextLabel || (message.isOwn ? 'Bạn đã trả lời' : `${senderName} đã trả lời`)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => message.replyToMessageId && onJumpToMessage?.(message.replyToMessageId)}
+              disabled={!message.replyToMessageId}
+              className={`relative z-[1] mt-0.5 inline-flex min-h-[48px] w-auto max-w-full rounded-2xl border px-2.5 py-2 text-left text-sm leading-tight transition-colors ${
+                message.isOwn
+                  ? 'ml-auto border-blue-200/90 bg-blue-100 text-blue-900 hover:bg-blue-200'
+                  : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'
+              } disabled:cursor-default disabled:opacity-80`}
+              title={message.replyToMessageId ? 'Nhấn để đến tin nhắn gốc' : undefined}
+            >
+              <p className="max-w-[220px] whitespace-pre-wrap break-words line-clamp-2">{message.replyPreview}</p>
+            </button>
           </div>
+        )}
+        <div className={`relative z-[3] group ${message.replyPreview ? '-mt-[22px]' : ''}`}>
+          {imageUrls.length > 0 && !message.deleted ? (
+            <div className={`flex max-w-[386px] flex-col gap-1.5 ${message.isOwn ? 'items-end' : 'items-start'}`}>
+              <div className={`flex flex-wrap gap-1.5 ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
+                {imageUrls.map((imageUrl, index) =>
+                  renderImageButton(
+                    imageUrl,
+                    index,
+                    imageUrls.length === 1 ? 'max-h-[320px] w-[260px]' : 'h-[124px] w-[124px]',
+                  ),
+                )}
+              </div>
+              {message.imageCaption && (
+                <div
+                  className={`inline-block max-w-[260px] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                    message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
+                  }`}
+                >
+                  {message.imageCaption}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className={`inline-block w-fit max-w-full rounded-2xl px-3 py-2 break-words ${
+                message.isOwn
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-900'
+              }`}
+            >
+              {message.voiceAudioUrl && !message.deleted ? (
+              <div
+                className="flex min-w-[176px] max-w-[240px] items-center gap-2"
+                style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
+              >
+                <button
+                  type="button"
+                  onClick={toggleVoicePlayback}
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                    message.isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-white hover:bg-gray-50'
+                  }`}
+                  title={isVoicePlaying ? 'Tạm dừng' : 'Phát tin nhắn thoại'}
+                >
+                  {isVoicePlaying ? (
+                    <Pause className={`h-4 w-4 ${message.isOwn ? 'text-white' : 'text-blue-600'}`} />
+                  ) : (
+                    <Play className={`h-4 w-4 ${message.isOwn ? 'text-white' : 'text-blue-600'}`} />
+                  )}
+                </button>
+                <div className={`h-1.5 flex-1 overflow-hidden rounded-full ${message.isOwn ? 'bg-white/25' : 'bg-gray-300'}`}>
+                  <div
+                    className={`h-full rounded-full ${message.isOwn ? 'bg-white' : 'bg-blue-600'}`}
+                    style={{ width: `${voiceProgress}%` }}
+                  />
+                </div>
+                <span className={`w-10 shrink-0 text-right text-xs tabular-nums ${message.isOwn ? 'text-white/90' : 'text-gray-600'}`}>
+                  {formatDuration(message.voiceDurationSec ?? 0)}
+                </span>
+                <audio
+                  ref={audioRef}
+                  src={message.voiceAudioUrl}
+                  preload="metadata"
+                  onTimeUpdate={(event) => {
+                    const audio = event.currentTarget;
+                    const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+                    setVoiceProgress(duration ? Math.min(100, (audio.currentTime / duration) * 100) : 0);
+                  }}
+                  onEnded={() => {
+                    setIsVoicePlaying(false);
+                    setVoiceProgress(0);
+                  }}
+                  onPause={() => setIsVoicePlaying(false)}
+                  className="hidden"
+                />
+              </div>
+              ) : (
+              <p className={`whitespace-pre-wrap text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
+                {message.deleted ? 'Tin nhắn đã được gỡ' : message.text}
+              </p>
+              )}
+            </div>
+          )}
 
           {message.reactions && message.reactions.length > 0 && (
             <div
@@ -213,7 +359,7 @@ export const MessageBubble = ({
                   setShowReactions(!showReactions);
                 }}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-                title="Th? c?m x�c"
+                title="Thả cảm xúc"
                 disabled={message.deleted}
               >
                 <Smile className="w-3.5 h-3.5 text-gray-600" />
@@ -222,7 +368,7 @@ export const MessageBubble = ({
               <button
                 onClick={() => !message.deleted && onReply?.(message)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-                title="Tr? l?i"
+                title="Trả lời"
                 disabled={message.deleted}
               >
                 <Reply className="w-3.5 h-3.5 text-gray-600" />
@@ -231,7 +377,7 @@ export const MessageBubble = ({
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer relative"
-                title="T�y ch?n kh�c"
+                title="Tùy chọn khác"
               >
                 <MoreVertical className="w-3.5 h-3.5 text-gray-600" />
               </button>
@@ -258,7 +404,7 @@ export const MessageBubble = ({
               <button
                 onClick={() => setShowExtraReactions((prev) => !prev)}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-                title="Th�m emoji kh�c"
+                title="Thêm emoji khác"
               >
                 <span className="text-xl text-gray-600">+</span>
               </button>
@@ -299,7 +445,7 @@ export const MessageBubble = ({
                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
                 disabled={message.deleted || !message.isOwn}
               >
-                {message.isOwn ? 'G?' : 'Ch? g? tin nh?n c?a b?n'}
+                {message.isOwn ? 'Gỡ' : 'Chỉ gỡ tin nhắn của bạn'}
               </button>
               <button
                 onClick={() => {
@@ -308,7 +454,7 @@ export const MessageBubble = ({
                 }}
                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
               >
-                Chuy?n ti?p
+                Chuyển tiếp
               </button>
               <button
                 onClick={() => {
@@ -317,7 +463,7 @@ export const MessageBubble = ({
                 }}
                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
               >
-                B�o c�o
+                Báo cáo
               </button>
             </div>
           )}
@@ -336,6 +482,67 @@ export const MessageBubble = ({
       {showTimestamp && !message.isOwn && (
         <span className="text-xs text-gray-500 self-end pb-0.5">{formatTime(message.timestamp)}</span>
       )}
+
+      {activeLightboxImage && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setLightboxIndex(null)}
+        >
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setLightboxIndex(null);
+            }}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+            title="Đóng"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          {imageUrls.length > 1 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setLightboxIndex((prev) => (prev === null ? 0 : (prev - 1 + imageUrls.length) % imageUrls.length));
+              }}
+              className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              title="Ảnh trước"
+            >
+              <ChevronLeft className="h-7 w-7" />
+            </button>
+          )}
+
+          <img
+            src={activeLightboxImage}
+            alt="Ảnh đã gửi"
+            className="max-h-[88vh] max-w-[88vw] rounded-xl object-contain shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          />
+
+          {imageUrls.length > 1 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setLightboxIndex((prev) => (prev === null ? 0 : (prev + 1) % imageUrls.length));
+              }}
+              className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              title="Ảnh sau"
+            >
+              <ChevronRight className="h-7 w-7" />
+            </button>
+          )}
+
+          {imageUrls.length > 1 && (
+            <div className="absolute bottom-5 rounded-full bg-black/45 px-3 py-1 text-sm font-medium text-white">
+              {(lightboxIndex ?? 0) + 1} / {imageUrls.length}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
+

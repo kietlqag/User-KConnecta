@@ -1,7 +1,16 @@
-﻿export interface Message {
+export interface Message {
   id: string;
   senderId: string; // userId (UUID)
   text: string;
+  replyPreview?: string;
+  replyToMessageId?: string;
+  voiceAudioUrl?: string;
+  voiceDurationSec?: number;
+  voiceMimeType?: string;
+  imageUrl?: string;
+  imageUrls?: string[];
+  imageMimeType?: string;
+  imageCaption?: string;
   timestamp: Date;
   isOwn: boolean;
   deliveryStatus?: 'SENT' | 'DELIVERED' | 'SEEN';
