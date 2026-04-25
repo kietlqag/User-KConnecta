@@ -57,6 +57,22 @@ public class CloudinaryService {
         }
     }
 
+    public String uploadChatImage(MultipartFile file) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/chat-images",
+                            "resource_type", "image",
+                            "public_id", "chat-image-" + System.currentTimeMillis()
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload chat image failed", e);
+        }
+    }
+
     public String uploadCallRecording(MultipartFile file, String callId) {
         try {
             Map<?, ?> result = cloudinary.uploader().upload(
@@ -70,6 +86,22 @@ public class CloudinaryService {
             return result.get("secure_url").toString();
         } catch (IOException e) {
             throw new RuntimeException("Upload call recording failed", e);
+        }
+    }
+
+    public String uploadVoiceMessage(MultipartFile file) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/voice-messages",
+                            "resource_type", "video",
+                            "public_id", "voice-" + System.currentTimeMillis()
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload voice message failed", e);
         }
     }
 
