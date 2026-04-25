@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
 import { Message } from '../../types/message.types';
 
 interface MessageBubbleProps {
@@ -110,6 +110,37 @@ export const MessageBubble = ({
   const handleMouseLeave = () => {
     setShowTimestamp(false);
     setIsHovering(false);
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes || !Number.isFinite(bytes)) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getDownloadUrl = (url: string) => {
+    if (!url.includes('/upload/')) return url;
+    return url.replace('/upload/', '/upload/fl_attachment/');
+  };
+
+  const downloadFile = async (url: string, filename?: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Download failed');
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = filename?.trim() || 'file';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(getDownloadUrl(url), '_blank', 'noopener,noreferrer');
+    }
   };
 
   const toggleVoicePlayback = async () => {
@@ -324,6 +355,42 @@ export const MessageBubble = ({
                   className="hidden"
                 />
               </div>
+              ) : message.fileUrl && !message.deleted ? (
+              <button
+                type="button"
+                onClick={() => window.open(message.fileUrl, '_blank', 'noopener,noreferrer')}
+                className="flex min-w-[220px] max-w-[280px] items-center gap-3"
+                title="Mở file"
+              >
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    message.isOwn ? 'bg-white/20' : 'bg-white'
+                  }`}
+                >
+                  <FileText className={`h-5 w-5 ${message.isOwn ? 'text-white' : 'text-blue-600'}`} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">
+                    {message.fileName || message.text || 'File'}
+                  </span>
+                  <span className={`block text-xs ${message.isOwn ? 'text-white/80' : 'text-gray-500'}`}>
+                    {formatFileSize(message.fileSizeBytes) || message.fileMimeType || 'File'}
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void downloadFile(message.fileUrl, message.fileName);
+                  }}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${
+                    message.isOwn ? 'hover:bg-white/20' : 'hover:bg-blue-50'
+                  }`}
+                  title="Tải xuống"
+                >
+                  <Download className={`h-4 w-4 ${message.isOwn ? 'text-white/85' : 'text-blue-600'}`} />
+                </button>
+              </button>
               ) : (
               <p className={`whitespace-pre-wrap text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
                 {message.deleted ? 'Tin nhắn đã được gỡ' : message.text}

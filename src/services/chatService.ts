@@ -27,6 +27,13 @@ export interface ChatImageUploadResponse {
   fileSizeBytes: number;
 }
 
+export interface ChatFileUploadResponse {
+  fileUrl: string;
+  fileName: string;
+  mimeType?: string;
+  fileSizeBytes: number;
+}
+
 export interface ChatHistoryPageResponse {
   messages: IncomingChatMessage[];
   hasMore: boolean;
@@ -126,6 +133,12 @@ export const chatService = {
     const formData = new FormData();
     formData.append('file', file);
     return api.postMultipart<ChatImageUploadResponse>('/chat/messages/images', formData);
+  },
+
+  uploadChatFile: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.postMultipart<ChatFileUploadResponse>('/chat/messages/files', formData);
   },
 
   getCallSessionSnapshot: (callId: string) => {

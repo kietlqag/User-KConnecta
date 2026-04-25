@@ -15,6 +15,7 @@ const CALL_LOG_PREFIX = '__CALL_LOG__:';
 const REPLY_PREFIX = '__REPLY__:';
 const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
+const FILE_MESSAGE_PREFIX = '__FILE__:';
 
 function mapBackendContentToPreview(content?: string | null) {
   const raw = content?.trim();
@@ -26,6 +27,15 @@ function mapBackendContentToPreview(content?: string | null) {
 
   if (raw.startsWith(IMAGE_MESSAGE_PREFIX)) {
     return 'Ảnh';
+  }
+
+  if (raw.startsWith(FILE_MESSAGE_PREFIX)) {
+    try {
+      const payload = JSON.parse(raw.slice(FILE_MESSAGE_PREFIX.length));
+      return typeof payload?.fileName === 'string' && payload.fileName.trim() ? payload.fileName.trim() : 'File';
+    } catch {
+      return 'File';
+    }
   }
 
   if (raw.startsWith(REPLY_PREFIX)) {

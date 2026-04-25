@@ -7,6 +7,10 @@ export interface Message {
   voiceAudioUrl?: string;
   voiceDurationSec?: number;
   voiceMimeType?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileMimeType?: string;
+  fileSizeBytes?: number;
   imageUrl?: string;
   imageUrls?: string[];
   imageMimeType?: string;

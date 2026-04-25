@@ -208,7 +208,7 @@ export function Post({
                       <span className="hover:underline cursor-pointer font-medium text-gray-700">
                         {group.name}
                       </span>
-                      <span>Â·</span>
+                      <span>·</span>
                     </>
                   )}
                   <span>{timestamp}</span>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+﻿import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -7,6 +7,8 @@ import {
   RefreshCw,
   BellOff,
   ChevronDown,
+  ChevronUp,
+  ArrowLeft,
   Search as SearchIcon,
   Image as ImageIcon,
   FileText,
@@ -27,11 +29,12 @@ const CALL_LOG_PREFIX = '__CALL_LOG__:';
 const REPLY_PREFIX = '__REPLY__:';
 const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
+const FILE_MESSAGE_PREFIX = '__FILE__:';
 const HISTORY_PAGE_SIZE = 30;
 
 function mapBackendContentToMessageFields(
   content: string,
-): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'callLogKind' | 'callDurationSec' | 'callMediaType'> {
+): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'callLogKind' | 'callDurationSec' | 'callMediaType'> {
   if (!content?.startsWith(CALL_LOG_PREFIX)) {
     if (content?.startsWith(REPLY_PREFIX)) {
       try {
@@ -92,6 +95,27 @@ function mapBackendContentToMessageFields(
         };
       } catch {
         return { text: 'Ảnh' };
+      }
+    }
+    if (content?.startsWith(FILE_MESSAGE_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(FILE_MESSAGE_PREFIX.length));
+        const fileUrl = typeof payload?.fileUrl === 'string' ? payload.fileUrl : undefined;
+        const fileName = typeof payload?.fileName === 'string' ? payload.fileName : 'File';
+        const fileMimeType = typeof payload?.mimeType === 'string' ? payload.mimeType : undefined;
+        const fileSizeBytes =
+          typeof payload?.fileSizeBytes === 'number' && Number.isFinite(payload.fileSizeBytes)
+            ? Math.max(0, Math.floor(payload.fileSizeBytes))
+            : undefined;
+        return {
+          text: fileName,
+          fileUrl,
+          fileName,
+          fileMimeType,
+          fileSizeBytes,
+        };
+      } catch {
+        return { text: 'File' };
       }
     }
     return { text: content };
@@ -175,6 +199,14 @@ function defaultHistoryState(): HistoryState {
 }
 
 type InfoPanelTab = 'media' | 'files' | 'links';
+const INFO_PANEL_PAGE_SIZE = 9;
+
+function formatFileSize(bytes: number) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return 'File';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function extractLinksFromText(text?: string | null) {
   if (!text) return [];
@@ -184,11 +216,24 @@ function extractLinksFromText(text?: string | null) {
 
 function ChatInfoPanel({ user, messages }: { user: ChatUser; messages: Message[] }) {
   const [activeTab, setActiveTab] = useState<InfoPanelTab>('media');
-  const [expandedTabs, setExpandedTabs] = useState<Record<InfoPanelTab, boolean>>({
-    media: false,
-    files: false,
-    links: false,
+  const [infoView, setInfoView] = useState<'overview' | 'files'>('overview');
+  const [isMediaSectionOpen, setIsMediaSectionOpen] = useState(true);
+  const [visibleLimits, setVisibleLimits] = useState<Record<InfoPanelTab, number>>({
+    media: INFO_PANEL_PAGE_SIZE,
+    files: INFO_PANEL_PAGE_SIZE,
+    links: INFO_PANEL_PAGE_SIZE,
   });
+
+  useEffect(() => {
+    setVisibleLimits({
+      media: INFO_PANEL_PAGE_SIZE,
+      files: INFO_PANEL_PAGE_SIZE,
+      links: INFO_PANEL_PAGE_SIZE,
+    });
+    setInfoView('overview');
+    setActiveTab('media');
+    setIsMediaSectionOpen(true);
+  }, [user.id]);
 
   const mediaItems = useMemo(
     () =>
@@ -207,13 +252,13 @@ function ChatInfoPanel({ user, messages }: { user: ChatUser; messages: Message[]
   const fileItems = useMemo(
     () =>
       messages.flatMap((message) => {
-        if (message.deleted || !message.voiceAudioUrl) return [];
+        if (message.deleted || !message.fileUrl) return [];
         return [
           {
-            id: `${message.id}-voice`,
-            url: message.voiceAudioUrl,
-            label: 'Tin nhắn thoại',
-            meta: message.voiceDurationSec ? `${Math.floor(message.voiceDurationSec / 60)}:${String(message.voiceDurationSec % 60).padStart(2, '0')}` : 'Audio',
+            id: `${message.id}-file`,
+            url: message.fileUrl,
+            label: message.fileName || 'File',
+            meta: message.fileSizeBytes ? formatFileSize(message.fileSizeBytes) : message.fileMimeType || 'File',
           },
         ];
       }),
@@ -239,172 +284,249 @@ function ChatInfoPanel({ user, messages }: { user: ChatUser; messages: Message[]
     [messages],
   );
 
-  const tabs: { key: InfoPanelTab; label: string; count: number }[] = [
-    { key: 'media', label: 'Ảnh/Video', count: mediaItems.length },
-    { key: 'files', label: 'File', count: fileItems.length },
-    { key: 'links', label: 'Link', count: linkItems.length },
-  ];
-  const visibleMediaItems = expandedTabs.media ? mediaItems : mediaItems.slice(0, 9);
-  const visibleFileItems = expandedTabs.files ? fileItems : fileItems.slice(0, 9);
-  const visibleLinkItems = expandedTabs.links ? linkItems : linkItems.slice(0, 9);
+  const visibleMediaItems = mediaItems.slice(0, visibleLimits.media);
+  const visibleFileItems = fileItems.slice(0, visibleLimits.files);
+  const visibleLinkItems = linkItems.slice(0, visibleLimits.links);
 
   const renderSeeMoreButton = (tab: InfoPanelTab, total: number) => {
-    if (expandedTabs[tab] || total <= 9) return null;
+    const visibleCount = visibleLimits[tab];
+    const remainingCount = total - visibleCount;
+    if (remainingCount <= 0) return null;
     return (
       <button
         type="button"
-        onClick={() => setExpandedTabs((prev) => ({ ...prev, [tab]: true }))}
+        onClick={() =>
+          setVisibleLimits((prev) => ({
+            ...prev,
+            [tab]: Math.min(total, prev[tab] + INFO_PANEL_PAGE_SIZE),
+          }))
+        }
         className="mt-3 w-full rounded-full bg-gray-100 px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
       >
-        Xem thêm {total - 9}
+        Xem thêm
       </button>
     );
   };
 
-  return (
-    <aside
-      className="hidden xl:flex w-[320px] shrink-0 border-l border-gray-200 bg-white p-5 flex-col gap-5"
-      style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
-    >
-      <div className="text-center">
-        <img
-          src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
-          alt={user.name}
-          className="w-24 h-24 rounded-full object-cover mx-auto"
-        />
-        <h3 className="mt-3 text-xl font-semibold text-gray-900 tracking-tight">{user.name}</h3>
-        <p className="text-sm text-gray-500">{formatLastActiveLabel(user.isOnline, user.lastActiveAt)}</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 text-center">
-        <button
-          className="rounded-xl bg-gray-100 h-14 flex items-center justify-center hover:bg-gray-200 transition-colors"
-          title="Tắt thông báo"
-        >
-          <BellOff className="w-5 h-5 text-gray-700" />
-        </button>
-        <button
-          className="rounded-xl bg-gray-100 h-14 flex items-center justify-center hover:bg-gray-200 transition-colors"
-          title="Tìm kiếm"
-        >
-          <SearchIcon className="w-5 h-5 text-gray-700" />
-        </button>
-      </div>
-
-      <section className="rounded-xl border border-gray-100 bg-white">
-        <div className="flex items-center justify-between px-2 py-3">
-          <span className="text-[15px] font-medium text-gray-800">File phương tiện & file</span>
-          <ChevronDown className="w-5 h-5 text-gray-500" />
-        </div>
-
-        <div className="grid grid-cols-3 gap-1 rounded-full bg-gray-100 p-1">
-          {tabs.map((tab) => (
+  const renderMediaGrid = () => (
+    mediaItems.length > 0 ? (
+      <>
+        <div className="grid grid-cols-2 gap-1">
+          {visibleMediaItems.map((item) => (
             <button
-              key={tab.key}
+              key={item.id}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`rounded-full px-2 py-1.5 text-[12px] font-semibold transition-colors ${
-                activeTab === tab.key ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600 hover:text-gray-900'
-              }`}
+              onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+              className="relative aspect-square overflow-hidden bg-gray-100"
+              title="Mở media"
             >
-              {tab.label}
-              {tab.count > 0 && <span className="ml-1 text-[11px] opacity-70">{tab.count}</span>}
+              <img src={item.url} alt="Media đã gửi" className="h-full w-full object-cover" loading="lazy" />
+              {item.type === 'video' && (
+                <span className="absolute bottom-1 right-1 rounded-full bg-black/60 p-1 text-white">
+                  <Video className="h-3 w-3" />
+                </span>
+              )}
             </button>
           ))}
         </div>
+        {renderSeeMoreButton('media', mediaItems.length)}
+      </>
+    ) : (
+      <EmptyInfoTab icon={<ImageIcon className="h-5 w-5" />} text="Chưa có ảnh hoặc video" />
+    )
+  );
 
-        <div className="mt-3 max-h-[360px] overflow-y-auto px-1 pb-2">
-          {activeTab === 'media' && (
-            mediaItems.length > 0 ? (
-              <>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {visibleMediaItems.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
-                      className="relative aspect-square overflow-hidden rounded-lg bg-gray-100"
-                      title="Mở media"
-                    >
-                      <img src={item.url} alt="Media đã gửi" className="h-full w-full object-cover" loading="lazy" />
-                      {item.type === 'video' && (
-                        <span className="absolute bottom-1 right-1 rounded-full bg-black/60 p-1 text-white">
-                          <Video className="h-3 w-3" />
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                {renderSeeMoreButton('media', mediaItems.length)}
-              </>
-            ) : (
-              <EmptyInfoTab icon={<ImageIcon className="h-5 w-5" />} text="Chưa có ảnh hoặc video" />
-            )
-          )}
-
-          {activeTab === 'files' && (
-            fileItems.length > 0 ? (
-              <>
-                <div className="space-y-2">
-                  {visibleFileItems.map((item) => (
-                    <a
-                      key={item.id}
-                      href={item.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-2 hover:bg-gray-100"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                        <FileText className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-gray-900">{item.label}</span>
-                        <span className="block text-xs text-gray-500">{item.meta}</span>
-                      </span>
-                    </a>
-                  ))}
-                </div>
-                {renderSeeMoreButton('files', fileItems.length)}
-              </>
-            ) : (
-              <EmptyInfoTab icon={<FileText className="h-5 w-5" />} text="Chưa có file" />
-            )
-          )}
-
-          {activeTab === 'links' && (
-            linkItems.length > 0 ? (
-              <>
-                <div className="space-y-2">
-                  {visibleLinkItems.map((item) => (
-                    <a
-                      key={item.id}
-                      href={item.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-2 hover:bg-gray-100"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                        <LinkIcon className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-gray-900">{item.host}</span>
-                        <span className="block truncate text-xs text-gray-500">{item.url}</span>
-                      </span>
-                    </a>
-                  ))}
-                </div>
-                {renderSeeMoreButton('links', linkItems.length)}
-              </>
-            ) : (
-              <EmptyInfoTab icon={<LinkIcon className="h-5 w-5" />} text="Chưa có link" />
-            )
-          )}
+  const renderFileList = () => (
+    fileItems.length > 0 ? (
+      <>
+        <div className="space-y-2">
+          {visibleFileItems.map((item) => (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-3 hover:bg-gray-100"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                <FileText className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-gray-900">{item.label}</span>
+                <span className="block text-xs text-gray-500">{item.meta}</span>
+              </span>
+            </a>
+          ))}
         </div>
-      </section>
-      <button className="w-full flex items-center justify-between rounded-lg px-2 py-3 hover:bg-gray-50 transition-colors text-left">
-        <span className="text-[15px] font-medium text-gray-800">Quyền riêng tư và hỗ trợ</span>
-        <ChevronDown className="w-5 h-5 text-gray-500" />
-      </button>
+        {renderSeeMoreButton('files', fileItems.length)}
+      </>
+    ) : (
+      <EmptyInfoTab icon={<FileText className="h-5 w-5" />} text="Chưa có file" />
+    )
+  );
+
+  const renderLinkList = () => (
+    linkItems.length > 0 ? (
+      <>
+        <div className="space-y-2">
+          {visibleLinkItems.map((item) => (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-3 hover:bg-gray-100"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                <LinkIcon className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-gray-900">{item.host}</span>
+                <span className="block truncate text-xs text-gray-500">{item.url}</span>
+              </span>
+            </a>
+          ))}
+        </div>
+        {renderSeeMoreButton('links', linkItems.length)}
+      </>
+    ) : (
+      <EmptyInfoTab icon={<LinkIcon className="h-5 w-5" />} text="Chưa có link" />
+    )
+  );
+
+  const renderActiveDetail = () => {
+    if (activeTab === 'media') return renderMediaGrid();
+    if (activeTab === 'files') return renderFileList();
+    return renderLinkList();
+  };
+
+  return (
+    <aside
+      className="hidden xl:flex h-full min-h-0 w-[320px] shrink-0 overflow-hidden border-l border-gray-200 bg-white flex-col"
+      style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
+    >
+      {infoView === 'overview' ? (
+        <div className="flex h-full min-h-0 flex-col px-5 py-5">
+          <div className="shrink-0 text-center">
+            <img
+              src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
+              alt={user.name}
+              className="w-24 h-24 rounded-full object-cover mx-auto"
+            />
+            <h3 className="mt-3 text-lg font-semibold text-gray-900 tracking-tight">{user.name}</h3>
+            <p className="text-xs text-gray-500">{formatLastActiveLabel(user.isOnline, user.lastActiveAt)}</p>
+          </div>
+
+          <div className="mt-6 flex shrink-0 items-start justify-center gap-8 text-center">
+            <button type="button" className="group flex w-16 flex-col items-center gap-2" title="Tắt thông báo">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 transition-colors group-hover:bg-gray-300">
+                <BellOff className="h-4.5 w-4.5 text-gray-900" />
+              </span>
+              <span className="text-xs leading-tight text-gray-900">Tắt thông báo</span>
+            </button>
+            <button type="button" className="group flex w-16 flex-col items-center gap-2" title="Tìm kiếm">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 transition-colors group-hover:bg-gray-300">
+                <SearchIcon className="h-4.5 w-4.5 text-gray-900" />
+              </span>
+              <span className="text-xs leading-tight text-gray-900">Tìm kiếm</span>
+            </button>
+          </div>
+
+          <section className="mt-8 shrink-0">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between py-2 text-left"
+              onClick={() => setIsMediaSectionOpen((prev) => !prev)}
+            >
+              <span className="text-[15px] font-semibold text-gray-900">Phương tiện, File, Link</span>
+              <ChevronUp className={`h-4.5 w-4.5 text-gray-900 transition-transform ${isMediaSectionOpen ? '' : 'rotate-180'}`} />
+            </button>
+            {isMediaSectionOpen && <div className="mt-4 space-y-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('media');
+                  setInfoView('files');
+                }}
+                className="flex w-full items-center gap-4 text-left"
+              >
+                <ImageIcon className="h-5 w-5 text-gray-900" />
+                <span className="text-[15px] font-semibold text-gray-900">Phương tiện</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('files');
+                  setInfoView('files');
+                }}
+                className="flex w-full items-center gap-4 text-left"
+              >
+                <FileText className="h-5 w-5 text-gray-900" />
+                <span className="text-[15px] font-semibold text-gray-900">File</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('links');
+                  setInfoView('files');
+                }}
+                className="flex w-full items-center gap-4 text-left"
+              >
+                <LinkIcon className="h-5 w-5 text-gray-900" />
+                <span className="text-[15px] font-semibold text-gray-900">Link</span>
+              </button>
+            </div>}
+          </section>
+        </div>
+      ) : (
+        <div className="flex h-full min-h-0 flex-col px-5 py-5">
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setInfoView('overview')}
+              className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
+              title="Quay lại"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-900" />
+            </button>
+            <h3 className="text-lg font-semibold text-gray-900">Phương tiện, File, Link</h3>
+          </div>
+
+          <div className="mt-8 grid shrink-0 grid-cols-3 border-b border-gray-200">
+            <button
+              type="button"
+              onClick={() => setActiveTab('media')}
+              className={`pb-3 text-center text-sm font-semibold transition-colors ${
+                activeTab === 'media' ? 'border-b-[3px] border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Phương tiện
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('files')}
+              className={`pb-3 text-center text-sm font-semibold transition-colors ${
+                activeTab === 'files' ? 'border-b-[3px] border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              File
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('links')}
+              className={`pb-3 text-center text-sm font-semibold transition-colors ${
+                activeTab === 'links' ? 'border-b-[3px] border-blue-600 text-blue-600' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Link
+            </button>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto pt-5">
+            {renderActiveDetail()}
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
@@ -1212,9 +1334,9 @@ export default function MessengerPage() {
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 flex gap-2 relative">
+        <div className="flex-1 min-h-0 min-w-0 flex gap-2 relative">
           {activeChatUser ? (
-            <div className="flex-1 min-w-0 relative">
+            <div className="flex-1 min-h-0 min-w-0 relative">
               <ChatWindow
                 user={activeChatUser}
                 messages={activeMessages}
@@ -1268,5 +1390,3 @@ export default function MessengerPage() {
     </div>
   );
 }
-
-
