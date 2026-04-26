@@ -5,46 +5,15 @@ export interface Group {
   members: number;
   privacy: 'public' | 'private';
   lastActivity?: string;
+  role?: 'ADMIN' | 'MEMBER' | null;
 }
 
-export interface GroupPost {
+export interface GroupMember {
   id: string;
-  group: {
-    id: string;
-    name: string;
-    icon: string;
-  };
-  author: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  timestamp: string;
-  content: string;
-  media?: {
-    type: 'image' | 'video';
-    url: string;
-  };
-  reactions: {
-    like: number;
-    love: number;
-    haha: number;
-  };
-  commentsCount: number;
-  sharesCount: number;
-  comments?: Comment[];
-}
-
-export interface Comment {
-  id: string;
-  author: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  content: string;
-  timestamp: string;
-  reactions: number;
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  role: 'ADMIN' | 'MEMBER';
 }
 
 export interface GroupsSidebarSection {

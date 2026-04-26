@@ -2,6 +2,7 @@ import { api } from './api';
 
 export interface CreatePostPayload {
   authorId: string;
+  groupId?: string;
   content: string;
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT';
@@ -118,6 +119,11 @@ export const postService = {
     const params = new URLSearchParams();
     if (currentUserId) params.append('currentUserId', currentUserId);
     if (authorId) params.append('authorId', authorId);
+    return api.get<PostResponse[]>(`/posts?${params.toString()}`);
+  },
+  getGroupPosts: (groupId: string, currentUserId?: string) => {
+    const params = new URLSearchParams({ groupId });
+    if (currentUserId) params.append('currentUserId', currentUserId);
     return api.get<PostResponse[]>(`/posts?${params.toString()}`);
   },
   createPost: (data: CreatePostPayload) => api.post<PostResponse>('/posts', data),

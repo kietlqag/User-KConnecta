@@ -1,56 +1,16 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import {
-  Phone,
-  PhoneOff,
-  Video,
-  Minus,
-  X,
-  Smile,
-  Image as ImageIcon,
-  Mic,
-  MicOff,
-  Camera,
-  FileUp,
-  FileText,
-  Send,
-  Trash2,
-  Pause,
-  ArrowLeft,
-  Info,
-  ChevronDown,
-} from 'lucide-react';
+import { useState, useMemo } from 'react';
 import { ChatUser, Message } from '../../types/message.types';
-import { MessageBubble } from '../MessageBubble';
-import { formatLastActiveLabel } from '../../utils/presenceLabel';
-import { chatService } from '@/services/chatService';
+import { ChatHeader } from './components/ChatHeader';
+import { MessageList } from './components/MessageList';
+import { PendingAttachments } from './components/PendingAttachments';
+import { Composer } from './components/Composer';
+import { CameraModal } from './components/CameraModal';
+import { useChatScroll } from './hooks/useChatScroll';
+import { useVoiceRecorder } from './hooks/useVoiceRecorder';
+import { useAttachments } from './hooks/useAttachments';
+import { useCameraCapture } from './hooks/useCameraCapture';
 
 const REPLY_PREFIX = '__REPLY__:';
-const VOICE_MESSAGE_PREFIX = '__VOICE__:';
-const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
-const FILE_MESSAGE_PREFIX = '__FILE__:';
-const MAX_VOICE_RECORDING_SEC = 60;
-const MAX_PENDING_IMAGES = 6;
-const MAX_PENDING_FILES = 6;
-const MAX_CHAT_FILE_BYTES = 25 * 1024 * 1024;
-
-function getSupportedAudioMimeType() {
-  if (typeof MediaRecorder === 'undefined') return undefined;
-  return ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((type) => MediaRecorder.isTypeSupported(type));
-}
-
-function formatVoiceDuration(totalSec: number) {
-  const safeTotal = Math.max(0, Math.floor(totalSec));
-  const min = Math.floor(safeTotal / 60);
-  const sec = safeTotal % 60;
-  return `${min}:${String(sec).padStart(2, '0')}`;
-}
-
-function getAudioFileExtension(mimeType: string) {
-  if (mimeType.includes('mp4')) return 'm4a';
-  if (mimeType.includes('ogg')) return 'ogg';
-  if (mimeType.includes('mpeg')) return 'mp3';
-  return 'webm';
-}
 
 interface ChatWindowProps {
   user: ChatUser;
@@ -79,22 +39,11 @@ interface ChatWindowProps {
   onCallAgain?: (mediaType?: 'audio' | 'video') => void;
 }
 
-interface PendingImage {
-  id: string;
-  file: File;
-  previewUrl: string;
-}
-
-interface PendingFile {
-  id: string;
-  file: File;
-}
-
-function formatFileSize(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes <= 0) return 'File';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function formatVoiceDuration(totalSec: number) {
+  const safeTotal = Math.max(0, Math.floor(totalSec));
+  const min = Math.floor(safeTotal / 60);
+  const sec = safeTotal % 60;
+  return `${min}:${String(sec).padStart(2, '0')}`;
 }
 
 export const ChatWindow = ({
@@ -110,7 +59,6 @@ export const ChatWindow = ({
   onDeleteMessage,
   onReportMessage,
   onClose,
-  onMinimize,
   fullScreen,
   callStatus = 'idle',
   callMediaType = 'audio',
@@ -121,129 +69,58 @@ export const ChatWindow = ({
   onStartVideoCall,
   onEndVoiceCall,
   onToggleMute,
-  onCallAgain,
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [isSendingVoice, setIsSendingVoice] = useState(false);
-  const [isSendingImage, setIsSendingImage] = useState(false);
-  const [isSendingFile, setIsSendingFile] = useState(false);
-  const [isOpeningCamera, setIsOpeningCamera] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
-  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
-  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
-  const [voiceRecordingSec, setVoiceRecordingSec] = useState(0);
-  const messageListRef = useRef<HTMLDivElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraVideoRef = useRef<HTMLVideoElement>(null);
-  const pendingImagesRef = useRef<PendingImage[]>([]);
-  const voiceRecorderRef = useRef<MediaRecorder | null>(null);
-  const voiceStreamRef = useRef<MediaStream | null>(null);
-  const voiceChunksRef = useRef<Blob[]>([]);
-  const voiceStartedAtRef = useRef(0);
-  const voiceTimerRef = useRef<number | null>(null);
-  const loadingOlderRef = useRef(false);
-  const initializedRef = useRef(false);
-  const previousMessageCountRef = useRef(0);
-  const shouldStickToBottomRef = useRef(true);
-  const prependScrollAdjustRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null);
 
-  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
-    const list = messageListRef.current;
-    if (!list) return;
-    list.scrollTo({ top: list.scrollHeight, behavior });
-    setShowJumpToLatest(false);
-  };
+  const { messageListRef, showJumpToLatest, scrollToBottom, handleListScroll } = useChatScroll(
+    messages.length,
+    loading,
+    user.id,
+    onLoadOlder,
+    hasOlder,
+    loadingOlder
+  );
 
-  useEffect(() => {
-    initializedRef.current = false;
-    previousMessageCountRef.current = 0;
-    shouldStickToBottomRef.current = true;
-    prependScrollAdjustRef.current = null;
-    loadingOlderRef.current = false;
-  }, [user.id]);
+  const {
+    isRecordingVoice,
+    isSendingVoice,
+    voiceRecordingSec,
+    startVoiceRecording,
+    stopAndSendVoiceRecording,
+    cancelVoiceRecording,
+  } = useVoiceRecorder(connected, onSendMessage, setReportNotice);
 
-  useEffect(() => {
-    if (loading || initializedRef.current || messages.length === 0) return;
-    scrollToBottom('auto');
-    initializedRef.current = true;
-    previousMessageCountRef.current = messages.length;
-  }, [loading, messages.length]);
+  const {
+    pendingImages,
+    pendingFiles,
+    isSendingImage,
+    isSendingFile,
+    imageInputRef,
+    fileInputRef,
+    handleImageSelect,
+    handleFileSelect,
+    removePendingImage,
+    removePendingFile,
+    sendPendingImages,
+    sendPendingFiles,
+  } = useAttachments(connected, onSendMessage, setReportNotice);
 
-  useEffect(() => {
-    const list = messageListRef.current;
-    if (!list) return;
-
-    if (prependScrollAdjustRef.current) {
-      const { scrollTop, scrollHeight } = prependScrollAdjustRef.current;
-      const delta = list.scrollHeight - scrollHeight;
-      list.scrollTop = scrollTop + delta;
-      prependScrollAdjustRef.current = null;
-      previousMessageCountRef.current = messages.length;
-      return;
-    }
-
-    const appended = messages.length > previousMessageCountRef.current;
-    if (appended && shouldStickToBottomRef.current) {
-      scrollToBottom('smooth');
-    }
-    previousMessageCountRef.current = messages.length;
-  }, [messages]);
-
-  useEffect(() => {
-    return () => {
-      if (voiceTimerRef.current) {
-        window.clearInterval(voiceTimerRef.current);
-      }
-      voiceRecorderRef.current?.stream.getTracks().forEach((track) => track.stop());
-      voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
-      cameraStream?.getTracks().forEach((track) => track.stop());
-    };
-  }, [cameraStream]);
-
-  useEffect(() => {
-    const video = cameraVideoRef.current;
-    if (!video || !cameraStream) return;
-
-    video.srcObject = cameraStream;
-    void video.play().catch(() => {});
-  }, [cameraStream, showCamera]);
-
-  useEffect(() => {
-    pendingImagesRef.current = pendingImages;
-  }, [pendingImages]);
-
-  useEffect(() => {
-    return () => {
-      pendingImagesRef.current.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-    };
-  }, []);
-
-  const handleListScroll = () => {
-    const list = messageListRef.current;
-    if (!list) return;
-
-    const distanceToBottom = list.scrollHeight - (list.scrollTop + list.clientHeight);
-    shouldStickToBottomRef.current = distanceToBottom < 120;
-    setShowJumpToLatest(distanceToBottom > 320);
-
-    if (!onLoadOlder || !hasOlder || loadingOlder || loadingOlderRef.current || list.scrollTop > 200) {
-      return;
-    }
-
-    loadingOlderRef.current = true;
-    prependScrollAdjustRef.current = { scrollTop: list.scrollTop, scrollHeight: list.scrollHeight };
-    Promise.resolve(onLoadOlder()).finally(() => {
-      loadingOlderRef.current = false;
-    });
-  };
+  const {
+    showCamera,
+    isOpeningCamera,
+    cameraVideoRef,
+    openCamera,
+    closeCamera,
+    captureCameraPhoto,
+  } = useCameraCapture(connected, setReportNotice, (file) => {
+    // Manually add to pending images
+    const event = { target: { files: [file], value: '' } } as any;
+    handleImageSelect(event);
+  });
 
   const handleSend = () => {
     const text = inputText.trim();
@@ -253,11 +130,15 @@ export const ChatWindow = ({
 
     if (pendingImages.length > 0) {
       void sendPendingImages(text || undefined);
+      setInputText('');
+      setReplyToMessage(null);
       return;
     }
 
     if (pendingFiles.length > 0) {
       void sendPendingFiles();
+      setInputText('');
+      setReplyToMessage(null);
       return;
     }
 
@@ -273,942 +154,125 @@ export const ChatWindow = ({
     setReplyToMessage(null);
   };
 
-  const sendPendingImages = async (caption?: string) => {
-    if (!connected || pendingImages.length === 0 || isSendingImage) return;
-
-    const imagesToSend = pendingImages;
-    setIsSendingImage(true);
-    try {
-      const uploadedImages = await Promise.all(
-        imagesToSend.map(async (image) => {
-          const uploaded = await chatService.uploadChatImage(image.file);
-          return {
-            imageUrl: uploaded.imageUrl,
-            mimeType: uploaded.mimeType ?? image.file.type,
-          };
-        }),
-      );
-      onSendMessage(
-        `${IMAGE_MESSAGE_PREFIX}${JSON.stringify({
-          imageUrl: uploadedImages[0]?.imageUrl,
-          imageUrls: uploadedImages.map((image) => image.imageUrl),
-          mimeTypes: uploadedImages.map((image) => image.mimeType),
-          caption,
-        })}`,
-      );
-      imagesToSend.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-      setPendingImages([]);
-      setInputText('');
-      setReplyToMessage(null);
-    } catch {
-      setReportNotice('Không thể gửi ảnh.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-    } finally {
-      setIsSendingImage(false);
-    }
-  };
-
-  const sendPendingFiles = async () => {
-    if (!connected || pendingFiles.length === 0 || isSendingFile) return;
-
-    const filesToSend = pendingFiles;
-    setIsSendingFile(true);
-    try {
-      const uploadedFiles = await Promise.all(
-        filesToSend.map(async ({ file }) => {
-          const uploaded = await chatService.uploadChatFile(file);
-          return {
-            fileUrl: uploaded.fileUrl,
-            fileName: uploaded.fileName || file.name,
-            mimeType: uploaded.mimeType || file.type,
-            fileSizeBytes: uploaded.fileSizeBytes || file.size,
-          };
-        }),
-      );
-      uploadedFiles.forEach((file) => {
-        onSendMessage(`${FILE_MESSAGE_PREFIX}${JSON.stringify(file)}`);
-      });
-      setPendingFiles([]);
-      setInputText('');
-      setReplyToMessage(null);
-    } catch {
-      setReportNotice('Không thể gửi file.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-    } finally {
-      setIsSendingFile(false);
-    }
-  };
-
-  const resetVoiceRecording = () => {
-    if (voiceTimerRef.current) {
-      window.clearInterval(voiceTimerRef.current);
-      voiceTimerRef.current = null;
-    }
-    voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
-    voiceStreamRef.current = null;
-    voiceRecorderRef.current = null;
-    voiceChunksRef.current = [];
-    voiceStartedAtRef.current = 0;
-    setVoiceRecordingSec(0);
-    setIsRecordingVoice(false);
-  };
-
-  const startVoiceRecording = async () => {
-    if (!connected || isRecordingVoice || isSendingVoice) return;
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      setReportNotice('Trình duyệt không hỗ trợ ghi âm.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = getSupportedAudioMimeType();
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
-      voiceChunksRef.current = [];
-      voiceStartedAtRef.current = Date.now();
-      voiceStreamRef.current = stream;
-      voiceRecorderRef.current = recorder;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          voiceChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = async () => {
-        const chunks = voiceChunksRef.current;
-        const durationSec = Math.max(1, Math.round((Date.now() - voiceStartedAtRef.current) / 1000));
-        const finalMimeType = recorder.mimeType || mimeType || 'audio/webm';
-        if (voiceTimerRef.current) {
-          window.clearInterval(voiceTimerRef.current);
-          voiceTimerRef.current = null;
-        }
-        voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
-        setIsRecordingVoice(false);
-        setIsSendingVoice(true);
-        try {
-          if (chunks.length > 0) {
-            const blob = new Blob(chunks, { type: finalMimeType });
-            const file = new File([blob], `voice-${Date.now()}.${getAudioFileExtension(finalMimeType)}`, {
-              type: finalMimeType,
-            });
-            const uploaded = await chatService.uploadVoiceMessage(file, durationSec);
-            onSendMessage(
-              `${VOICE_MESSAGE_PREFIX}${JSON.stringify({
-                audioUrl: uploaded.audioUrl,
-                durationSec: uploaded.durationSec ?? durationSec,
-                mimeType: uploaded.mimeType ?? finalMimeType,
-              })}`,
-            );
-          }
-        } catch {
-          setReportNotice('Không thể gửi tin nhắn thoại.');
-          window.setTimeout(() => setReportNotice(null), 1800);
-        } finally {
-          setIsSendingVoice(false);
-          resetVoiceRecording();
-        }
-      };
-
-      recorder.start(250);
-      setIsRecordingVoice(true);
-      setVoiceRecordingSec(0);
-      voiceTimerRef.current = window.setInterval(() => {
-        const elapsedSec = Math.max(0, Math.floor((Date.now() - voiceStartedAtRef.current) / 1000));
-        setVoiceRecordingSec(elapsedSec);
-        if (elapsedSec >= MAX_VOICE_RECORDING_SEC && recorder.state !== 'inactive') {
-          recorder.stop();
-        }
-      }, 500);
-    } catch {
-      setReportNotice('Không thể truy cập micro.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-      resetVoiceRecording();
-    }
-  };
-
-  const stopAndSendVoiceRecording = () => {
-    const recorder = voiceRecorderRef.current;
-    if (!recorder || recorder.state === 'inactive') {
-      resetVoiceRecording();
-      return;
-    }
-    recorder.stop();
-  };
-
-  const cancelVoiceRecording = () => {
-    const recorder = voiceRecorderRef.current;
-    if (recorder && recorder.state !== 'inactive') {
-      recorder.ondataavailable = null;
-      recorder.onstop = null;
-      recorder.stop();
-    }
-    resetVoiceRecording();
-  };
-
-  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = '';
-    if (files.length === 0 || !connected || isSendingImage) return;
-
-    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-    if (imageFiles.length !== files.length) {
-      setReportNotice('Vui lòng chọn file ảnh.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-      return;
-    }
-
-    setPendingFiles([]);
-    setPendingImages((prev) => {
-      const availableSlots = Math.max(0, MAX_PENDING_IMAGES - prev.length);
-      const nextFiles = imageFiles.slice(0, availableSlots);
-      if (imageFiles.length > availableSlots) {
-        setReportNotice(`Chỉ có thể gửi tối đa ${MAX_PENDING_IMAGES} ảnh một lần.`);
-        window.setTimeout(() => setReportNotice(null), 1800);
-      }
-      return [
-        ...prev,
-        ...nextFiles.map((file) => ({
-          id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
-          file,
-          previewUrl: URL.createObjectURL(file),
-        })),
-      ];
-    });
-  };
-
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = '';
-    if (files.length === 0 || !connected || isSendingFile) return;
-
-    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-    if (imageFiles.length > 0) {
-      setReportNotice('Vui lòng dùng nút ảnh để gửi hình ảnh.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-    }
-
-    const nonImageFiles = files.filter((file) => !file.type.startsWith('image/'));
-    const validFiles = nonImageFiles.filter((file) => file.size <= MAX_CHAT_FILE_BYTES);
-    if (validFiles.length !== nonImageFiles.length) {
-      setReportNotice('Một số file quá lớn. Vui lòng chọn file tối đa 25 MB.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-    }
-    if (validFiles.length === 0) {
-      return;
-    }
-
-    setPendingImages((prev) => {
-      prev.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-      return [];
-    });
-    setPendingFiles((prev) => {
-      const availableSlots = Math.max(0, MAX_PENDING_FILES - prev.length);
-      const nextFiles = validFiles.slice(0, availableSlots);
-      if (validFiles.length > availableSlots) {
-        setReportNotice(`Chỉ có thể gửi tối đa ${MAX_PENDING_FILES} file một lần.`);
-        window.setTimeout(() => setReportNotice(null), 1800);
-      }
-      return [
-        ...prev,
-        ...nextFiles.map((file) => ({
-          id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
-          file,
-        })),
-      ];
-    });
-  };
-
-  const removePendingImage = (imageId: string) => {
-    setPendingImages((prev) => {
-      const target = prev.find((image) => image.id === imageId);
-      if (target) URL.revokeObjectURL(target.previewUrl);
-      return prev.filter((image) => image.id !== imageId);
-    });
-  };
-
-  const clearPendingImages = () => {
-    setPendingImages((prev) => {
-      prev.forEach((image) => URL.revokeObjectURL(image.previewUrl));
-      return [];
-    });
-  };
-
-  const removePendingFile = (fileId: string) => {
-    setPendingFiles((prev) => prev.filter((file) => file.id !== fileId));
-  };
-
-  const clearPendingFiles = () => {
-    setPendingFiles([]);
-  };
-
-  const openCamera = async () => {
-    if (!connected || isOpeningCamera || isSendingImage || isSendingFile) return;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setReportNotice('Trình duyệt không hỗ trợ camera.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-      return;
-    }
-
-    setIsOpeningCamera(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      });
-      setCameraStream(stream);
-      setShowCamera(true);
-      setShowEmojiPicker(false);
-    } catch {
-      setReportNotice('Không thể truy cập camera.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-    } finally {
-      setIsOpeningCamera(false);
-    }
-  };
-
-  const closeCamera = () => {
-    cameraStream?.getTracks().forEach((track) => track.stop());
-    setCameraStream(null);
-    setShowCamera(false);
-  };
-
-  const captureCameraPhoto = async () => {
-    const video = cameraVideoRef.current;
-    if (!video || !cameraStream) return;
-
-    const width = video.videoWidth || 1280;
-    const height = video.videoHeight || 720;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext('2d');
-    if (!context) return;
-
-    context.drawImage(video, 0, 0, width, height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-    if (!blob) {
-      setReportNotice('Không thể chụp ảnh.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-      return;
-    }
-
-    const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
-    setPendingFiles([]);
-    setPendingImages((prev) => {
-      if (prev.length >= MAX_PENDING_IMAGES) {
-        setReportNotice(`Chỉ có thể gửi tối đa ${MAX_PENDING_IMAGES} ảnh một lần.`);
-        window.setTimeout(() => setReportNotice(null), 1800);
-        return prev;
-      }
-
-      return [
-        ...prev,
-        {
-          id: `${file.name}-${file.size}-${file.lastModified}-${crypto.randomUUID()}`,
-          file,
-          previewUrl: URL.createObjectURL(file),
-        },
-      ];
-    });
-    closeCamera();
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  const handleReact = (messageId: string, emoji: string) => {
-    onReactMessage?.(messageId, emoji);
-  };
-
-  const handleReply = (message: Message) => {
-    setReplyToMessage(message);
-    setShowEmojiPicker(false);
-  };
-
-  const handleDelete = (messageId: string) => {
-    onDeleteMessage?.(messageId);
-  };
-
-  const handleForward = (message: Message) => {
-    if (!message.text?.trim()) return;
-    const prefix = message.systemType ? '' : 'Chuyển tiếp: ';
-    setInputText((prev) => {
-      const normalizedPrev = prev.trim();
-      if (!normalizedPrev) return `${prefix}${message.text}`.trim();
-      return `${normalizedPrev}\n${prefix}${message.text}`.trim();
-    });
-  };
-
-  const handleReport = async (message: Message) => {
-    const excerpt = message.text.slice(0, 40);
-    const ok = await Promise.resolve(onReportMessage?.(message.id) ?? true);
-    setReportNotice(
-      ok
-        ? `Đã báo cáo: "${excerpt}${message.text.length > 40 ? '...' : ''}"`
-        : 'Không thể báo cáo tin nhắn lúc này',
-    );
-    window.setTimeout(() => {
-      setReportNotice(null);
-    }, 1800);
-  };
-
-  const hasActiveVoiceCall = callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'in_call';
-  const isStartingVoiceCall = callStatus === 'calling' || callStatus === 'connecting';
-  const isVideoCall = hasActiveVoiceCall && callMediaType === 'video';
-
-  const shouldShowSenderAvatar = (index: number) => {
-    const current = messages[index];
-    if (!current || current.isOwn) {
-      return false;
-    }
-
-    const next = messages[index + 1];
-    if (!next) {
-      return true;
-    }
-
-    // Show avatar at the last incoming message of a consecutive incoming block.
-    return next.isOwn || next.senderId !== current.senderId;
-  };
-
-  const getLastOwnMessageId = () => {
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      if (messages[i].isOwn) return messages[i].id;
-    }
-    return null;
-  };
-
-  const getLastOwnMessageStatusLabel = () => {
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      const message = messages[i];
-      if (!message.isOwn || message.systemType) continue;
-      if (message.deliveryStatus === 'SEEN') return 'Đã xem';
-      if (message.deliveryStatus === 'DELIVERED') return 'Đã nhận';
-      return 'Đã gửi';
-    }
-    return 'Đã gửi';
-  };
-
-  const lastOwnMessageId = getLastOwnMessageId();
-  const isLastMessageFromMe = messages.length > 0 && messages[messages.length - 1].isOwn;
-  const latestOwnMessageStatus = connected ? getLastOwnMessageStatusLabel() : 'Đã gửi';
-  const messageById = useMemo(() => new Map(messages.map((m) => [m.id, m])), [messages]);
-
   const jumpToMessage = async (messageId: string) => {
     if (!messageId) return;
-
     const scrollToTarget = () => {
       const target = document.getElementById(`chat-message-${messageId}`);
       if (!target) return false;
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setHighlightedMessageId(messageId);
-      window.setTimeout(() => {
-        setHighlightedMessageId((prev) => (prev === messageId ? null : prev));
-      }, 1300);
+      window.setTimeout(() => setHighlightedMessageId(prev => prev === messageId ? null : prev), 1300);
       return true;
     };
 
     if (scrollToTarget()) return;
     if (!onLoadOlder) return;
 
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < 6; i++) {
       await Promise.resolve(onLoadOlder());
-      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
-      if (scrollToTarget() || !hasOlder) {
-        return;
-      }
+      await new Promise(resolve => window.requestAnimationFrame(resolve));
+      if (scrollToTarget() || !hasOlder) return;
     }
   };
 
+  const handleReport = async (message: Message) => {
+    const excerpt = message.text.slice(0, 40);
+    const ok = await Promise.resolve(onReportMessage?.(message.id) ?? true);
+    setReportNotice(ok ? `Đã báo cáo: "${excerpt}..."` : 'Không thể báo cáo lúc này');
+    window.setTimeout(() => setReportNotice(null), 1800);
+  };
+
+  const hasActiveVoiceCall = callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'in_call';
+  const isStartingVoiceCall = callStatus === 'calling' || callStatus === 'connecting';
+  const isVideoCall = hasActiveVoiceCall && callMediaType === 'video';
+
   return (
-    <div
-      className={`
-        ${
-          fullScreen
-            ? 'w-full h-full flex flex-col rounded-2xl border border-gray-200 bg-white overflow-hidden'
-            : 'fixed bottom-0 right-6 w-[360px] h-[520px] rounded-t-xl shadow-2xl animate-in slide-in-from-bottom-4 z-50'
-        }
-        relative flex flex-col
-      `}
-    >
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-3 min-w-0">
-          {fullScreen && (
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors -ml-2 cursor-pointer"
-              title="Quay lại danh sách chat"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-700" />
-            </button>
-          )}
-          <div className="relative">
-            <img
-              src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
-              alt={user.name}
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            {user.isOnline && (
-              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <h3 className="font-semibold text-sm truncate">{user.name}</h3>
-            <p className="text-xs text-gray-500 truncate">
-              {formatLastActiveLabel(user.isOnline, user.lastActiveAt)}
-            </p>
-          </div>
-        </div>
+    <div className={`
+      ${fullScreen 
+        ? 'w-full h-full flex flex-col rounded-2xl border border-gray-200 bg-white overflow-hidden' 
+        : 'fixed bottom-0 right-6 w-[360px] h-[520px] rounded-t-xl shadow-2xl z-50'}
+      relative flex flex-col
+    `}>
+      <ChatHeader 
+        user={user}
+        connected={connected}
+        fullScreen={fullScreen}
+        onClose={onClose}
+        hasActiveVoiceCall={hasActiveVoiceCall}
+        isStartingVoiceCall={isStartingVoiceCall}
+        isVideoCall={isVideoCall}
+        onEndVoiceCall={onEndVoiceCall}
+        onStartVoiceCall={onStartVoiceCall}
+        onStartVideoCall={onStartVideoCall}
+        canStartVoiceCall={canStartVoiceCall}
+        canStartVideoCall={canStartVideoCall}
+        isMuted={isMuted}
+        onToggleMute={onToggleMute}
+      />
 
-        <div className="flex items-center gap-1">
-          <button
-            onClick={hasActiveVoiceCall ? onEndVoiceCall : onStartVoiceCall}
-            disabled={hasActiveVoiceCall ? false : !connected || !canStartVoiceCall}
-            className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            title={hasActiveVoiceCall ? 'Kết thúc cuộc gọi' : 'Gọi thoại'}
-          >
-            {hasActiveVoiceCall ? (
-              <PhoneOff className="w-5 h-5 text-red-500" />
-            ) : (
-              <Phone className={`w-5 h-5 ${isStartingVoiceCall ? 'text-amber-500' : 'text-blue-600'}`} />
-            )}
-          </button>
-          <button
-            onClick={onStartVideoCall}
-            disabled={hasActiveVoiceCall || !connected || !canStartVideoCall}
-            className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Gọi video"
-          >
-            <Video className={`w-[22px] h-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-blue-600'}`} />
-          </button>
-          {fullScreen && (
-            <button className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Thông tin">
-              <Info className="w-5 h-5 text-blue-600" />
-            </button>
-          )}
-          {hasActiveVoiceCall && (
-            <button
-              onClick={onToggleMute}
-              className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title={isMuted ? 'Bật mic' : 'Tắt mic'}
-            >
-              <Mic className={`w-5 h-5 ${isMuted ? 'text-red-500' : 'text-blue-600'}`} />
-            </button>
-          )}
-          {!fullScreen && onMinimize && (
-            <button
-              onClick={onMinimize}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title="Thu nhỏ"
-            >
-              <Minus className="w-4 h-4 text-blue-600" />
-            </button>
-          )}
-          {!fullScreen && (
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              title="Đóng"
-            >
-              <X className="w-4 h-4 text-blue-600" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div
+      <MessageList 
         ref={messageListRef}
+        messages={messages}
+        loadingOlder={loadingOlder}
+        hasOlder={hasOlder}
+        highlightedMessageId={highlightedMessageId}
+        showJumpToLatest={showJumpToLatest}
+        scrollToBottom={scrollToBottom}
+        onJumpToMessage={jumpToMessage}
+        onReactMessage={onReactMessage}
+        onDeleteMessage={onDeleteMessage}
+        onReplyMessage={setReplyToMessage}
+        onForwardMessage={(msg) => setInputText(prev => prev ? `${prev}\n${msg.text}` : msg.text)}
+        onReportMessage={handleReport}
         onScroll={handleListScroll}
-        className={`flex-1 overflow-y-auto px-4 py-4 space-y-1 bg-gradient-to-b from-[#f5f8ff] to-[#eef4ff] ${
-          fullScreen ? '' : ''
-        }`}
-      >
-        {loading ? (
-          <div className="flex items-center justify-center h-full gap-2 text-gray-400 text-sm">
-            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
-            </svg>
-            Đang tải tin nhắn...
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-            Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện.
-          </div>
-        ) : (
-          <>
-            {!hasOlder && (
-              <div className="flex items-center justify-center py-2 text-xs text-gray-500">
-                Đã xem hết tin nhắn cũ
-              </div>
-            )}
-            {loadingOlder && (
-              <div className="flex items-center justify-center py-2 text-xs text-gray-500">
-                Đang tải tin nhắn cũ...
-              </div>
-            )}
-            {messages.map((message, index) => {
-              const repliedMessage = message.replyToMessageId ? messageById.get(message.replyToMessageId) : undefined;
-              const isReplyToSelf = Boolean(repliedMessage && repliedMessage.isOwn === message.isOwn);
-              const replyContextLabel = message.isOwn
-                ? isReplyToSelf
-                  ? 'Bạn đã trả lời chính mình'
-                  : `Bạn đã trả lời ${user.name}`
-                : isReplyToSelf
-                  ? `${user.name} đã trả lời chính mình`
-                  : `${user.name} đã trả lời bạn`;
+      />
 
-              return (
-                <div
-                  id={`chat-message-${message.id}`}
-                  className={`rounded-2xl transition-colors duration-300 ${
-                    highlightedMessageId === message.id ? 'bg-amber-100/80' : 'bg-transparent'
-                  }`}
-                >
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    replyContextLabel={replyContextLabel}
-                    onReact={handleReact}
-                    onReply={handleReply}
-                    onJumpToMessage={jumpToMessage}
-                    onDelete={handleDelete}
-                    onForward={handleForward}
-                    onReport={handleReport}
-                    showSenderAvatar={shouldShowSenderAvatar(index)}
-                    senderAvatar={user.avatar}
-                    senderName={user.name}
-                    showDeliveryStatus={
-                      isLastMessageFromMe && message.isOwn && message.id === lastOwnMessageId && !message.systemType
-                    }
-                    deliveryStatusLabel={latestOwnMessageStatus}
-                    onCallAgain={onCallAgain}
-                  />
-                </div>
-              );
-            })}
-          </>
-        )}
-      </div>
+      <PendingAttachments 
+        pendingImages={pendingImages}
+        pendingFiles={pendingFiles}
+        removePendingImage={removePendingImage}
+        removePendingFile={removePendingFile}
+      />
 
-      {showJumpToLatest && (
-        <button
-          onClick={() => scrollToBottom('smooth')}
-          className="absolute right-4 bottom-[84px] w-10 h-10 rounded-full bg-white border border-gray-200 shadow-md hover:bg-gray-50 transition-colors flex items-center justify-center"
-          title="Về tin nhắn mới nhất"
-        >
-          <ChevronDown className="w-5 h-5 text-blue-600" />
-        </button>
+      <Composer 
+        inputText={inputText}
+        setInputText={setInputText}
+        onSend={handleSend}
+        connected={connected}
+        isRecordingVoice={isRecordingVoice}
+        isSendingVoice={isSendingVoice}
+        isSendingImage={isSendingImage}
+        isSendingFile={isSendingFile}
+        isOpeningCamera={isOpeningCamera}
+        onStartVoice={startVoiceRecording}
+        onStopAndSendVoice={stopAndSendVoiceRecording}
+        onCancelVoice={cancelVoiceRecording}
+        onImageClick={() => imageInputRef.current?.click()}
+        onFileClick={() => fileInputRef.current?.click()}
+        onCameraClick={openCamera}
+        onEmojiClick={() => setShowEmojiPicker(!showEmojiPicker)}
+        replyToMessage={replyToMessage}
+        onCancelReply={() => setReplyToMessage(null)}
+        voiceRecordingSec={voiceRecordingSec}
+        formatVoiceDuration={formatVoiceDuration}
+        imageInputRef={imageInputRef}
+        fileInputRef={fileInputRef}
+        handleImageSelect={handleImageSelect}
+        handleFileSelect={handleFileSelect}
+      />
+
+      <CameraModal 
+        show={showCamera}
+        videoRef={cameraVideoRef}
+        onClose={closeCamera}
+        onCapture={captureCameraPhoto}
+      />
+
+      {reportNotice && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 bg-gray-800/90 text-white text-sm rounded-lg shadow-xl z-[200] animate-in fade-in zoom-in duration-200">
+          {reportNotice}
+        </div>
       )}
-
-      <div className="px-3 py-3 border-t border-gray-200 bg-white relative">
-        {replyToMessage && (
-          <div className="mb-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
-            <div className="flex items-center justify-between gap-3">
-              <p className="truncate text-xs text-gray-700">
-                Đang trả lời: <span className="font-medium">{replyToMessage.text}</span>
-              </p>
-              <button
-                onClick={() => setReplyToMessage(null)}
-                className="shrink-0 text-xs text-blue-600 hover:underline"
-              >
-                Bỏ
-              </button>
-            </div>
-          </div>
-        )}
-        {reportNotice && (
-          <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-            {reportNotice}
-          </div>
-        )}
-        {pendingImages.length > 0 && !isRecordingVoice && !isSendingVoice && (
-          <div className="mb-2 rounded-2xl border border-blue-100 bg-blue-50/80 px-3 py-2">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="text-xs font-medium text-blue-700">
-                {isSendingImage ? 'Đang gửi ảnh...' : `${pendingImages.length} ảnh đã chọn`}
-              </span>
-              <button
-                type="button"
-                onClick={clearPendingImages}
-                disabled={isSendingImage}
-                className="text-xs font-medium text-blue-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Bỏ tất cả
-              </button>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {pendingImages.map((image) => (
-                <div key={image.id} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white shadow-sm">
-                  <img src={image.previewUrl} alt={image.file.name} className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removePendingImage(image.id)}
-                    disabled={isSendingImage}
-                    className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/75 disabled:cursor-not-allowed disabled:opacity-50"
-                    title="Bỏ ảnh"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {pendingFiles.length > 0 && !isRecordingVoice && !isSendingVoice && (
-          <div className="mb-2 rounded-2xl border border-blue-100 bg-blue-50/80 px-3 py-2">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <span className="text-xs font-medium text-blue-700">
-                {isSendingFile ? 'Đang gửi file...' : `${pendingFiles.length} file đã chọn`}
-              </span>
-              <button
-                type="button"
-                onClick={clearPendingFiles}
-                disabled={isSendingFile}
-                className="text-xs font-medium text-blue-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Bỏ tất cả
-              </button>
-            </div>
-            <div className="space-y-2">
-              {pendingFiles.map((pendingFile) => (
-                <div key={pendingFile.id} className="flex min-w-0 items-center gap-3 rounded-xl bg-white px-3 py-2 shadow-sm">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                    <FileText className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-gray-900">{pendingFile.file.name}</span>
-                    <span className="block text-xs text-gray-500">{formatFileSize(pendingFile.file.size)}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removePendingFile(pendingFile.id)}
-                    disabled={isSendingFile}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-                    title="Bỏ file"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {isRecordingVoice || isSendingVoice ? (
-          <div
-            className="flex items-center gap-2"
-            style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
-          >
-            <button
-              type="button"
-              onClick={cancelVoiceRecording}
-              disabled={isSendingVoice}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-              title="Hủy ghi âm"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
-
-            <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-blue-600 px-3 text-white shadow-sm">
-              <button
-                type="button"
-                onClick={stopAndSendVoiceRecording}
-                disabled={isSendingVoice}
-                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-blue-600 transition-transform hover:scale-105 disabled:opacity-70"
-                title="Dừng và gửi ghi âm"
-              >
-                <Pause className="h-4 w-4 fill-current" />
-              </button>
-              <div className="flex min-w-0 flex-1 items-center gap-[3px] overflow-hidden" aria-hidden="true">
-                {Array.from({ length: 48 }).map((_, index) => (
-                  <span
-                    key={index}
-                    className="h-1 w-1 shrink-0 rounded-full bg-white/95"
-                    style={{ opacity: index % 5 === 0 ? 0.65 : 1 }}
-                  />
-                ))}
-              </div>
-              <span className="shrink-0 text-[11px] font-medium tabular-nums">
-                {isSendingVoice ? '...' : formatVoiceDuration(voiceRecordingSec)}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={stopAndSendVoiceRecording}
-              disabled={isSendingVoice}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-              title="Gửi ghi âm"
-            >
-              <Send className="h-6 w-6 fill-current" />
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={isRecordingVoice ? stopAndSendVoiceRecording : startVoiceRecording}
-              disabled={!connected || isSendingVoice}
-              className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                isRecordingVoice ? 'bg-blue-600 hover:bg-blue-700' : 'bg-transparent hover:bg-gray-100'
-              }`}
-              title={isRecordingVoice ? 'Dừng và gửi ghi âm' : 'Gửi tin nhắn thoại'}
-            >
-              <Mic className={`w-5 h-5 ${isRecordingVoice ? 'text-white' : 'text-blue-600'}`} />
-            </button>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              multiple
-              className="hidden"
-              onChange={handleImageSelect}
-            />
-            <button
-              type="button"
-              onClick={() => imageInputRef.current?.click()}
-              disabled={!connected || isSendingImage || isSendingFile}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-              title={isSendingImage ? 'Đang gửi ảnh...' : 'Đính kèm ảnh'}
-            >
-              <ImageIcon className="w-5 h-5 text-blue-600" />
-            </button>
-            <button
-              type="button"
-              onClick={openCamera}
-              disabled={!connected || isOpeningCamera || isSendingImage || isSendingFile}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-              title={isOpeningCamera ? 'Đang mở camera...' : 'Chụp ảnh'}
-            >
-              <Camera className="w-5 h-5 text-blue-600" />
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.mp3,.wav,.mp4,.webm,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/zip,application/x-rar-compressed,application/x-7z-compressed,audio/*,video/*"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!connected || isSendingFile || isSendingImage}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
-              title={isSendingFile ? 'Đang gửi file...' : 'Gửi file'}
-            >
-              <FileUp className="w-5 h-5 text-blue-600" />
-            </button>
-            </div>
-
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={connected ? 'Aa' : 'Đang kết nối...'}
-                disabled={!connected || isSendingImage || isSendingFile}
-                className="w-full px-3 py-2 pr-11 bg-gray-100 rounded-full outline-none focus:bg-gray-200 transition-colors text-sm disabled:opacity-50"
-              />
-              <button
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="p-1.5 hover:bg-gray-200 rounded-full transition-colors absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
-                title="Emoji"
-              >
-                <Smile className="w-5 h-5 text-blue-600" />
-              </button>
-            </div>
-
-            <button
-              onClick={handleSend}
-              disabled={(!inputText.trim() && pendingImages.length === 0 && pendingFiles.length === 0) || !connected || isSendingImage || isSendingFile}
-              className={`p-2 rounded-full transition-all ${
-                (inputText.trim() || pendingImages.length > 0 || pendingFiles.length > 0) && connected && !isSendingImage && !isSendingFile
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'text-blue-400 cursor-not-allowed'
-              }`}
-              title="Gửi"
-            >
-              <Send className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-
-        {showCamera && (
-          <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 p-4">
-            <div
-              className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl"
-              style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
-            >
-              <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                <span className="text-sm font-semibold text-gray-900">Chụp ảnh</span>
-                <button
-                  type="button"
-                  onClick={closeCamera}
-                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
-                  title="Đóng camera"
-                >
-                  <X className="h-5 w-5 text-gray-700" />
-                </button>
-              </div>
-              <div className="bg-black">
-                <video
-                  ref={cameraVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="max-h-[65vh] w-full bg-black object-contain"
-                />
-              </div>
-              <div className="flex items-center justify-center gap-3 px-4 py-4">
-                <button
-                  type="button"
-                  onClick={closeCamera}
-                  className="rounded-full bg-gray-100 px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-200"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void captureCameraPhoto()}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-md hover:bg-blue-700"
-                  title="Chụp"
-                >
-                  <Camera className="h-6 w-6" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showEmojiPicker && (
-          <div className="absolute bottom-full right-4 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 p-3 grid grid-cols-8 gap-2 z-10">
-            {['😀', '😂', '😍', '🥰', '😎', '🤔', '😢', '😭', '😡', '👍', '👎', '🎉', '❤️', '🔥', '👏', '🙏'].map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => {
-                  setInputText(inputText + emoji);
-                  setShowEmojiPicker(false);
-                }}
-                className="text-2xl hover:scale-125 transition-transform cursor-pointer"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };
-
-
-

@@ -6,7 +6,7 @@ import { CreateStoryPage, StoryViewerPage } from '../features/stories/pages';
 import { HomePage } from '../features/home/pages';
 import { ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage, ProfileReelsPage, ProfileLikesPage } from '../features/profile/pages';
 import { FriendsPage } from '../features/friends/pages';
-import { GroupsPage } from '../features/groups/pages';
+import { GroupsPage, CreateGroupPage, GroupDetailPage, JoinedGroupsPage, DiscoverGroupsPage } from '../features/groups/pages';
 import { WatchPage } from '../features/watch/pages';
 import { MarketplacePage } from '../features/marketplace/pages';
 import LiveVideoPage from '../features/live/pages/LiveVideoPage';
@@ -57,6 +57,22 @@ export const router = createBrowserRouter([
       {
         path: '/groups',
         Component: GroupsPage,
+      },
+      {
+        path: '/groups/create',
+        Component: CreateGroupPage,
+      },
+      {
+        path: '/groups/joined',
+        Component: JoinedGroupsPage,
+      },
+      {
+        path: '/groups/discover',
+        Component: DiscoverGroupsPage,
+      },
+      {
+        path: '/groups/:groupId',
+        Component: GroupDetailPage,
       },
       {
         path: '/watch',

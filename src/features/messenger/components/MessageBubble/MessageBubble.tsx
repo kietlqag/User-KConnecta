@@ -206,7 +206,7 @@ export const MessageBubble = ({
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[15px] leading-tight text-gray-900 font-semibold">{message.text}</p>
+              <p className="text-[15px] leading-tight text-gray-900 font-semibold break-words">{message.text}</p>
               <p className="mt-0.5 text-xs text-gray-600">
                 {isCompleted && typeof message.callDurationSec === 'number'
                   ? formatDuration(message.callDurationSec)
@@ -294,7 +294,7 @@ export const MessageBubble = ({
               </div>
               {message.imageCaption && (
                 <div
-                  className={`inline-block max-w-[260px] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+                  className={`inline-block max-w-[260px] rounded-2xl px-3 py-2 text-sm leading-relaxed break-words ${
                     message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
                   }`}
                 >
@@ -392,7 +392,7 @@ export const MessageBubble = ({
                 </button>
               </button>
               ) : (
-              <p className={`whitespace-pre-wrap text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
+              <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
                 {message.deleted ? 'Tin nhắn đã được gỡ' : message.text}
               </p>
               )}

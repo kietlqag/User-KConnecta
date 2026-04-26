@@ -22,6 +22,7 @@ interface ProfileCreatePostModalProps {
   onClose: () => void;
   username: string;
   onPostCreated?: () => void;
+  groupId?: string;
 }
 
 export function ProfileCreatePostModal({
@@ -29,6 +30,7 @@ export function ProfileCreatePostModal({
   onClose,
   username,
   onPostCreated,
+  groupId,
 }: ProfileCreatePostModalProps) {
   const [postContent, setPostContent] = useState('');
   const [privacy, setPrivacy] = useState('public');
@@ -73,6 +75,7 @@ export function ProfileCreatePostModal({
     try {
       await postService.createPost({
         authorId: currentUser.id,
+        ...(groupId && { groupId }),
         content: postContent.trim(),
         privacy: mapPrivacyToApi(),
         status: 'PUBLISHED',
