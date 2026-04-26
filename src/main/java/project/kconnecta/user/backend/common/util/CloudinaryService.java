@@ -3,6 +3,7 @@ package project.kconnecta.user.backend.common.util;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,6 +12,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CloudinaryService {
 
     private final Cloudinary cloudinary;
@@ -31,15 +33,19 @@ public class CloudinaryService {
 
     public String uploadCover(MultipartFile file) {
         try {
+            log.info("Uploading cover photo to Cloudinary, size={} bytes, contentType={}", file.getSize(), file.getContentType());
             Map<?, ?> result = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
                             "folder", "kconnecta/covers"
                     )
             );
-            return result.get("secure_url").toString();
+            String url = result.get("secure_url").toString();
+            log.info("Cover photo uploaded successfully: {}", url);
+            return url;
         } catch (IOException e) {
-            throw new RuntimeException("Upload cover photo failed", e);
+            log.error("Failed to upload cover photo to Cloudinary", e);
+            throw new RuntimeException("Upload cover photo failed: " + e.getMessage(), e);
         }
     }
 

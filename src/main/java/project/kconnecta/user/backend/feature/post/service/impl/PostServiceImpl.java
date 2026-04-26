@@ -24,6 +24,8 @@ import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
 import project.kconnecta.user.backend.feature.post.repository.*;
 import project.kconnecta.user.backend.feature.post.service.PostService;
+import project.kconnecta.user.backend.feature.group.entity.Group;
+import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -57,6 +59,7 @@ public class PostServiceImpl implements PostService {
     private final PostCommentRepository postCommentRepository;
     private final PostShareRepository postShareRepository;
     private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -78,8 +81,15 @@ public class PostServiceImpl implements PostService {
             throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
         }
 
+        Group group = null;
+        if (request.getGroupId() != null) {
+            group = groupRepository.findById(request.getGroupId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + request.getGroupId()));
+        }
+
         Post post = Post.builder()
                 .author(author)
+                .group(group)
                 .content(trimToNull(request.getContent()))
                 .privacy(privacy)
                 .status(status)
@@ -100,7 +110,9 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public List<PostResponse> getAllPosts(UUID currentUserId) {
-        List<Post> posts = postRepository.findAllByOrderByCreatedAtDesc();
+        List<Post> posts = postRepository.findHomeFeedPostsOrderByCreatedAtDesc().stream()
+                .filter(p -> p.getGroup() == null)
+                .toList();
         return processPostsBulk(posts, currentUserId);
     }
 
@@ -108,6 +120,15 @@ public class PostServiceImpl implements PostService {
     @Transactional(readOnly = true)
     public List<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId) {
         List<Post> posts = postRepository.findByAuthorId(authorId);
+        return processPostsBulk(posts, currentUserId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId) {
+        List<Post> posts = postRepository.findByGroupId(groupId).stream()
+                .filter(p -> p.getGroup() != null && p.getGroup().getId().equals(groupId))
+                .toList();
         return processPostsBulk(posts, currentUserId);
     }
 
@@ -399,6 +420,9 @@ public class PostServiceImpl implements PostService {
         return PostResponse.builder()
                 .id(post.getId())
                 .authorId(post.getAuthor().getId())
+                .groupId(post.getGroup() != null ? post.getGroup().getId() : null)
+                .groupName(post.getGroup() != null ? post.getGroup().getName() : null)
+                .groupIconUrl(post.getGroup() != null ? post.getGroup().getCoverPhotoUrl() : null)
                 .authorUsername(post.getAuthor().getUsername())
                 .authorFullName(post.getAuthor().getFullName())
                 .authorAvatarUrl(post.getAuthor().getAvatarUrl())

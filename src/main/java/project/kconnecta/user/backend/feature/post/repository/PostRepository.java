@@ -10,10 +10,21 @@ import java.util.UUID;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, UUID> {
-    @EntityGraph(attributePaths = {"author"})
-    List<Post> findAllByOrderByCreatedAtDesc();
+    // Explicit JOIN FETCH instead of @EntityGraph to avoid the known Spring Data JPA
+    // issue where @EntityGraph + @Query can cause the JPQL WHERE clause to be
+    // partially ignored or generate conflicting implicit/explicit joins.
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT p FROM Post p JOIN FETCH p.author WHERE p.group IS NULL ORDER BY p.createdAt DESC"
+    )
+    List<Post> findHomeFeedPostsOrderByCreatedAtDesc();
 
-    @EntityGraph(attributePaths = {"author"})
-    @org.springframework.data.jpa.repository.Query("SELECT p FROM Post p WHERE p.author.id = :authorId ORDER BY p.createdAt DESC")
-    List<Post> findByAuthorId(UUID authorId);
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group WHERE p.author.id = :authorId ORDER BY p.createdAt DESC"
+    )
+    List<Post> findByAuthorId(@org.springframework.data.repository.query.Param("authorId") UUID authorId);
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group WHERE p.group IS NOT NULL AND p.group.id = :groupId ORDER BY p.createdAt DESC"
+    )
+    List<Post> findByGroupId(@org.springframework.data.repository.query.Param("groupId") UUID groupId);
 }

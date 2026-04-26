@@ -5,6 +5,7 @@ import lombok.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import org.hibernate.annotations.BatchSize;
+import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,10 @@ public class Post {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private Group group;
 
     @Column(columnDefinition = "TEXT")
     private String content;

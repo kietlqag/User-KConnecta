@@ -212,3 +212,31 @@ CREATE TABLE IF NOT EXISTS public.post_shares (
 );
 
 CREATE INDEX IF NOT EXISTS idx_post_shares_post_id ON public.post_shares(post_id);
+
+-- -------------------------
+-- Group
+-- -------------------------
+CREATE TABLE IF NOT EXISTS public.user_groups (
+    id UUID PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    description TEXT,
+    cover_photo_url TEXT,
+    privacy VARCHAR(10) NOT NULL,
+    created_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_groups_created_by ON public.user_groups(created_by);
+
+CREATE TABLE IF NOT EXISTS public.group_members (
+    id UUID PRIMARY KEY,
+    group_id UUID NOT NULL REFERENCES public.user_groups(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    role VARCHAR(10) NOT NULL,
+    joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_group_members_group_user UNIQUE (group_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON public.group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON public.group_members(group_id);

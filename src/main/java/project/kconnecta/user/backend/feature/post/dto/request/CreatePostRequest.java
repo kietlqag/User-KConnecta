@@ -19,6 +19,8 @@ public class CreatePostRequest {
     @NotNull
     private UUID authorId;
 
+    private UUID groupId;
+
     private String content;
 
     private PostPrivacy privacy;

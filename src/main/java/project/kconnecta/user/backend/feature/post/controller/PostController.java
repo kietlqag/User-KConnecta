@@ -34,8 +34,12 @@ public class PostController {
     @GetMapping
     public ResponseEntity<List<PostResponse>> getPosts(
             @RequestParam(required = false) UUID authorId,
+            @RequestParam(required = false) UUID groupId,
             @RequestParam(required = false) UUID currentUserId
     ) {
+        if (groupId != null) {
+            return ResponseEntity.ok(postService.getPostsByGroupId(groupId, currentUserId));
+        }
         if (authorId != null) {
             return ResponseEntity.ok(postService.getPostsByUserId(authorId, currentUserId));
         }

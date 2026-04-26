@@ -17,6 +17,7 @@ public interface PostService {
     PostResponse createPost(CreatePostRequest request);
     List<PostResponse> getAllPosts(UUID currentUserId);
     List<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId);
+    List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId);
     PostResponse getPostById(UUID id, UUID currentUserId);
     PostReactionResponse addReaction(UUID postId, AddReactionRequest request);
     void removeReaction(UUID postId, UUID userId);

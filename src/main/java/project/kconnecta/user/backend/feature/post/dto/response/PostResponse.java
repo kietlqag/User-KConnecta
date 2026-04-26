@@ -15,6 +15,9 @@ import java.util.UUID;
 public class PostResponse {
     private UUID id;
     private UUID authorId;
+    private UUID groupId;
+    private String groupName;
+    private String groupIconUrl;
     private String authorUsername;
     private String authorFullName;
     private String authorAvatarUrl;
