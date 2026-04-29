@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { useLocation } from 'react-router@7.1.3';
+import { useLocation } from 'react-router-dom';
 import { Header } from '../features/home/components/Header';
 import { LeftSidebar } from '../features/home/components/LeftSidebar';
 

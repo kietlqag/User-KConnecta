@@ -79,15 +79,15 @@ export const MessageList = forwardRef(({
           <div key={message.id} id={`chat-message-${message.id}`}>
             <MessageBubble
               message={message}
-              showAvatar={shouldShowSenderAvatar(index)}
+              showSenderAvatar={shouldShowSenderAvatar(index)}
               isHighlighted={highlightedMessageId === message.id}
               deliveryStatusLabel={message.id === lastOwnMessageId ? latestOwnMessageStatus : undefined}
               onReact={onReactMessage}
-              onReply={() => onReplyMessage(message)}
-              onDelete={() => onDeleteMessage?.(message.id)}
-              onForward={() => onForwardMessage(message)}
-              onReport={() => onReportMessage(message)}
-              onJumpToReply={onJumpToMessage}
+              onReply={onReplyMessage}
+              onDelete={onDeleteMessage}
+              onForward={onForwardMessage}
+              onReport={onReportMessage}
+              onJumpToMessage={onJumpToMessage}
             />
           </div>
         ))}

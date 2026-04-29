@@ -106,9 +106,10 @@ export function useGroupMembers(groupId: string | undefined) {
 
 export function useInviteFriends() {
   const queryClient = useQueryClient();
+  const currentUser = authService.getCurrentUser();
   return useMutation({
     mutationFn: ({ groupId, userIds }: { groupId: string; userIds: string[] }) =>
-      groupService.inviteFriends(groupId, userIds),
+      groupService.inviteFriends(groupId, currentUser!.id, userIds),
     onSuccess: (_, { groupId }) => {
       queryClient.invalidateQueries({ queryKey: ['groups', 'members', groupId] });
     },

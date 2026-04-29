@@ -1,9 +1,18 @@
 import { api } from './api';
 
+export interface CreatePostMediaRequest {
+  mediaType: 'IMAGE' | 'VIDEO';
+  fileUrl: string;
+  thumbnailUrl?: string;
+  sortOrder?: number;
+}
+
 export interface CreatePostPayload {
   authorId: string;
   groupId?: string;
   content: string;
+  imageUrl?: string;
+  media?: CreatePostMediaRequest[];
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT';
   promoted?: boolean;
@@ -55,10 +64,14 @@ export interface PostMediaResponse {
 export interface PostResponse {
   id: string;
   authorId: string;
+  groupId?: string | null;
+  groupName?: string | null;
+  groupIconUrl?: string | null;
   authorUsername: string;
   authorFullName: string;
   authorAvatarUrl?: string | null;
   content: string;
+  imageUrl?: string | null;
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT';
   scheduledAt?: string | null;
@@ -127,6 +140,11 @@ export const postService = {
     return api.get<PostResponse[]>(`/posts?${params.toString()}`);
   },
   createPost: (data: CreatePostPayload) => api.post<PostResponse>('/posts', data),
+  uploadPostImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.postMultipart<{ url: string }>('/posts/upload', formData);
+  },
   addReaction: (postId: string, data: AddReactionPayload) =>
     api.post<PostReactionResponse>(`/posts/${postId}/reactions`, data),
   removeReaction: (postId: string, userId: string) =>

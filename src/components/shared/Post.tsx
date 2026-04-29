@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreHorizontal, MessageCircle, Share2 } from 'lucide-react';
+import { MoreHorizontal, MessageCircle, Share2, Globe, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
@@ -59,6 +59,7 @@ export interface PostProps {
   reactionCounts?: PostReactionCountResponse[];
   group?: Group;
   commentsData?: Comment[];
+  mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
 }
 
 export function Post({
@@ -75,6 +76,7 @@ export function Post({
   currentUserReactionType = null,
   reactionCounts: serverReactionCounts,
   group,
+  mediaList = [],
 }: PostProps) {
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(initialIsLiked || !!currentUserReactionType);
@@ -96,6 +98,71 @@ export function Post({
       buildInitialReactionCounts(likes, currentUserReactionType),
     ),
   );
+
+  // Lightbox State
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // Filter images for lightbox
+  const imagesOnly = useMemo(() => {
+    if (mediaList.length > 0) {
+      return mediaList.filter(m => m.type === 'IMAGE').map(m => m.url);
+    }
+    const singleImg = media?.url || image;
+    return singleImg ? [singleImg] : [];
+  }, [mediaList, media, image]);
+
+  const openLightbox = useCallback((index: number) => {
+    setLightboxIndex(index);
+    setIsLightboxOpen(true);
+  }, []);
+
+  const closeLightbox = useCallback(() => {
+    setIsLightboxOpen(false);
+  }, []);
+
+  const prevImage = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setLightboxIndex(prev => (prev === 0 ? imagesOnly.length - 1 : prev - 1));
+  }, [imagesOnly.length]);
+
+  const nextImage = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setLightboxIndex(prev => (prev === imagesOnly.length - 1 ? 0 : prev + 1));
+  }, [imagesOnly.length]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isLightboxOpen) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') prevImage();
+      if (e.key === 'ArrowRight') nextImage();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isLightboxOpen, closeLightbox, prevImage, nextImage]);
+
+  // Handle scroll lock
+  useEffect(() => {
+    const scrollableEl = document.querySelector('#root') as HTMLElement;
+    if (isLightboxOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      if (scrollableEl) scrollableEl.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      if (scrollableEl) scrollableEl.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      if (scrollableEl) scrollableEl.style.overflow = '';
+    };
+  }, [isLightboxOpen]);
 
   const mediaUrl = media?.url || image;
   const mediaType = media?.type || 'image';
@@ -189,29 +256,44 @@ export function Post({
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">
-              <ImageWithFallback
-                src={author.avatar}
-                alt={author.name}
-                className="w-10 h-10 rounded-full object-cover cursor-pointer"
-                onClick={() => navigate(`/profile/${author.id}`)}
-              />
-              <div 
-                className="cursor-pointer"
-                onClick={() => navigate(`/profile/${author.id}`)}
-              >
-                <h3 className="font-semibold text-gray-900 group-hover:underline">
-                  {author.name}
+              <div className="relative">
+                <ImageWithFallback
+                  src={group?.icon || author.avatar}
+                  alt={group?.name || author.name}
+                  className={`w-10 h-10 object-cover cursor-pointer ${group ? 'rounded-lg shadow-sm' : 'rounded-full'}`}
+                  onClick={() => group ? navigate(`/groups/${group.id}`) : navigate(`/profile/${author.id}`)}
+                />
+                {group && (
+                  <ImageWithFallback
+                    src={author.avatar}
+                    alt={author.name}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white object-cover cursor-pointer shadow-sm"
+                    onClick={() => navigate(`/profile/${author.id}`)}
+                  />
+                )}
+              </div>
+              <div className="flex flex-col">
+                <h3 
+                  className="font-bold text-[15px] text-gray-900 cursor-pointer hover:underline leading-tight"
+                  onClick={() => group ? navigate(`/groups/${group.id}`) : navigate(`/profile/${author.id}`)}
+                >
+                  {group?.name || author.name}
                 </h3>
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  {group && (
+                <div className="flex items-center gap-1 text-[13px] text-gray-500 leading-tight">
+                  {group ? (
                     <>
-                      <span className="hover:underline cursor-pointer font-medium text-gray-700">
-                        {group.name}
+                      <span 
+                        className="hover:underline cursor-pointer"
+                        onClick={() => navigate(`/profile/${author.id}`)}
+                      >
+                        {author.name}
                       </span>
                       <span>·</span>
                     </>
-                  )}
+                  ) : null}
                   <span>{timestamp}</span>
+                  <span>·</span>
+                  <Globe className="w-3 h-3" />
                 </div>
               </div>
             </div>
@@ -224,7 +306,7 @@ export function Post({
         </div>
 
         {mediaUrl && (
-          <div className="relative bg-black">
+          <div className="relative bg-black cursor-pointer" onClick={() => openLightbox(0)}>
             {mediaType === 'image' ? (
               <ImageWithFallback
                 src={mediaUrl}
@@ -232,7 +314,12 @@ export function Post({
                 className="w-full max-h-[600px] object-contain"
               />
             ) : (
-              <video src={mediaUrl} controls className="w-full max-h-[600px] object-contain" />
+              <video 
+                src={mediaUrl} 
+                controls 
+                className="w-full max-h-[600px] object-contain" 
+                onClick={(e) => e.stopPropagation()}
+              />
             )}
           </div>
         )}
@@ -309,6 +396,52 @@ export function Post({
         postId={id}
         reactionCounts={reactionCounts}
       />
+
+      {/* Fullscreen Lightbox */}
+      {isLightboxOpen && imagesOnly.length > 0 && (
+        <div 
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 transition-opacity"
+          onClick={closeLightbox}
+        >
+          <button 
+            className="absolute right-4 top-4 z-[1001] rounded-full bg-black/50 p-2 text-white hover:bg-black/70 transition-colors"
+            onClick={closeLightbox}
+          >
+            <X size={32} />
+          </button>
+
+          {imagesOnly.length > 1 && (
+            <>
+              <button 
+                className="absolute left-4 z-[1001] rounded-full bg-black/50 p-3 text-white hover:bg-black/70 transition-colors"
+                onClick={prevImage}
+              >
+                <ChevronLeft size={40} />
+              </button>
+              <button 
+                className="absolute right-4 z-[1001] rounded-full bg-black/50 p-3 text-white hover:bg-black/70 transition-colors"
+                onClick={nextImage}
+              >
+                <ChevronRight size={40} />
+              </button>
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1001] rounded-full bg-black/50 px-4 py-2 text-white text-lg font-medium">
+                {lightboxIndex + 1} / {imagesOnly.length}
+              </div>
+            </>
+          )}
+
+          <div 
+            className="max-h-[90vh] max-w-[90vw]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ImageWithFallback
+              src={imagesOnly[lightboxIndex]}
+              alt={`Fullscreen view ${lightboxIndex + 1}`}
+              className="h-full w-full object-contain shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }

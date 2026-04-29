@@ -2,12 +2,53 @@ import { Notification } from '../../types/notifications.types';
 
 interface NotificationItemProps {
   notification: Notification;
+  onAcceptInvite?: (notificationId: string, relatedId: string) => void;
+  onRejectInvite?: (notificationId: string, relatedId: string) => void;
+  onRead?: (notificationId: string) => void;
 }
 
-export const NotificationItem = ({ notification }: NotificationItemProps) => {
+export const NotificationItem = ({ 
+  notification, 
+  onAcceptInvite, 
+  onRejectInvite,
+  onRead
+}: NotificationItemProps) => {
+
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return new Intl.RelativeTimeFormat('vi', { numeric: 'auto' }).format(
+        Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+        'day'
+      ).replace('trước', 'trước').replace('sau', 'nữa');
+    } catch {
+      return dateString; // Fallback to raw string if not a date
+    }
+  };
+
+  const handleAccept = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (notification.relatedId && onAcceptInvite) {
+      onAcceptInvite(notification.id, notification.relatedId);
+    }
+  };
+
+  const handleReject = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (notification.relatedId && onRejectInvite) {
+      onRejectInvite(notification.id, notification.relatedId);
+    }
+  };
+
+  const handleClick = () => {
+    if (notification.isUnread && onRead) {
+      onRead(notification.id);
+    }
+  };
   return (
-    <button 
-      className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-100 transition-colors ${
+    <div 
+      onClick={handleClick}
+      className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-100 transition-colors cursor-pointer ${
         notification.isUnread ? 'bg-blue-50' : ''
       }`}
     >
@@ -26,13 +67,31 @@ export const NotificationItem = ({ notification }: NotificationItemProps) => {
           <span className="font-semibold">{notification.user.name}</span>{' '}
           {notification.text}
         </p>
-        <span className="text-xs text-blue-600 font-medium">{notification.timestamp}</span>
+        <span className="text-xs text-blue-600 font-medium">{formatDate(notification.timestamp)}</span>
+
+        {/* Group Invite Actions */}
+        {notification.type === 'group_invite' && !notification.isActioned && (
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              onClick={handleAccept}
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              Tham gia
+            </button>
+            <button
+              onClick={handleReject}
+              className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold rounded-lg transition-colors"
+            >
+              Từ chối
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Unread Indicator */}
       {notification.isUnread && (
         <div className="flex-shrink-0 w-3 h-3 bg-blue-600 rounded-full mt-2" />
       )}
-    </button>
+    </div>
   );
 };

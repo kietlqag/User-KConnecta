@@ -40,8 +40,8 @@ export const groupService = {
   getGroupMembers: (groupId: string) =>
     api.get<GroupMemberApiResponse[]>(`/groups/${groupId}/members`),
 
-  inviteFriends: (groupId: string, userIds: string[]) =>
-    api.post<void>(`/groups/${groupId}/invite`, userIds),
+  inviteFriends: (groupId: string, senderId: string, userIds: string[]) =>
+    api.post<void>(`/groups/${groupId}/invite?currentUserId=${senderId}`, userIds),
 
   createGroup: (payload: {
     creatorId: string;

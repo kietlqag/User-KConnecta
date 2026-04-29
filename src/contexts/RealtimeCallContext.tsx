@@ -45,7 +45,7 @@ const RealtimeCallContext = createContext<RealtimeCallContextValue | null>(null)
 
 export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const currentUser = authService.getCurrentUser();
+  const [currentUser] = useState(() => authService.getCurrentUser());
   const listenersRef = useRef<Set<MessageListener>>(new Set());
   const statusListenersRef = useRef<Set<MessageStatusListener>>(new Set());
   const presenceListenersRef = useRef<Set<PresenceStatusListener>>(new Set());

@@ -10,6 +10,7 @@ import { RecentSearchItem } from '../../../search/types/search.types';
 import { useMenu } from '../../../../contexts/MenuContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
+import { notificationService } from '@/services/notificationService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
@@ -20,6 +21,7 @@ export function Header() {
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navigate = useNavigate();
   const { isMenuOpen, toggleMenu, setMenuOpen } = useMenu();
   const userAvatar = currentUser?.avatarUrl || avatarImage;
@@ -33,6 +35,14 @@ export function Header() {
       window.removeEventListener('storage', syncAuthUser);
     };
   }, []);
+
+  useEffect(() => {
+    if (currentUser) {
+      notificationService.getUnreadCount(currentUser.id).then(setUnreadNotifications).catch(console.error);
+    } else {
+      setUnreadNotifications(0);
+    }
+  }, [currentUser, showNotifications]); // Refresh count when panel closes
 
   const navItems = [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
@@ -136,9 +146,11 @@ export function Header() {
               className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
             >
               <Bell className="w-5 h-5 text-gray-700" />
-              <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                5
-              </span>
+              {unreadNotifications > 0 && (
+                <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
             </button>
             
             <div className="relative">

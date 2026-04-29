@@ -17,6 +17,7 @@ interface MessageBubbleProps {
   showDeliveryStatus?: boolean;
   deliveryStatusLabel?: string;
   onCallAgain?: (mediaType?: 'audio' | 'video') => void;
+  isHighlighted?: boolean;
 }
 
 const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '😡'];
@@ -37,6 +38,7 @@ export const MessageBubble = ({
   showDeliveryStatus = false,
   deliveryStatusLabel = 'Đã gửi',
   onCallAgain,
+  isHighlighted = false,
 }: MessageBubbleProps) => {
   const [showReactions, setShowReactions] = useState(false);
   const [showTimestamp, setShowTimestamp] = useState(false);
@@ -228,7 +230,7 @@ export const MessageBubble = ({
 
   return (
     <div
-      className={`flex items-end gap-2 ${message.reactions && message.reactions.length > 0 ? 'mb-3' : 'mb-1'} ${message.isOwn ? 'justify-end' : 'justify-start'}`}
+      className={`flex items-end gap-2 ${message.reactions && message.reactions.length > 0 ? 'mb-3' : 'mb-1'} ${message.isOwn ? 'justify-end' : 'justify-start'} ${isHighlighted ? 'bg-blue-50/50 ring-1 ring-blue-100' : ''} transition-all duration-500 rounded-lg py-1 px-2 -mx-2`}
       onMouseEnter={() => {
         setShowTimestamp(true);
         setIsHovering(true);

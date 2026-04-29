@@ -13,6 +13,7 @@ export interface FeedPost {
   currentUserReactionType: PostResponse['currentUserReactionType'];
   reactionCounts?: PostReactionCountResponse[];
   group?: { id: string; name: string; icon?: string };
+  mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
 }
 
 export function formatPostTimestamp(dateString?: string | null): string {
@@ -52,6 +53,10 @@ export function mapApiPost(item: PostResponse): FeedPost {
       id: item.groupId,
       name: item.groupName || 'Nhóm',
       icon: item.groupIconUrl || undefined
-    } : undefined
+    } : undefined,
+    mediaList: (item.media ?? []).map(m => ({
+      type: m.mediaType,
+      url: m.mediaUrl || m.fileUrl || ''
+    }))
   };
 }

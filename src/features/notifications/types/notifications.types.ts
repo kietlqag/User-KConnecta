@@ -4,6 +4,7 @@ export type NotificationType =
   | 'share' 
   | 'friend_request' 
   | 'group_activity' 
+  | 'group_invite'
   | 'mention' 
   | 'birthday'
   | 'event'
@@ -20,6 +21,8 @@ export interface Notification {
   timestamp: string;
   isUnread: boolean;
   actionUrl?: string;
+  isActioned?: boolean;
+  relatedId?: string;
 }
 
 export type NotificationFilter = 'all' | 'unread';
