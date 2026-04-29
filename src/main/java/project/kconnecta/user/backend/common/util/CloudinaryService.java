@@ -79,6 +79,22 @@ public class CloudinaryService {
         }
     }
 
+    public String uploadPostImage(MultipartFile file) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/post-images",
+                            "resource_type", "image",
+                            "public_id", "post-image-" + System.currentTimeMillis()
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload post image failed", e);
+        }
+    }
+
     public String uploadChatFile(MultipartFile file) {
         try {
             String publicId = "chat-file-" + System.currentTimeMillis() + "-" + normalizeFilename(file.getOriginalFilename());

@@ -78,8 +78,28 @@ public class GroupController {
     }
 
     @PostMapping("/{id}/invite")
-    public ResponseEntity<Void> inviteFriends(@PathVariable UUID id, @RequestBody List<UUID> userIds) {
-        groupService.inviteFriends(id, userIds);
+    public ResponseEntity<Void> inviteFriends(
+            @PathVariable UUID id, 
+            @RequestParam UUID currentUserId, 
+            @RequestBody List<UUID> userIds) {
+        groupService.inviteFriends(id, currentUserId, userIds);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/invites/{notificationId}/accept")
+    public ResponseEntity<Void> acceptInvite(
+            @PathVariable UUID id,
+            @PathVariable UUID notificationId,
+            @RequestParam UUID userId) {
+        groupService.acceptInvite(id, notificationId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/invites/{notificationId}/reject")
+    public ResponseEntity<Void> rejectInvite(
+            @PathVariable UUID id,
+            @PathVariable UUID notificationId) {
+        groupService.rejectInvite(id, notificationId);
         return ResponseEntity.noContent().build();
     }
 }

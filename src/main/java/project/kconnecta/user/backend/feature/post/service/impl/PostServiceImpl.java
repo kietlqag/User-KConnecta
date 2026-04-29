@@ -3,8 +3,11 @@ package project.kconnecta.user.backend.feature.post.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostMediaRequest;
@@ -60,6 +63,7 @@ public class PostServiceImpl implements PostService {
     private final PostShareRepository postShareRepository;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -97,6 +101,8 @@ public class PostServiceImpl implements PostService {
                 .publishedAt(status == PostStatus.PUBLISHED ? LocalDateTime.now() : null)
                 .locationText(trimToNull(request.getLocationText()))
                 .backgroundStyle(trimToNull(request.getBackgroundStyle()))
+                .imageUrl(trimToNull(request.getImageUrl()) != null ? request.getImageUrl().trim() : 
+                        (mediaRequests.isEmpty() ? null : mediaRequests.get(0).getFileUrl().trim()))
                 .promoted(Boolean.TRUE.equals(request.getPromoted()))
                 .build();
 
@@ -108,10 +114,18 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public String uploadPostImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ValidationException("Image file is required");
+        }
+        return cloudinaryService.uploadPostImage(file);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<PostResponse> getAllPosts(UUID currentUserId) {
         List<Post> posts = postRepository.findHomeFeedPostsOrderByCreatedAtDesc().stream()
-                .filter(p -> p.getGroup() == null)
+                .filter(p -> p.getGroup() == null || p.getGroup().getPrivacy() == GroupPrivacy.PUBLIC)
                 .toList();
         return processPostsBulk(posts, currentUserId);
     }
@@ -427,6 +441,7 @@ public class PostServiceImpl implements PostService {
                 .authorFullName(post.getAuthor().getFullName())
                 .authorAvatarUrl(post.getAuthor().getAvatarUrl())
                 .content(post.getContent())
+                .imageUrl(post.getImageUrl())
                 .privacy(post.getPrivacy())
                 .status(post.getStatus())
                 .scheduledAt(post.getScheduledAt())

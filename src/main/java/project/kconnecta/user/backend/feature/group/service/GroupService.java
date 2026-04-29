@@ -14,7 +14,9 @@ public interface GroupService {
     List<GroupMemberResponse> getGroupMembers(UUID groupId);
     List<GroupResponse> getDiscoverGroups(UUID userId);
     GroupResponse joinGroup(UUID groupId, UUID userId);
-    void inviteFriends(UUID groupId, List<UUID> userIds);
+    void inviteFriends(UUID groupId, UUID senderId, List<UUID> userIds);
+    void acceptInvite(UUID groupId, UUID notificationId, UUID userId);
+    void rejectInvite(UUID groupId, UUID notificationId);
     GroupResponse createGroup(CreateGroupRequest request);
     GroupResponse updateCoverPhoto(UUID groupId, org.springframework.web.multipart.MultipartFile file);
     void removeCoverPhoto(UUID groupId);

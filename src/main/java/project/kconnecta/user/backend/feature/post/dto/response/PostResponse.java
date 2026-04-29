@@ -22,6 +22,7 @@ public class PostResponse {
     private String authorFullName;
     private String authorAvatarUrl;
     private String content;
+    private String imageUrl;
     private PostPrivacy privacy;
     private PostStatus status;
     private LocalDateTime scheduledAt;

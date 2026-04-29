@@ -9,12 +9,14 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDeta
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface PostService {
     PostResponse createPost(CreatePostRequest request);
+    String uploadPostImage(MultipartFile file);
     List<PostResponse> getAllPosts(UUID currentUserId);
     List<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId);
     List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId);

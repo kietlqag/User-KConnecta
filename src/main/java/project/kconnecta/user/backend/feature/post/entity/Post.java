@@ -57,6 +57,9 @@ public class Post {
     @Column(name = "background_style", length = 100)
     private String backgroundStyle;
 
+    @Column(name = "image_url", length = 1000)
+    private String imageUrl;
+
     @Column(name = "is_promoted", nullable = false)
     private boolean promoted;
 

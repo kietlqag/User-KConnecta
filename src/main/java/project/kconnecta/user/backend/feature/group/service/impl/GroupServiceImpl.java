@@ -16,6 +16,8 @@ import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
+import project.kconnecta.user.backend.feature.notification.service.NotificationService;
+import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -31,6 +33,7 @@ public class GroupServiceImpl implements GroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -112,9 +115,12 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     @Transactional
-    public void inviteFriends(UUID groupId, List<UUID> userIds) {
+    public void inviteFriends(UUID groupId, UUID senderId, List<UUID> userIds) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
 
         for (UUID userId : userIds) {
             // Check if already a member
@@ -122,17 +128,45 @@ public class GroupServiceImpl implements GroupService {
                     .anyMatch(gm -> gm.getUser().getId().equals(userId));
 
             if (!alreadyMember) {
-                User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-
-                GroupMember member = GroupMember.builder()
-                        .group(group)
-                        .user(user)
-                        .role(GroupMemberRole.MEMBER)
-                        .build();
-                groupMemberRepository.save(member);
+                String content = sender.getFullName() + " đã mời bạn tham gia nhóm " + group.getName();
+                notificationService.createNotification(
+                        userId, 
+                        senderId, 
+                        NotificationType.GROUP_INVITE, 
+                        content, 
+                        groupId
+                );
             }
         }
+    }
+
+    @Override
+    @Transactional
+    public void acceptInvite(UUID groupId, UUID notificationId, UUID userId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+        boolean alreadyMember = groupMemberRepository.findAllByGroupId(groupId).stream()
+                .anyMatch(gm -> gm.getUser().getId().equals(userId));
+
+        if (!alreadyMember) {
+            GroupMember member = GroupMember.builder()
+                    .group(group)
+                    .user(user)
+                    .role(GroupMemberRole.MEMBER)
+                    .build();
+            groupMemberRepository.save(member);
+        }
+
+        notificationService.markAsActioned(notificationId);
+    }
+
+    @Override
+    @Transactional
+    public void rejectInvite(UUID groupId, UUID notificationId) {
+        notificationService.markAsActioned(notificationId);
     }
 
     @Override

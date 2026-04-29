@@ -3,8 +3,10 @@ package project.kconnecta.user.backend.feature.post.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
@@ -29,6 +31,12 @@ public class PostController {
     @PostMapping
     public ResponseEntity<PostResponse> createPost(@Valid @RequestBody CreatePostRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(postService.createPost(request));
+    }
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<java.util.Map<String, String>> uploadPostImage(@RequestParam("file") MultipartFile file) {
+        String url = postService.uploadPostImage(file);
+        return ResponseEntity.ok(java.util.Collections.singletonMap("url", url));
     }
 
     @GetMapping

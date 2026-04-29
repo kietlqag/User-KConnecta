@@ -14,7 +14,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     // issue where @EntityGraph + @Query can cause the JPQL WHERE clause to be
     // partially ignored or generate conflicting implicit/explicit joins.
     @org.springframework.data.jpa.repository.Query(
-        "SELECT p FROM Post p JOIN FETCH p.author WHERE p.group IS NULL ORDER BY p.createdAt DESC"
+        "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group WHERE p.group IS NULL OR p.group.privacy = project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy.PUBLIC ORDER BY p.createdAt DESC"
     )
     List<Post> findHomeFeedPostsOrderByCreatedAtDesc();
 
