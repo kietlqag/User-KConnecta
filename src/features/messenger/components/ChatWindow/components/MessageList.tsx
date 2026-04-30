@@ -19,6 +19,7 @@ interface MessageListProps {
   pinnedMessageId?: string | null;
   onReportMessage: (msg: Message) => void;
   onScroll: () => void;
+  onUserScrollIntent: () => void;
   isGroupChat?: boolean;
   groupName?: string;
   groupAvatar?: string;
@@ -45,6 +46,7 @@ export const MessageList = forwardRef(({
   pinnedMessageId = null,
   onReportMessage,
   onScroll,
+  onUserScrollIntent,
   isGroupChat = false,
   groupName = '',
   groupAvatar = '',
@@ -86,6 +88,9 @@ export const MessageList = forwardRef(({
       <div
         ref={ref}
         onScroll={onScroll}
+        onWheel={onUserScrollIntent}
+        onTouchStart={onUserScrollIntent}
+        onPointerDown={onUserScrollIntent}
         className="h-full overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1 scroll-smooth sm:px-4"
       >
         {hasOlder && (

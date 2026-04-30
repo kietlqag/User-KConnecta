@@ -79,6 +79,9 @@ export type CallSignalType =
 
 export interface OutgoingCallSignal {
   receiverId: string;
+  conversationId?: string;
+  conversationName?: string;
+  conversationAvatarUrl?: string;
   callId: string;
   type: CallSignalType;
   mediaType?: 'audio' | 'video';
@@ -92,6 +95,9 @@ export interface IncomingCallSignal {
   callId: string;
   fromUserId: string;
   toUserId: string;
+  conversationId?: string | null;
+  conversationName?: string | null;
+  conversationAvatarUrl?: string | null;
   fromUsername: string;
   type: CallSignalType;
   mediaType?: 'audio' | 'video';

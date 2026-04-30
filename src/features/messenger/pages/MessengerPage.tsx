@@ -35,7 +35,7 @@ const REPLY_PREFIX = '__REPLY__:';
 const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
-const HISTORY_PAGE_SIZE = 30;
+const HISTORY_PAGE_SIZE = 15;
 
 function mapBackendContentToMessageFields(
   content: string,
@@ -219,10 +219,32 @@ function extractLinksFromText(text?: string | null) {
   return matches.map((link) => link.replace(/[),.;!?]+$/, ''));
 }
 
-function ChatInfoPanel({ user, messages }: { user: ChatUser; messages: Message[] }) {
+function ChatInfoPanel({
+  user,
+  messages,
+  isGroupChat = false,
+  groupMembers = [],
+  groupCreatorId,
+  currentUserId,
+  onOpenAddMembers,
+}: {
+  user: ChatUser;
+  messages: Message[];
+  isGroupChat?: boolean;
+  groupMembers?: ChatUser[];
+  groupCreatorId?: string;
+  currentUserId?: string | null;
+  onOpenAddMembers?: () => void;
+}) {
   const [activeTab, setActiveTab] = useState<InfoPanelTab>('media');
   const [infoView, setInfoView] = useState<'overview' | 'files'>('overview');
   const [isMediaSectionOpen, setIsMediaSectionOpen] = useState(true);
+  const [groupSectionsOpen, setGroupSectionsOpen] = useState({
+    info: false,
+    customize: false,
+    options: false,
+    members: true,
+  });
   const [visibleLimits, setVisibleLimits] = useState<Record<InfoPanelTab, number>>({
     media: INFO_PANEL_PAGE_SIZE,
     files: INFO_PANEL_PAGE_SIZE,
@@ -238,6 +260,12 @@ function ChatInfoPanel({ user, messages }: { user: ChatUser; messages: Message[]
     setInfoView('overview');
     setActiveTab('media');
     setIsMediaSectionOpen(true);
+    setGroupSectionsOpen({
+      info: false,
+      customize: false,
+      options: false,
+      members: true,
+    });
   }, [user.id]);
 
   const mediaItems = useMemo(
@@ -405,6 +433,210 @@ function ChatInfoPanel({ user, messages }: { user: ChatUser; messages: Message[]
     return renderLinkList();
   };
 
+  if (isGroupChat && infoView === 'overview') {
+    const toggleGroupSection = (section: keyof typeof groupSectionsOpen) => {
+      setGroupSectionsOpen((prev) => ({ ...prev, [section]: !prev[section] }));
+    };
+    const sortedMembers = [...groupMembers].sort((a, b) => {
+      if (a.id === groupCreatorId) return -1;
+      if (b.id === groupCreatorId) return 1;
+      if (a.id === currentUserId) return -1;
+      if (b.id === currentUserId) return 1;
+      return a.name.localeCompare(b.name, 'vi');
+    });
+
+    const renderGroupSectionHeader = (
+      section: keyof typeof groupSectionsOpen,
+      label: string,
+      highlighted = false,
+    ) => (
+      <button
+        type="button"
+        onClick={() => toggleGroupSection(section)}
+        className={`flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left ${
+          highlighted ? 'bg-gray-100' : 'hover:bg-gray-50'
+        }`}
+      >
+        <span className="text-[15px] font-semibold text-gray-900">{label}</span>
+        <ChevronUp className={`h-4.5 w-4.5 text-gray-900 transition-transform ${groupSectionsOpen[section] ? '' : 'rotate-180'}`} />
+      </button>
+    );
+
+    return (
+      <aside
+        className="hidden h-full min-h-0 w-[320px] shrink-0 overflow-y-auto border-l border-gray-200 bg-white px-4 py-4 xl:flex xl:flex-col"
+        style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
+      >
+        <div className="shrink-0 px-1 pb-5 text-center">
+          <img
+            src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563eb&color=ffffff`}
+            alt={user.name}
+            className="mx-auto h-24 w-24 rounded-full object-cover"
+          />
+          <h3 className="mt-3 truncate text-lg font-semibold tracking-tight text-gray-900">{user.name}</h3>
+          <p className="text-xs text-gray-500">{groupMembers.length} thành viên</p>
+        </div>
+
+        <div className="flex shrink-0 items-start justify-center gap-8 pb-5 text-center">
+          <button type="button" className="group flex w-16 flex-col items-center gap-2" title="Tắt thông báo">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 transition-colors group-hover:bg-gray-300">
+              <BellOff className="h-4.5 w-4.5 text-gray-900" />
+            </span>
+            <span className="text-xs leading-tight text-gray-900">Tắt thông báo</span>
+          </button>
+          <button type="button" className="group flex w-16 flex-col items-center gap-2" title="Tìm kiếm">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 transition-colors group-hover:bg-gray-300">
+              <SearchIcon className="h-4.5 w-4.5 text-gray-900" />
+            </span>
+            <span className="text-xs leading-tight text-gray-900">Tìm kiếm</span>
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {renderGroupSectionHeader('info', 'Thông tin về đoạn chat', true)}
+          {groupSectionsOpen.info && (
+            <div className="px-3 pb-3 text-sm text-gray-500">
+              <div className="flex items-center gap-3">
+                <img
+                  src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563eb&color=ffffff`}
+                  alt={user.name}
+                  className="h-10 w-10 rounded-full object-cover"
+                />
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-gray-900">{user.name}</p>
+                  <p>{groupMembers.length} thành viên</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {renderGroupSectionHeader('customize', 'Tùy chỉnh đoạn chat')}
+          {groupSectionsOpen.customize && (
+            <div className="space-y-2 px-3 pb-3 text-sm text-gray-600">
+              <button type="button" className="block w-full rounded-lg py-2 text-left hover:text-gray-900">
+                Đổi tên đoạn chat
+              </button>
+              <button type="button" className="block w-full rounded-lg py-2 text-left hover:text-gray-900">
+                Đổi ảnh nhóm
+              </button>
+            </div>
+          )}
+
+          {renderGroupSectionHeader('options', 'Tùy chọn nhóm')}
+          {groupSectionsOpen.options && (
+            <div className="space-y-2 px-3 pb-3 text-sm text-gray-600">
+              <button type="button" className="block w-full rounded-lg py-2 text-left hover:text-gray-900">
+                Tìm kiếm trong đoạn chat
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('media');
+                  setInfoView('files');
+                }}
+                className="block w-full rounded-lg py-2 text-left hover:text-gray-900"
+              >
+                Xem phương tiện, file và link
+              </button>
+            </div>
+          )}
+
+          {renderGroupSectionHeader('members', 'Thành viên trong đoạn chat')}
+          {groupSectionsOpen.members && (
+            <div className="space-y-3 px-3 pb-3 pt-1">
+              {sortedMembers.map((member) => {
+                const isCreator = member.id === groupCreatorId;
+                const isCurrentUser = member.id === currentUserId;
+                const subtitle = isCreator ? 'Người tạo nhóm' : isCurrentUser ? 'Bạn' : 'Do bạn thêm';
+
+                return (
+                  <div key={member.id} className="flex items-center gap-3">
+                    <img
+                      src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`}
+                      alt={member.name}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-semibold text-gray-900">{member.name}</p>
+                      <p className="truncate text-sm text-gray-500">{subtitle}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-900 hover:bg-gray-100"
+                      title="Tùy chọn thành viên"
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
+                    </button>
+                  </div>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={onOpenAddMembers}
+                className="flex w-full items-center gap-3 rounded-lg py-1 text-left hover:bg-gray-50"
+                title="Thêm người"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-900">
+                  <UserPlus className="h-5 w-5" />
+                </span>
+                <span className="text-[15px] font-semibold text-gray-900">Thêm người</span>
+              </button>
+            </div>
+          )}
+
+          <section>
+            <button
+              type="button"
+              className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-gray-50"
+              onClick={() => setIsMediaSectionOpen((prev) => !prev)}
+            >
+              <span className="text-[15px] font-semibold text-gray-900">Phương tiện, File, Link</span>
+              <ChevronUp className={`h-4.5 w-4.5 text-gray-900 transition-transform ${isMediaSectionOpen ? '' : 'rotate-180'}`} />
+            </button>
+            {isMediaSectionOpen && (
+              <div className="space-y-4 px-3 pb-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('media');
+                    setInfoView('files');
+                  }}
+                  className="flex w-full items-center gap-4 text-left"
+                >
+                  <ImageIcon className="h-5 w-5 text-gray-900" />
+                  <span className="text-[15px] font-semibold text-gray-900">Phương tiện</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('files');
+                    setInfoView('files');
+                  }}
+                  className="flex w-full items-center gap-4 text-left"
+                >
+                  <FileText className="h-5 w-5 text-gray-900" />
+                  <span className="text-[15px] font-semibold text-gray-900">File</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('links');
+                    setInfoView('files');
+                  }}
+                  className="flex w-full items-center gap-4 text-left"
+                >
+                  <LinkIcon className="h-5 w-5 text-gray-900" />
+                  <span className="text-[15px] font-semibold text-gray-900">Link</span>
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside
       className="hidden xl:flex h-full min-h-0 w-[320px] shrink-0 overflow-hidden border-l border-gray-200 bg-white flex-col"
@@ -568,6 +800,10 @@ export default function MessengerPage() {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [groupNameInput, setGroupNameInput] = useState('');
   const [selectedGroupMemberIds, setSelectedGroupMemberIds] = useState<string[]>([]);
+  const [isAddGroupMembersOpen, setIsAddGroupMembersOpen] = useState(false);
+  const [addGroupMemberSearch, setAddGroupMemberSearch] = useState('');
+  const [selectedAddGroupMemberIds, setSelectedAddGroupMemberIds] = useState<string[]>([]);
+  const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
   const [selectedForwardTargetIds, setSelectedForwardTargetIds] = useState<string[]>([]);
   const [pinnedMessageByConversation, setPinnedMessageByConversation] = useState<Record<string, { id: string; text: string }>>({});
@@ -1426,6 +1662,73 @@ export default function MessengerPage() {
     );
   }, []);
 
+  const openAddGroupMembersModal = useCallback(() => {
+    setSelectedAddGroupMemberIds([]);
+    setAddGroupMemberSearch('');
+    setIsAddGroupMembersOpen(true);
+  }, []);
+
+  const closeAddGroupMembersModal = useCallback(() => {
+    if (isAddingGroupMembers) return;
+    setIsAddGroupMembersOpen(false);
+    setSelectedAddGroupMemberIds([]);
+    setAddGroupMemberSearch('');
+  }, [isAddingGroupMembers]);
+
+  const toggleAddGroupMemberSelection = useCallback((userId: string) => {
+    setSelectedAddGroupMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+  }, []);
+
+  const handleAddGroupMembers = useCallback(async () => {
+    if (!activeChatUserId || !activeChatUserId.startsWith('group:')) return;
+    if (selectedAddGroupMemberIds.length === 0) return;
+
+    const conversationId = activeChatUserId.replace('group:', '');
+    setIsAddingGroupMembers(true);
+    try {
+      const updated = await chatService.addGroupMembers(conversationId, selectedAddGroupMemberIds);
+      const chatUserId = `group:${updated.id}`;
+      const memberProfiles: ChatUser[] = updated.members.map((m) => ({
+        id: m.userId,
+        name: m.fullName || m.username || 'Người dùng',
+        avatar:
+          m.avatarUrl?.trim() ||
+          `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(m.fullName || m.username || 'User')}`,
+        isOnline: false,
+      }));
+
+      setGroupMembersById((prev) => ({ ...prev, [chatUserId]: memberProfiles }));
+      setGroupCreatorById((prev) => ({ ...prev, [chatUserId]: updated.createdBy }));
+      setServerGroupConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.user.id === chatUserId
+            ? {
+                ...conversation,
+                user: {
+                  ...conversation.user,
+                  name: updated.name,
+                  avatar:
+                    updated.avatarUrl?.trim() ||
+                    conversation.user.avatar ||
+                    `https://ui-avatars.com/api/?background=2563eb&color=ffffff&bold=true&name=${encodeURIComponent('Group')}`,
+                },
+              }
+            : conversation,
+        ),
+      );
+      setIsAddGroupMembersOpen(false);
+      setSelectedAddGroupMemberIds([]);
+      setAddGroupMemberSearch('');
+      toast.success('Đã thêm thành viên vào nhóm.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể thêm thành viên.');
+    } finally {
+      setIsAddingGroupMembers(false);
+    }
+  }, [activeChatUserId, selectedAddGroupMemberIds]);
+
   const handleCreateGroupChat = useCallback(async () => {
     if (!currentUser?.id) return;
     if (selectedGroupMemberIds.length < 2) {
@@ -1502,13 +1805,53 @@ export default function MessengerPage() {
 
   const handleStartVoiceCall = useCallback(() => {
     if (!activeChatUserId) return;
+    if (activeChatUserId.startsWith('group:')) {
+      const memberIds = (groupMembersById[activeChatUserId] ?? []).map((member) => member.id);
+      const conversationId = activeChatUserId.replace('group:', '');
+      void chatService
+        .createGroupCallSession(conversationId, 'audio')
+        .then((session) =>
+          voiceCall.startGroupCall(
+            conversationId,
+            memberIds,
+            'audio',
+            activeChatUser?.name,
+            activeChatUser?.avatar,
+            session.callId,
+          ),
+        )
+        .catch((error: any) => {
+          toast.error(error?.message || 'Không thể bắt đầu cuộc gọi nhóm.');
+        });
+      return;
+    }
     void voiceCall.startCall(activeChatUserId, 'audio', activeChatUser?.name, activeChatUser?.avatar);
-  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, voiceCall]);
+  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, groupMembersById, voiceCall]);
 
   const handleStartVideoCall = useCallback(() => {
     if (!activeChatUserId) return;
+    if (activeChatUserId.startsWith('group:')) {
+      const memberIds = (groupMembersById[activeChatUserId] ?? []).map((member) => member.id);
+      const conversationId = activeChatUserId.replace('group:', '');
+      void chatService
+        .createGroupCallSession(conversationId, 'video')
+        .then((session) =>
+          voiceCall.startGroupCall(
+            conversationId,
+            memberIds,
+            'video',
+            activeChatUser?.name,
+            activeChatUser?.avatar,
+            session.callId,
+          ),
+        )
+        .catch((error: any) => {
+          toast.error(error?.message || 'Không thể bắt đầu cuộc gọi nhóm.');
+        });
+      return;
+    }
     void voiceCall.startCall(activeChatUserId, 'video', activeChatUser?.name, activeChatUser?.avatar);
-  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, voiceCall]);
+  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, groupMembersById, voiceCall]);
 
   const handleCallAgain = useCallback(
     (mediaType: 'audio' | 'video' = 'audio') => {
@@ -1579,6 +1922,16 @@ export default function MessengerPage() {
     });
 
   const activeMessages = activeChatUserId ? (messagesByUser[activeChatUserId] ?? []) : [];
+  const addableGroupMembers = useMemo(() => {
+    if (!activeChatUserId || !isActiveGroupChat) return [];
+    const existingIds = new Set((groupMembersById[activeChatUserId] ?? []).map((member) => member.id));
+    const query = addGroupMemberSearch.trim().toLowerCase();
+    return selectableFriends.filter((friend) => {
+      if (existingIds.has(friend.id)) return false;
+      if (!query) return true;
+      return friend.name.toLowerCase().includes(query);
+    });
+  }, [activeChatUserId, addGroupMemberSearch, groupMembersById, isActiveGroupChat, selectableFriends]);
   const activePinnedMessage = useMemo(() => {
     if (!activeChatUserId) return null;
     const pinned = pinnedMessageByConversation[activeChatUserId];
@@ -1600,11 +1953,20 @@ export default function MessengerPage() {
   >(() => {
     if (!activeChatUserId) return 'idle';
     if (voiceCall.activePeerUserId === activeChatUserId) return voiceCall.status;
+    if (
+      activeChatUserId.startsWith('group:') &&
+      (voiceCall.activeGroupConversationId === activeChatUserId.replace('group:', '') ||
+        (voiceCall.incomingGroupConversationId === activeChatUserId.replace('group:', '') && voiceCall.isRinging))
+    ) {
+      return voiceCall.status;
+    }
     if (voiceCall.incomingPeerUserId === activeChatUserId && voiceCall.isRinging) return 'ringing';
     return 'idle';
   }, [
     activeChatUserId,
+    voiceCall.activeGroupConversationId,
     voiceCall.activePeerUserId,
+    voiceCall.incomingGroupConversationId,
     voiceCall.incomingPeerUserId,
     voiceCall.isRinging,
     voiceCall.status,
@@ -1740,12 +2102,13 @@ export default function MessengerPage() {
                 callMediaType={voiceCall.callMediaType}
                 isMuted={voiceCall.isMuted}
                 canStartVoiceCall={
-                  !isActiveGroupChat &&
                   !voiceCall.hasActiveCall && !voiceCall.isRinging
                     ? true
-                    : voiceCall.activePeerUserId === activeChatUser.id
+                    : voiceCall.activePeerUserId === activeChatUser.id ||
+                      (isActiveGroupChat &&
+                        voiceCall.activeGroupConversationId === activeChatUser.id.replace('group:', ''))
                 }
-                canStartVideoCall={!isActiveGroupChat && !voiceCall.hasActiveCall && !voiceCall.isRinging}
+                canStartVideoCall={!voiceCall.hasActiveCall && !voiceCall.isRinging}
                 onStartVoiceCall={handleStartVoiceCall}
                 onStartVideoCall={handleStartVideoCall}
                 onEndVoiceCall={handleEndVoiceCall}
@@ -1773,7 +2136,17 @@ export default function MessengerPage() {
             </div>
           )}
 
-          {activeChatUser && <ChatInfoPanel user={activeChatUser} messages={activeMessages} />}
+          {activeChatUser && (
+            <ChatInfoPanel
+              user={activeChatUser}
+              messages={activeMessages}
+              isGroupChat={isActiveGroupChat}
+              groupMembers={activeChatUserId ? groupMembersById[activeChatUserId] ?? [] : []}
+              groupCreatorId={activeChatUserId ? groupCreatorById[activeChatUserId] : undefined}
+              currentUserId={currentUser?.id}
+              onOpenAddMembers={openAddGroupMembersModal}
+            />
+          )}
         </div>
       </div>
 
@@ -1864,6 +2237,120 @@ export default function MessengerPage() {
                 className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
                 Tạo nhóm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAddGroupMembersOpen && activeChatUserId?.startsWith('group:') && (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
+          <div className="flex max-h-[86vh] w-full max-w-[660px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+            <div className="relative flex shrink-0 items-center justify-center border-b border-gray-200 px-5 py-4">
+              <h3 className="text-[24px] font-bold text-gray-900">Thêm người</h3>
+              <button
+                onClick={closeAddGroupMembersModal}
+                disabled={isAddingGroupMembers}
+                className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition-colors hover:bg-gray-300 disabled:opacity-60"
+                title="Đóng"
+              >
+                <X className="h-7 w-7" />
+              </button>
+            </div>
+
+            <div className="shrink-0 px-5 pb-4 pt-5">
+              <div className="relative">
+                <SearchIcon className="absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-600" />
+                <input
+                  type="text"
+                  value={addGroupMemberSearch}
+                  onChange={(e) => setAddGroupMemberSearch(e.target.value)}
+                  placeholder="Tìm kiếm"
+                  className="h-11 w-full rounded-full bg-gray-100 pl-11 pr-4 text-[16px] outline-none transition-colors focus:bg-gray-200"
+                />
+              </div>
+
+              <div className="mt-7 min-h-[112px] text-sm text-gray-500">
+                {selectedAddGroupMemberIds.length === 0 ? (
+                  <div className="pt-6 text-center">Chưa chọn người dùng nào</div>
+                ) : (
+                  <div className="flex flex-wrap items-start justify-start gap-4 px-2">
+                    {selectedAddGroupMemberIds.map((id) => {
+                      const friend = selectableFriends.find((item) => item.id === id);
+                      if (!friend) return null;
+                      return (
+                        <div
+                          key={id}
+                          className="flex w-[72px] flex-col items-center gap-2 text-center"
+                        >
+                          <div className="relative">
+                            <img
+                              src={friend.avatar}
+                              alt={friend.name}
+                              className="h-12 w-12 rounded-full border-2 border-blue-600 object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => toggleAddGroupMemberSelection(id)}
+                              className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-gray-700 shadow-sm hover:bg-gray-300"
+                              title="Bỏ chọn"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <span className="line-clamp-2 w-full text-sm leading-tight text-gray-500">{friend.name}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
+              <h4 className="mb-3 text-[24px] font-bold text-gray-900">Gợi ý</h4>
+              {addableGroupMembers.length === 0 ? (
+                <div className="rounded-xl bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+                  Không có bạn bè phù hợp để thêm
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {addableGroupMembers.map((friend) => {
+                    const selected = selectedAddGroupMemberIds.includes(friend.id);
+                    return (
+                      <button
+                        key={friend.id}
+                        type="button"
+                        onClick={() => toggleAddGroupMemberSelection(friend.id)}
+                        className={`flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors ${
+                          selected ? 'bg-gray-100' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <img src={friend.avatar} alt={friend.name} className="h-10 w-10 rounded-full object-cover" />
+                        <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-gray-900">
+                          {friend.name}
+                        </span>
+                        <span
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+                            selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-500 bg-white text-transparent'
+                          }`}
+                        >
+                          <Check className="h-4 w-4" />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="shrink-0 border-t border-gray-100 px-5 py-4">
+              <button
+                onClick={handleAddGroupMembers}
+                disabled={selectedAddGroupMemberIds.length === 0 || isAddingGroupMembers}
+                className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+              >
+                {isAddingGroupMembers ? 'Đang thêm...' : 'Thêm người'}
               </button>
             </div>
           </div>

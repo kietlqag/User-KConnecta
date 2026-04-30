@@ -12,6 +12,8 @@ interface ActiveCall {
   peerUserId: string;
   peerDisplayName?: string;
   peerAvatarUrl?: string;
+  groupConversationId?: string;
+  participantIds?: string[];
   direction: CallDirection;
   mediaType: CallMediaType;
 }
@@ -63,6 +65,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   const [authoritativeDurationSec, setAuthoritativeDurationSec] = useState<number | null>(null);
 
   const peerRef = useRef<RTCPeerConnection | null>(null);
+  const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
@@ -137,6 +140,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     (keepStatus = false) => {
       clearCallTimeout();
       clearConnectTimeout();
+      peerConnectionsRef.current.forEach((pc) => pc.close());
+      peerConnectionsRef.current.clear();
       peerRef.current?.close();
       peerRef.current = null;
 
@@ -189,6 +194,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     () => () => {
       clearCallTimeout();
       clearConnectTimeout();
+      peerConnectionsRef.current.forEach((pc) => pc.close());
+      peerConnectionsRef.current.clear();
       peerRef.current?.close();
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -228,7 +235,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
   const createPeerConnection = useCallback(
     (callId: string, peerUserId: string) => {
-      if (peerRef.current) return peerRef.current;
+      const existing = peerConnectionsRef.current.get(peerUserId);
+      if (existing) return existing;
 
       const pc = new RTCPeerConnection(rtcConfig);
       logWebRtc('createPeerConnection', {
@@ -330,7 +338,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         }
       };
 
-      peerRef.current = pc;
+      peerConnectionsRef.current.set(peerUserId, pc);
+      if (!peerRef.current) {
+        peerRef.current = pc;
+      }
       return pc;
     },
     [armConnectTimeout, clearConnectTimeout, logWebRtc, sendSignal],
@@ -403,9 +414,98 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     [cleanup, clearCallTimeout, createPeerConnection, currentUserId, ensureLocalStream, logWebRtc, sendSignal, status],
   );
 
+  const startGroupCall = useCallback(
+    async (
+      conversationId: string,
+      participantIds: string[],
+      mediaType: CallMediaType = 'audio',
+      groupDisplayName?: string,
+      groupAvatarUrl?: string,
+      existingCallId?: string,
+    ) => {
+      if (!currentUserId) return;
+      if (status !== 'idle' && status !== 'ended') return;
+
+      const receivers = participantIds.filter((id) => id && id !== currentUserId);
+      if (receivers.length === 0) return;
+
+      setErrorMessage(null);
+
+      const callId = existingCallId || createCallId();
+      setActiveCall({
+        callId,
+        peerUserId: receivers[0],
+        peerDisplayName: groupDisplayName,
+        peerAvatarUrl: groupAvatarUrl,
+        groupConversationId: conversationId,
+        participantIds: receivers,
+        direction: 'outgoing',
+        mediaType,
+      });
+      hasRetriedIceRestartRef.current = false;
+      setCallStartedAtMs(null);
+      setAuthoritativeSessionStatus('RINGING');
+      setAuthoritativeDurationSec(null);
+      setStatus('calling');
+
+      clearCallTimeout();
+      callTimeoutRef.current = window.setTimeout(() => {
+        receivers.forEach((receiverId) => {
+          sendSignal(receiverId, callId, 'CALL_CANCEL', { conversationId });
+        });
+        setErrorMessage('Cuộc gọi không phản hồi.');
+        setStatus('ended');
+        cleanup(true);
+      }, CALL_RING_TIMEOUT_MS);
+
+      try {
+        const local = await ensureLocalStream(mediaType);
+
+        await Promise.all(
+          receivers.map(async (receiverId) => {
+            sendSignal(receiverId, callId, 'CALL_INVITE', {
+              mediaType,
+              conversationId,
+              conversationName: groupDisplayName,
+              conversationAvatarUrl: groupAvatarUrl,
+            });
+            const pc = createPeerConnection(callId, receiverId);
+            local.getTracks().forEach((track) => pc.addTrack(track, local));
+            const offer = await pc.createOffer({
+              offerToReceiveAudio: true,
+              offerToReceiveVideo: mediaType === 'video',
+            });
+            await pc.setLocalDescription(offer);
+            sendSignal(receiverId, callId, 'CALL_OFFER', {
+              sdp: offer.sdp ?? undefined,
+              conversationId,
+              conversationName: groupDisplayName,
+              conversationAvatarUrl: groupAvatarUrl,
+            });
+          }),
+        );
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : 'Không thể bắt đầu cuộc gọi nhóm');
+        setStatus('error');
+        cleanup(true);
+      }
+    },
+    [
+      cleanup,
+      clearCallTimeout,
+      createPeerConnection,
+      currentUserId,
+      ensureLocalStream,
+      sendSignal,
+      status,
+    ],
+  );
+
   const rejectIncoming = useCallback(() => {
     if (!incomingSignal) return;
-    sendSignal(incomingSignal.fromUserId, incomingSignal.callId, 'CALL_REJECT');
+    sendSignal(incomingSignal.fromUserId, incomingSignal.callId, 'CALL_REJECT', {
+      conversationId: incomingSignal.conversationId ?? undefined,
+    });
     cleanup();
   }, [cleanup, incomingSignal, sendSignal]);
 
@@ -416,7 +516,15 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     const offerMediaType: CallMediaType = hasVideoInSdp(pendingOfferRef.current?.sdp) ? 'video' : incomingMediaType;
 
     setErrorMessage(null);
-    setActiveCall({ callId, peerUserId, direction: 'incoming', mediaType: offerMediaType });
+    setActiveCall({
+      callId,
+      peerUserId,
+      groupConversationId: incomingSignal.conversationId ?? undefined,
+      peerDisplayName: incomingSignal.conversationName ?? undefined,
+      peerAvatarUrl: incomingSignal.conversationAvatarUrl ?? undefined,
+      direction: 'incoming',
+      mediaType: offerMediaType,
+    });
     hasRetriedIceRestartRef.current = false;
     setCallStartedAtMs(Date.now());
     setAuthoritativeSessionStatus('ONGOING');
@@ -424,7 +532,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     setStatus('connecting');
     setIncomingSignal(null);
     setIncomingMediaType('audio');
-    sendSignal(peerUserId, callId, 'CALL_ACCEPT');
+    sendSignal(peerUserId, callId, 'CALL_ACCEPT', { conversationId: incomingSignal.conversationId ?? undefined });
     armConnectTimeout(peerUserId, callId);
     logWebRtc('send CALL_ACCEPT', { callId, peerUserId });
 
@@ -444,7 +552,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         logWebRtc('setLocalDescription answer', { callId });
-        sendSignal(peerUserId, callId, 'CALL_ANSWER', { sdp: answer.sdp ?? undefined });
+        sendSignal(peerUserId, callId, 'CALL_ANSWER', {
+          sdp: answer.sdp ?? undefined,
+          conversationId: incomingSignal.conversationId ?? undefined,
+        });
       }
 
       await applyPendingIce();
@@ -468,9 +579,16 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   const endCall = useCallback(() => {
     if (activeCall) {
       const endType: CallSignalType = status === 'in_call' ? 'CALL_END' : 'CALL_CANCEL';
-      sendSignal(activeCall.peerUserId, activeCall.callId, endType);
+      const receivers = activeCall.participantIds?.length ? activeCall.participantIds : [activeCall.peerUserId];
+      receivers.forEach((receiverId) => {
+        sendSignal(receiverId, activeCall.callId, endType, {
+          conversationId: activeCall.groupConversationId,
+        });
+      });
     } else if (incomingSignal) {
-      sendSignal(incomingSignal.fromUserId, incomingSignal.callId, 'CALL_CANCEL');
+      sendSignal(incomingSignal.fromUserId, incomingSignal.callId, 'CALL_CANCEL', {
+        conversationId: incomingSignal.conversationId ?? undefined,
+      });
     }
     setStatus('ended');
     cleanup(true);
@@ -595,7 +713,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
               pendingOfferRef.current = null;
               const answer = await peerRef.current.createAnswer();
               await peerRef.current.setLocalDescription(answer);
-              sendSignal(signal.fromUserId, signal.callId, 'CALL_ANSWER', { sdp: answer.sdp ?? undefined });
+              sendSignal(signal.fromUserId, signal.callId, 'CALL_ANSWER', {
+                sdp: answer.sdp ?? undefined,
+                conversationId: signal.conversationId ?? undefined,
+              });
               await applyPendingIce();
             } catch {
               // Wait for manual accept flow.
@@ -603,7 +724,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           }
           break;
         case 'CALL_ANSWER':
-          if (!matchesByCallId || !signal.sdp || !peerRef.current) break;
+          {
+          const pc = peerConnectionsRef.current.get(signal.fromUserId) ?? peerRef.current;
+          if (!matchesByCallId || !signal.sdp || !pc) break;
           setActiveCall((prev) =>
             prev && prev.callId === signal.callId
               ? { ...prev, peerDisplayName: prev.peerDisplayName || signal.fromUsername }
@@ -615,12 +738,13 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
             answeredAt: signal.sessionAnsweredAt ?? signal.createdAt,
             durationSec: signal.sessionDurationSec,
           });
-          await peerRef.current.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
+          await pc.setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: signal.sdp }));
           logWebRtc('setRemoteDescription answer', { callId: signal.callId });
           setStatus('connecting');
           armConnectTimeout(signal.fromUserId, signal.callId);
           await applyPendingIce();
           break;
+          }
         case 'CALL_ICE':
           if (!matchesByCallId || !signal.candidate) break;
           const candidate: RTCIceCandidateInit = {
@@ -628,13 +752,14 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
             sdpMid: signal.sdpMid ?? undefined,
             sdpMLineIndex: signal.sdpMLineIndex ?? undefined,
           };
-          if (peerRef.current?.remoteDescription) {
+          const icePeer = peerConnectionsRef.current.get(signal.fromUserId) ?? peerRef.current;
+          if (icePeer?.remoteDescription) {
             try {
               logWebRtc('apply remote ICE', {
                 callId: signal.callId,
                 type: extractCandidateType(signal.candidate),
               });
-              await peerRef.current.addIceCandidate(candidate);
+              await icePeer.addIceCandidate(candidate);
             } catch {
               // Ignore malformed candidate.
             }
@@ -676,6 +801,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   }, [applyAuthoritativeSnapshot]);
 
   const incomingPeerUserId = incomingSignal?.fromUserId ?? null;
+  const incomingGroupConversationId = incomingSignal?.conversationId ?? null;
 
   return useMemo(
     () => ({
@@ -691,14 +817,19 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       callMediaType: activeCall?.mediaType ?? incomingMediaType,
       incomingMediaType,
       activeCallId: activeCall?.callId ?? null,
+      activeGroupConversationId: activeCall?.groupConversationId ?? null,
       incomingPeerUserId,
+      incomingGroupConversationId,
       incomingFromUsername: incomingSignal?.fromUsername ?? null,
+      incomingGroupDisplayName: incomingSignal?.conversationName ?? null,
+      incomingGroupAvatarUrl: incomingSignal?.conversationAvatarUrl ?? null,
       activePeerUserId: activeCall?.peerUserId ?? null,
       activePeerDisplayName: activeCall?.peerDisplayName ?? null,
       activePeerAvatarUrl: activeCall?.peerAvatarUrl ?? null,
       hasActiveCall: status === 'calling' || status === 'connecting' || status === 'in_call',
       isRinging: status === 'ringing',
       startCall,
+      startGroupCall,
       acceptIncoming,
       rejectIncoming,
       endCall,
@@ -710,6 +841,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     [
       acceptIncoming,
       activeCall?.callId,
+      activeCall?.groupConversationId,
       activeCall?.mediaType,
       activeCall?.peerAvatarUrl,
       activeCall?.peerDisplayName,
@@ -718,7 +850,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       errorMessage,
       handleIncomingSignal,
       incomingMediaType,
+      incomingGroupConversationId,
       incomingPeerUserId,
+      incomingSignal?.conversationAvatarUrl,
+      incomingSignal?.conversationName,
       incomingSignal?.fromUsername,
       isCameraEnabled,
       isMuted,
@@ -730,6 +865,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       authoritativeDurationSec,
       syncAuthoritativeSession,
       startCall,
+      startGroupCall,
       status,
       toggleCamera,
       toggleMute,

@@ -66,6 +66,18 @@ export interface CallSessionSnapshotResponse {
   durationSec?: number | null;
 }
 
+export interface GroupCallSessionResponse {
+  callId: string;
+  conversationId: string;
+  callerId: string;
+  status?: 'RINGING' | 'ONGOING' | 'MISSED' | 'COMPLETED';
+  mediaType?: 'audio' | 'video';
+  startedAt?: string | null;
+  answeredAt?: string | null;
+  endedAt?: string | null;
+  durationSec?: number | null;
+}
+
 export interface ConversationPinResponse {
   peerUserId?: string | null;
   conversationId?: string | null;
@@ -175,8 +187,20 @@ export const chatService = {
     return api.get<CallSessionSnapshotResponse>(`/chat/calls/${callId}/session`);
   },
 
+  createGroupCallSession: (conversationId: string, mediaType: 'audio' | 'video') => {
+    return api.post<GroupCallSessionResponse>(`/chat/conversations/${conversationId}/calls`, { mediaType });
+  },
+
+  getGroupCallSessionSnapshot: (callId: string) => {
+    return api.get<GroupCallSessionResponse>(`/chat/conversations/group/calls/${callId}/session`);
+  },
+
   createGroupConversation: (payload: { name?: string; avatarUrl?: string; memberIds: string[] }) => {
     return api.post<GroupConversationResponse>('/chat/conversations/group', payload);
+  },
+
+  addGroupMembers: (conversationId: string, memberIds: string[]) => {
+    return api.post<GroupConversationResponse>(`/chat/conversations/${conversationId}/members`, { memberIds });
   },
 
   getMyGroupConversations: () => {

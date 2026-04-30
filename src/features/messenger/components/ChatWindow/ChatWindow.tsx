@@ -91,7 +91,7 @@ export const ChatWindow = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
-  const { messageListRef, showJumpToLatest, scrollToBottom, handleListScroll } = useChatScroll(
+  const { messageListRef, showJumpToLatest, scrollToBottom, handleListScroll, markUserScrollIntent } = useChatScroll(
     messages.length,
     loading,
     user.id,
@@ -263,6 +263,7 @@ export const ChatWindow = ({
         pinnedMessageId={pinnedMessage?.id ?? null}
         onReportMessage={handleReport}
         onScroll={handleListScroll}
+        onUserScrollIntent={markUserScrollIntent}
         isGroupChat={isGroupChat}
         isGroupCreator={isGroupCreator}
         groupCreatorName={groupCreatorName}

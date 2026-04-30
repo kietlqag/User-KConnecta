@@ -18,6 +18,7 @@ export function useChatScroll(
   const prependScrollAdjustRef = useRef<{ scrollTop: number; scrollHeight: number } | null>(null);
   const previousMessageCountRef = useRef(0);
   const loadingOlderRef = useRef(false);
+  const userScrollIntentRef = useRef(false);
 
   const clearPendingScrollJobs = () => {
     if (rafRef.current !== null) {
@@ -71,6 +72,7 @@ export function useChatScroll(
     shouldStickToBottomRef.current = true;
     prependScrollAdjustRef.current = null;
     loadingOlderRef.current = false;
+    userScrollIntentRef.current = false;
     clearPendingScrollJobs();
   }, [userId]);
 
@@ -107,6 +109,10 @@ export function useChatScroll(
     previousMessageCountRef.current = messagesLength;
   }, [messagesLength]);
 
+  const markUserScrollIntent = () => {
+    userScrollIntentRef.current = true;
+  };
+
   const handleListScroll = () => {
     const list = messageListRef.current;
     if (!list) return;
@@ -115,7 +121,14 @@ export function useChatScroll(
     shouldStickToBottomRef.current = distanceToBottom < 120;
     setShowJumpToLatest(distanceToBottom > 320);
 
-    if (!onLoadOlder || !hasOlder || loadingOlder || loadingOlderRef.current || list.scrollTop > 200) {
+    if (
+      !userScrollIntentRef.current ||
+      !onLoadOlder ||
+      !hasOlder ||
+      loadingOlder ||
+      loadingOlderRef.current ||
+      list.scrollTop > 80
+    ) {
       return;
     }
 
@@ -131,5 +144,6 @@ export function useChatScroll(
     showJumpToLatest,
     scrollToBottom,
     handleListScroll,
+    markUserScrollIntent,
   };
 }

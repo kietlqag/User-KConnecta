@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, PhoneOff, Video, Info, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Info, Phone, PhoneOff, Video } from 'lucide-react';
 import { ChatUser } from '../../../types/message.types';
 import { formatLastActiveLabel } from '../../../utils/presenceLabel';
 
@@ -33,34 +33,34 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onStartVideoCall,
   canStartVoiceCall,
   canStartVideoCall,
-  isMuted,
-  onToggleMute,
 }) => {
+  const voiceCallTitle = hasActiveVoiceCall ? 'Kết thúc cuộc gọi' : 'Gọi thoại';
+
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white">
-      <div className="flex items-center gap-3 min-w-0">
+    <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3">
         {fullScreen && (
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors -ml-2 cursor-pointer"
+            className="-ml-2 rounded-full p-2 transition-colors hover:bg-gray-100"
             title="Quay lại danh sách chat"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
+            <ArrowLeft className="h-5 w-5 text-gray-700" />
           </button>
         )}
         <div className="relative">
           <img
             src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
             alt={user.name}
-            className="w-10 h-10 rounded-full object-cover"
+            className="h-10 w-10 rounded-full object-cover"
           />
           {user.isOnline && (
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+            <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />
           )}
         </div>
         <div className="min-w-0">
-          <h3 className="font-semibold text-sm truncate">{user.name}</h3>
-          <p className="text-xs text-gray-500 truncate">
+          <h3 className="truncate text-sm font-semibold text-gray-900">{user.name}</h3>
+          <p className="truncate text-xs text-gray-500">
             {formatLastActiveLabel(user.isOnline, user.lastActiveAt)}
           </p>
         </div>
@@ -70,26 +70,26 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           onClick={hasActiveVoiceCall ? onEndVoiceCall : onStartVoiceCall}
           disabled={hasActiveVoiceCall ? false : !connected || !canStartVoiceCall}
-          className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          title={hasActiveVoiceCall ? 'Kết thúc cuộc gọi' : 'Gọi thoại'}
+          className="rounded-full p-2.5 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          title={voiceCallTitle}
         >
           {hasActiveVoiceCall ? (
-            <PhoneOff className="w-5 h-5 text-red-500" />
+            <PhoneOff className="h-5 w-5 text-red-500" />
           ) : (
-            <Phone className={`w-5 h-5 ${isStartingVoiceCall ? 'text-amber-500' : 'text-blue-600'}`} />
+            <Phone className={`h-5 w-5 ${isStartingVoiceCall ? 'text-amber-500' : 'text-blue-600'}`} />
           )}
         </button>
         <button
           onClick={onStartVideoCall}
           disabled={hasActiveVoiceCall || !connected || !canStartVideoCall}
-          className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded-full p-2.5 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
           title="Gọi video"
         >
-          <Video className={`w-[22px] h-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-blue-600'}`} />
+          <Video className={`h-[22px] w-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-blue-600'}`} />
         </button>
         {fullScreen && (
-          <button className="p-2.5 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Thông tin">
-            <Info className="w-5 h-5 text-blue-600" />
+          <button className="rounded-full p-2.5 transition-colors hover:bg-gray-100" title="Thông tin">
+            <Info className="h-5 w-5 text-blue-600" />
           </button>
         )}
       </div>

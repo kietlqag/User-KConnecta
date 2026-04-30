@@ -111,8 +111,11 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       if (permission !== 'granted') return;
 
       closeDesktopNotification();
-      let callerName = peerProfiles[signal.fromUserId]?.fullName || signal.fromUsername || 'Người dùng';
-      if (!peerProfiles[signal.fromUserId] && !peerProfileLoadingRef.current.has(signal.fromUserId)) {
+      const isGroupCall = Boolean(signal.conversationId);
+      let callerName = isGroupCall
+        ? signal.conversationName || 'Cuộc gọi nhóm'
+        : peerProfiles[signal.fromUserId]?.fullName || signal.fromUsername || 'Người dùng';
+      if (!isGroupCall && !peerProfiles[signal.fromUserId] && !peerProfileLoadingRef.current.has(signal.fromUserId)) {
         peerProfileLoadingRef.current.add(signal.fromUserId);
         try {
           const profile = await authService.getUserById(signal.fromUserId);
@@ -135,7 +138,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       const notif = new Notification(
         signal.mediaType === 'video' ? 'Cuộc gọi video đến' : 'Cuộc gọi thoại đến',
         {
-          body: `${callerName} đang gọi cho bạn`,
+          body: isGroupCall ? `${callerName} đang gọi nhóm cho bạn` : `${callerName} đang gọi cho bạn`,
           tag: `call-${signal.callId}`,
           requireInteraction: true,
         },
@@ -144,7 +147,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       notif.onclick = () => {
         window.focus();
         setShowCallModal(true);
-        navigate(`/messages?with=${signal.fromUserId}`);
+        navigate(`/messages?with=${isGroupCall ? `group:${signal.conversationId}` : signal.fromUserId}`);
         notif.close();
       };
       notif.onclose = () => {
@@ -253,7 +256,10 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const isCallConnected = effectiveCallStatus === 'in_call';
 
   useEffect(() => {
-    const peerIds = [voiceCall.incomingPeerUserId, voiceCall.activePeerUserId].filter(
+    const peerIds = [
+      voiceCall.incomingGroupConversationId ? null : voiceCall.incomingPeerUserId,
+      voiceCall.activeGroupConversationId ? null : voiceCall.activePeerUserId,
+    ].filter(
       (id): id is string => Boolean(id),
     );
     if (peerIds.length === 0) return;
@@ -278,7 +284,13 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
         }
       })();
     });
-  }, [peerProfiles, voiceCall.activePeerUserId, voiceCall.incomingPeerUserId]);
+  }, [
+    peerProfiles,
+    voiceCall.activeGroupConversationId,
+    voiceCall.activePeerUserId,
+    voiceCall.incomingGroupConversationId,
+    voiceCall.incomingPeerUserId,
+  ]);
 
   useEffect(() => {
     if (voiceCall.isRinging) {
@@ -332,7 +344,9 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const syncSession = async () => {
       try {
-        const snapshot = await chatService.getCallSessionSnapshot(voiceCall.activeCallId);
+        const snapshot = voiceCall.activeGroupConversationId
+          ? await chatService.getGroupCallSessionSnapshot(voiceCall.activeCallId)
+          : await chatService.getCallSessionSnapshot(voiceCall.activeCallId);
         if (cancelled) return;
 
         voiceCall.syncAuthoritativeSession(snapshot);
@@ -381,7 +395,13 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [formatCallDuration, isCallConnected, voiceCall.activeCallId, voiceCall.syncAuthoritativeSession]);
+  }, [
+    formatCallDuration,
+    isCallConnected,
+    voiceCall.activeCallId,
+    voiceCall.activeGroupConversationId,
+    voiceCall.syncAuthoritativeSession,
+  ]);
 
   const callStatusText =
     authoritativeStatusText ||
@@ -391,17 +411,24 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
         ? 'Đang kết nối...'
         : formatCallDuration(callDurationSec));
 
-  const incomingProfile = voiceCall.incomingPeerUserId ? peerProfiles[voiceCall.incomingPeerUserId] : undefined;
+  const incomingProfile =
+    voiceCall.incomingPeerUserId && !voiceCall.incomingGroupConversationId
+      ? peerProfiles[voiceCall.incomingPeerUserId]
+      : undefined;
   const activeProfile = voiceCall.activePeerUserId ? peerProfiles[voiceCall.activePeerUserId] : undefined;
 
-  const incomingName = incomingProfile?.fullName || voiceCall.incomingFromUsername || 'Người dùng';
+  const incomingName = voiceCall.incomingGroupConversationId
+    ? voiceCall.incomingGroupDisplayName || 'Cuộc gọi nhóm'
+    : incomingProfile?.fullName || voiceCall.incomingFromUsername || 'Người dùng';
   const incomingAvatar =
+    voiceCall.incomingGroupAvatarUrl ||
     incomingProfile?.avatarUrl ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingName)}&background=random`;
-  const activeName =
-    activeProfile?.fullName || voiceCall.activePeerDisplayName || voiceCall.incomingFromUsername || 'Người dùng';
+  const activeName = voiceCall.activeGroupConversationId
+    ? voiceCall.activePeerDisplayName || 'Cuộc gọi nhóm'
+    : activeProfile?.fullName || voiceCall.activePeerDisplayName || voiceCall.incomingFromUsername || 'Người dùng';
   const activeAvatar =
-    activeProfile?.avatarUrl ||
+    (voiceCall.activeGroupConversationId ? undefined : activeProfile?.avatarUrl) ||
     voiceCall.activePeerAvatarUrl ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(activeName)}&background=random`;
   const isVideoCall = isCallOngoing && voiceCall.callMediaType === 'video';
