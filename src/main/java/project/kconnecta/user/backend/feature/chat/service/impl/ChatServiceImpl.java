@@ -7,9 +7,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupCallSessionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PinnedMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
@@ -19,6 +21,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinR
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationMemberResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSessionResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.MessageStatusResponse;
 import project.kconnecta.user.backend.feature.chat.entity.CallSession;
 import project.kconnecta.user.backend.feature.chat.entity.ChatConversation;
@@ -28,6 +31,7 @@ import project.kconnecta.user.backend.feature.chat.entity.ChatMessageReaction;
 import project.kconnecta.user.backend.feature.chat.entity.ChatMessageReport;
 import project.kconnecta.user.backend.feature.chat.entity.ChatPinnedConversation;
 import project.kconnecta.user.backend.feature.chat.entity.ChatPinnedMessage;
+import project.kconnecta.user.backend.feature.chat.entity.GroupCallSession;
 import project.kconnecta.user.backend.feature.chat.repository.CallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.repository.ChatConversationMemberRepository;
 import project.kconnecta.user.backend.feature.chat.repository.ChatConversationRepository;
@@ -36,6 +40,7 @@ import project.kconnecta.user.backend.feature.chat.repository.ChatMessageReactio
 import project.kconnecta.user.backend.feature.chat.repository.ChatMessageReportRepository;
 import project.kconnecta.user.backend.feature.chat.repository.ChatPinnedConversationRepository;
 import project.kconnecta.user.backend.feature.chat.repository.ChatPinnedMessageRepository;
+import project.kconnecta.user.backend.feature.chat.repository.GroupCallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
@@ -50,13 +55,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
-    private static final int DEFAULT_HISTORY_LIMIT = 30;
-    private static final int MIN_HISTORY_LIMIT = 10;
-    private static final int MAX_HISTORY_LIMIT = 100;
+    private static final int DEFAULT_HISTORY_LIMIT = 15;
+    private static final int MIN_HISTORY_LIMIT = 1;
+    private static final int MAX_HISTORY_LIMIT = 50;
 
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
@@ -68,6 +74,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatPinnedConversationRepository chatPinnedConversationRepository;
     private final ChatPinnedMessageRepository chatPinnedMessageRepository;
     private final CallSessionRepository callSessionRepository;
+    private final GroupCallSessionRepository groupCallSessionRepository;
 
     @Override
     public void sendPrivateMessage(String currentUsername, PrivateMessageRequest request) {
@@ -484,6 +491,109 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
+    public GroupConversationResponse addGroupMembers(String currentUsername, UUID conversationId, AddGroupMembersRequest request) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (conversationId == null) {
+            throw new RuntimeException("Conversation ID is required");
+        }
+        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, actor.getId())) {
+            throw new RuntimeException("You are not a member of this conversation");
+        }
+
+        List<UUID> requested = request == null ? null : request.getMemberIds();
+        if (requested == null || requested.isEmpty()) {
+            throw new RuntimeException("Member IDs are required");
+        }
+
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        Set<UUID> memberIds = requested.stream()
+                .filter(id -> id != null && !id.equals(actor.getId()))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+        if (memberIds.isEmpty()) {
+            return toGroupConversationResponse(
+                    conversation,
+                    chatConversationMemberRepository.findMembersByConversationId(conversationId)
+            );
+        }
+
+        List<User> users = userRepository.findAllById(memberIds);
+        if (users.size() != memberIds.size()) {
+            throw new RuntimeException("One or more users not found");
+        }
+
+        LocalDateTime joinedAt = LocalDateTime.now();
+        List<ChatConversationMember> newMembers = users.stream()
+                .filter(user -> !chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, user.getId()))
+                .map(user -> ChatConversationMember.builder()
+                        .conversation(conversation)
+                        .user(user)
+                        .joinedAt(joinedAt)
+                        .build())
+                .toList();
+
+        if (!newMembers.isEmpty()) {
+            chatConversationMemberRepository.saveAll(newMembers);
+        }
+
+        return toGroupConversationResponse(
+                conversation,
+                chatConversationMemberRepository.findMembersByConversationId(conversationId)
+        );
+    }
+
+    @Override
+    @Transactional
+    public GroupCallSessionResponse createGroupCallSession(
+            String currentUsername,
+            UUID conversationId,
+            CreateGroupCallSessionRequest request
+    ) {
+        User caller = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (conversationId == null) {
+            throw new RuntimeException("Conversation ID is required");
+        }
+        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, caller.getId())) {
+            throw new RuntimeException("You are not a member of this conversation");
+        }
+
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        String mediaType = request != null && "video".equalsIgnoreCase(request.getMediaType()) ? "video" : "audio";
+        LocalDateTime now = LocalDateTime.now();
+
+        GroupCallSession session = GroupCallSession.builder()
+                .callId(UUID.randomUUID())
+                .conversation(conversation)
+                .caller(caller)
+                .startedAt(now)
+                .status("RINGING")
+                .lastSignalType("CALL_INVITE")
+                .callMediaType(mediaType)
+                .build();
+
+        return toGroupCallSessionResponse(groupCallSessionRepository.save(session), now);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GroupCallSessionResponse getGroupCallSessionSnapshot(String currentUsername, UUID callId) {
+        User viewer = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        GroupCallSession session = groupCallSessionRepository.findByCallIdWithDetails(callId)
+                .orElseThrow(() -> new RuntimeException("Group call session not found"));
+        UUID conversationId = session.getConversation().getId();
+        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, viewer.getId())) {
+            throw new RuntimeException("You are not a member of this conversation");
+        }
+        return toGroupCallSessionResponse(session, LocalDateTime.now());
+    }
+
+    @Override
+    @Transactional
     public ConversationPinResponse setConversationPinned(String currentUsername, ConversationPinRequest request) {
         User owner = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -816,6 +926,24 @@ public class ChatServiceImpl implements ChatService {
                 conversation.getCreatedAt(),
                 conversation.getCreatedBy().getId(),
                 memberResponses
+        );
+    }
+
+    private GroupCallSessionResponse toGroupCallSessionResponse(GroupCallSession session, LocalDateTime now) {
+        Integer durationSec = session.getDurationSec();
+        if ("ONGOING".equals(session.getStatus()) && session.getAnsweredAt() != null && durationSec == null) {
+            durationSec = (int) Math.max(0, ChronoUnit.SECONDS.between(session.getAnsweredAt(), now));
+        }
+        return new GroupCallSessionResponse(
+                session.getCallId(),
+                session.getConversation().getId(),
+                session.getCaller().getId(),
+                session.getStatus(),
+                session.getCallMediaType(),
+                session.getStartedAt(),
+                session.getAnsweredAt(),
+                session.getEndedAt(),
+                durationSec
         );
     }
 }

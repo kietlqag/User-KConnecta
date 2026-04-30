@@ -9,6 +9,9 @@ import java.util.UUID;
 @Setter
 public class CallSignalRequest {
     private UUID receiverId;
+    private UUID conversationId;
+    private String conversationName;
+    private String conversationAvatarUrl;
     private UUID callId;
     private String type;
     private String mediaType;

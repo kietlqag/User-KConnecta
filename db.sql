@@ -156,6 +156,24 @@ CREATE INDEX IF NOT EXISTS idx_call_sessions_caller_id ON public.call_sessions(c
 CREATE INDEX IF NOT EXISTS idx_call_sessions_callee_id ON public.call_sessions(callee_id);
 CREATE INDEX IF NOT EXISTS idx_call_sessions_status ON public.call_sessions(status);
 
+CREATE TABLE IF NOT EXISTS public.group_call_sessions (
+    id UUID PRIMARY KEY,
+    call_id UUID NOT NULL UNIQUE,
+    conversation_id UUID NOT NULL REFERENCES public.chat_conversations(id) ON DELETE CASCADE,
+    caller_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    started_at TIMESTAMP NOT NULL,
+    answered_at TIMESTAMP,
+    ended_at TIMESTAMP,
+    duration_sec INTEGER,
+    status VARCHAR(32) NOT NULL,
+    last_signal_type VARCHAR(32),
+    call_media_type VARCHAR(16) NOT NULL DEFAULT 'audio'
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_call_sessions_conversation_id ON public.group_call_sessions(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_group_call_sessions_caller_id ON public.group_call_sessions(caller_id);
+CREATE INDEX IF NOT EXISTS idx_group_call_sessions_status ON public.group_call_sessions(status);
+
 CREATE TABLE IF NOT EXISTS public.call_signal_events (
     id UUID PRIMARY KEY,
     call_session_id UUID NOT NULL REFERENCES public.call_sessions(id) ON DELETE CASCADE,

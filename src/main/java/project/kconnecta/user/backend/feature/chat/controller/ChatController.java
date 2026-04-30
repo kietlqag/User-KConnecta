@@ -9,8 +9,10 @@ import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupCallSessionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PinnedMessageRequest;
@@ -21,6 +23,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnaps
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSessionResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.VoiceMessageUploadResponse;
@@ -85,6 +88,41 @@ public class ChatController {
             return ResponseEntity.status(401).build();
         }
         return ResponseEntity.ok(chatService.getMyGroupConversations(principal.getName()));
+    }
+
+    @PostMapping("/conversations/{conversationId}/members")
+    public ResponseEntity<GroupConversationResponse> addGroupMembers(
+            @PathVariable UUID conversationId,
+            @RequestBody AddGroupMembersRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.addGroupMembers(principal.getName(), conversationId, request));
+    }
+
+    @PostMapping("/conversations/{conversationId}/calls")
+    public ResponseEntity<GroupCallSessionResponse> createGroupCallSession(
+            @PathVariable UUID conversationId,
+            @RequestBody(required = false) CreateGroupCallSessionRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.createGroupCallSession(principal.getName(), conversationId, request));
+    }
+
+    @GetMapping("/conversations/group/calls/{callId}/session")
+    public ResponseEntity<GroupCallSessionResponse> getGroupCallSessionSnapshot(
+            @PathVariable UUID callId,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getGroupCallSessionSnapshot(principal.getName(), callId));
     }
 
     @PutMapping("/conversations/pin")

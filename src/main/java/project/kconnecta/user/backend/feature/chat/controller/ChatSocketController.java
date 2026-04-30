@@ -14,8 +14,10 @@ import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnaps
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSignalResponse;
 import project.kconnecta.user.backend.feature.chat.entity.CallSession;
 import project.kconnecta.user.backend.feature.chat.entity.CallSignalEvent;
+import project.kconnecta.user.backend.feature.chat.entity.GroupCallSession;
 import project.kconnecta.user.backend.feature.chat.repository.CallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.repository.CallSignalEventRepository;
+import project.kconnecta.user.backend.feature.chat.repository.GroupCallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 import project.kconnecta.user.backend.feature.chat.service.impl.ChatServiceImpl;
 import project.kconnecta.user.backend.feature.user.entity.User;
@@ -38,6 +40,7 @@ public class ChatSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final CallSessionRepository callSessionRepository;
     private final CallSignalEventRepository callSignalEventRepository;
+    private final GroupCallSessionRepository groupCallSessionRepository;
 
     @MessageMapping("/chat.private")
     public void sendPrivateMessage(PrivateMessageRequest request, Principal principal) {
@@ -83,14 +86,24 @@ public class ChatSocketController {
                 .orElseThrow(() -> new IllegalStateException("Receiver not found"));
 
         LocalDateTime now = LocalDateTime.now();
-        CallSession session = persistCallData(request, sender, receiver, now);
-        CallSessionSnapshotResponse snapshot = session == null
-                ? new CallSessionSnapshotResponse(request.getCallId(), null, null, null, null, null, null)
-                : ChatServiceImpl.toSnapshot(session, now);
+        CallSession session = request.getConversationId() == null
+                ? persistCallData(request, sender, receiver, now)
+                : null;
+        GroupCallSession groupSession = request.getConversationId() != null
+                ? persistGroupCallData(request, sender, now)
+                : null;
+        CallSessionSnapshotResponse snapshot = session != null
+                ? ChatServiceImpl.toSnapshot(session, now)
+                : groupSession != null
+                    ? toGroupSnapshot(groupSession, now)
+                    : new CallSessionSnapshotResponse(request.getCallId(), null, null, null, null, null, null);
         CallSignalResponse response = new CallSignalResponse(
                 request.getCallId(),
                 sender.getId(),
                 receiver.getId(),
+                request.getConversationId(),
+                request.getConversationName(),
+                request.getConversationAvatarUrl(),
                 sender.getUsername(),
                 request.getType(),
                 normalizeMediaType(request.getMediaType()),
@@ -206,6 +219,81 @@ public class ChatSocketController {
             }
         }
         return session;
+    }
+
+    private GroupCallSession persistGroupCallData(CallSignalRequest request, User sender, LocalDateTime now) {
+        UUID callId = request.getCallId();
+        String type = request.getType();
+        if (callId == null || type == null) {
+            return null;
+        }
+
+        GroupCallSession session = groupCallSessionRepository.findByCallId(callId).orElse(null);
+        if (session == null) {
+            return null;
+        }
+
+        String mediaTypeFromSignal = resolveMediaType(request.getMediaType(), request.getSdp());
+        if (MEDIA_TYPE_VIDEO.equals(mediaTypeFromSignal)) {
+            session.setCallMediaType(MEDIA_TYPE_VIDEO);
+        }
+        session.setLastSignalType(type);
+
+        if (isTerminalStatus(session.getStatus()) && !"CALL_END".equals(type)) {
+            return groupCallSessionRepository.save(session);
+        }
+
+        switch (type) {
+            case "CALL_ACCEPT" -> {
+                if (session.getAnsweredAt() == null) {
+                    session.setAnsweredAt(now);
+                }
+                session.setStatus("ONGOING");
+            }
+            case "CALL_CANCEL" -> {
+                if (session.getCaller() != null && session.getCaller().getId().equals(sender.getId())) {
+                    session.setEndedAt(now);
+                    session.setStatus(session.getAnsweredAt() == null ? "MISSED" : "COMPLETED");
+                    if (session.getAnsweredAt() != null) {
+                        int durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
+                        session.setDurationSec(Math.max(durationSec, 0));
+                    }
+                }
+            }
+            case "CALL_END" -> {
+                if (session.getCaller() == null || session.getCaller().getId().equals(sender.getId())) {
+                    session.setEndedAt(now);
+                    if (session.getAnsweredAt() != null) {
+                        int durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
+                        session.setDurationSec(Math.max(durationSec, 0));
+                        session.setStatus("COMPLETED");
+                    } else {
+                        session.setStatus("MISSED");
+                    }
+                }
+            }
+            default -> {
+                // keep status for invites, offers, answers, ice, and member rejects
+            }
+        }
+
+        return groupCallSessionRepository.save(session);
+    }
+
+    private CallSessionSnapshotResponse toGroupSnapshot(GroupCallSession session, LocalDateTime now) {
+        Integer durationSec = session.getDurationSec();
+        if ("ONGOING".equals(session.getStatus()) && session.getAnsweredAt() != null && durationSec == null) {
+            durationSec = (int) Math.max(0, ChronoUnit.SECONDS.between(session.getAnsweredAt(), now));
+        }
+        return new CallSessionSnapshotResponse(
+                session.getCallId(),
+                session.getStatus(),
+                session.getCallMediaType(),
+                session.getStartedAt(),
+                session.getAnsweredAt(),
+                session.getEndedAt(),
+                durationSec
+        );
     }
 
     private void persistCallEvent(CallSignalRequest request, User sender, User receiver, CallSession session, String type, LocalDateTime now) {

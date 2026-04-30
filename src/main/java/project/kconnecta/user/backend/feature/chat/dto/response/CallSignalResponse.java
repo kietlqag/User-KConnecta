@@ -16,6 +16,9 @@ public class CallSignalResponse {
     private UUID callId;
     private UUID fromUserId;
     private UUID toUserId;
+    private UUID conversationId;
+    private String conversationName;
+    private String conversationAvatarUrl;
     private String fromUsername;
     private String type;
     private String mediaType;
