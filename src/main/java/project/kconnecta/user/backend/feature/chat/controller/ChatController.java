@@ -10,18 +10,26 @@ import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.PinnedMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallRecordingResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatFileUploadResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatImageUploadResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.VoiceMessageUploadResponse;
 import project.kconnecta.user.backend.feature.chat.service.CallRecordingService;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 
 import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -45,6 +53,90 @@ public class ChatController {
             @RequestParam(required = false) Integer limit
     ) {
         return ResponseEntity.ok(chatService.getChatHistory(userId1, userId2, beforeCreatedAt, limit));
+    }
+
+    @GetMapping("/conversations/{conversationId}/history")
+    public ResponseEntity<ChatHistoryPageResponse> getGroupChatHistory(
+            @PathVariable UUID conversationId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime beforeCreatedAt,
+            @RequestParam(required = false) Integer limit,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getGroupChatHistory(principal.getName(), conversationId, beforeCreatedAt, limit));
+    }
+
+    @PostMapping("/conversations/group")
+    public ResponseEntity<GroupConversationResponse> createGroupConversation(
+            @RequestBody CreateGroupConversationRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.createGroupConversation(principal.getName(), request));
+    }
+
+    @GetMapping("/conversations/group")
+    public ResponseEntity<List<GroupConversationResponse>> getMyGroupConversations(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getMyGroupConversations(principal.getName()));
+    }
+
+    @PutMapping("/conversations/pin")
+    public ResponseEntity<ConversationPinResponse> setConversationPinned(
+            @RequestBody ConversationPinRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.setConversationPinned(principal.getName(), request));
+    }
+
+    @GetMapping("/conversations/pin")
+    public ResponseEntity<List<ConversationPinResponse>> getPinnedConversations(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getPinnedConversations(principal.getName()));
+    }
+
+    @PutMapping("/messages/pin")
+    public ResponseEntity<PinnedMessageResponse> setPinnedMessage(
+            @RequestBody PinnedMessageRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.setPinnedMessage(principal.getName(), request));
+    }
+
+    @GetMapping("/messages/pin")
+    public ResponseEntity<List<PinnedMessageResponse>> getPinnedMessages(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getPinnedMessages(principal.getName()));
+    }
+
+    @PostMapping("/conversations/{conversationId}/messages")
+    public ResponseEntity<ChatMessageResponse> sendGroupMessage(
+            @PathVariable UUID conversationId,
+            @RequestBody GroupMessageRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        GroupMessageRequest normalized = request == null ? new GroupMessageRequest() : request;
+        normalized.setConversationId(conversationId);
+        return ResponseEntity.ok(chatService.sendGroupMessage(principal.getName(), normalized));
     }
 
     @PostMapping(value = "/calls/{callId}/recordings", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

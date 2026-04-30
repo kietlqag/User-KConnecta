@@ -1,11 +1,18 @@
 package project.kconnecta.user.backend.feature.chat.service;
 
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.PinnedMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,6 +20,7 @@ import java.util.UUID;
 
 public interface ChatService {
     void sendPrivateMessage(String currentUsername, PrivateMessageRequest request);
+    ChatMessageResponse sendGroupMessage(String currentUsername, GroupMessageRequest request);
     void sendSystemMessage(UUID senderId, UUID receiverId, String content);
     void markMessageDelivered(String currentUsername, UUID messageId);
     void markConversationSeen(String currentUsername, UUID peerUserId);
@@ -21,5 +29,12 @@ public interface ChatService {
     void reportMessage(String currentUsername, UUID messageId, MessageReportRequest request);
 
     ChatHistoryPageResponse getChatHistory(UUID userId1, UUID userId2, LocalDateTime beforeCreatedAt, Integer limit);
+    ChatHistoryPageResponse getGroupChatHistory(String currentUsername, UUID conversationId, LocalDateTime beforeCreatedAt, Integer limit);
+    GroupConversationResponse createGroupConversation(String currentUsername, CreateGroupConversationRequest request);
+    List<GroupConversationResponse> getMyGroupConversations(String currentUsername);
+    ConversationPinResponse setConversationPinned(String currentUsername, ConversationPinRequest request);
+    List<ConversationPinResponse> getPinnedConversations(String currentUsername);
+    PinnedMessageResponse setPinnedMessage(String currentUsername, PinnedMessageRequest request);
+    List<PinnedMessageResponse> getPinnedMessages(String currentUsername);
     CallSessionSnapshotResponse getCallSessionSnapshot(String currentUsername, UUID callId);
 }

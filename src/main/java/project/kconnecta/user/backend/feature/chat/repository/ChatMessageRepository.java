@@ -18,8 +18,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             SELECT m FROM ChatMessage m
             JOIN FETCH m.sender
             JOIN FETCH m.receiver
-            WHERE (m.sender.id = :userId1 AND m.receiver.id = :userId2)
-               OR (m.sender.id = :userId2 AND m.receiver.id = :userId1)
+            WHERE (
+                    (m.sender.id = :userId1 AND m.receiver.id = :userId2)
+                 OR (m.sender.id = :userId2 AND m.receiver.id = :userId1)
+            )
+              AND m.conversation IS NULL
             ORDER BY m.createdAt ASC
             """)
     List<ChatMessage> findConversation(@Param("userId1") UUID userId1, @Param("userId2") UUID userId2);
@@ -30,6 +33,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
                 s.id,
                 s.username,
                 r.id,
+                null,
                 m.content,
                 m.createdAt,
                 m.delivered,
@@ -46,6 +50,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
                     (s.id = :userId1 AND r.id = :userId2)
                  OR (s.id = :userId2 AND r.id = :userId1)
             )
+              AND m.conversation IS NULL
               AND m.createdAt < COALESCE(:beforeCreatedAt, CURRENT_TIMESTAMP)
             ORDER BY m.createdAt DESC
             """)
@@ -59,10 +64,40 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
     @Query("""
             SELECT m FROM ChatMessage m
             JOIN FETCH m.sender
-            JOIN FETCH m.receiver
+            LEFT JOIN FETCH m.receiver
+            LEFT JOIN FETCH m.conversation
             WHERE m.id = :messageId
             """)
     Optional<ChatMessage> findByIdWithUsers(@Param("messageId") UUID messageId);
+
+    @Query("""
+            SELECT new project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse(
+                m.id,
+                s.id,
+                s.username,
+                null,
+                c.id,
+                m.content,
+                m.createdAt,
+                m.delivered,
+                m.seen,
+                m.seenAt,
+                m.deleted,
+                m.deletedAt,
+                null
+            )
+            FROM ChatMessage m
+            JOIN m.sender s
+            JOIN m.conversation c
+            WHERE c.id = :conversationId
+              AND m.createdAt < COALESCE(:beforeCreatedAt, CURRENT_TIMESTAMP)
+            ORDER BY m.createdAt DESC
+            """)
+    List<ChatMessageResponse> findConversationChunkByConversationId(
+            @Param("conversationId") UUID conversationId,
+            @Param("beforeCreatedAt") LocalDateTime beforeCreatedAt,
+            Pageable pageable
+    );
 
     @Query("""
             SELECT m FROM ChatMessage m

@@ -7,6 +7,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import project.kconnecta.user.backend.feature.chat.dto.request.CallSignalRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationSeenRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageDeliveredRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
@@ -44,6 +45,14 @@ public class ChatSocketController {
             throw new IllegalStateException("Unauthenticated WebSocket session");
         }
         chatService.sendPrivateMessage(principal.getName(), request);
+    }
+
+    @MessageMapping("/chat.group")
+    public void sendGroupMessage(GroupMessageRequest request, Principal principal) {
+        if (principal == null) {
+            throw new IllegalStateException("Unauthenticated WebSocket session");
+        }
+        chatService.sendGroupMessage(principal.getName(), request);
     }
 
     @MessageMapping("/chat.delivered")

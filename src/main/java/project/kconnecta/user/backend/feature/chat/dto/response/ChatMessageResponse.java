@@ -18,6 +18,7 @@ public class ChatMessageResponse {
     private UUID senderId;
     private String senderUsername;
     private UUID receiverId;
+    private UUID conversationId;
     private String content;
     private LocalDateTime createdAt;
     private Boolean delivered;

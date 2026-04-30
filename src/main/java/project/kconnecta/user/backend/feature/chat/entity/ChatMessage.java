@@ -12,7 +12,8 @@ import java.util.UUID;
         name = "chat_messages",
         indexes = {
                 @Index(name = "idx_chat_messages_sender_receiver_created_at", columnList = "sender_id, receiver_id, created_at"),
-                @Index(name = "idx_chat_messages_receiver_sender_created_at", columnList = "receiver_id, sender_id, created_at")
+                @Index(name = "idx_chat_messages_receiver_sender_created_at", columnList = "receiver_id, sender_id, created_at"),
+                @Index(name = "idx_chat_messages_conversation_created_at", columnList = "conversation_id, created_at")
         }
 )
 @Getter
@@ -31,8 +32,12 @@ public class ChatMessage {
     private User sender;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "receiver_id", nullable = false)
+    @JoinColumn(name = "receiver_id")
     private User receiver;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversation_id")
+    private ChatConversation conversation;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
