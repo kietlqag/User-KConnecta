@@ -114,6 +114,17 @@ export function useChatSocket(
     }
   }, []);
 
+  const sendGroupMessage = useCallback((conversationId: string, content: string) => {
+    if (clientRef.current?.connected) {
+      clientRef.current.publish({
+        destination: '/app/chat.group',
+        body: JSON.stringify({ conversationId, content }),
+      });
+    } else {
+      console.warn('[useChatSocket] Not connected, cannot send group message');
+    }
+  }, []);
+
   const sendCallSignal = useCallback((signal: OutgoingCallSignal) => {
     if (clientRef.current?.connected) {
       clientRef.current.publish({
@@ -145,5 +156,5 @@ export function useChatSocket(
     }
   }, []);
 
-  return { connected, sendMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen };
+  return { connected, sendMessage, sendGroupMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen };
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, Pause, X } from 'lucide-react';
 import { Message } from '../../../types/message.types';
 
@@ -55,6 +55,19 @@ export const Composer: React.FC<ComposerProps> = ({
   handleImageSelect,
   handleFileSelect,
 }) => {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const resizeTextarea = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+  };
+
+  useEffect(() => {
+    resizeTextarea();
+  }, [inputText]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -161,11 +174,10 @@ export const Composer: React.FC<ComposerProps> = ({
 
             <div className="flex-1 relative bg-gray-100 rounded-2xl">
               <textarea
+                ref={textareaRef}
                 value={inputText}
                 onChange={(e) => {
                   setInputText(e.target.value);
-                  e.target.style.height = 'auto';
-                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {

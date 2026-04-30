@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Pin } from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { ChatHeader } from './components/ChatHeader';
 import { MessageList } from './components/MessageList';
@@ -24,6 +25,9 @@ interface ChatWindowProps {
   onReactMessage?: (messageId: string, emoji: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   onReportMessage?: (messageId: string) => Promise<boolean> | boolean;
+  onForwardMessage?: (message: Message) => void;
+  onPinMessage?: (message: Message) => void;
+  pinnedMessage?: Message | null;
   onClose: () => void;
   onMinimize?: () => void;
   fullScreen?: boolean;
@@ -37,6 +41,10 @@ interface ChatWindowProps {
   onEndVoiceCall?: () => void;
   onToggleMute?: () => void;
   onCallAgain?: (mediaType?: 'audio' | 'video') => void;
+  isGroupChat?: boolean;
+  isGroupCreator?: boolean;
+  groupCreatorName?: string;
+  groupMembers?: ChatUser[];
 }
 
 function formatVoiceDuration(totalSec: number) {
@@ -58,6 +66,9 @@ export const ChatWindow = ({
   onReactMessage,
   onDeleteMessage,
   onReportMessage,
+  onForwardMessage,
+  onPinMessage,
+  pinnedMessage = null,
   onClose,
   fullScreen,
   callStatus = 'idle',
@@ -69,6 +80,10 @@ export const ChatWindow = ({
   onStartVideoCall,
   onEndVoiceCall,
   onToggleMute,
+  isGroupChat = false,
+  isGroupCreator = false,
+  groupCreatorName = 'Người tạo',
+  groupMembers = [],
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
@@ -189,9 +204,9 @@ export const ChatWindow = ({
   return (
     <div className={`
       ${fullScreen 
-        ? 'w-full h-full flex flex-col rounded-2xl border border-gray-200 bg-white overflow-hidden' 
+        ? 'w-full h-full min-w-0 flex flex-col rounded-2xl border border-gray-200 bg-white overflow-hidden' 
         : 'fixed bottom-0 right-6 w-[360px] h-[520px] rounded-t-xl shadow-2xl z-50'}
-      relative flex flex-col
+      relative min-w-0 flex flex-col
     `}>
       <ChatHeader 
         user={user}
@@ -210,6 +225,21 @@ export const ChatWindow = ({
         onToggleMute={onToggleMute}
       />
 
+      {pinnedMessage && (
+        <button
+          type="button"
+          onClick={() => void jumpToMessage(pinnedMessage.id)}
+          className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 text-left hover:bg-gray-100"
+          title="Đi đến tin nhắn đã ghim"
+        >
+          <Pin className="h-4 w-4 shrink-0 text-gray-500" />
+          <span className="text-sm text-gray-500">Đã ghim</span>
+          <span className="truncate text-sm font-medium text-gray-900">
+            {pinnedMessage.text || 'Tin nhắn'}
+          </span>
+        </button>
+      )}
+
       <MessageList 
         ref={messageListRef}
         messages={messages}
@@ -222,9 +252,25 @@ export const ChatWindow = ({
         onReactMessage={onReactMessage}
         onDeleteMessage={onDeleteMessage}
         onReplyMessage={setReplyToMessage}
-        onForwardMessage={(msg) => setInputText(prev => prev ? `${prev}\n${msg.text}` : msg.text)}
+        onForwardMessage={(msg) => {
+          if (onForwardMessage) {
+            onForwardMessage(msg);
+            return;
+          }
+          setInputText(prev => prev ? `${prev}\n${msg.text}` : msg.text);
+        }}
+        onPinMessage={onPinMessage}
+        pinnedMessageId={pinnedMessage?.id ?? null}
         onReportMessage={handleReport}
         onScroll={handleListScroll}
+        isGroupChat={isGroupChat}
+        isGroupCreator={isGroupCreator}
+        groupCreatorName={groupCreatorName}
+        groupMembers={groupMembers}
+        peerAvatar={user.avatar}
+        peerName={user.name}
+        groupName={user.name}
+        groupAvatar={user.avatar}
       />
 
       <PendingAttachments 

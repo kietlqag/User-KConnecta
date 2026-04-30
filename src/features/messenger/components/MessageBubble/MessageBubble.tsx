@@ -10,6 +10,8 @@ interface MessageBubbleProps {
   onDelete?: (messageId: string) => void;
   onForward?: (message: Message) => void;
   onReport?: (message: Message) => void;
+  onPinMessage?: (message: Message) => void;
+  isPinnedMessage?: boolean;
   showSenderAvatar?: boolean;
   senderAvatar?: string;
   senderName?: string;
@@ -31,6 +33,8 @@ export const MessageBubble = ({
   onDelete,
   onForward,
   onReport,
+  onPinMessage,
+  isPinnedMessage = false,
   showSenderAvatar = false,
   senderAvatar,
   senderName = 'Sender',
@@ -45,12 +49,14 @@ export const MessageBubble = ({
   const [showMenu, setShowMenu] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const [showExtraReactions, setShowExtraReactions] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [isVoicePlaying, setIsVoicePlaying] = useState(false);
   const [voiceProgress, setVoiceProgress] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const reactionRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
   // Click outside to close menu and reactions
   useEffect(() => {
@@ -186,9 +192,9 @@ export const MessageBubble = ({
     const isCompleted = message.callLogKind === 'completed';
     const isVideoCall = message.callMediaType === 'video' || message.text.toLowerCase().includes('video');
     return (
-      <div className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
+      <div className={`flex min-w-0 ${message.isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
         <div
-          className="w-[286px] max-w-[85vw] rounded-2xl bg-[#eef1e5] border border-[#dde2d2] p-2.5"
+          className="w-[286px] max-w-full rounded-2xl bg-[#eef1e5] border border-[#dde2d2] p-2.5"
           style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
         >
           <div className="flex items-start gap-3">
@@ -208,7 +214,7 @@ export const MessageBubble = ({
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[15px] leading-tight text-gray-900 font-semibold break-words">{message.text}</p>
+              <p className="text-[15px] leading-tight text-gray-900 font-semibold break-words [overflow-wrap:anywhere]">{message.text}</p>
               <p className="mt-0.5 text-xs text-gray-600">
                 {isCompleted && typeof message.callDurationSec === 'number'
                   ? formatDuration(message.callDurationSec)
@@ -230,7 +236,7 @@ export const MessageBubble = ({
 
   return (
     <div
-      className={`flex items-end gap-2 ${message.reactions && message.reactions.length > 0 ? 'mb-3' : 'mb-1'} ${message.isOwn ? 'justify-end' : 'justify-start'} ${isHighlighted ? 'bg-blue-50/50 ring-1 ring-blue-100' : ''} transition-all duration-500 rounded-lg py-1 px-2 -mx-2`}
+      className={`flex min-w-0 items-end gap-1.5 ${message.reactions && message.reactions.length > 0 ? 'mb-3' : 'mb-1'} ${message.isOwn ? 'justify-end' : 'justify-start'} ${isHighlighted ? 'bg-blue-50/50 ring-1 ring-blue-100' : ''} transition-all duration-500 rounded-lg py-1 px-1 sm:gap-2 sm:px-2 sm:-mx-2`}
       onMouseEnter={() => {
         setShowTimestamp(true);
         setIsHovering(true);
@@ -253,10 +259,10 @@ export const MessageBubble = ({
       )}
 
       {showTimestamp && message.isOwn && (
-        <span className="text-xs text-gray-500 self-end pb-0.5">{formatTime(message.timestamp)}</span>
+        <span className="hidden shrink-0 self-end pb-0.5 text-xs text-gray-500 sm:inline">{formatTime(message.timestamp)}</span>
       )}
 
-      <div className={`max-w-[70%] flex flex-col ${message.isOwn ? 'items-end' : 'items-start'}`}>
+      <div className={`min-w-0 max-w-[78%] lg:max-w-[70%] flex flex-col ${message.isOwn ? 'items-end' : 'items-start'}`}>
         {message.replyPreview && (
           <div className={`${message.isOwn ? 'text-right' : 'text-left'}`}>
             <div
@@ -278,25 +284,25 @@ export const MessageBubble = ({
               } disabled:cursor-default disabled:opacity-80`}
               title={message.replyToMessageId ? 'Nhấn để đến tin nhắn gốc' : undefined}
             >
-              <p className="max-w-[220px] whitespace-pre-wrap break-words line-clamp-2">{message.replyPreview}</p>
+              <p className="max-w-[220px] whitespace-pre-wrap break-words [overflow-wrap:anywhere] line-clamp-2">{message.replyPreview}</p>
             </button>
           </div>
         )}
         <div className={`relative z-[3] group ${message.replyPreview ? '-mt-[22px]' : ''}`}>
           {imageUrls.length > 0 && !message.deleted ? (
-            <div className={`flex max-w-[386px] flex-col gap-1.5 ${message.isOwn ? 'items-end' : 'items-start'}`}>
+            <div className={`flex max-w-full flex-col gap-1.5 sm:max-w-[386px] ${message.isOwn ? 'items-end' : 'items-start'}`}>
               <div className={`flex flex-wrap gap-1.5 ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
                 {imageUrls.map((imageUrl, index) =>
                   renderImageButton(
                     imageUrl,
                     index,
-                    imageUrls.length === 1 ? 'max-h-[320px] w-[260px]' : 'h-[124px] w-[124px]',
+                    imageUrls.length === 1 ? 'max-h-[320px] w-[min(260px,70vw)] max-w-full' : 'h-[124px] w-[124px]',
                   ),
                 )}
               </div>
               {message.imageCaption && (
                 <div
-                  className={`inline-block max-w-[260px] rounded-2xl px-3 py-2 text-sm leading-relaxed break-words ${
+                  className={`inline-block max-w-full overflow-hidden rounded-2xl px-3 py-2 text-sm leading-relaxed break-all [overflow-wrap:anywhere] sm:max-w-[260px] ${
                     message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
                   }`}
                 >
@@ -306,7 +312,7 @@ export const MessageBubble = ({
             </div>
           ) : (
             <div
-              className={`inline-block w-fit max-w-full rounded-2xl px-3 py-2 break-words ${
+              className={`inline-block w-fit max-w-full overflow-hidden rounded-2xl px-3 py-2 break-all [overflow-wrap:anywhere] ${
                 message.isOwn
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-900'
@@ -314,7 +320,7 @@ export const MessageBubble = ({
             >
               {message.voiceAudioUrl && !message.deleted ? (
               <div
-                className="flex min-w-[176px] max-w-[240px] items-center gap-2"
+                className="flex min-w-0 w-[min(240px,68vw)] max-w-full items-center gap-2 sm:min-w-[176px]"
                 style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
               >
                 <button
@@ -361,7 +367,7 @@ export const MessageBubble = ({
               <button
                 type="button"
                 onClick={() => window.open(message.fileUrl, '_blank', 'noopener,noreferrer')}
-                className="flex min-w-[220px] max-w-[280px] items-center gap-3"
+                className="flex min-w-0 w-[min(280px,68vw)] max-w-full items-center gap-3"
                 title="Mở file"
               >
                 <span
@@ -394,7 +400,7 @@ export const MessageBubble = ({
                 </button>
               </button>
               ) : (
-              <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
+              <p className={`max-w-full whitespace-pre-wrap break-all [overflow-wrap:anywhere] text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
                 {message.deleted ? 'Tin nhắn đã được gỡ' : message.text}
               </p>
               )}
@@ -415,7 +421,7 @@ export const MessageBubble = ({
             </div>
           )}
 
-          {isHovering && (
+          {!message.deleted && isHovering && (
             <div
               className={`absolute top-0 -translate-y-1/2 flex items-center gap-0.5 bg-white rounded-full shadow-sm px-1 py-1 z-[2] ${
                 message.isOwn ? 'right-full mr-1.5' : 'left-full ml-1.5'
@@ -444,7 +450,23 @@ export const MessageBubble = ({
               </button>
 
               <button
-                onClick={() => setShowMenu(!showMenu)}
+                onClick={() => {
+                  const triggerRect = menuTriggerRef.current?.getBoundingClientRect();
+                  if (triggerRect) {
+                    const estimatedMenuHeight = 132;
+                    const estimatedMenuWidth = 176;
+                    const openAbove = triggerRect.top > estimatedMenuHeight + 16;
+                    const top = openAbove
+                      ? triggerRect.top - estimatedMenuHeight - 8
+                      : triggerRect.bottom + 8;
+                    const left = message.isOwn
+                      ? Math.max(8, triggerRect.left - estimatedMenuWidth - 8)
+                      : Math.min(window.innerWidth - estimatedMenuWidth - 8, triggerRect.right + 8);
+                    setMenuPosition({ top, left });
+                  }
+                  setShowMenu(!showMenu);
+                }}
+                ref={menuTriggerRef}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer relative"
                 title="Tùy chọn khác"
               >
@@ -453,7 +475,7 @@ export const MessageBubble = ({
             </div>
           )}
 
-          {showReactions && (
+          {!message.deleted && showReactions && (
             <div
               className={`absolute bottom-full mb-2 bg-white rounded-full shadow-xl border border-gray-200 px-3 py-2 flex items-center gap-2 z-10 ${
                 message.isOwn ? 'right-0' : 'left-0'
@@ -479,7 +501,7 @@ export const MessageBubble = ({
               </button>
             </div>
           )}
-          {showReactions && showExtraReactions && (
+          {!message.deleted && showReactions && showExtraReactions && (
             <div
               className={`absolute bottom-full mb-16 bg-white rounded-xl shadow-xl border border-gray-200 px-3 py-2 flex items-center gap-2 z-10 ${
                 message.isOwn ? 'right-0' : 'left-0'
@@ -498,23 +520,36 @@ export const MessageBubble = ({
             </div>
           )}
 
-          {showMenu && (
+          {!message.deleted && showMenu && (
             <div
-              className={`absolute bottom-full mb-2 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] z-10 ${
-                message.isOwn ? 'right-0' : 'left-0'
-              }`}
+              className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] z-[200]"
               ref={menuRef}
-              style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
+              style={{
+                fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif',
+                top: `${menuPosition?.top ?? 0}px`,
+                left: `${menuPosition?.left ?? 0}px`,
+              }}
             >
+              {message.isOwn && (
+                <button
+                  onClick={() => {
+                    onDelete?.(message.id);
+                    setShowMenu(false);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
+                  disabled={message.deleted}
+                >
+                  Gỡ
+                </button>
+              )}
               <button
                 onClick={() => {
-                  onDelete?.(message.id);
+                  onPinMessage?.(message);
                   setShowMenu(false);
                 }}
                 className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
-                disabled={message.deleted || !message.isOwn}
               >
-                {message.isOwn ? 'Gỡ' : 'Chỉ gỡ tin nhắn của bạn'}
+                {isPinnedMessage ? 'Bỏ ghim tin nhắn' : 'Ghim tin nhắn'}
               </button>
               <button
                 onClick={() => {
@@ -549,7 +584,7 @@ export const MessageBubble = ({
       </div>
 
       {showTimestamp && !message.isOwn && (
-        <span className="text-xs text-gray-500 self-end pb-0.5">{formatTime(message.timestamp)}</span>
+        <span className="hidden shrink-0 self-end pb-0.5 text-xs text-gray-500 sm:inline">{formatTime(message.timestamp)}</span>
       )}
 
       {activeLightboxImage && (

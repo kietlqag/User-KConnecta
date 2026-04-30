@@ -3,7 +3,7 @@ import { Search, X, Check } from 'lucide-react';
 import { useFriends } from '@/features/friends/hooks/useFriends';
 import { authService } from '@/services/authService';
 import { useInviteFriends } from '@/features/groups/hooks/useGroups';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface InviteFriendsModalProps {
   groupId: string;

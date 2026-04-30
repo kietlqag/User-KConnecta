@@ -7,7 +7,7 @@ import { PenTool, Edit3, MoreHorizontal, Lock, Users, Smile, Image as ImageIcon,
 import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers } from '../hooks/useGroups';
 import { groupService } from '@/services/groupService';
 import { authService } from '@/services/authService';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const UserAvatar = ({
   avatarUrl,

@@ -41,7 +41,8 @@ export interface IncomingChatMessage {
   id: string;
   senderId: string;
   senderUsername: string;
-  receiverId: string;
+  receiverId?: string | null;
+  conversationId?: string | null;
   content: string;
   createdAt: string; // ISO datetime
   delivered?: boolean;

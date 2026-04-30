@@ -40,6 +40,22 @@ export interface ChatHistoryPageResponse {
   nextBeforeCreatedAt?: string | null;
 }
 
+export interface GroupConversationMemberResponse {
+  userId: string;
+  username: string;
+  fullName: string;
+  avatarUrl?: string | null;
+}
+
+export interface GroupConversationResponse {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+  createdAt: string;
+  createdBy: string;
+  members: GroupConversationMemberResponse[];
+}
+
 export interface CallSessionSnapshotResponse {
   callId: string;
   status?: 'RINGING' | 'ONGOING' | 'MISSED' | 'COMPLETED';
@@ -48,6 +64,20 @@ export interface CallSessionSnapshotResponse {
   answeredAt?: string | null;
   endedAt?: string | null;
   durationSec?: number | null;
+}
+
+export interface ConversationPinResponse {
+  peerUserId?: string | null;
+  conversationId?: string | null;
+  pinned: boolean;
+}
+
+export interface PinnedMessageResponse {
+  peerUserId?: string | null;
+  conversationId?: string | null;
+  messageId?: string | null;
+  messagePreview?: string | null;
+  pinned: boolean;
 }
 
 function normalizeChatHistoryResponse(payload: unknown): ChatHistoryPageResponse {
@@ -143,6 +173,62 @@ export const chatService = {
 
   getCallSessionSnapshot: (callId: string) => {
     return api.get<CallSessionSnapshotResponse>(`/chat/calls/${callId}/session`);
+  },
+
+  createGroupConversation: (payload: { name?: string; avatarUrl?: string; memberIds: string[] }) => {
+    return api.post<GroupConversationResponse>('/chat/conversations/group', payload);
+  },
+
+  getMyGroupConversations: () => {
+    return api.get<GroupConversationResponse[]>('/chat/conversations/group');
+  },
+
+  setConversationPinned: (payload: { peerUserId?: string; conversationId?: string; pinned: boolean }) => {
+    return api.put<ConversationPinResponse>('/chat/conversations/pin', payload);
+  },
+
+  getPinnedConversations: () => {
+    return api.get<ConversationPinResponse[]>('/chat/conversations/pin');
+  },
+
+  setPinnedMessage: (payload: {
+    peerUserId?: string;
+    conversationId?: string;
+    messageId?: string;
+    pinned: boolean;
+  }) => {
+    return api.put<PinnedMessageResponse>('/chat/messages/pin', payload);
+  },
+
+  getPinnedMessages: () => {
+    return api.get<PinnedMessageResponse[]>('/chat/messages/pin');
+  },
+
+  getGroupChatHistory: (
+    conversationId: string,
+    options?: {
+      beforeCreatedAt?: string | null;
+      limit?: number;
+    },
+  ) => {
+    const params = new URLSearchParams();
+    if (options?.beforeCreatedAt) {
+      params.set('beforeCreatedAt', options.beforeCreatedAt);
+    }
+    if (typeof options?.limit === 'number') {
+      params.set('limit', String(options.limit));
+    }
+    const query = params.toString();
+    const url = query
+      ? `/chat/conversations/${conversationId}/history?${query}`
+      : `/chat/conversations/${conversationId}/history`;
+    return api.get<ChatHistoryPageResponse>(url);
+  },
+
+  sendGroupMessage: (conversationId: string, content: string) => {
+    return api.post<IncomingChatMessage>(`/chat/conversations/${conversationId}/messages`, {
+      content,
+    });
   },
 
   updateMessageReaction: (messageId: string, emoji: string | null) => {

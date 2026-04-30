@@ -28,6 +28,7 @@ type PresenceStatusListener = (status: IncomingPresenceStatus) => void;
 interface RealtimeCallContextValue {
   connected: boolean;
   sendMessage: (receiverId: string, content: string) => void;
+  sendGroupMessage: (conversationId: string, content: string) => void;
   voiceCall: ReturnType<typeof useVoiceCall>;
   subscribeMessages: (listener: MessageListener) => () => void;
   subscribeMessageStatuses: (listener: MessageStatusListener) => () => void;
@@ -170,7 +171,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     [closeDesktopNotification, maybeShowDesktopNotification],
   );
 
-  const { connected, sendMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen } = useChatSocket(
+  const { connected, sendMessage, sendGroupMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen } = useChatSocket(
     currentUser?.token,
     handleIncomingMessage,
     handleIncomingCallSignal,
@@ -413,6 +414,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     () => ({
       connected,
       sendMessage,
+      sendGroupMessage,
       voiceCall,
       subscribeMessages,
       subscribeMessageStatuses,
@@ -423,6 +425,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     [
       connected,
       sendConversationSeen,
+      sendGroupMessage,
       sendMessage,
       sendMessageDelivered,
       subscribeMessageStatuses,

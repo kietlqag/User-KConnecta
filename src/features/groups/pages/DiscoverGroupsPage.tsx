@@ -4,7 +4,7 @@ import { Header } from '../../home/components/Header';
 import { GroupsLeftSidebar } from '../components';
 import { MoreHorizontal, Compass } from 'lucide-react';
 import { useDiscoverGroups, useJoinedGroups, useManagedGroups, useJoinGroup } from '../hooks/useGroups';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export const DiscoverGroupsPage = () => {
   const navigate = useNavigate();

@@ -10,6 +10,8 @@ export function useChatScroll(
 ) {
   const messageListRef = useRef<HTMLDivElement>(null);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+  const rafRef = useRef<number | null>(null);
+  const settleTimersRef = useRef<number[]>([]);
   
   const initializedRef = useRef(false);
   const shouldStickToBottomRef = useRef(true);
@@ -17,11 +19,50 @@ export function useChatScroll(
   const previousMessageCountRef = useRef(0);
   const loadingOlderRef = useRef(false);
 
+  const clearPendingScrollJobs = () => {
+    if (rafRef.current !== null) {
+      window.cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+    if (settleTimersRef.current.length > 0) {
+      settleTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      settleTimersRef.current = [];
+    }
+  };
+
   const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
     const list = messageListRef.current;
     if (!list) return;
-    list.scrollTo({ top: list.scrollHeight, behavior });
+    clearPendingScrollJobs();
+
+    list.scrollTo({ top: list.scrollHeight, behavior: 'auto' });
     setShowJumpToLatest(false);
+
+    rafRef.current = window.requestAnimationFrame(() => {
+      const currentList = messageListRef.current;
+      if (!currentList) return;
+      currentList.scrollTo({ top: currentList.scrollHeight, behavior });
+      setShowJumpToLatest(false);
+      rafRef.current = null;
+    });
+
+    // Media (image/voice/file preview) may change height shortly after render.
+    settleTimersRef.current.push(
+      window.setTimeout(() => {
+        const currentList = messageListRef.current;
+        if (!currentList) return;
+        currentList.scrollTo({ top: currentList.scrollHeight, behavior: 'auto' });
+        setShowJumpToLatest(false);
+      }, 120),
+    );
+    settleTimersRef.current.push(
+      window.setTimeout(() => {
+        const currentList = messageListRef.current;
+        if (!currentList) return;
+        currentList.scrollTo({ top: currentList.scrollHeight, behavior: 'auto' });
+        setShowJumpToLatest(false);
+      }, 280),
+    );
   };
 
   useEffect(() => {
@@ -30,7 +71,14 @@ export function useChatScroll(
     shouldStickToBottomRef.current = true;
     prependScrollAdjustRef.current = null;
     loadingOlderRef.current = false;
+    clearPendingScrollJobs();
   }, [userId]);
+
+  useEffect(() => {
+    return () => {
+      clearPendingScrollJobs();
+    };
+  }, []);
 
   useEffect(() => {
     if (loading || initializedRef.current || messagesLength === 0) return;
