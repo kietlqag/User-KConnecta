@@ -14,6 +14,7 @@ import { chatService } from '@/services/chatService';
 import { CallMinimizedBar, CallOverlayModal } from '@/features/messenger/components';
 import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import { useVoiceCall } from '@/features/messenger/hooks/useVoiceCall';
+import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '@/features/messenger/utils/callDuration';
 import type {
   IncomingCallSignal,
   IncomingChatMessage,
@@ -326,8 +327,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     }
 
     const tick = () => {
-      const elapsed = Math.floor((Date.now() - voiceCall.callStartedAtMs) / 1000);
-      setCallDurationSec(Math.max(0, elapsed));
+      setCallDurationSec(calculateCallDurationSeconds(voiceCall.callStartedAtMs));
     };
 
     tick();
@@ -357,13 +357,11 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
         }
 
         if (snapshot.status === 'ONGOING') {
-          if (typeof snapshot.durationSec === 'number' && Number.isFinite(snapshot.durationSec)) {
-            const safeDuration = Math.max(0, Math.floor(snapshot.durationSec));
+          if (!voiceCall.callStartedAtMs && typeof snapshot.durationSec === 'number' && Number.isFinite(snapshot.durationSec)) {
+            const safeDuration = normalizeCallDurationSeconds(snapshot.durationSec);
             setCallDurationSec(safeDuration);
-            setAuthoritativeStatusText(formatCallDuration(safeDuration));
-          } else {
-            setAuthoritativeStatusText(null);
           }
+          setAuthoritativeStatusText(null);
           return;
         }
 
@@ -375,7 +373,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
         if (snapshot.status === 'COMPLETED') {
           const safeDuration =
             typeof snapshot.durationSec === 'number' && Number.isFinite(snapshot.durationSec)
-              ? Math.max(0, Math.floor(snapshot.durationSec))
+              ? normalizeCallDurationSeconds(snapshot.durationSec)
               : 0;
           setCallDurationSec(safeDuration);
           setAuthoritativeStatusText(formatCallDuration(safeDuration));
@@ -400,6 +398,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     isCallConnected,
     voiceCall.activeCallId,
     voiceCall.activeGroupConversationId,
+    voiceCall.callStartedAtMs,
     voiceCall.syncAuthoritativeSession,
   ]);
 
@@ -411,6 +410,14 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
         ? 'Đang kết nối...'
         : formatCallDuration(callDurationSec));
 
+  const incomingGroupCaller = voiceCall.incomingGroupConversationId
+    ? voiceCall.groupCallParticipants.find((participant) => participant.userId === voiceCall.incomingPeerUserId)
+    : undefined;
+  const activeGroupCaller = voiceCall.activeGroupConversationId
+    ? voiceCall.groupCallParticipants.find((participant) =>
+        participant.userId === (voiceCall.activeCallDirection === 'outgoing' ? currentUser?.id : voiceCall.activePeerUserId),
+      )
+    : undefined;
   const incomingProfile =
     voiceCall.incomingPeerUserId && !voiceCall.incomingGroupConversationId
       ? peerProfiles[voiceCall.incomingPeerUserId]
@@ -418,14 +425,14 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const activeProfile = voiceCall.activePeerUserId ? peerProfiles[voiceCall.activePeerUserId] : undefined;
 
   const incomingName = voiceCall.incomingGroupConversationId
-    ? voiceCall.incomingGroupDisplayName || 'Cuộc gọi nhóm'
+    ? incomingGroupCaller?.name || voiceCall.incomingFromUsername || 'Người gọi'
     : incomingProfile?.fullName || voiceCall.incomingFromUsername || 'Người dùng';
   const incomingAvatar =
-    voiceCall.incomingGroupAvatarUrl ||
+    incomingGroupCaller?.avatar ||
     incomingProfile?.avatarUrl ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingName)}&background=random`;
   const activeName = voiceCall.activeGroupConversationId
-    ? voiceCall.activePeerDisplayName || 'Cuộc gọi nhóm'
+    ? activeGroupCaller?.name || 'Cuộc gọi nhóm'
     : activeProfile?.fullName || voiceCall.activePeerDisplayName || voiceCall.incomingFromUsername || 'Người dùng';
   const activeAvatar =
     (voiceCall.activeGroupConversationId ? undefined : activeProfile?.avatarUrl) ||
@@ -499,6 +506,9 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
           show={showCallModal}
           user={{ name: incomingName, avatar: incomingAvatar }}
           incomingMediaType={voiceCall.incomingMediaType}
+          groupCallParticipants={voiceCall.groupCallParticipants}
+          currentUserId={currentUser?.id}
+          callerUserId={voiceCall.incomingPeerUserId}
           zIndexClassName="z-[200]"
           onMinimize={() => setShowCallModal(false)}
           onRejectIncoming={() => voiceCall.rejectIncoming()}
@@ -523,6 +533,10 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
           isMuted={voiceCall.isMuted}
           remoteVideoRef={remoteVideoRef}
           localVideoRef={localVideoRef}
+          groupCallParticipants={voiceCall.groupCallParticipants}
+          remoteStreams={voiceCall.remoteStreams}
+          currentUserId={currentUser?.id}
+          callerUserId={voiceCall.activeCallDirection === 'outgoing' ? currentUser?.id : voiceCall.activePeerUserId}
           zIndexClassName="z-[200]"
           onMinimize={() => setShowCallModal(false)}
           onToggleSpeaker={() => setSpeakerMode((prev) => (prev === 'outer' ? 'inner' : 'outer'))}

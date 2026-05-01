@@ -102,7 +102,15 @@ export const MessageList = forwardRef(({
         )}
 
         {messages.map((message, index) => (
-          <div key={message.id} id={`chat-message-${message.id}`} className="min-w-0">
+          <div
+            key={message.id}
+            id={`chat-message-${message.id}`}
+            className="min-w-0"
+            style={{
+              contentVisibility: 'auto',
+              containIntrinsicSize: message.systemType ? '72px' : '96px',
+            }}
+          >
             <MessageBubble
               message={message}
               showSenderAvatar={shouldShowSenderAvatar(index)}

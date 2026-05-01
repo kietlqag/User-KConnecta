@@ -73,9 +73,29 @@ export type CallSignalType =
   | 'CALL_REJECT'
   | 'CALL_CANCEL'
   | 'CALL_END'
+  | 'CALL_PARTICIPANT_UPDATE'
   | 'CALL_OFFER'
   | 'CALL_ANSWER'
   | 'CALL_ICE';
+
+export type GroupCallParticipantStatus = 'invited' | 'ringing' | 'joined' | 'left' | 'rejected' | 'missed';
+
+export interface GroupCallParticipant {
+  userId: string;
+  name: string;
+  avatar?: string;
+  status: GroupCallParticipantStatus;
+  micEnabled: boolean;
+  cameraEnabled: boolean;
+  joinedAt?: number;
+  leftAt?: number;
+}
+
+export interface GroupCallParticipantSignal {
+  userId: string;
+  name: string;
+  avatar?: string;
+}
 
 export interface OutgoingCallSignal {
   receiverId: string;
@@ -89,6 +109,10 @@ export interface OutgoingCallSignal {
   candidate?: string;
   sdpMid?: string;
   sdpMLineIndex?: number;
+  durationSec?: number;
+  groupParticipants?: GroupCallParticipantSignal[];
+  participantUserId?: string;
+  participantStatus?: GroupCallParticipantStatus;
 }
 
 export interface IncomingCallSignal {
@@ -105,6 +129,9 @@ export interface IncomingCallSignal {
   candidate?: string;
   sdpMid?: string;
   sdpMLineIndex?: number;
+  groupParticipants?: GroupCallParticipantSignal[];
+  participantUserId?: string;
+  participantStatus?: GroupCallParticipantStatus;
   createdAt: string;
   sessionStatus?: 'RINGING' | 'ONGOING' | 'MISSED' | 'COMPLETED';
   sessionMediaType?: 'audio' | 'video';

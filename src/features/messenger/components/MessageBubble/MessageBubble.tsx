@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
 import { Message } from '../../types/message.types';
+import { normalizeCallDurationSeconds } from '../../utils/callDuration';
 
 interface MessageBubbleProps {
   message: Message;
@@ -92,8 +93,9 @@ export const MessageBubble = ({
   };
 
   const formatDuration = (totalSec: number) => {
-    const min = Math.floor(totalSec / 60);
-    const sec = totalSec % 60;
+    const safeTotal = normalizeCallDurationSeconds(totalSec);
+    const min = Math.floor(safeTotal / 60);
+    const sec = safeTotal % 60;
     return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 

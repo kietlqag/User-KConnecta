@@ -28,6 +28,7 @@ import { authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { formatLastActiveLabel } from '../utils/presenceLabel';
+import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '../utils/callDuration';
 import { toast } from 'sonner';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
@@ -36,6 +37,16 @@ const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
 const HISTORY_PAGE_SIZE = 15;
+
+function uniqueByUserId<T extends { userId: string }>(items: T[]) {
+  const byId = new Map<string, T>();
+  items.forEach((item) => {
+    if (item.userId && !byId.has(item.userId)) {
+      byId.set(item.userId, item);
+    }
+  });
+  return Array.from(byId.values());
+}
 
 function mapBackendContentToMessageFields(
   content: string,
@@ -145,7 +156,7 @@ function mapBackendContentToMessageFields(
       text: payload?.label || fallbackLabel,
       systemType: 'call_log',
       callLogKind: payload?.kind === 'completed' ? 'completed' : 'missed',
-      callDurationSec: typeof payload?.durationSec === 'number' ? payload.durationSec : undefined,
+      callDurationSec: typeof payload?.durationSec === 'number' ? normalizeCallDurationSeconds(payload.durationSec) : undefined,
       callMediaType: mediaType,
     };
   } catch {
@@ -1304,7 +1315,7 @@ export default function MessengerPage() {
       const mimeType = recorder.mimeType || fallbackMimeType;
       const blob = new Blob(callRecorderChunksRef.current, { type: mimeType });
       const callId = finalCallId ?? meta.callId;
-      const durationSec = Math.max(0, Math.floor((Date.now() - meta.startedAt) / 1000));
+      const durationSec = calculateCallDurationSeconds(meta.startedAt);
 
       callRecorderRef.current = null;
       callRecorderChunksRef.current = [];
@@ -1806,7 +1817,25 @@ export default function MessengerPage() {
   const handleStartVoiceCall = useCallback(() => {
     if (!activeChatUserId) return;
     if (activeChatUserId.startsWith('group:')) {
-      const memberIds = (groupMembersById[activeChatUserId] ?? []).map((member) => member.id);
+      const members = groupMembersById[activeChatUserId] ?? [];
+      const memberIds = members.map((member) => member.id).filter((id) => id !== currentUser?.id);
+      const callerMemberProfile = members.find((member) => member.id === currentUser?.id);
+      const groupParticipants = uniqueByUserId([
+        ...(currentUser?.id
+          ? [
+              {
+                userId: currentUser.id,
+                name: callerMemberProfile?.name || currentUser.fullName || currentUser.username || 'Bạn',
+                avatar: callerMemberProfile?.avatar || currentUser.avatarUrl,
+              },
+            ]
+          : []),
+        ...members.map((member) => ({
+          userId: member.id,
+          name: member.name,
+          avatar: member.avatar,
+        })),
+      ]);
       const conversationId = activeChatUserId.replace('group:', '');
       void chatService
         .createGroupCallSession(conversationId, 'audio')
@@ -1818,6 +1847,7 @@ export default function MessengerPage() {
             activeChatUser?.name,
             activeChatUser?.avatar,
             session.callId,
+            groupParticipants,
           ),
         )
         .catch((error: any) => {
@@ -1826,12 +1856,30 @@ export default function MessengerPage() {
       return;
     }
     void voiceCall.startCall(activeChatUserId, 'audio', activeChatUser?.name, activeChatUser?.avatar);
-  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, groupMembersById, voiceCall]);
+  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, currentUser, groupMembersById, voiceCall]);
 
   const handleStartVideoCall = useCallback(() => {
     if (!activeChatUserId) return;
     if (activeChatUserId.startsWith('group:')) {
-      const memberIds = (groupMembersById[activeChatUserId] ?? []).map((member) => member.id);
+      const members = groupMembersById[activeChatUserId] ?? [];
+      const memberIds = members.map((member) => member.id).filter((id) => id !== currentUser?.id);
+      const callerMemberProfile = members.find((member) => member.id === currentUser?.id);
+      const groupParticipants = uniqueByUserId([
+        ...(currentUser?.id
+          ? [
+              {
+                userId: currentUser.id,
+                name: callerMemberProfile?.name || currentUser.fullName || currentUser.username || 'Bạn',
+                avatar: callerMemberProfile?.avatar || currentUser.avatarUrl,
+              },
+            ]
+          : []),
+        ...members.map((member) => ({
+          userId: member.id,
+          name: member.name,
+          avatar: member.avatar,
+        })),
+      ]);
       const conversationId = activeChatUserId.replace('group:', '');
       void chatService
         .createGroupCallSession(conversationId, 'video')
@@ -1843,6 +1891,7 @@ export default function MessengerPage() {
             activeChatUser?.name,
             activeChatUser?.avatar,
             session.callId,
+            groupParticipants,
           ),
         )
         .catch((error: any) => {
@@ -1851,7 +1900,7 @@ export default function MessengerPage() {
       return;
     }
     void voiceCall.startCall(activeChatUserId, 'video', activeChatUser?.name, activeChatUser?.avatar);
-  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, groupMembersById, voiceCall]);
+  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, currentUser, groupMembersById, voiceCall]);
 
   const handleCallAgain = useCallback(
     (mediaType: 'audio' | 'video' = 'audio') => {

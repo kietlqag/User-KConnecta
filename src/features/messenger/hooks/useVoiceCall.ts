@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { buildRtcConfig, isWebRtcDebugEnabled } from '@/utils/webrtcConfig';
-import type { CallSignalType, IncomingCallSignal, OutgoingCallSignal } from '../types/message.types';
+import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '../utils/callDuration';
+import type {
+  CallSignalType,
+  GroupCallParticipant,
+  GroupCallParticipantSignal,
+  IncomingCallSignal,
+  OutgoingCallSignal,
+} from '../types/message.types';
 import type { CallSessionSnapshotResponse } from '@/services/chatService';
 
 type CallDirection = 'incoming' | 'outgoing';
@@ -48,6 +55,20 @@ function extractCandidateType(candidate?: string | null) {
   return 'unknown';
 }
 
+function participantAvatar(name: string, avatar?: string) {
+  return avatar?.trim() || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(name || 'User')}`;
+}
+
+function uniqueParticipants(participants: GroupCallParticipantSignal[]) {
+  const byId = new Map<string, GroupCallParticipantSignal>();
+  participants.forEach((participant) => {
+    if (participant.userId && !byId.has(participant.userId)) {
+      byId.set(participant.userId, participant);
+    }
+  });
+  return Array.from(byId.values());
+}
+
 export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOptions) {
   const [status, setStatus] = useState<CallStatus>('idle');
   const [incomingSignal, setIncomingSignal] = useState<IncomingCallSignal | null>(null);
@@ -58,6 +79,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   const [isCameraEnabled, setIsCameraEnabled] = useState(true);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [remoteStreams, setRemoteStreams] = useState<Array<{ userId: string; stream: MediaStream }>>([]);
+  const [groupCallParticipants, setGroupCallParticipants] = useState<GroupCallParticipant[]>([]);
+  const [activeGroupParticipantCount, setActiveGroupParticipantCount] = useState(0);
   const [callStartedAtMs, setCallStartedAtMs] = useState<number | null>(null);
   const [authoritativeSessionStatus, setAuthoritativeSessionStatus] = useState<
     'RINGING' | 'ONGOING' | 'MISSED' | 'COMPLETED' | null
@@ -66,6 +90,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const activeCallRef = useRef<ActiveCall | null>(null);
+  const connectedGroupParticipantIdsRef = useRef<Set<string>>(new Set());
+  const settledGroupParticipantIdsRef = useRef<Set<string>>(new Set());
+  const remoteStreamsByPeerRef = useRef<Map<string, MediaStream>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingOfferRef = useRef<RTCSessionDescriptionInit | null>(null);
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
@@ -86,6 +114,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       connectTimeoutRef.current = null;
     }
   }, []);
+
+  useEffect(() => {
+    activeCallRef.current = activeCall;
+  }, [activeCall]);
 
   const logWebRtc = useCallback((message: string, details?: unknown) => {
     if (!DEBUG_WEBRTC) return;
@@ -114,7 +146,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           : null;
       setAuthoritativeSessionStatus(normalizedStatus);
       if (typeof snapshot.durationSec === 'number' && Number.isFinite(snapshot.durationSec)) {
-        setAuthoritativeDurationSec(Math.max(0, Math.floor(snapshot.durationSec)));
+        setAuthoritativeDurationSec(normalizeCallDurationSeconds(snapshot.durationSec));
       }
       const answeredAtMs = toEpochMs(snapshot.answeredAt);
       if (answeredAtMs) {
@@ -136,6 +168,123 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     [sendCallSignal],
   );
 
+  const refreshGroupParticipantCount = useCallback(() => {
+    setActiveGroupParticipantCount(connectedGroupParticipantIdsRef.current.size);
+  }, []);
+
+  const updateGroupParticipant = useCallback(
+    (userId: string, patch: Partial<GroupCallParticipant> & { name?: string; avatar?: string }) => {
+      if (!userId) return;
+      setGroupCallParticipants((prev) => {
+        const existing = prev.find((participant) => participant.userId === userId);
+        if (!existing) {
+          const name = patch.name || 'Người dùng';
+          return [
+            ...prev,
+            {
+              userId,
+              name,
+              avatar: participantAvatar(name, patch.avatar),
+              status: patch.status ?? 'invited',
+              micEnabled: patch.micEnabled ?? true,
+              cameraEnabled: patch.cameraEnabled ?? true,
+              joinedAt: patch.joinedAt,
+              leftAt: patch.leftAt,
+            },
+          ];
+        }
+        return prev.map((participant) =>
+          participant.userId === userId
+            ? {
+                ...participant,
+                ...patch,
+                avatar:
+                  patch.avatar !== undefined
+                    ? participantAvatar(patch.name ?? participant.name, patch.avatar)
+                    : participant.avatar,
+                name: patch.name ?? participant.name,
+              }
+            : participant,
+        );
+      });
+    },
+    [],
+  );
+
+  const buildGroupParticipants = useCallback(
+    (
+      participants: GroupCallParticipantSignal[] | undefined,
+      callerId: string,
+      callerName: string,
+      callerAvatar: string | undefined,
+      selfStatus: GroupCallParticipant['status'],
+    ) => {
+      const byId = new Map<string, GroupCallParticipantSignal>();
+      (participants ?? []).forEach((participant) => {
+        if (participant.userId) byId.set(participant.userId, participant);
+      });
+      byId.set(callerId, {
+        userId: callerId,
+        name: callerName || byId.get(callerId)?.name || 'Người gọi',
+        avatar: callerAvatar ?? byId.get(callerId)?.avatar,
+      });
+      return Array.from(byId.values()).map<GroupCallParticipant>((participant) => {
+        const isCaller = participant.userId === callerId;
+        const isSelf = participant.userId === currentUserId;
+        const status: GroupCallParticipant['status'] = isCaller ? 'joined' : isSelf ? selfStatus : 'ringing';
+        return {
+          userId: participant.userId,
+          name: participant.name || 'Người dùng',
+          avatar: participantAvatar(participant.name || 'Người dùng', participant.avatar),
+          status,
+          micEnabled: true,
+          cameraEnabled: true,
+          joinedAt: isCaller ? Date.now() : undefined,
+        };
+      });
+    },
+    [currentUserId],
+  );
+
+  const addGroupParticipant = useCallback(
+    (userId?: string | null) => {
+      if (!userId) return;
+      connectedGroupParticipantIdsRef.current.add(userId);
+      updateGroupParticipant(userId, { status: 'joined', joinedAt: Date.now(), leftAt: undefined });
+      refreshGroupParticipantCount();
+    },
+    [refreshGroupParticipantCount, updateGroupParticipant],
+  );
+
+  const removeGroupParticipant = useCallback(
+    (userId?: string | null) => {
+      if (!userId) return;
+      connectedGroupParticipantIdsRef.current.delete(userId);
+      updateGroupParticipant(userId, { status: 'left', leftAt: Date.now() });
+      refreshGroupParticipantCount();
+    },
+    [refreshGroupParticipantCount, updateGroupParticipant],
+  );
+
+  const closePeerConnection = useCallback((peerUserId: string) => {
+    const pc = peerConnectionsRef.current.get(peerUserId);
+    if (pc) {
+      pc.onicecandidate = null;
+      pc.ontrack = null;
+      pc.oniceconnectionstatechange = null;
+      pc.onconnectionstatechange = null;
+      pc.close();
+      peerConnectionsRef.current.delete(peerUserId);
+    }
+    remoteStreamsByPeerRef.current.delete(peerUserId);
+    const nextRemoteStream = (remoteStreamsByPeerRef.current.values().next().value as MediaStream | undefined) ?? null;
+    setRemoteStream(nextRemoteStream);
+    setRemoteStreams(Array.from(remoteStreamsByPeerRef.current, ([userId, stream]) => ({ userId, stream })));
+    if (peerRef.current === pc) {
+      peerRef.current = (peerConnectionsRef.current.values().next().value as RTCPeerConnection | undefined) ?? null;
+    }
+  }, []);
+
   const cleanup = useCallback(
     (keepStatus = false) => {
       clearCallTimeout();
@@ -144,6 +293,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       peerConnectionsRef.current.clear();
       peerRef.current?.close();
       peerRef.current = null;
+      connectedGroupParticipantIdsRef.current.clear();
+      settledGroupParticipantIdsRef.current.clear();
+      remoteStreamsByPeerRef.current.clear();
 
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach((track) => track.stop());
@@ -155,11 +307,15 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       hasRetriedIceRestartRef.current = false;
       setLocalStream(null);
       setRemoteStream(null);
+      setRemoteStreams([]);
+      setGroupCallParticipants([]);
+      setActiveGroupParticipantCount(0);
       setCallStartedAtMs(null);
       setAuthoritativeSessionStatus(null);
       setAuthoritativeDurationSec(null);
       setIncomingSignal(null);
       setIncomingMediaType('audio');
+      activeCallRef.current = null;
       setActiveCall(null);
       setIsMuted(false);
       setIsCameraEnabled(true);
@@ -170,17 +326,66 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     [clearCallTimeout, clearConnectTimeout],
   );
 
+  const finishGroupCallIfAllReceiversSettled = useCallback(
+    (call: ActiveCall, lastReceiverId: string) => {
+      if (!call.groupConversationId || call.direction !== 'outgoing') return false;
+      if (connectedGroupParticipantIdsRef.current.size > 1) return false;
+      const receiverCount = call.participantIds?.length ?? 0;
+      if (receiverCount === 0 || settledGroupParticipantIdsRef.current.size < receiverCount) return false;
+
+      sendSignal(lastReceiverId, call.callId, 'CALL_CANCEL', {
+        conversationId: call.groupConversationId,
+      });
+      setStatus('ended');
+      cleanup(true);
+      return true;
+    },
+    [cleanup, sendSignal],
+  );
+
+  const broadcastGroupParticipantUpdate = useCallback(
+    (
+      call: ActiveCall,
+      participantUserId: string,
+      participantStatus: GroupCallParticipant['status'],
+      exceptUserId?: string,
+    ) => {
+      if (!call.groupConversationId || call.direction !== 'outgoing') return;
+      const receivers = (call.participantIds ?? []).filter(
+        (receiverId) => receiverId && receiverId !== exceptUserId && receiverId !== participantUserId,
+      );
+      receivers.forEach((receiverId) => {
+        sendSignal(receiverId, call.callId, 'CALL_PARTICIPANT_UPDATE', {
+          conversationId: call.groupConversationId,
+          participantUserId,
+          participantStatus,
+        });
+      });
+    },
+    [sendSignal],
+  );
+
   const armConnectTimeout = useCallback(
     (peerUserId: string, callId: string) => {
       clearConnectTimeout();
       connectTimeoutRef.current = window.setTimeout(() => {
-        sendSignal(peerUserId, callId, 'CALL_END');
+        const activeGroupCall = activeCallRef.current?.groupConversationId ? activeCallRef.current : null;
+        if (activeGroupCall) {
+          closePeerConnection(peerUserId);
+          removeGroupParticipant(peerUserId);
+          if (activeGroupCall.direction === 'outgoing' && connectedGroupParticipantIdsRef.current.size > 1) {
+            return;
+          }
+        }
+        sendSignal(peerUserId, callId, 'CALL_END', {
+          durationSec: calculateCallDurationSeconds(callStartedAtMs),
+        });
         setErrorMessage('Kết nối cuộc gọi quá lâu. Vui lòng thử lại.');
         setStatus('ended');
         cleanup(true);
       }, CALL_CONNECT_TIMEOUT_MS);
     },
-    [clearConnectTimeout, cleanup, sendSignal],
+    [callStartedAtMs, clearConnectTimeout, cleanup, closePeerConnection, removeGroupParticipant, sendSignal],
   );
 
   useEffect(() => {
@@ -264,7 +469,14 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         const [stream] = event.streams;
         logWebRtc('remote track received', { callId, trackCount: stream?.getTracks().length ?? 0 });
         if (stream) {
-          setRemoteStream(stream);
+          if (activeCallRef.current?.groupConversationId) {
+            remoteStreamsByPeerRef.current.set(peerUserId, stream);
+            setRemoteStreams(Array.from(remoteStreamsByPeerRef.current, ([userId, remote]) => ({ userId, stream: remote })));
+            addGroupParticipant(peerUserId);
+            setRemoteStream((prev) => prev ?? stream);
+          } else {
+            setRemoteStream(stream);
+          }
           setStatus((prev) => (prev === 'connecting' || prev === 'calling' ? 'in_call' : prev));
         }
       };
@@ -274,11 +486,25 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
           clearConnectTimeout();
           hasRetriedIceRestartRef.current = false;
+          if (activeCallRef.current?.groupConversationId) {
+            addGroupParticipant(peerUserId);
+          }
           setStatus('in_call');
         } else if (
           pc.iceConnectionState === 'failed' ||
           pc.iceConnectionState === 'closed'
         ) {
+          const activeGroupCall = activeCallRef.current?.groupConversationId ? activeCallRef.current : null;
+          if (activeGroupCall) {
+            closePeerConnection(peerUserId);
+            removeGroupParticipant(peerUserId);
+            if (activeGroupCall.direction === 'outgoing' && connectedGroupParticipantIdsRef.current.size > 1) {
+              return;
+            }
+            setStatus('ended');
+            cleanup(true);
+            return;
+          }
           if (pc.iceConnectionState === 'failed' && !hasRetriedIceRestartRef.current) {
             hasRetriedIceRestartRef.current = true;
             armConnectTimeout(peerUserId, callId);
@@ -328,12 +554,28 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         if (pc.connectionState === 'connected') {
           clearConnectTimeout();
           hasRetriedIceRestartRef.current = false;
+          if (activeCallRef.current?.groupConversationId) {
+            addGroupParticipant(peerUserId);
+          }
           setStatus('in_call');
         } else if (
           pc.connectionState === 'failed' ||
           pc.connectionState === 'disconnected' ||
           pc.connectionState === 'closed'
         ) {
+          const activeGroupCall = activeCallRef.current?.groupConversationId ? activeCallRef.current : null;
+          if (activeGroupCall) {
+            if (pc.connectionState === 'disconnected') {
+              armConnectTimeout(peerUserId, callId);
+              setStatus((prev) => (prev === 'in_call' ? 'connecting' : prev));
+              return;
+            }
+            closePeerConnection(peerUserId);
+            removeGroupParticipant(peerUserId);
+            if (activeGroupCall.direction === 'outgoing' && connectedGroupParticipantIdsRef.current.size > 1) {
+              return;
+            }
+          }
           setStatus('ended');
         }
       };
@@ -344,7 +586,16 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       }
       return pc;
     },
-    [armConnectTimeout, clearConnectTimeout, logWebRtc, sendSignal],
+    [
+      addGroupParticipant,
+      armConnectTimeout,
+      cleanup,
+      clearConnectTimeout,
+      closePeerConnection,
+      logWebRtc,
+      removeGroupParticipant,
+      sendSignal,
+    ],
   );
 
   const applyPendingIce = useCallback(async () => {
@@ -376,7 +627,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       setErrorMessage(null);
 
       const callId = createCallId();
-      setActiveCall({ callId, peerUserId, peerDisplayName, peerAvatarUrl, direction: 'outgoing', mediaType });
+      const nextCall: ActiveCall = { callId, peerUserId, peerDisplayName, peerAvatarUrl, direction: 'outgoing', mediaType };
+      activeCallRef.current = nextCall;
+      setActiveCall(nextCall);
       hasRetriedIceRestartRef.current = false;
       setCallStartedAtMs(null);
       setAuthoritativeSessionStatus('RINGING');
@@ -422,6 +675,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       groupDisplayName?: string,
       groupAvatarUrl?: string,
       existingCallId?: string,
+      groupParticipants?: GroupCallParticipantSignal[],
     ) => {
       if (!currentUserId) return;
       if (status !== 'idle' && status !== 'ended') return;
@@ -432,7 +686,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       setErrorMessage(null);
 
       const callId = existingCallId || createCallId();
-      setActiveCall({
+      const nextCall: ActiveCall = {
         callId,
         peerUserId: receivers[0],
         peerDisplayName: groupDisplayName,
@@ -441,7 +695,35 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         participantIds: receivers,
         direction: 'outgoing',
         mediaType,
-      });
+      };
+      activeCallRef.current = nextCall;
+      setActiveCall(nextCall);
+      connectedGroupParticipantIdsRef.current = new Set([currentUserId]);
+      settledGroupParticipantIdsRef.current.clear();
+      const participants = uniqueParticipants(
+        groupParticipants?.length
+          ? groupParticipants
+          : [
+            {
+              userId: currentUserId,
+              name: groupDisplayName || 'Bạn',
+              avatar: groupAvatarUrl,
+            },
+            ...receivers.map((receiverId) => ({ userId: receiverId, name: 'Người dùng' })),
+          ],
+      );
+      setGroupCallParticipants(
+        participants.map((participant) => ({
+          userId: participant.userId,
+          name: participant.name || 'Người dùng',
+          avatar: participantAvatar(participant.name || 'Người dùng', participant.avatar),
+          status: participant.userId === currentUserId ? 'joined' : 'ringing',
+          micEnabled: true,
+          cameraEnabled: mediaType === 'video',
+          joinedAt: participant.userId === currentUserId ? Date.now() : undefined,
+        })),
+      );
+      refreshGroupParticipantCount();
       hasRetriedIceRestartRef.current = false;
       setCallStartedAtMs(null);
       setAuthoritativeSessionStatus('RINGING');
@@ -468,6 +750,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
               conversationId,
               conversationName: groupDisplayName,
               conversationAvatarUrl: groupAvatarUrl,
+              groupParticipants: participants,
             });
             const pc = createPeerConnection(callId, receiverId);
             local.getTracks().forEach((track) => pc.addTrack(track, local));
@@ -481,6 +764,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
               conversationId,
               conversationName: groupDisplayName,
               conversationAvatarUrl: groupAvatarUrl,
+              groupParticipants: participants,
             });
           }),
         );
@@ -496,6 +780,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       createPeerConnection,
       currentUserId,
       ensureLocalStream,
+      refreshGroupParticipantCount,
       sendSignal,
       status,
     ],
@@ -505,18 +790,19 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     if (!incomingSignal) return;
     sendSignal(incomingSignal.fromUserId, incomingSignal.callId, 'CALL_REJECT', {
       conversationId: incomingSignal.conversationId ?? undefined,
+      groupParticipants: incomingSignal.groupParticipants,
     });
     cleanup();
   }, [cleanup, incomingSignal, sendSignal]);
 
   const acceptIncoming = useCallback(async () => {
-    if (!incomingSignal) return;
+    if (!incomingSignal || !currentUserId) return;
     const callId = incomingSignal.callId;
     const peerUserId = incomingSignal.fromUserId;
     const offerMediaType: CallMediaType = hasVideoInSdp(pendingOfferRef.current?.sdp) ? 'video' : incomingMediaType;
 
     setErrorMessage(null);
-    setActiveCall({
+    const nextCall: ActiveCall = {
       callId,
       peerUserId,
       groupConversationId: incomingSignal.conversationId ?? undefined,
@@ -524,7 +810,15 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       peerAvatarUrl: incomingSignal.conversationAvatarUrl ?? undefined,
       direction: 'incoming',
       mediaType: offerMediaType,
-    });
+    };
+    activeCallRef.current = nextCall;
+    setActiveCall(nextCall);
+    if (incomingSignal.conversationId) {
+      connectedGroupParticipantIdsRef.current = new Set([currentUserId, peerUserId]);
+      updateGroupParticipant(currentUserId, { status: 'joined', joinedAt: Date.now(), leftAt: undefined });
+      updateGroupParticipant(peerUserId, { status: 'joined', joinedAt: Date.now(), leftAt: undefined });
+      refreshGroupParticipantCount();
+    }
     hasRetriedIceRestartRef.current = false;
     setCallStartedAtMs(Date.now());
     setAuthoritativeSessionStatus('ONGOING');
@@ -532,7 +826,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     setStatus('connecting');
     setIncomingSignal(null);
     setIncomingMediaType('audio');
-    sendSignal(peerUserId, callId, 'CALL_ACCEPT', { conversationId: incomingSignal.conversationId ?? undefined });
+    sendSignal(peerUserId, callId, 'CALL_ACCEPT', {
+      conversationId: incomingSignal.conversationId ?? undefined,
+      groupParticipants: incomingSignal.groupParticipants,
+    });
     armConnectTimeout(peerUserId, callId);
     logWebRtc('send CALL_ACCEPT', { callId, peerUserId });
 
@@ -555,6 +852,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         sendSignal(peerUserId, callId, 'CALL_ANSWER', {
           sdp: answer.sdp ?? undefined,
           conversationId: incomingSignal.conversationId ?? undefined,
+          groupParticipants: incomingSignal.groupParticipants,
         });
       }
 
@@ -569,20 +867,31 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     armConnectTimeout,
     cleanup,
     createPeerConnection,
+    currentUserId,
     ensureLocalStream,
     incomingMediaType,
     incomingSignal,
     logWebRtc,
+    refreshGroupParticipantCount,
     sendSignal,
+    updateGroupParticipant,
   ]);
 
   const endCall = useCallback(() => {
     if (activeCall) {
-      const endType: CallSignalType = status === 'in_call' ? 'CALL_END' : 'CALL_CANCEL';
+      const hasJoinedGroupCall =
+        Boolean(activeCall.groupConversationId) &&
+        (activeCall.direction === 'incoming' ||
+          connectedGroupParticipantIdsRef.current.size > 1 ||
+          authoritativeSessionStatus === 'ONGOING');
+      const endType: CallSignalType = status === 'in_call' || hasJoinedGroupCall ? 'CALL_END' : 'CALL_CANCEL';
+      const durationSec =
+        endType === 'CALL_END' ? calculateCallDurationSeconds(callStartedAtMs) : undefined;
       const receivers = activeCall.participantIds?.length ? activeCall.participantIds : [activeCall.peerUserId];
       receivers.forEach((receiverId) => {
         sendSignal(receiverId, activeCall.callId, endType, {
           conversationId: activeCall.groupConversationId,
+          durationSec,
         });
       });
     } else if (incomingSignal) {
@@ -592,7 +901,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     }
     setStatus('ended');
     cleanup(true);
-  }, [activeCall, cleanup, incomingSignal, sendSignal, status]);
+  }, [activeCall, authoritativeSessionStatus, callStartedAtMs, cleanup, incomingSignal, sendSignal, status]);
 
   const toggleMute = useCallback(() => {
     const stream = localStreamRef.current;
@@ -630,6 +939,19 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           if (status === 'idle' || status === 'ended') {
             setIncomingSignal(signal);
             setIncomingMediaType(signal.mediaType === 'video' ? 'video' : 'audio');
+            if (signal.conversationId) {
+              setGroupCallParticipants(
+                buildGroupParticipants(
+                  signal.groupParticipants,
+                  signal.fromUserId,
+                  signal.fromUsername,
+                  signal.groupParticipants?.find((participant) => participant.userId === signal.fromUserId)?.avatar,
+                  'ringing',
+                ),
+              );
+            } else {
+              setGroupCallParticipants([]);
+            }
             applyAuthoritativeSnapshot({
               status: signal.sessionStatus,
               answeredAt: signal.sessionAnsweredAt,
@@ -637,11 +959,24 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
             });
             setStatus('ringing');
           } else {
-            sendSignal(signal.fromUserId, signal.callId, 'CALL_REJECT');
+            sendSignal(signal.fromUserId, signal.callId, 'CALL_REJECT', {
+              conversationId: signal.conversationId ?? undefined,
+            });
           }
           break;
         case 'CALL_CANCEL':
           if (incomingSignal?.callId === signal.callId || matchesByCallId) {
+            if (matchesByCallId && activeCall?.groupConversationId && activeCall.direction === 'outgoing') {
+              settledGroupParticipantIdsRef.current.add(signal.fromUserId);
+              closePeerConnection(signal.fromUserId);
+              removeGroupParticipant(signal.fromUserId);
+              updateGroupParticipant(signal.fromUserId, { status: 'missed', leftAt: Date.now() });
+              broadcastGroupParticipantUpdate(activeCall, signal.fromUserId, 'missed', signal.fromUserId);
+              if (finishGroupCallIfAllReceiversSettled(activeCall, signal.fromUserId)) {
+                break;
+              }
+              break;
+            }
             if (matchesByCallId && status === 'in_call') {
               break;
             }
@@ -656,6 +991,17 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
         case 'CALL_REJECT':
           if (incomingSignal?.callId === signal.callId || matchesByCallId) {
+            if (matchesByCallId && activeCall?.groupConversationId && activeCall.direction === 'outgoing') {
+              settledGroupParticipantIdsRef.current.add(signal.fromUserId);
+              closePeerConnection(signal.fromUserId);
+              removeGroupParticipant(signal.fromUserId);
+              updateGroupParticipant(signal.fromUserId, { status: 'rejected', leftAt: Date.now() });
+              broadcastGroupParticipantUpdate(activeCall, signal.fromUserId, 'rejected', signal.fromUserId);
+              if (finishGroupCallIfAllReceiversSettled(activeCall, signal.fromUserId)) {
+                break;
+              }
+              break;
+            }
             if (matchesByCallId && status === 'in_call') {
               break;
             }
@@ -670,6 +1016,20 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
         case 'CALL_END':
           if (incomingSignal?.callId === signal.callId || matchesByCallId) {
+            if (matchesByCallId && activeCall?.groupConversationId && activeCall.direction === 'outgoing') {
+              settledGroupParticipantIdsRef.current.add(signal.fromUserId);
+              closePeerConnection(signal.fromUserId);
+              removeGroupParticipant(signal.fromUserId);
+              updateGroupParticipant(signal.fromUserId, { status: 'left', leftAt: Date.now() });
+              if (connectedGroupParticipantIdsRef.current.size > 1) {
+                broadcastGroupParticipantUpdate(activeCall, signal.fromUserId, 'left', signal.fromUserId);
+                break;
+              }
+              sendSignal(signal.fromUserId, signal.callId, 'CALL_END', {
+                conversationId: activeCall.groupConversationId,
+                durationSec: calculateCallDurationSeconds(callStartedAtMs),
+              });
+            }
             applyAuthoritativeSnapshot({
               status: signal.sessionStatus,
               answeredAt: signal.sessionAnsweredAt,
@@ -681,9 +1041,24 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
         case 'CALL_ACCEPT':
           if (matchesByCallId && activeCall?.direction === 'outgoing') {
+            if (activeCall.groupConversationId) {
+              const participant = signal.groupParticipants?.find((item) => item.userId === signal.fromUserId);
+              updateGroupParticipant(signal.fromUserId, {
+                name: participant?.name || signal.fromUsername,
+                avatar: participant?.avatar,
+                status: 'joined',
+                joinedAt: Date.now(),
+                leftAt: undefined,
+              });
+              addGroupParticipant(signal.fromUserId);
+              broadcastGroupParticipantUpdate(activeCall, signal.fromUserId, 'joined', signal.fromUserId);
+            }
             setActiveCall((prev) =>
               prev && prev.callId === signal.callId
-                ? { ...prev, peerDisplayName: prev.peerDisplayName || signal.fromUsername }
+                ? {
+                    ...prev,
+                    peerDisplayName: prev.groupConversationId ? prev.peerDisplayName : prev.peerDisplayName || signal.fromUsername,
+                  }
                 : prev,
             );
             clearCallTimeout();
@@ -694,6 +1069,25 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
             });
             setStatus('connecting');
             armConnectTimeout(signal.fromUserId, signal.callId);
+          }
+          break;
+        case 'CALL_PARTICIPANT_UPDATE':
+          if (
+            (matchesByCallId || incomingSignal?.callId === signal.callId) &&
+            (activeCall?.groupConversationId || incomingSignal?.conversationId) &&
+            signal.participantUserId &&
+            signal.participantStatus
+          ) {
+            updateGroupParticipant(signal.participantUserId, {
+              status: signal.participantStatus,
+              joinedAt: signal.participantStatus === 'joined' ? Date.now() : undefined,
+              leftAt:
+                signal.participantStatus === 'left' ||
+                signal.participantStatus === 'rejected' ||
+                signal.participantStatus === 'missed'
+                  ? Date.now()
+                  : undefined,
+            });
           }
           break;
         case 'CALL_OFFER':
@@ -729,9 +1123,23 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           if (!matchesByCallId || !signal.sdp || !pc) break;
           setActiveCall((prev) =>
             prev && prev.callId === signal.callId
-              ? { ...prev, peerDisplayName: prev.peerDisplayName || signal.fromUsername }
+              ? {
+                  ...prev,
+                  peerDisplayName: prev.groupConversationId ? prev.peerDisplayName : prev.peerDisplayName || signal.fromUsername,
+                }
               : prev,
           );
+          if (activeCall?.groupConversationId) {
+            const participant = signal.groupParticipants?.find((item) => item.userId === signal.fromUserId);
+            updateGroupParticipant(signal.fromUserId, {
+              name: participant?.name || signal.fromUsername,
+              avatar: participant?.avatar,
+              status: 'joined',
+              joinedAt: Date.now(),
+              leftAt: undefined,
+            });
+            addGroupParticipant(signal.fromUserId);
+          }
           clearCallTimeout();
           applyAuthoritativeSnapshot({
             status: signal.sessionStatus,
@@ -777,17 +1185,25 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     },
     [
       activeCall,
+      addGroupParticipant,
       applyAuthoritativeSnapshot,
       applyPendingIce,
+      broadcastGroupParticipantUpdate,
+      buildGroupParticipants,
       cleanup,
       clearCallTimeout,
+      closePeerConnection,
       currentUserId,
+      finishGroupCallIfAllReceiversSettled,
       incomingSignal,
+      callStartedAtMs,
       logWebRtc,
       armConnectTimeout,
+      removeGroupParticipant,
       sendSignal,
       status,
       toEpochMs,
+      updateGroupParticipant,
     ],
   );
 
@@ -811,6 +1227,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       isCameraEnabled,
       localStream,
       remoteStream,
+      remoteStreams,
+      groupCallParticipants,
       callStartedAtMs,
       authoritativeSessionStatus,
       authoritativeDurationSec,
@@ -826,6 +1244,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       activePeerUserId: activeCall?.peerUserId ?? null,
       activePeerDisplayName: activeCall?.peerDisplayName ?? null,
       activePeerAvatarUrl: activeCall?.peerAvatarUrl ?? null,
+      activeCallDirection: activeCall?.direction ?? null,
+      activeGroupParticipantCount,
       hasActiveCall: status === 'calling' || status === 'connecting' || status === 'in_call',
       isRinging: status === 'ringing',
       startCall,
@@ -846,6 +1266,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       activeCall?.peerAvatarUrl,
       activeCall?.peerDisplayName,
       activeCall?.peerUserId,
+      activeCall?.direction,
+      activeGroupParticipantCount,
+      groupCallParticipants,
       endCall,
       errorMessage,
       handleIncomingSignal,
@@ -860,6 +1283,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       localStream,
       rejectIncoming,
       remoteStream,
+      remoteStreams,
       callStartedAtMs,
       authoritativeSessionStatus,
       authoritativeDurationSec,
