@@ -52,4 +52,8 @@ public class GroupCallSession {
     @Builder.Default
     @Column(name = "call_media_type", length = 16)
     private String callMediaType = "audio";
+
+    @Builder.Default
+    @Column(name = "call_log_sent", nullable = false, columnDefinition = "boolean default false")
+    private Boolean callLogSent = false;
 }

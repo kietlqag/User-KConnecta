@@ -546,6 +546,39 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
+    public void sendGroupSystemMessage(UUID senderId, UUID conversationId, String content) {
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new RuntimeException("Sender not found"));
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        LocalDateTime now = LocalDateTime.now();
+        ChatMessage message = ChatMessage.builder()
+                .sender(sender)
+                .receiver(sender)
+                .conversation(conversation)
+                .content(content)
+                .createdAt(now)
+                .delivered(true)
+                .deliveredAt(now)
+                .seen(false)
+                .seenAt(null)
+                .build();
+        message = chatMessageRepository.save(message);
+
+        ChatMessageResponse response = toMessageResponse(message);
+        List<ChatConversationMember> members = chatConversationMemberRepository.findMembersByConversationId(conversation.getId());
+        for (ChatConversationMember member : members) {
+            messagingTemplate.convertAndSendToUser(
+                    member.getUser().getUsername(),
+                    "/queue/messages",
+                    response
+            );
+        }
+    }
+
+    @Override
+    @Transactional
     public GroupCallSessionResponse createGroupCallSession(
             String currentUsername,
             UUID conversationId,
@@ -799,8 +832,7 @@ public class ChatServiceImpl implements ChatService {
     public static CallSessionSnapshotResponse toSnapshot(CallSession session, LocalDateTime now) {
         Integer durationSec = session.getDurationSec();
         if ("ONGOING".equals(session.getStatus()) && session.getAnsweredAt() != null && session.getEndedAt() == null) {
-            durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
-            if (durationSec < 0) durationSec = 0;
+            durationSec = calculateDurationSec(session.getAnsweredAt(), now);
         }
         return new CallSessionSnapshotResponse(
                 session.getCallId(),
@@ -811,6 +843,14 @@ public class ChatServiceImpl implements ChatService {
                 session.getEndedAt(),
                 durationSec
         );
+    }
+
+    private static int calculateDurationSec(LocalDateTime startedAt, LocalDateTime endedAt) {
+        if (startedAt == null || endedAt == null) {
+            return 0;
+        }
+        int durationSec = (int) ChronoUnit.SECONDS.between(startedAt, endedAt);
+        return Math.max(durationSec, 0);
     }
 
     private ChatMessageResponse toMessageResponse(ChatMessage message) {
@@ -932,7 +972,7 @@ public class ChatServiceImpl implements ChatService {
     private GroupCallSessionResponse toGroupCallSessionResponse(GroupCallSession session, LocalDateTime now) {
         Integer durationSec = session.getDurationSec();
         if ("ONGOING".equals(session.getStatus()) && session.getAnsweredAt() != null && durationSec == null) {
-            durationSec = (int) Math.max(0, ChronoUnit.SECONDS.between(session.getAnsweredAt(), now));
+            durationSec = calculateDurationSec(session.getAnsweredAt(), now);
         }
         return new GroupCallSessionResponse(
                 session.getCallId(),

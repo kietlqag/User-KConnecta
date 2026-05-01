@@ -11,9 +11,9 @@ import java.util.UUID;
 @Table(
         name = "chat_messages",
         indexes = {
-                @Index(name = "idx_chat_messages_sender_receiver_created_at", columnList = "sender_id, receiver_id, created_at"),
-                @Index(name = "idx_chat_messages_receiver_sender_created_at", columnList = "receiver_id, sender_id, created_at"),
-                @Index(name = "idx_chat_messages_conversation_created_at", columnList = "conversation_id, created_at")
+                @Index(name = "idx_chat_messages_sender_receiver_created_at", columnList = "sender_id, receiver_id, created_at, id"),
+                @Index(name = "idx_chat_messages_receiver_sender_created_at", columnList = "receiver_id, sender_id, created_at, id"),
+                @Index(name = "idx_chat_messages_conversation_created_at", columnList = "conversation_id, created_at, id")
         }
 )
 @Getter

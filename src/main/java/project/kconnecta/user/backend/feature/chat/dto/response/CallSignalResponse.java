@@ -4,8 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import project.kconnecta.user.backend.feature.chat.dto.CallParticipantInfo;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -26,6 +28,9 @@ public class CallSignalResponse {
     private String candidate;
     private String sdpMid;
     private Integer sdpMLineIndex;
+    private List<CallParticipantInfo> groupParticipants;
+    private UUID participantUserId;
+    private String participantStatus;
     private LocalDateTime createdAt;
     private String sessionStatus;
     private String sessionMediaType;

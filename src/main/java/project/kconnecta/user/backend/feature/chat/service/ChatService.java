@@ -25,6 +25,7 @@ public interface ChatService {
     void sendPrivateMessage(String currentUsername, PrivateMessageRequest request);
     ChatMessageResponse sendGroupMessage(String currentUsername, GroupMessageRequest request);
     void sendSystemMessage(UUID senderId, UUID receiverId, String content);
+    void sendGroupSystemMessage(UUID senderId, UUID conversationId, String content);
     void markMessageDelivered(String currentUsername, UUID messageId);
     void markConversationSeen(String currentUsername, UUID peerUserId);
     ChatMessageResponse updateMessageReaction(String currentUsername, UUID messageId, MessageReactionRequest request);

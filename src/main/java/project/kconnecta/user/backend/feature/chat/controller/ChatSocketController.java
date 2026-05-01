@@ -6,6 +6,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import project.kconnecta.user.backend.feature.chat.dto.request.CallSignalRequest;
+import project.kconnecta.user.backend.feature.chat.dto.CallParticipantInfo;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationSeenRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageDeliveredRequest;
@@ -26,6 +27,10 @@ import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Controller
@@ -104,13 +109,16 @@ public class ChatSocketController {
                 request.getConversationId(),
                 request.getConversationName(),
                 request.getConversationAvatarUrl(),
-                sender.getUsername(),
+                displayName(sender),
                 request.getType(),
                 normalizeMediaType(request.getMediaType()),
                 request.getSdp(),
                 request.getCandidate(),
                 request.getSdpMid(),
                 request.getSdpMLineIndex(),
+                enrichGroupParticipants(request.getGroupParticipants(), sender, receiver),
+                request.getParticipantUserId(),
+                request.getParticipantStatus(),
                 now,
                 snapshot.getStatus(),
                 snapshot.getMediaType(),
@@ -122,6 +130,58 @@ public class ChatSocketController {
 
         messagingTemplate.convertAndSendToUser(receiver.getUsername(), "/queue/call", response);
         messagingTemplate.convertAndSendToUser(sender.getUsername(), "/queue/call", response);
+    }
+
+    private List<CallParticipantInfo> enrichGroupParticipants(List<CallParticipantInfo> participants, User sender, User receiver) {
+        if (participants == null || participants.isEmpty()) {
+            if (sender == null || receiver == null) {
+                return participants;
+            }
+            return List.of(toParticipantInfo(sender), toParticipantInfo(receiver));
+        }
+
+        Map<UUID, CallParticipantInfo> byId = new LinkedHashMap<>();
+        for (CallParticipantInfo participant : participants) {
+            if (participant != null && participant.getUserId() != null) {
+                byId.put(participant.getUserId(), participant);
+            }
+        }
+        if (sender != null) {
+            byId.putIfAbsent(sender.getId(), toParticipantInfo(sender));
+        }
+
+        List<User> users = userRepository.findAllById(byId.keySet());
+        Map<UUID, User> usersById = new LinkedHashMap<>();
+        for (User user : users) {
+            usersById.put(user.getId(), user);
+        }
+
+        List<CallParticipantInfo> enriched = new ArrayList<>();
+        for (Map.Entry<UUID, CallParticipantInfo> entry : byId.entrySet()) {
+            User user = usersById.get(entry.getKey());
+            if (user != null) {
+                enriched.add(toParticipantInfo(user));
+                continue;
+            }
+            CallParticipantInfo original = entry.getValue();
+            enriched.add(new CallParticipantInfo(
+                    original.getUserId(),
+                    original.getName(),
+                    original.getAvatar()
+            ));
+        }
+        return enriched;
+    }
+
+    private CallParticipantInfo toParticipantInfo(User user) {
+        return new CallParticipantInfo(user.getId(), displayName(user), user.getAvatarUrl());
+    }
+
+    private String displayName(User user) {
+        if (user.getFullName() != null && !user.getFullName().isBlank()) {
+            return user.getFullName();
+        }
+        return user.getUsername();
     }
 
     private CallSession persistCallData(CallSignalRequest request, User sender, User receiver, LocalDateTime now) {
@@ -181,8 +241,7 @@ public class ChatSocketController {
             case "CALL_REJECT", "CALL_CANCEL" -> {
                 session.setEndedAt(now);
                 if (session.getAnsweredAt() != null) {
-                    int durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
-                    session.setDurationSec(Math.max(durationSec, 0));
+                    session.setDurationSec(resolveFinalDurationSec(request, session.getAnsweredAt(), now));
                     session.setStatus("COMPLETED");
                 } else {
                     session.setStatus("MISSED");
@@ -191,11 +250,7 @@ public class ChatSocketController {
             case "CALL_END" -> {
                 session.setEndedAt(now);
                 if (session.getAnsweredAt() != null) {
-                    int durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
-                    if (durationSec < 0) {
-                        durationSec = 0;
-                    }
-                    session.setDurationSec(durationSec);
+                    session.setDurationSec(resolveFinalDurationSec(request, session.getAnsweredAt(), now));
                     session.setStatus("COMPLETED");
                 } else {
                     session.setStatus("MISSED");
@@ -255,8 +310,7 @@ public class ChatSocketController {
                     session.setEndedAt(now);
                     session.setStatus(session.getAnsweredAt() == null ? "MISSED" : "COMPLETED");
                     if (session.getAnsweredAt() != null) {
-                        int durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
-                        session.setDurationSec(Math.max(durationSec, 0));
+                        session.setDurationSec(resolveFinalDurationSec(request, session.getAnsweredAt(), now));
                     }
                 }
             }
@@ -264,8 +318,7 @@ public class ChatSocketController {
                 if (session.getCaller() == null || session.getCaller().getId().equals(sender.getId())) {
                     session.setEndedAt(now);
                     if (session.getAnsweredAt() != null) {
-                        int durationSec = (int) ChronoUnit.SECONDS.between(session.getAnsweredAt(), now);
-                        session.setDurationSec(Math.max(durationSec, 0));
+                        session.setDurationSec(resolveFinalDurationSec(request, session.getAnsweredAt(), now));
                         session.setStatus("COMPLETED");
                     } else {
                         session.setStatus("MISSED");
@@ -277,13 +330,45 @@ public class ChatSocketController {
             }
         }
 
-        return groupCallSessionRepository.save(session);
+        session = groupCallSessionRepository.save(session);
+
+        if (("CALL_END".equals(type) || "CALL_CANCEL".equals(type))
+                && isTerminalStatus(session.getStatus())
+                && !Boolean.TRUE.equals(session.getCallLogSent())) {
+            String callLogContent = buildGroupCallLogContent(session);
+            if (callLogContent != null) {
+                chatService.sendGroupSystemMessage(
+                        session.getCaller().getId(),
+                        session.getConversation().getId(),
+                        callLogContent
+                );
+                session.setCallLogSent(true);
+                session = groupCallSessionRepository.save(session);
+            }
+        }
+
+        return session;
+    }
+
+    private int resolveFinalDurationSec(CallSignalRequest request, LocalDateTime answeredAt, LocalDateTime endedAt) {
+        if (request.getDurationSec() != null) {
+            return Math.max(0, request.getDurationSec());
+        }
+        return calculateDurationSec(answeredAt, endedAt);
+    }
+
+    private int calculateDurationSec(LocalDateTime startedAt, LocalDateTime endedAt) {
+        if (startedAt == null || endedAt == null) {
+            return 0;
+        }
+        int durationSec = (int) ChronoUnit.SECONDS.between(startedAt, endedAt);
+        return Math.max(durationSec, 0);
     }
 
     private CallSessionSnapshotResponse toGroupSnapshot(GroupCallSession session, LocalDateTime now) {
         Integer durationSec = session.getDurationSec();
         if ("ONGOING".equals(session.getStatus()) && session.getAnsweredAt() != null && durationSec == null) {
-            durationSec = (int) Math.max(0, ChronoUnit.SECONDS.between(session.getAnsweredAt(), now));
+            durationSec = calculateDurationSec(session.getAnsweredAt(), now);
         }
         return new CallSessionSnapshotResponse(
                 session.getCallId(),
@@ -378,6 +463,39 @@ public class ChatSocketController {
                     + "\",\"label\":\""
                     + label
                     + "\"}";
+        }
+
+        return null;
+    }
+
+    private String buildGroupCallLogContent(GroupCallSession session) {
+        String mediaType = MEDIA_TYPE_VIDEO.equalsIgnoreCase(session.getCallMediaType())
+                ? MEDIA_TYPE_VIDEO
+                : MEDIA_TYPE_AUDIO;
+
+        if ("COMPLETED".equals(session.getStatus())) {
+            int durationSec = session.getDurationSec() == null ? 0 : session.getDurationSec();
+            String label = MEDIA_TYPE_VIDEO.equals(mediaType)
+                    ? "Cu\u1ed9c g\u1ecdi video nh\u00f3m ho\u00e0n th\u00e0nh"
+                    : "Cu\u1ed9c g\u1ecdi tho\u1ea1i nh\u00f3m ho\u00e0n th\u00e0nh";
+            return "__CALL_LOG__:{\"kind\":\"completed\",\"mediaType\":\""
+                    + mediaType
+                    + "\",\"label\":\""
+                    + label
+                    + "\",\"durationSec\":"
+                    + durationSec
+                    + ",\"group\":true}";
+        }
+
+        if ("MISSED".equals(session.getStatus())) {
+            String label = MEDIA_TYPE_VIDEO.equals(mediaType)
+                    ? "\u0110\u00e3 b\u1ecf l\u1ee1 cu\u1ed9c g\u1ecdi video nh\u00f3m"
+                    : "\u0110\u00e3 b\u1ecf l\u1ee1 cu\u1ed9c g\u1ecdi tho\u1ea1i nh\u00f3m";
+            return "__CALL_LOG__:{\"kind\":\"missed\",\"mediaType\":\""
+                    + mediaType
+                    + "\",\"label\":\""
+                    + label
+                    + "\",\"group\":true}";
         }
 
         return null;

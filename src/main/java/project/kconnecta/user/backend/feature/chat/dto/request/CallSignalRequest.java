@@ -2,7 +2,9 @@ package project.kconnecta.user.backend.feature.chat.dto.request;
 
 import lombok.Getter;
 import lombok.Setter;
+import project.kconnecta.user.backend.feature.chat.dto.CallParticipantInfo;
 
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -19,4 +21,8 @@ public class CallSignalRequest {
     private String candidate;
     private String sdpMid;
     private Integer sdpMLineIndex;
+    private Integer durationSec;
+    private List<CallParticipantInfo> groupParticipants;
+    private UUID participantUserId;
+    private String participantStatus;
 }

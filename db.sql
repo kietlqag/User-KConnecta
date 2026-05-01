@@ -96,11 +96,11 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_id ON public.chat_messages(s
 CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver_id ON public.chat_messages(receiver_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON public.chat_messages(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_receiver_created_at
-    ON public.chat_messages(sender_id, receiver_id, created_at DESC);
+    ON public.chat_messages(sender_id, receiver_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver_sender_created_at
-    ON public.chat_messages(receiver_id, sender_id, created_at DESC);
+    ON public.chat_messages(receiver_id, sender_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_created_at
-    ON public.chat_messages(conversation_id, created_at DESC);
+    ON public.chat_messages(conversation_id, created_at DESC, id DESC);
 
 CREATE TABLE IF NOT EXISTS public.chat_pinned_conversations (
     id UUID PRIMARY KEY,
@@ -167,7 +167,8 @@ CREATE TABLE IF NOT EXISTS public.group_call_sessions (
     duration_sec INTEGER,
     status VARCHAR(32) NOT NULL,
     last_signal_type VARCHAR(32),
-    call_media_type VARCHAR(16) NOT NULL DEFAULT 'audio'
+    call_media_type VARCHAR(16) NOT NULL DEFAULT 'audio',
+    call_log_sent BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX IF NOT EXISTS idx_group_call_sessions_conversation_id ON public.group_call_sessions(conversation_id);
