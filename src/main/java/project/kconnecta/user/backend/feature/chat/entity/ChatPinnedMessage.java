@@ -8,13 +8,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(
-        name = "chat_pinned_messages",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_chat_pin_message_owner_peer", columnNames = {"owner_user_id", "peer_user_id"}),
-                @UniqueConstraint(name = "uk_chat_pin_message_owner_conversation", columnNames = {"owner_user_id", "conversation_id"})
-        }
-)
+@Table(name = "chat_pinned_messages")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,7 +36,10 @@ public class ChatPinnedMessage {
     @JoinColumn(name = "message_id", nullable = false)
     private ChatMessage message;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pinned_by_user_id")
+    private User pinnedBy;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 }
-

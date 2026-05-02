@@ -12,6 +12,8 @@ import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRe
 import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupMemberNicknameRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupCallSessionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
@@ -88,6 +90,31 @@ public class ChatController {
             return ResponseEntity.status(401).build();
         }
         return ResponseEntity.ok(chatService.getMyGroupConversations(principal.getName()));
+    }
+
+    @PutMapping("/conversations/{conversationId}")
+    public ResponseEntity<GroupConversationResponse> updateGroupConversation(
+            @PathVariable UUID conversationId,
+            @RequestBody UpdateGroupConversationRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.updateGroupConversation(principal.getName(), conversationId, request));
+    }
+
+    @PutMapping("/conversations/{conversationId}/members/{memberUserId}/nickname")
+    public ResponseEntity<GroupConversationResponse> updateGroupMemberNickname(
+            @PathVariable UUID conversationId,
+            @PathVariable UUID memberUserId,
+            @RequestBody(required = false) UpdateGroupMemberNicknameRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.updateGroupMemberNickname(principal.getName(), conversationId, memberUserId, request));
     }
 
     @PostMapping("/conversations/{conversationId}/members")

@@ -125,17 +125,30 @@ CREATE TABLE IF NOT EXISTS public.chat_pinned_messages (
     peer_user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
     conversation_id UUID REFERENCES public.chat_conversations(id) ON DELETE CASCADE,
     message_id UUID NOT NULL REFERENCES public.chat_messages(id) ON DELETE CASCADE,
+    pinned_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS uk_chat_pin_message_owner_peer
-    ON public.chat_pinned_messages(owner_user_id, peer_user_id)
+ALTER TABLE public.chat_pinned_messages
+    ADD COLUMN IF NOT EXISTS pinned_by_user_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
+DROP INDEX IF EXISTS public.uk_chat_pin_message_owner_peer;
+DROP INDEX IF EXISTS public.uk_chat_pin_message_owner_conversation;
+CREATE UNIQUE INDEX IF NOT EXISTS uk_chat_pin_message_owner_peer_message
+    ON public.chat_pinned_messages(owner_user_id, peer_user_id, message_id)
     WHERE peer_user_id IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS uk_chat_pin_message_owner_conversation
-    ON public.chat_pinned_messages(owner_user_id, conversation_id)
+CREATE UNIQUE INDEX IF NOT EXISTS uk_chat_pin_message_owner_conversation_message
+    ON public.chat_pinned_messages(owner_user_id, conversation_id, message_id)
     WHERE conversation_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_chat_pin_message_owner_user_id
     ON public.chat_pinned_messages(owner_user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_pin_message_message_id
+    ON public.chat_pinned_messages(message_id);
+
+ALTER TABLE public.chat_conversations
+    ADD COLUMN IF NOT EXISTS theme_color VARCHAR(32);
+
+ALTER TABLE public.chat_conversation_members
+    ADD COLUMN IF NOT EXISTS nickname VARCHAR(120);
 
 CREATE TABLE IF NOT EXISTS public.call_sessions (
     id UUID PRIMARY KEY,

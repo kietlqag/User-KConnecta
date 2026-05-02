@@ -17,8 +17,8 @@ public class GroupConversationResponse {
     private UUID id;
     private String name;
     private String avatarUrl;
+    private String themeColor;
     private LocalDateTime createdAt;
     private UUID createdBy;
     private List<GroupConversationMemberResponse> members;
 }
-

@@ -26,6 +26,9 @@ public class ChatConversation {
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
+    @Column(name = "theme_color", length = 32)
+    private String themeColor;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
@@ -33,4 +36,3 @@ public class ChatConversation {
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 }
-

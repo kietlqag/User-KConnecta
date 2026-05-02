@@ -9,6 +9,8 @@ import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupCallSe
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PinnedMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupMemberNicknameRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
@@ -35,6 +37,8 @@ public interface ChatService {
     ChatHistoryPageResponse getChatHistory(UUID userId1, UUID userId2, LocalDateTime beforeCreatedAt, Integer limit);
     ChatHistoryPageResponse getGroupChatHistory(String currentUsername, UUID conversationId, LocalDateTime beforeCreatedAt, Integer limit);
     GroupConversationResponse createGroupConversation(String currentUsername, CreateGroupConversationRequest request);
+    GroupConversationResponse updateGroupConversation(String currentUsername, UUID conversationId, UpdateGroupConversationRequest request);
+    GroupConversationResponse updateGroupMemberNickname(String currentUsername, UUID conversationId, UUID memberUserId, UpdateGroupMemberNicknameRequest request);
     List<GroupConversationResponse> getMyGroupConversations(String currentUsername);
     GroupConversationResponse addGroupMembers(String currentUsername, UUID conversationId, AddGroupMembersRequest request);
     GroupCallSessionResponse createGroupCallSession(String currentUsername, UUID conversationId, CreateGroupCallSessionRequest request);

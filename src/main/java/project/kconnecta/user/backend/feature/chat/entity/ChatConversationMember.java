@@ -35,5 +35,7 @@ public class ChatConversationMember {
 
     @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt;
-}
 
+    @Column(name = "nickname", length = 120)
+    private String nickname;
+}

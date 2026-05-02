@@ -14,6 +14,8 @@ import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConver
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupCallSessionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PinnedMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupMemberNicknameRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
@@ -316,8 +318,11 @@ public class ChatServiceImpl implements ChatService {
             chatMessageReactionRepository.save(reaction);
         }
 
+        List<ChatPinnedMessage> removedPins = chatPinnedMessageRepository.findByMessageIdWithTargets(messageId);
+        chatPinnedMessageRepository.deleteByMessageId(messageId);
         ChatMessageResponse updated = toMessageResponse(message);
         broadcastMessageUpdate(message, updated);
+        broadcastPinnedMessageRemoval(removedPins);
         return updated;
     }
 
@@ -471,6 +476,72 @@ public class ChatServiceImpl implements ChatService {
         }
         chatConversationMemberRepository.saveAll(members);
         return toGroupConversationResponse(conversation, members);
+    }
+
+    @Override
+    @Transactional
+    public GroupConversationResponse updateGroupConversation(String currentUsername, UUID conversationId, UpdateGroupConversationRequest request) {
+        if (conversationId == null) {
+            throw new RuntimeException("Conversation ID is required");
+        }
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, actor.getId())) {
+            throw new RuntimeException("Forbidden");
+        }
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        if (request != null) {
+            if (request.getName() != null) {
+                String name = request.getName().trim();
+                if (!name.isBlank()) {
+                    conversation.setName(name.length() > 255 ? name.substring(0, 255) : name);
+                }
+            }
+            if (request.getAvatarUrl() != null) {
+                String avatarUrl = request.getAvatarUrl().trim();
+                conversation.setAvatarUrl(avatarUrl.isBlank() ? null : avatarUrl);
+            }
+            if (request.getThemeColor() != null) {
+                String themeColor = request.getThemeColor().trim();
+                conversation.setThemeColor(themeColor.isBlank() ? null : themeColor.substring(0, Math.min(themeColor.length(), 32)));
+            }
+        }
+
+        ChatConversation saved = chatConversationRepository.save(conversation);
+        return toGroupConversationResponse(saved, chatConversationMemberRepository.findMembersByConversationId(conversationId));
+    }
+
+    @Override
+    @Transactional
+    public GroupConversationResponse updateGroupMemberNickname(
+            String currentUsername,
+            UUID conversationId,
+            UUID memberUserId,
+            UpdateGroupMemberNicknameRequest request
+    ) {
+        if (conversationId == null || memberUserId == null) {
+            throw new RuntimeException("Conversation ID and member ID are required");
+        }
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, actor.getId())) {
+            throw new RuntimeException("Forbidden");
+        }
+        ChatConversationMember target = chatConversationMemberRepository
+                .findByConversationIdAndUserId(conversationId, memberUserId)
+                .orElseThrow(() -> new RuntimeException("Member not found"));
+
+        String nickname = request == null ? null : request.getNickname();
+        if (nickname == null || nickname.trim().isBlank()) {
+            target.setNickname(null);
+        } else {
+            String normalized = nickname.trim();
+            target.setNickname(normalized.length() > 120 ? normalized.substring(0, 120) : normalized);
+        }
+        chatConversationMemberRepository.save(target);
+        return toGroupConversationResponse(target.getConversation(), chatConversationMemberRepository.findMembersByConversationId(conversationId));
     }
 
     @Override
@@ -702,7 +773,7 @@ public class ChatServiceImpl implements ChatService {
     @Override
     @Transactional
     public PinnedMessageResponse setPinnedMessage(String currentUsername, PinnedMessageRequest request) {
-        User owner = userRepository.findByUsername(currentUsername)
+        User actor = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         if (request == null) {
             throw new RuntimeException("Request is required");
@@ -715,25 +786,15 @@ public class ChatServiceImpl implements ChatService {
         if ((peerUserId == null && conversationId == null) || (peerUserId != null && conversationId != null)) {
             throw new RuntimeException("Exactly one target is required");
         }
-
-        if (!pinned) {
-            if (peerUserId != null) {
-                chatPinnedMessageRepository.findByOwnerAndPeer(owner.getId(), peerUserId)
-                        .ifPresent(chatPinnedMessageRepository::delete);
-                return new PinnedMessageResponse(peerUserId, null, null, null, false);
-            }
-            chatPinnedMessageRepository.findByOwnerAndConversation(owner.getId(), conversationId)
-                    .ifPresent(chatPinnedMessageRepository::delete);
-            return new PinnedMessageResponse(null, conversationId, null, null, false);
-        }
-
         if (messageId == null) {
             throw new RuntimeException("Message ID is required");
         }
 
         ChatMessage message = chatMessageRepository.findByIdWithUsers(messageId)
                 .orElseThrow(() -> new RuntimeException("Message not found"));
-        String preview = message.getDeleted() != null && message.getDeleted() ? "Tin nhắn đã được gỡ" : message.getContent();
+        if (Boolean.TRUE.equals(message.getDeleted())) {
+            throw new RuntimeException("Cannot pin deleted message");
+        }
 
         if (peerUserId != null) {
             if (message.getConversation() != null) {
@@ -742,44 +803,87 @@ public class ChatServiceImpl implements ChatService {
             UUID senderId = message.getSender().getId();
             UUID receiverId = message.getReceiver() == null ? null : message.getReceiver().getId();
             boolean isValidPair =
-                    (senderId.equals(owner.getId()) && peerUserId.equals(receiverId))
-                            || (senderId.equals(peerUserId) && owner.getId().equals(receiverId));
+                    (senderId.equals(actor.getId()) && peerUserId.equals(receiverId))
+                            || (senderId.equals(peerUserId) && actor.getId().equals(receiverId));
             if (!isValidPair) {
                 throw new RuntimeException("Message does not belong to target chat");
             }
             User peer = userRepository.findById(peerUserId)
                     .orElseThrow(() -> new RuntimeException("Peer not found"));
-            ChatPinnedMessage row = chatPinnedMessageRepository.findByOwnerAndPeer(owner.getId(), peerUserId)
-                    .orElse(ChatPinnedMessage.builder()
-                            .ownerUser(owner)
-                            .peerUser(peer)
-                            .conversation(null)
-                            .createdAt(LocalDateTime.now())
-                            .build());
-            row.setMessage(message);
-            chatPinnedMessageRepository.save(row);
-            return new PinnedMessageResponse(peerUserId, null, messageId, preview, true);
+            List<User> owners = List.of(actor, peer);
+            LocalDateTime now = LocalDateTime.now();
+            if (pinned) {
+                for (User owner : owners) {
+                    User ownerPeer = owner.getId().equals(actor.getId()) ? peer : actor;
+                    ChatPinnedMessage row = chatPinnedMessageRepository
+                            .findByOwnerAndPeerAndMessage(owner.getId(), ownerPeer.getId(), messageId)
+                            .orElse(ChatPinnedMessage.builder()
+                                    .ownerUser(owner)
+                                    .peerUser(ownerPeer)
+                                    .conversation(null)
+                                    .createdAt(now)
+                                    .build());
+                    row.setMessage(message);
+                    row.setPinnedBy(actor);
+                    chatPinnedMessageRepository.save(row);
+                }
+            } else {
+                for (User owner : owners) {
+                    UUID ownerPeerId = owner.getId().equals(actor.getId()) ? peer.getId() : actor.getId();
+                    chatPinnedMessageRepository.findByOwnerAndPeerAndMessage(owner.getId(), ownerPeerId, messageId)
+                            .ifPresent(chatPinnedMessageRepository::delete);
+                }
+            }
+            for (User owner : owners) {
+                UUID ownerPeerId = owner.getId().equals(actor.getId()) ? peer.getId() : actor.getId();
+                PinnedMessageResponse ownerResponse = toPinnedMessageResponse(null, ownerPeerId, null, message, actor, now, pinned);
+                messagingTemplate.convertAndSendToUser(
+                        owner.getUsername(),
+                        "/queue/pinned-messages",
+                        ownerResponse
+                );
+            }
+            PinnedMessageResponse response = toPinnedMessageResponse(null, peerUserId, null, message, actor, now, pinned);
+            return response;
         }
 
         if (message.getConversation() == null || !message.getConversation().getId().equals(conversationId)) {
             throw new RuntimeException("Message does not belong to target conversation");
         }
-        boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, owner.getId());
+        boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, actor.getId());
         if (!isMember) {
             throw new RuntimeException("Forbidden");
         }
         ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
-        ChatPinnedMessage row = chatPinnedMessageRepository.findByOwnerAndConversation(owner.getId(), conversationId)
-                .orElse(ChatPinnedMessage.builder()
-                        .ownerUser(owner)
-                        .peerUser(null)
-                        .conversation(conversation)
-                        .createdAt(LocalDateTime.now())
-                        .build());
-        row.setMessage(message);
-        chatPinnedMessageRepository.save(row);
-        return new PinnedMessageResponse(null, conversationId, messageId, preview, true);
+        List<User> owners = chatConversationMemberRepository.findMembersByConversationId(conversationId)
+                .stream()
+                .map(ChatConversationMember::getUser)
+                .toList();
+        LocalDateTime now = LocalDateTime.now();
+        if (pinned) {
+            for (User owner : owners) {
+                ChatPinnedMessage row = chatPinnedMessageRepository
+                        .findByOwnerAndConversationAndMessage(owner.getId(), conversationId, messageId)
+                        .orElse(ChatPinnedMessage.builder()
+                                .ownerUser(owner)
+                                .peerUser(null)
+                                .conversation(conversation)
+                                .createdAt(now)
+                                .build());
+                row.setMessage(message);
+                row.setPinnedBy(actor);
+                chatPinnedMessageRepository.save(row);
+            }
+        } else {
+            for (User owner : owners) {
+                chatPinnedMessageRepository.findByOwnerAndConversationAndMessage(owner.getId(), conversationId, messageId)
+                        .ifPresent(chatPinnedMessageRepository::delete);
+            }
+        }
+        PinnedMessageResponse response = toPinnedMessageResponse(null, null, conversationId, message, actor, now, pinned);
+        broadcastPinnedMessageChange(owners, response);
+        return response;
     }
 
     @Override
@@ -790,19 +894,67 @@ public class ChatServiceImpl implements ChatService {
         List<ChatPinnedMessage> rows = chatPinnedMessageRepository.findByOwnerUserId(owner.getId());
         List<PinnedMessageResponse> result = new ArrayList<>();
         for (ChatPinnedMessage row : rows) {
-            ChatMessage m = row.getMessage();
-            String preview = (m.getDeleted() != null && m.getDeleted()) ? "Tin nhắn đã được gỡ" : m.getContent();
-            result.add(new PinnedMessageResponse(
-                    row.getPeerUser() == null ? null : row.getPeerUser().getId(),
-                    row.getConversation() == null ? null : row.getConversation().getId(),
-                    m.getId(),
-                    preview,
-                    true
-            ));
+            result.add(toPinnedMessageResponse(row, null, null, null, null, null, true));
         }
         return result;
     }
 
+    private PinnedMessageResponse toPinnedMessageResponse(
+            ChatPinnedMessage row,
+            UUID peerUserId,
+            UUID conversationId,
+            ChatMessage message,
+            User pinnedBy,
+            LocalDateTime pinnedAt,
+            Boolean pinned
+    ) {
+        ChatMessage m = row == null ? message : row.getMessage();
+        User pinActor = row == null ? pinnedBy : (row.getPinnedBy() == null ? row.getOwnerUser() : row.getPinnedBy());
+        LocalDateTime createdAt = row == null ? pinnedAt : row.getCreatedAt();
+        UUID resolvedPeerUserId = row == null
+                ? peerUserId
+                : row.getPeerUser() == null ? null : row.getPeerUser().getId();
+        UUID resolvedConversationId = row == null
+                ? conversationId
+                : row.getConversation() == null ? null : row.getConversation().getId();
+        return new PinnedMessageResponse(
+                row == null ? null : row.getId(),
+                resolvedPeerUserId,
+                resolvedConversationId,
+                m == null ? null : m.getId(),
+                pinActor == null ? null : pinActor.getId(),
+                createdAt,
+                m == null ? null : m.getSender().getId(),
+                m == null ? null : (m.getSender().getFullName() == null || m.getSender().getFullName().isBlank()
+                        ? m.getSender().getUsername()
+                        : m.getSender().getFullName()),
+                m == null ? null : m.getSender().getAvatarUrl(),
+                m == null ? null : m.getContent(),
+                m == null ? null : m.getCreatedAt(),
+                pinned
+        );
+    }
+
+    private void broadcastPinnedMessageChange(List<User> recipients, PinnedMessageResponse response) {
+        for (User recipient : recipients) {
+            messagingTemplate.convertAndSendToUser(
+                    recipient.getUsername(),
+                    "/queue/pinned-messages",
+                    response
+            );
+        }
+    }
+
+    private void broadcastPinnedMessageRemoval(List<ChatPinnedMessage> removedPins) {
+        for (ChatPinnedMessage row : removedPins) {
+            PinnedMessageResponse response = toPinnedMessageResponse(row, null, null, null, null, null, false);
+            messagingTemplate.convertAndSendToUser(
+                    row.getOwnerUser().getUsername(),
+                    "/queue/pinned-messages",
+                    response
+            );
+        }
+    }
     private int normalizeHistoryLimit(Integer limit) {
         if (limit == null) return DEFAULT_HISTORY_LIMIT;
         if (limit < MIN_HISTORY_LIMIT) return MIN_HISTORY_LIMIT;
@@ -955,7 +1107,8 @@ public class ChatServiceImpl implements ChatService {
                         member.getUser().getId(),
                         member.getUser().getUsername(),
                         member.getUser().getFullName(),
-                        member.getUser().getAvatarUrl()
+                        member.getUser().getAvatarUrl(),
+                        member.getNickname()
                 ))
                 .toList();
 
@@ -963,6 +1116,7 @@ public class ChatServiceImpl implements ChatService {
                 conversation.getId(),
                 conversation.getName(),
                 conversation.getAvatarUrl(),
+                conversation.getThemeColor(),
                 conversation.getCreatedAt(),
                 conversation.getCreatedBy().getId(),
                 memberResponses
