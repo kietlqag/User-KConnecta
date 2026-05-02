@@ -182,9 +182,10 @@ export function Post({
       comments: commentCount,
       shares: shareCount,
       image: mediaUrl,
+      media: mediaUrl ? { type: mediaType, url: mediaUrl } as const : undefined,
       reactionCounts,
     }),
-    [author.avatar, author.name, commentCount, content, id, likeCount, mediaUrl, reactionCounts, shareCount, timestamp],
+    [author.avatar, author.name, commentCount, content, id, likeCount, mediaUrl, mediaType, reactionCounts, shareCount, timestamp],
   );
 
   const handleReactionChange = async (reaction: ReactionOption | null) => {

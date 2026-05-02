@@ -139,6 +139,11 @@ export const postService = {
     if (currentUserId) params.append('currentUserId', currentUserId);
     return api.get<PostResponse[]>(`/posts?${params.toString()}`);
   },
+  getGroupFeedPosts: (currentUserId?: string) => {
+    const params = new URLSearchParams({ isGroupFeed: 'true' });
+    if (currentUserId) params.append('currentUserId', currentUserId);
+    return api.get<PostResponse[]>(`/posts?${params.toString()}`);
+  },
   createPost: (data: CreatePostPayload) => api.post<PostResponse>('/posts', data),
   uploadPostImage: (file: File) => {
     const formData = new FormData();

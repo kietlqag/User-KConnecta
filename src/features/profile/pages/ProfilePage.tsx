@@ -14,70 +14,13 @@ import {
   ProfilePosts,
   ProfileTabs,
 } from '../components';
-
-interface ProfileFeedPost {
-  id: string;
-  userName: string;
-  authorId: string;
-  userAvatar: string;
-  timestamp: string;
-  content: string;
-  image?: string;
-  likes: number;
-  comments: number;
-  shares: number;
-  isLiked?: boolean;
-  currentUserReactionType?: ReactionType | null;
-}
+import { mapApiPost, type FeedPost } from '@/utils/postUtils';
 
 const DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300';
 
 const DEFAULT_COVER =
   'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200';
-
-function normalizeId(value?: string | null) {
-  return value?.trim().toLowerCase() ?? '';
-}
-
-function formatPostTimestamp(dateString?: string | null) {
-  if (!dateString) {
-    return '';
-  }
-
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  return new Intl.DateTimeFormat('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(date);
-}
-
-function mapPostToProfileFeed(post: PostResponse): ProfileFeedPost {
-  const firstImage = (post.media ?? []).find((item) => item.mediaType === 'IMAGE');
-  const fallbackAvatar = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(post.authorFullName || 'User')}`;
-
-  return {
-    id: post.id,
-    userName: post.authorFullName,
-    authorId: post.authorId,
-    userAvatar: post.authorAvatarUrl || fallbackAvatar,
-    timestamp: formatPostTimestamp(post.publishedAt || post.createdAt),
-    content: post.content,
-    image: firstImage?.mediaUrl || firstImage?.fileUrl,
-    likes: post.reactionCount,
-    comments: post.commentCount,
-    shares: post.shareCount,
-    isLiked: !!post.currentUserReactionType,
-    currentUserReactionType: post.currentUserReactionType,
-  };
-}
 
 export function ProfilePage() {
   const { userId: routeUserId } = useParams();
@@ -94,7 +37,7 @@ export function ProfilePage() {
   const isOwnProfile = currentUser?.id === userId;
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [profile, setProfile] = React.useState<AuthUser | null>(null);
-  const [posts, setPosts] = React.useState<ProfileFeedPost[]>([]);
+  const [posts, setPosts] = React.useState<FeedPost[]>([]);
   const [friends, setFriends] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -117,7 +60,7 @@ export function ProfilePage() {
             const rightTime = new Date(right.publishedAt || right.createdAt).getTime();
             return rightTime - leftTime;
           })
-          .map((post) => mapPostToProfileFeed(post));
+          .map((post) => mapApiPost(post));
 
         setPosts(profilePosts);
       } catch (error) {

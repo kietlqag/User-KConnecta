@@ -6,6 +6,7 @@ export interface FeedPost {
   timestamp: string;
   content: string;
   image?: string;
+  media?: { type: 'image' | 'video'; url: string };
   likes: number;
   comments: number;
   shares: number;
@@ -30,7 +31,9 @@ export function formatPostTimestamp(dateString?: string | null): string {
 }
 
 export function mapApiPost(item: PostResponse): FeedPost {
+  const firstMedia = (item.media ?? [])[0];
   const firstImage = (item.media ?? []).find((m) => m.mediaType === 'IMAGE');
+  
   return {
     id: item.id,
     author: {
@@ -43,6 +46,10 @@ export function mapApiPost(item: PostResponse): FeedPost {
     timestamp: formatPostTimestamp(item.publishedAt || item.createdAt),
     content: item.content || '',
     image: firstImage?.mediaUrl || firstImage?.fileUrl,
+    media: firstMedia ? {
+      type: firstMedia.mediaType === 'VIDEO' ? 'video' : 'image',
+      url: firstMedia.mediaUrl || firstMedia.fileUrl || ''
+    } : undefined,
     likes: item.reactionCount,
     comments: item.commentCount,
     shares: item.shareCount,

@@ -1,10 +1,10 @@
-import React, { useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useRef, useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../../home/components/Header';
 import { GroupsLeftSidebar, GroupFeed, InviteFriendsModal } from '../components';
-import { PenTool, Edit3, MoreHorizontal, Lock, Users, Smile, Image as ImageIcon, Briefcase, EyeOff, X, Globe2 } from 'lucide-react';
-import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers } from '../hooks/useGroups';
+import { PenTool, Edit3, MoreHorizontal, Lock, Users, Smile, Image as ImageIcon, Briefcase, EyeOff, X, Globe2, Search, Shield, UserMinus, AlertTriangle } from 'lucide-react';
+import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember } from '../hooks/useGroups';
 import { groupService } from '@/services/groupService';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
@@ -58,6 +58,20 @@ export const GroupDetailPage = () => {
 
   const [coverError, setCoverError] = useState<string | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [removingMember, setRemovingMember] = useState<{ userId: string; fullName: string } | null>(null);
+  const navigate = useNavigate();
+  const removeMemberMutation = useRemoveMember();
+  const isAdmin = group?.role === 'ADMIN';
+
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return members;
+    const q = memberSearch.toLowerCase();
+    return members.filter(m => m.fullName.toLowerCase().includes(q));
+  }, [members, memberSearch]);
+
+  const adminMembers = useMemo(() => filteredMembers.filter(m => m.role === 'ADMIN'), [filteredMembers]);
+  const regularMembers = useMemo(() => filteredMembers.filter(m => m.role !== 'ADMIN'), [filteredMembers]);
 
   const uploadCoverMutation = useMutation({
     mutationFn: (file: File) => groupService.updateCoverPhoto(groupId!, file),
@@ -302,9 +316,103 @@ export const GroupDetailPage = () => {
           
           {/* Main Layout Area */}
           <div className="max-w-[1050px] mx-auto px-4 py-4 lg:py-6 flex flex-col md:flex-row gap-6">
-             {/* Left Column (Posts Flow) */}
+             {/* Left Column (Posts Flow / Members Tab) */}
              <div className="flex-1 min-w-0">
-               {groupId && <GroupFeed groupId={groupId} />}
+               {activeTab === 'Thành viên' ? (
+                 /* ===== Members Management Panel ===== */
+                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                   {/* Header */}
+                   <div className="p-4 border-b border-gray-200">
+                     <div className="flex items-center justify-between mb-4">
+                       <h2 className="text-xl font-bold text-gray-900">Thành viên · {members.length}</h2>
+                       {isAdmin && (
+                         <button
+                           onClick={() => setIsInviteModalOpen(true)}
+                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                         >
+                           <span className="text-lg leading-none">+</span> Mời thành viên
+                         </button>
+                       )}
+                     </div>
+                     {/* Search */}
+                     <div className="relative">
+                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                       <input
+                         type="text"
+                         placeholder="Tìm kiếm thành viên"
+                         value={memberSearch}
+                         onChange={(e) => setMemberSearch(e.target.value)}
+                         className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                       />
+                     </div>
+                   </div>
+
+                   {/* Admin section */}
+                   {adminMembers.length > 0 && (
+                     <div className="p-4 border-b border-gray-100">
+                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Quản trị viên · {adminMembers.length}</h3>
+                       <div className="space-y-1">
+                         {adminMembers.map(member => (
+                           <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors group">
+                             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/profile/${member.userId}`)}>
+                               <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} className="w-12 h-12" />
+                               <div>
+                                 <div className="font-semibold text-gray-900 text-[15px] group-hover:underline">{member.fullName}</div>
+                                 <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                                   <Shield className="w-3 h-3" /> Quản trị viên
+                                 </div>
+                               </div>
+                             </div>
+                             <button className="p-2 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+                               <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                             </button>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Regular members section */}
+                   <div className="p-4">
+                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Thành viên · {regularMembers.length}</h3>
+                     {regularMembers.length === 0 ? (
+                       <p className="text-gray-400 text-sm py-4 text-center">
+                         {memberSearch ? 'Không tìm thấy thành viên nào.' : 'Chưa có thành viên nào.'}
+                       </p>
+                     ) : (
+                       <div className="space-y-1">
+                         {regularMembers.map(member => (
+                           <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors group">
+                             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/profile/${member.userId}`)}>
+                               <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} className="w-12 h-12" />
+                               <div>
+                                 <div className="font-semibold text-gray-900 text-[15px] group-hover:underline">{member.fullName}</div>
+                                 <div className="text-xs text-gray-500">Thành viên</div>
+                               </div>
+                             </div>
+                             <div className="flex items-center gap-1">
+                               {isAdmin && (
+                                 <button
+                                   onClick={() => setRemovingMember({ userId: member.userId, fullName: member.fullName })}
+                                   className="p-2 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                                   title="Xóa khỏi nhóm"
+                                 >
+                                   <UserMinus className="w-5 h-5" />
+                                 </button>
+                               )}
+                               <button className="p-2 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+                                 <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                               </button>
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               ) : (
+                 groupId && <GroupFeed groupId={groupId} />
+               )}
              </div>
 
              {/* Right Column (Widgets) */}
@@ -373,6 +481,51 @@ export const GroupDetailPage = () => {
           onClose={() => setIsInviteModalOpen(false)}
           existingMemberIds={members.map(m => m.userId)}
         />
+      )}
+
+      {/* Remove Member Confirmation Modal */}
+      {removingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Xóa thành viên</h3>
+              <p className="text-gray-500 text-sm">
+                Bạn có chắc chắn muốn xóa <strong className="text-gray-900">{removingMember.fullName}</strong> khỏi nhóm không?
+              </p>
+            </div>
+            <div className="flex gap-2 px-6 pb-6">
+              <button
+                onClick={() => setRemovingMember(null)}
+                className="flex-1 py-2.5 rounded-lg bg-gray-100 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  removeMemberMutation.mutate(
+                    { groupId: groupId!, userId: removingMember.userId },
+                    {
+                      onSuccess: () => {
+                        toast.success(`Đã xóa ${removingMember.fullName} khỏi nhóm`);
+                        setRemovingMember(null);
+                      },
+                      onError: (err: any) => {
+                        toast.error(err?.message || 'Không thể xóa thành viên');
+                      },
+                    }
+                  );
+                }}
+                disabled={removeMemberMutation.isPending}
+                className="flex-1 py-2.5 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-60 cursor-pointer"
+              >
+                {removeMemberMutation.isPending ? 'Đang xóa...' : 'Xóa thành viên'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

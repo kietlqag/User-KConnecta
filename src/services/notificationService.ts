@@ -1,12 +1,27 @@
 import { api } from './api';
-import { Notification } from '../features/notifications/types/notifications.types';
+import { Notification, NotificationType } from '../features/notifications/types/notifications.types';
 
 const API_URL = '/notifications';
 const GROUP_API_URL = '/groups';
 
+/** Backend sends Java enum names (UPPER_SNAKE_CASE). Frontend expects lower_snake_case. */
+function mapApiNotification(raw: any): Notification {
+  return {
+    ...raw,
+    id: String(raw.id),
+    type: (typeof raw.type === 'string' ? raw.type.toLowerCase() : raw.type) as NotificationType,
+    relatedId: raw.relatedId ? String(raw.relatedId) : undefined,
+    isActioned: raw.isActioned ?? raw.actioned ?? false,
+    isUnread: raw.isUnread ?? raw.unread ?? false,
+    user: raw.user ?? { name: 'Người dùng', avatar: '' },
+  };
+}
+
 export const notificationService = {
-  getNotifications: (userId: string): Promise<Notification[]> =>
-    api.get<Notification[]>(`${API_URL}?userId=${userId}`),
+  getNotifications: async (userId: string): Promise<Notification[]> => {
+    const data = await api.get<any[]>(`${API_URL}?userId=${userId}`);
+    return (Array.isArray(data) ? data : []).map(mapApiNotification);
+  },
 
   getUnreadCount: async (userId: string): Promise<number> => {
     const data = await api.get<{ count: number }>(`${API_URL}/unread-count?userId=${userId}`);

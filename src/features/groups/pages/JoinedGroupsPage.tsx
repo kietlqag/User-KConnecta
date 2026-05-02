@@ -33,7 +33,7 @@ export const JoinedGroupsPage = () => {
                   ? 'Đang tải...'
                   : `Tất cả các nhóm bạn đã tham gia (${joinedGroups.length})`}
               </h2>
-              <button className="text-[15px] font-medium text-blue-600 hover:text-blue-700 hover:underline">
+              <button className="text-[15px] font-medium text-blue-600 hover:text-blue-700 hover:underline cursor-pointer">
                 Sắp xếp
               </button>
             </div>
@@ -67,7 +67,10 @@ export const JoinedGroupsPage = () => {
                         </div>
                       )}
                       <div className="flex-1 min-w-0 flex flex-col">
-                        <h3 className="font-semibold text-gray-900 text-[15px] leading-tight line-clamp-2">
+                        <h3 
+                          onClick={() => navigate(`/groups/${group.id}`)}
+                          className="font-semibold text-gray-900 text-[15px] leading-tight line-clamp-2 cursor-pointer hover:underline"
+                        >
                           {group.name}
                         </h3>
                         <p className="text-[13px] text-gray-500 mt-1.5 leading-snug">
@@ -80,11 +83,11 @@ export const JoinedGroupsPage = () => {
                     <div className="p-3 flex items-center gap-2 bg-white">
                       <button
                         onClick={() => navigate(`/groups/${group.id}`)}
-                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold py-1.5 rounded-md transition-colors text-[15px]"
+                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold py-1.5 rounded-md transition-colors text-[15px] cursor-pointer"
                       >
                         Xem nhóm
                       </button>
-                      <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-md transition-colors shrink-0">
+                      <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-md transition-colors shrink-0 cursor-pointer">
                         <MoreHorizontal className="w-5 h-5" />
                       </button>
                     </div>

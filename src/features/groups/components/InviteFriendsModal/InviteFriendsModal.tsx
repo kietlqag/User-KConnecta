@@ -50,6 +50,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
     inviteMutation.mutate({ groupId, userIds: selectedUserIds }, {
       onSuccess: () => {
         toast.success(`Đã gửi lời mời đến ${selectedUserIds.length} người bạn`);
+        window.dispatchEvent(new Event('notification:refresh'));
         onClose();
         setSelectedUserIds([]);
       },

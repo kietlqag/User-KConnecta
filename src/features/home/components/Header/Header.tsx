@@ -37,12 +37,28 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    if (currentUser) {
-      notificationService.getUnreadCount(currentUser.id).then(setUnreadNotifications).catch(console.error);
-    } else {
+    if (!currentUser) {
       setUnreadNotifications(0);
+      return;
     }
-  }, [currentUser, showNotifications]); // Refresh count when panel closes
+
+    const fetchCount = () => {
+      notificationService.getUnreadCount(currentUser.id).then(setUnreadNotifications).catch(console.error);
+    };
+
+    fetchCount(); // initial fetch
+
+    // Poll every 15 seconds for new notifications
+    const interval = setInterval(fetchCount, 15_000);
+
+    // Allow other components to trigger an immediate refresh
+    window.addEventListener('notification:refresh', fetchCount);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notification:refresh', fetchCount);
+    };
+  }, [currentUser, showNotifications]);
 
   const navItems = [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },

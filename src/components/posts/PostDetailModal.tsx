@@ -23,6 +23,7 @@ interface Post {
   comments?: number;
   shares?: number;
   image?: string;
+  media?: { type: 'image' | 'video'; url: string };
   reactionCounts?: ReactionCountMap;
 }
 
@@ -148,11 +149,19 @@ export function PostDetailModal({
             <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{post.content}</p>
           </div>
 
-          {post.image && (
-            <div className="mb-3">
-              <img src={post.image} alt="Post content" className="w-full object-cover" />
+          {post.media ? (
+            <div className="mb-3 bg-black flex justify-center">
+              {post.media.type === 'video' ? (
+                <video src={post.media.url} controls className="w-full max-h-[500px] object-contain" />
+              ) : (
+                <img src={post.media.url} alt="Post content" className="w-full max-h-[500px] object-contain" />
+              )}
             </div>
-          )}
+          ) : post.image ? (
+            <div className="mb-3 bg-black flex justify-center">
+              <img src={post.image} alt="Post content" className="w-full max-h-[500px] object-contain" />
+            </div>
+          ) : null}
 
           <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 text-sm text-gray-600">
             <div className="flex items-center gap-1">

@@ -16,6 +16,7 @@ const REPLY_PREFIX = '__REPLY__:';
 const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
+const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 
 function mapBackendContentToPreview(content?: string | null) {
   const raw = content?.trim();
@@ -27,6 +28,10 @@ function mapBackendContentToPreview(content?: string | null) {
 
   if (raw.startsWith(IMAGE_MESSAGE_PREFIX)) {
     return 'Ảnh';
+  }
+  
+  if (raw.startsWith(VIDEO_SHARE_PREFIX)) {
+    return 'Video';
   }
 
   if (raw.startsWith(FILE_MESSAGE_PREFIX)) {

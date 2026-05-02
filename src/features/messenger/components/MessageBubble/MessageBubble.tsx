@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
 import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
+import { useNavigate } from 'react-router-dom';
 
 interface MessageBubbleProps {
   message: Message;
@@ -48,6 +49,7 @@ export const MessageBubble = ({
   isHighlighted = false,
   themeColor,
 }: MessageBubbleProps) => {
+  const navigate = useNavigate();
   const [showReactions, setShowReactions] = useState(false);
   const [showTimestamp, setShowTimestamp] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -388,6 +390,38 @@ export const MessageBubble = ({
                   className="hidden"
                 />
               </div>
+              ) : message.videoShareId && !message.deleted ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/watch?id=${message.videoShareId}`)}
+                className="flex flex-col min-w-0 w-[min(260px,68vw)] max-w-full overflow-hidden rounded-xl bg-black/5 group/video-share transition-transform hover:scale-[1.02]"
+                title="Xem video"
+              >
+                <div className="relative aspect-[9/16] w-full overflow-hidden">
+                  <img 
+                    src={message.videoShareThumbnail} 
+                    alt={message.videoShareTitle} 
+                    className="h-full w-full object-cover transition-transform group-hover/video-share:scale-110"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/video-share:bg-black/40 transition-colors">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/30 backdrop-blur-md text-white shadow-lg">
+                      <Play className="h-6 w-6 fill-current ml-1" />
+                    </div>
+                  </div>
+                  <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
+                    <Video className="h-3 w-3" />
+                    REELS
+                  </div>
+                </div>
+                <div className={`p-3 text-left ${message.isOwn ? 'bg-blue-700' : 'bg-gray-100'}`}>
+                  <p className={`text-sm font-semibold line-clamp-2 ${message.isOwn ? 'text-white' : 'text-gray-900'}`}>
+                    {message.videoShareTitle || 'Xem video này trên KConnecta'}
+                  </p>
+                  <p className={`mt-1 text-[11px] font-medium uppercase tracking-wider ${message.isOwn ? 'text-blue-100/70' : 'text-gray-500'}`}>
+                    Nhấn để xem nội dung
+                  </p>
+                </div>
+              </button>
               ) : message.fileUrl && !message.deleted ? (
               <button
                 type="button"

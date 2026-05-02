@@ -115,3 +115,16 @@ export function useInviteFriends() {
     },
   });
 }
+
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+  const currentUser = authService.getCurrentUser();
+  return useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      groupService.removeMember(groupId, userId, currentUser!.id),
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', 'members', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
+    },
+  });
+}

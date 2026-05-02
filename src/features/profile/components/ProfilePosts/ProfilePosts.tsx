@@ -1,22 +1,9 @@
 import { Filter, Grid3x3 } from 'lucide-react';
-import type { ReactionType } from '@/services/postService';
-import { Post } from '../../../home/components/Post';
+import type { FeedPost } from '@/utils/postUtils';
+import { Post } from '../../../../components/shared/Post';
 
 interface ProfilePostsProps {
-  posts: Array<{
-    id: string;
-    userName: string;
-    authorId: string;
-    userAvatar: string;
-    timestamp: string;
-    content: string;
-    image?: string;
-    likes: number;
-    comments: number;
-    shares: number;
-    isLiked?: boolean;
-    currentUserReactionType?: ReactionType | null;
-  }>;
+  posts: FeedPost[];
 }
 
 export function ProfilePosts({ posts }: ProfilePostsProps) {

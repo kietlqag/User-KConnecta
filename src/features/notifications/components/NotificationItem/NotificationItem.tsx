@@ -74,13 +74,13 @@ export const NotificationItem = ({
           <div className="flex items-center gap-2 mt-2">
             <button
               onClick={handleAccept}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
-              Tham gia
+              Chấp nhận
             </button>
             <button
               onClick={handleReject}
-              className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-semibold rounded-lg transition-colors"
+              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Từ chối
             </button>

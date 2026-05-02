@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -42,6 +42,7 @@ const REPLY_PREFIX = '__REPLY__:';
 const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
+const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const HISTORY_PAGE_SIZE = 15;
 
 function uniqueByUserId<T extends { userId: string }>(items: T[]) {
@@ -138,6 +139,19 @@ function mapBackendContentToMessageFields(
         };
       } catch {
         return { text: 'File' };
+      }
+    }
+    if (content?.startsWith(VIDEO_SHARE_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(VIDEO_SHARE_PREFIX.length));
+        return {
+          text: payload.caption || 'Đã chia sẻ một video',
+          videoShareId: payload.id,
+          videoShareThumbnail: payload.thumbnail,
+          videoShareTitle: payload.caption,
+        };
+      } catch {
+        return { text: 'Video' };
       }
     }
     return { text: content };

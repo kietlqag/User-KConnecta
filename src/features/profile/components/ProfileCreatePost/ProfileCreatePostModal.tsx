@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   X,
   Globe,
@@ -24,6 +24,7 @@ interface ProfileCreatePostModalProps {
   username: string;
   onPostCreated?: () => void;
   groupId?: string;
+  initialShowImagePicker?: boolean;
 }
 
 export function ProfileCreatePostModal({
@@ -32,15 +33,21 @@ export function ProfileCreatePostModal({
   username,
   onPostCreated,
   groupId,
+  initialShowImagePicker = false,
 }: ProfileCreatePostModalProps) {
   const [postContent, setPostContent] = useState('');
   const [privacy, setPrivacy] = useState('public');
   const [showAudienceModal, setShowAudienceModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
-  const [showImagePicker, setShowImagePicker] = useState(false);
-  const [selectedImages, setSelectedImages] = useState<{ id: string; file: File; previewUrl: string }[]>([]);
+  const [showImagePicker, setShowImagePicker] = useState(initialShowImagePicker);
+  const [selectedImages, setSelectedImages] = useState<{ id: string; file: File; previewUrl: string; type: 'image' | 'video' }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync state when initialShowImagePicker changes
+  useEffect(() => {
+    setShowImagePicker(initialShowImagePicker);
+  }, [initialShowImagePicker]);
 
   if (!isOpen) return null;
 
@@ -58,6 +65,7 @@ export function ProfileCreatePostModal({
       id: Math.random().toString(36).substring(7),
       file,
       previewUrl: URL.createObjectURL(file),
+      type: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
     }));
 
     setSelectedImages(prev => [...prev, ...newImages]);
@@ -96,7 +104,7 @@ export function ProfileCreatePostModal({
         const uploadPromises = selectedImages.map(async (img, index) => {
           const response = await postService.uploadPostImage(img.file);
           return {
-            mediaType: 'IMAGE' as const,
+            mediaType: img.type === 'video' ? 'VIDEO' as const : 'IMAGE' as const,
             fileUrl: response.url,
             sortOrder: index,
           };
@@ -219,11 +227,15 @@ export function ProfileCreatePostModal({
                 ) : (
                   <div className="grid grid-cols-2 gap-2 mt-12 pb-2">
                     {selectedImages.map((img) => (
-                      <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-500">
-                        <img src={img.previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                      <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-500 bg-black flex items-center justify-center">
+                        {img.type === 'video' ? (
+                          <video src={img.previewUrl} className="max-h-full max-w-full" controls />
+                        ) : (
+                          <img src={img.previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                        )}
                         <button 
                           onClick={() => removeImage(img.id)}
-                          className="absolute right-1 top-1 rounded-full bg-white p-1 text-gray-500 shadow-sm hover:bg-gray-50 border border-gray-200 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 dark:border-gray-500"
+                          className="absolute right-1 top-1 rounded-full bg-white p-1 text-gray-500 shadow-sm hover:bg-gray-50 border border-gray-200 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 dark:border-gray-500 z-10"
                         >
                           <X className="h-4 w-4" />
                         </button>

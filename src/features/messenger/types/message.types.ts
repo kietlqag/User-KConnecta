@@ -26,6 +26,9 @@ export interface Message {
   callLogKind?: 'missed' | 'completed';
   callDurationSec?: number;
   callMediaType?: 'audio' | 'video';
+  videoShareId?: string;
+  videoShareThumbnail?: string;
+  videoShareTitle?: string;
 }
 
 export interface ChatUser {

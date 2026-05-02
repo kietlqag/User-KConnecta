@@ -33,8 +33,8 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
   const handleAcceptInvite = async (notificationId: string, relatedId: string) => {
     try {
       await notificationService.acceptGroupInvite(relatedId, notificationId, currentUser?.id as string);
-      // Optimistically update
       setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isActioned: true, isUnread: false } : n));
+      window.dispatchEvent(new Event('notification:refresh'));
     } catch (error) {
       console.error('Failed to accept invite:', error);
     }
@@ -43,8 +43,8 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
   const handleRejectInvite = async (notificationId: string, relatedId: string) => {
     try {
       await notificationService.rejectGroupInvite(relatedId, notificationId);
-      // Optimistically update
       setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isActioned: true, isUnread: false } : n));
+      window.dispatchEvent(new Event('notification:refresh'));
     } catch (error) {
       console.error('Failed to reject invite:', error);
     }
@@ -54,6 +54,7 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
     try {
       await notificationService.markAsRead(notificationId);
       setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, isUnread: false } : n));
+      window.dispatchEvent(new Event('notification:refresh'));
     } catch (error) {
       console.error('Failed to mark as read:', error);
     }

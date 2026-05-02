@@ -11,6 +11,17 @@ interface ProfileCreatePostProps {
 
 export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePostProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [initialShowImagePicker, setInitialShowImagePicker] = useState(false);
+
+  const handleOpenModal = (showImagePicker = false) => {
+    setInitialShowImagePicker(showImagePicker);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setInitialShowImagePicker(false);
+  };
 
   return (
     <>
@@ -18,8 +29,8 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
         <div className="flex items-center gap-3 mb-4">
           <CurrentUserAvatar />
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex-1 text-left px-4 py-2 sm:py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full text-gray-500 dark:text-gray-400 transition-colors text-sm sm:text-base"
+            onClick={() => handleOpenModal(false)}
+            className="flex-1 text-left px-4 py-2 sm:py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full text-gray-500 dark:text-gray-400 transition-colors text-sm sm:text-base cursor-pointer"
           >
             Bạn đang nghĩ gì, {username}?
           </button>
@@ -38,21 +49,24 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
             </span>
           </Link>
 
-          <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center">
+          <button 
+            onClick={() => handleOpenModal(true)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center cursor-pointer"
+          >
             <Image className="w-6 h-6 text-green-500" />
             <span className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">
               Ảnh/video
             </span>
           </button>
 
-          <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center">
+          <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center cursor-pointer">
             <Smile className="w-6 h-6 text-yellow-500" />
             <span className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">
               Cảm xúc
             </span>
           </button>
 
-          <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center">
+          <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center cursor-pointer">
             <MapPin className="w-6 h-6 text-blue-500" />
             <span className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">
               Địa điểm
@@ -63,9 +77,10 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
 
       <ProfileCreatePostModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         username={username}
         onPostCreated={onPostCreated}
+        initialShowImagePicker={initialShowImagePicker}
       />
     </>
   );

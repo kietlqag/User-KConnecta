@@ -8,6 +8,7 @@ interface ReelInteractionPanelProps {
   onComment: () => void;
   onShare: () => void;
   onMore: () => void;
+  isLiked?: boolean;
 }
 
 export const ReelInteractionPanel = ({
@@ -18,6 +19,7 @@ export const ReelInteractionPanel = ({
   onComment,
   onShare,
   onMore,
+  isLiked = false,
 }: ReelInteractionPanelProps) => {
   const formatCount = (count: number): string => {
     if (count >= 1000000) {
@@ -35,8 +37,8 @@ export const ReelInteractionPanel = ({
         onClick={onLike}
         className="flex flex-col items-center gap-1 group transition-transform hover:scale-110"
       >
-        <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-emerald-600 transition-colors">
-          <ThumbsUp className="w-6 h-6 text-white" />
+        <div className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center transition-colors ${isLiked ? 'bg-emerald-600' : 'bg-gray-800/50 group-hover:bg-emerald-600'}`}>
+          <ThumbsUp className={`w-6 h-6 text-white ${isLiked ? 'fill-white' : ''}`} />
         </div>
         <span className="text-sm font-semibold text-white">
           {formatCount(likes)}

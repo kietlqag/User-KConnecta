@@ -1,75 +1,12 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
 import { ReelPlayer, ReelNavigation } from '../components';
 import { Reel, ReelComment } from '../types/watch.types';
-import reelImage from 'figma:asset/31a71acf4ef3fd228bada3a6b0e3bebe7634528f.png';
-import reelImage2 from 'figma:asset/c7a8ce7ba396d53b08d61568bbcaba1bfb78fb98.png';
+import { authService } from '@/services/authService';
+import { postService } from '@/services/postService';
 
-const mockReels: Reel[] = [
-  {
-    id: '1',
-    videoUrl: reelImage,
-    thumbnail: reelImage,
-    creator: {
-      id: '101',
-      name: 'Sinh viên HCMUTE - Trường ĐH Công nghệ Kỹ thuật TPHCM',
-      avatar: 'https://images.unsplash.com/photo-1695800998493-ccff5ea292ea?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMHByb2Zlc3Npb25hbCUyMEFzaWFuJTIweG91bmclMjBtYW58ZW58MXx8fHwxNzY5NjY2MzY5fDA&ixlib=rb-4.1.0&q=80&w=1080',
-      verified: true,
-    },
-    caption: 'Lễ tốt nghiệp HCMUTE năm nay... Xem thêm',
-    music: {
-      name: 'Nhạc truyền thống',
-      artist: 'HCMUTE',
-    },
-    likes: 2400,
-    comments: 108,
-    shares: 59,
-    views: 15000,
-    duration: 30,
-  },
-  {
-    id: '2',
-    videoUrl: reelImage2,
-    thumbnail: reelImage2,
-    creator: {
-      id: '102',
-      name: 'Etang Rendezvous',
-      avatar: 'https://images.unsplash.com/photo-1738566061505-556830f8b8f5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMGJ1c2luZXNzJTIwQXNpYW4lMjBtYW58ZW58MXx8fHwxNzY5NjY2MzcxfDA&ixlib=rb-4.1.0&q=80&w=1080',
-      verified: true,
-    },
-    caption: 'Chặng đường trải nghiệm đầy cảm xúc, xem đến cuối nhé!',
-    music: {
-      name: 'Âm thanh gốc',
-      artist: 'Etang Rendezvous',
-    },
-    likes: 90800,
-    comments: 251,
-    shares: 313,
-    views: 428500,
-    duration: 45,
-  },
-  {
-    id: '3',
-    videoUrl: 'https://images.unsplash.com/photo-1718307701476-bf46ac964396?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMGNhc3VhbCUyMFZpZXRuYW1lc2UlMjB3b21hbnxlbnwxfHx8fDE3Njk2NjYzNzB8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    thumbnail: 'https://images.unsplash.com/photo-1718307701476-bf46ac964396?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMGNhc3VhbCUyMFZpZXRuYW1lc2UlMjB3b21hbnxlbnwxfHx8fDE3Njk2NjYzNzB8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    creator: {
-      id: '103',
-      name: 'Thu Hà',
-      avatar: 'https://images.unsplash.com/photo-1718307701476-bf46ac964396?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMGNhc3VhbCUyMFZpZXRuYW1lc2UlMjB3b21hbnxlbnwxfHx8fDE3Njk2NjYzNzB8MA&ixlib=rb-4.1.0&q=80&w=1080',
-      verified: true,
-    },
-    caption: 'Hướng dẫn trang điểm tự nhiên cho mùa hè 💄 #makeup #beauty',
-    music: {
-      name: 'Summer Vibes',
-      artist: 'Chill Beats',
-    },
-    likes: 3200,
-    comments: 156,
-    shares: 78,
-    views: 22000,
-    duration: 60,
-  },
-];
+
 
 // Mock comments data
 const mockCommentsMap: Record<string, ReelComment[]> = {
@@ -159,9 +96,70 @@ const mockCommentsMap: Record<string, ReelComment[]> = {
 };
 
 export const WatchPage = () => {
+  const [reels, setReels] = useState<Reel[]>([]);
+  const [loading, setLoading] = useState(true);
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
-  const currentReel = mockReels[currentReelIndex];
-  const currentComments = mockCommentsMap[currentReel.id] || [];
+  const [searchParams] = useSearchParams();
+  const reelId = searchParams.get('id');
+
+  useEffect(() => {
+    const fetchReels = async () => {
+      try {
+        const currentUser = authService.getCurrentUser();
+        const posts = await postService.getAllPosts(currentUser?.id);
+
+        // Filter posts with videos
+        const videoPosts = posts.filter(post => 
+          post.media?.some(m => m.mediaType === 'VIDEO')
+        );
+
+        const mappedReels = videoPosts.map((post): Reel => {
+          const videoMedia = post.media.find(m => m.mediaType === 'VIDEO');
+          const fallbackAvatar = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(post.authorFullName || 'User')}`;
+          
+          return {
+            id: post.id,
+            videoUrl: videoMedia?.mediaUrl || videoMedia?.fileUrl || '',
+            thumbnail: videoMedia?.mediaUrl || videoMedia?.fileUrl || '',
+            creator: {
+              id: post.authorId,
+              name: post.authorFullName,
+              avatar: post.authorAvatarUrl || fallbackAvatar,
+            },
+            caption: post.content || '',
+            music: {
+              name: 'Âm thanh gốc',
+              artist: post.authorFullName,
+            },
+            likes: post.reactionCount,
+            comments: post.commentCount,
+            shares: post.shareCount,
+            views: 0,
+            duration: 0,
+          };
+        });
+
+        setReels(mappedReels);
+
+        // Handle direct link to reel
+        if (reelId) {
+          const index = mappedReels.findIndex(r => r.id === reelId);
+          if (index !== -1) {
+            setCurrentReelIndex(index);
+          }
+        }
+      } catch (error) {
+        console.error('Lỗi khi tải video:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchReels();
+  }, []);
+
+  const currentReel = reels[currentReelIndex];
+
 
   const handlePrevious = () => {
     if (currentReelIndex > 0) {
@@ -170,7 +168,7 @@ export const WatchPage = () => {
   };
 
   const handleNext = () => {
-    if (currentReelIndex < mockReels.length - 1) {
+    if (currentReelIndex < reels.length - 1) {
       setCurrentReelIndex(currentReelIndex + 1);
     }
   };
@@ -195,25 +193,32 @@ export const WatchPage = () => {
 
       {/* Main Content Area */}
       <div className="mt-14 h-[calc(100vh-56px)] relative">
-        <ReelPlayer
-          reel={currentReel}
-          comments={currentComments}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          hasPrevious={currentReelIndex > 0}
-          hasNext={currentReelIndex < mockReels.length - 1}
-        />
+        {loading ? (
+          <div className="flex h-full items-center justify-center text-white">Đang tải video...</div>
+        ) : reels.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-white">Chưa có video nào.</div>
+        ) : currentReel ? (
+          <ReelPlayer
+            reel={currentReel}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            hasPrevious={currentReelIndex > 0}
+            hasNext={currentReelIndex < reels.length - 1}
+          />
+        ) : null}
       </div>
 
       {/* Progress Indicator */}
-      <div className="fixed top-14 left-0 right-0 h-1 bg-gray-800 z-50">
-        <div
-          className="h-full bg-emerald-600 transition-all duration-300"
-          style={{
-            width: `${((currentReelIndex + 1) / mockReels.length) * 100}%`,
-          }}
-        />
-      </div>
+      {!loading && reels.length > 0 && (
+        <div className="fixed top-14 left-0 right-0 h-1 bg-gray-800 z-50">
+          <div
+            className="h-full bg-emerald-600 transition-all duration-300"
+            style={{
+              width: `${((currentReelIndex + 1) / reels.length) * 100}%`,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
