@@ -27,4 +27,11 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group WHERE p.group IS NOT NULL AND p.group.id = :groupId ORDER BY p.createdAt DESC"
     )
     List<Post> findByGroupId(@org.springframework.data.repository.query.Param("groupId") UUID groupId);
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group g " +
+        "WHERE g.id IN (SELECT gm.group.id FROM GroupMember gm WHERE gm.user.id = :userId) " +
+        "ORDER BY p.createdAt DESC"
+    )
+    List<Post> findGroupFeedPostsByUserId(@org.springframework.data.repository.query.Param("userId") UUID userId);
 }

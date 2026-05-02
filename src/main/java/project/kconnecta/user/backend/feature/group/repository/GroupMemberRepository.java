@@ -24,4 +24,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, UUID> 
 
     @Query("SELECT gm FROM GroupMember gm JOIN FETCH gm.user WHERE gm.group.id = :groupId")
     List<GroupMember> findAllByGroupId(@Param("groupId") UUID groupId);
+
+    @Query("SELECT gm FROM GroupMember gm WHERE gm.group.id = :groupId AND gm.user.id = :userId")
+    java.util.Optional<GroupMember> findByGroupIdAndUserId(@Param("groupId") UUID groupId, @Param("userId") UUID userId);
 }

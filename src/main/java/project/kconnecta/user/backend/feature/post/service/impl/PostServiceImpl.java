@@ -146,6 +146,14 @@ public class PostServiceImpl implements PostService {
         return processPostsBulk(posts, currentUserId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostResponse> getGroupFeedPosts(UUID currentUserId) {
+        if (currentUserId == null) return Collections.emptyList();
+        List<Post> posts = postRepository.findGroupFeedPostsByUserId(currentUserId);
+        return processPostsBulk(posts, currentUserId);
+    }
+
     private List<PostResponse> processPostsBulk(List<Post> posts, UUID currentUserId) {
         if (posts.isEmpty()) return Collections.emptyList();
 

@@ -85,13 +85,13 @@ public class CloudinaryService {
                     file.getBytes(),
                     ObjectUtils.asMap(
                             "folder", "kconnecta/post-images",
-                            "resource_type", "image",
-                            "public_id", "post-image-" + System.currentTimeMillis()
+                            "resource_type", "auto",
+                            "public_id", "post-media-" + System.currentTimeMillis()
                     )
             );
             return result.get("secure_url").toString();
         } catch (IOException e) {
-            throw new RuntimeException("Upload post image failed", e);
+            throw new RuntimeException("Upload post media failed", e);
         }
     }
 

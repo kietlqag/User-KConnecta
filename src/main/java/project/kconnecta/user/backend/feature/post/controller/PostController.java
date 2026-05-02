@@ -43,6 +43,7 @@ public class PostController {
     public ResponseEntity<List<PostResponse>> getPosts(
             @RequestParam(required = false) UUID authorId,
             @RequestParam(required = false) UUID groupId,
+            @RequestParam(required = false, defaultValue = "false") boolean isGroupFeed,
             @RequestParam(required = false) UUID currentUserId
     ) {
         if (groupId != null) {
@@ -50,6 +51,9 @@ public class PostController {
         }
         if (authorId != null) {
             return ResponseEntity.ok(postService.getPostsByUserId(authorId, currentUserId));
+        }
+        if (isGroupFeed) {
+            return ResponseEntity.ok(postService.getGroupFeedPosts(currentUserId));
         }
         return ResponseEntity.ok(postService.getAllPosts(currentUserId));
     }

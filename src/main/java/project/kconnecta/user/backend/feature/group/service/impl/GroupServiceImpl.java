@@ -243,6 +243,31 @@ public class GroupServiceImpl implements GroupService {
         }
     }
 
+    @Override
+    @Transactional
+    public void removeMember(UUID groupId, UUID userId, UUID requesterId) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        // Check requester is an admin
+        GroupMember requester = groupMemberRepository.findByGroupIdAndUserId(groupId, requesterId)
+                .orElseThrow(() -> new ValidationException("Requester is not a member of this group"));
+        if (requester.getRole() != GroupMemberRole.ADMIN) {
+            throw new ValidationException("Only admins can remove members");
+        }
+
+        // Find the member to remove
+        GroupMember target = groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found in group"));
+
+        // Cannot remove another admin
+        if (target.getRole() == GroupMemberRole.ADMIN) {
+            throw new ValidationException("Cannot remove an admin from the group");
+        }
+
+        groupMemberRepository.delete(target);
+    }
+
     private GroupResponse toResponse(Group group, GroupMemberRole role) {
         int memberCount = groupMemberRepository.countByGroupId(group.getId());
         return GroupResponse.builder()

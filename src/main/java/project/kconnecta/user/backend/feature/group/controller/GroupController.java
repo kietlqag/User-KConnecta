@@ -102,4 +102,13 @@ public class GroupController {
         groupService.rejectInvite(id, notificationId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}/members/{userId}")
+    public ResponseEntity<Void> removeMember(
+            @PathVariable UUID id,
+            @PathVariable UUID userId,
+            @RequestParam UUID requesterId) {
+        groupService.removeMember(id, userId, requesterId);
+        return ResponseEntity.noContent().build();
+    }
 }

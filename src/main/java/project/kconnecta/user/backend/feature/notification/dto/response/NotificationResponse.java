@@ -1,5 +1,6 @@
 package project.kconnecta.user.backend.feature.notification.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +20,9 @@ public class NotificationResponse {
     private NotificationUser user;
     private String text;
     private LocalDateTime timestamp;
+    @JsonProperty("isUnread")
     private boolean isUnread;
+    @JsonProperty("isActioned")
     private boolean isActioned;
     private UUID relatedId;
 
