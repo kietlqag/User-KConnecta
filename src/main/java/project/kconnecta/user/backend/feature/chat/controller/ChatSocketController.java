@@ -5,6 +5,7 @@ import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.feature.chat.dto.request.CallSignalRequest;
 import project.kconnecta.user.backend.feature.chat.dto.CallParticipantInfo;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationSeenRequest;
@@ -80,6 +81,7 @@ public class ChatSocketController {
     }
 
     @MessageMapping("/call.signal")
+    @Transactional
     public void sendCallSignal(CallSignalRequest request, Principal principal) {
         if (principal == null) {
             throw new IllegalStateException("Unauthenticated WebSocket session");
@@ -119,6 +121,8 @@ public class ChatSocketController {
                 enrichGroupParticipants(request.getGroupParticipants(), sender, receiver),
                 request.getParticipantUserId(),
                 request.getParticipantStatus(),
+                request.getParticipantMicEnabled(),
+                request.getParticipantCameraEnabled(),
                 now,
                 snapshot.getStatus(),
                 snapshot.getMediaType(),
@@ -283,7 +287,7 @@ public class ChatSocketController {
             return null;
         }
 
-        GroupCallSession session = groupCallSessionRepository.findByCallId(callId).orElse(null);
+        GroupCallSession session = groupCallSessionRepository.findByCallIdForUpdate(callId).orElse(null);
         if (session == null) {
             return null;
         }

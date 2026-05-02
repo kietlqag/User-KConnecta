@@ -31,6 +31,8 @@ public class CallSignalResponse {
     private List<CallParticipantInfo> groupParticipants;
     private UUID participantUserId;
     private String participantStatus;
+    private Boolean participantMicEnabled;
+    private Boolean participantCameraEnabled;
     private LocalDateTime createdAt;
     private String sessionStatus;
     private String sessionMediaType;
