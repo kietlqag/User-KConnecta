@@ -5,6 +5,7 @@ import type {
   IncomingChatMessage,
   IncomingCallSignal,
   IncomingMessageStatus,
+  IncomingPinnedMessage,
   IncomingPresenceStatus,
   OutgoingCallSignal,
 } from '../types/message.types';
@@ -18,6 +19,7 @@ export function useChatSocket(
   onCallSignal?: (signal: IncomingCallSignal) => void,
   onMessageStatus?: (status: IncomingMessageStatus) => void,
   onPresenceStatus?: (status: IncomingPresenceStatus) => void,
+  onPinnedMessage?: (event: IncomingPinnedMessage) => void,
 ) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef<Client | null>(null);
@@ -26,10 +28,12 @@ export function useChatSocket(
   const onCallSignalRef = useRef(onCallSignal);
   const onMessageStatusRef = useRef(onMessageStatus);
   const onPresenceStatusRef = useRef(onPresenceStatus);
+  const onPinnedMessageRef = useRef(onPinnedMessage);
   onMessageRef.current = onMessage;
   onCallSignalRef.current = onCallSignal;
   onMessageStatusRef.current = onMessageStatus;
   onPresenceStatusRef.current = onPresenceStatus;
+  onPinnedMessageRef.current = onPinnedMessage;
 
   useEffect(() => {
     if (!token) return;
@@ -76,6 +80,15 @@ export function useChatSocket(
             onPresenceStatusRef.current?.(status);
           } catch (e) {
             console.error('[useChatSocket] Failed to parse presence status:', e);
+          }
+        });
+
+        client.subscribe('/user/queue/pinned-messages', (frame) => {
+          try {
+            const event = JSON.parse(frame.body) as IncomingPinnedMessage;
+            onPinnedMessageRef.current?.(event);
+          } catch (e) {
+            console.error('[useChatSocket] Failed to parse pinned message event:', e);
           }
         });
 

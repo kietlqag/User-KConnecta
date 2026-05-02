@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
 import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
@@ -21,6 +22,7 @@ interface MessageBubbleProps {
   deliveryStatusLabel?: string;
   onCallAgain?: (mediaType?: 'audio' | 'video') => void;
   isHighlighted?: boolean;
+  themeColor?: string | null;
 }
 
 const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '😡'];
@@ -44,6 +46,7 @@ export const MessageBubble = ({
   deliveryStatusLabel = 'Đã gửi',
   onCallAgain,
   isHighlighted = false,
+  themeColor,
 }: MessageBubbleProps) => {
   const [showReactions, setShowReactions] = useState(false);
   const [showTimestamp, setShowTimestamp] = useState(false);
@@ -105,7 +108,7 @@ export const MessageBubble = ({
       setShowExtraReactions(false);
       return;
     }
-    // Chỉ giữ 1 reaction duy nhất: click lại reaction hiện tại để xóa, click reaction khác để thay thế.
+    // Chỉ giữ 1 reaction: click lại reaction hiện tại để xóa, click reaction khác để thay thế.
     if (message.reactions && message.reactions.length === 1 && message.reactions[0] === emoji) {
       // Nếu click lại reaction hiện tại thì xóa hết.
       onReact?.(message.id, '');
@@ -120,6 +123,23 @@ export const MessageBubble = ({
   const handleMouseLeave = () => {
     setShowTimestamp(false);
     setIsHovering(false);
+  };
+
+  const openActionMenu = () => {
+    const triggerRect = menuTriggerRef.current?.getBoundingClientRect();
+    if (triggerRect) {
+      const estimatedMenuHeight = 168;
+      const estimatedMenuWidth = 184;
+      const top = triggerRect.bottom + estimatedMenuHeight + 8 > window.innerHeight
+        ? Math.max(8, triggerRect.top - estimatedMenuHeight - 8)
+        : triggerRect.bottom + 8;
+      const left = Math.min(
+        Math.max(8, triggerRect.right - estimatedMenuWidth),
+        window.innerWidth - estimatedMenuWidth - 8,
+      );
+      setMenuPosition({ top, left });
+    }
+    setShowMenu((prev) => !prev);
   };
 
   const formatFileSize = (bytes?: number) => {
@@ -173,6 +193,7 @@ export const MessageBubble = ({
 
   const imageUrls = message.imageUrls?.length ? message.imageUrls : message.imageUrl ? [message.imageUrl] : [];
   const activeLightboxImage = lightboxIndex === null ? null : imageUrls[lightboxIndex];
+  const ownBubbleStyle = message.isOwn && themeColor ? { backgroundColor: themeColor } : undefined;
   const renderImageButton = (imageUrl: string, index: number, className = '') => (
     <button
       key={`${imageUrl}-${index}`}
@@ -307,6 +328,7 @@ export const MessageBubble = ({
                   className={`inline-block max-w-full overflow-hidden rounded-2xl px-3 py-2 text-sm leading-relaxed break-all [overflow-wrap:anywhere] sm:max-w-[260px] ${
                     message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
                   }`}
+                  style={ownBubbleStyle}
                 >
                   {message.imageCaption}
                 </div>
@@ -319,6 +341,7 @@ export const MessageBubble = ({
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-900'
               }`}
+              style={ownBubbleStyle}
             >
               {message.voiceAudioUrl && !message.deleted ? (
               <div
@@ -425,8 +448,8 @@ export const MessageBubble = ({
 
           {!message.deleted && isHovering && (
             <div
-              className={`absolute top-0 -translate-y-1/2 flex items-center gap-0.5 bg-white rounded-full shadow-sm px-1 py-1 z-[2] ${
-                message.isOwn ? 'right-full mr-1.5' : 'left-full ml-1.5'
+              className={`absolute top-0 -translate-y-1/2 flex items-center gap-0.5 bg-white rounded-full shadow-sm ring-1 ring-gray-200/70 px-1 py-1 z-20 ${
+                message.isOwn ? 'right-[calc(100%+6px)]' : 'left-[calc(100%+6px)]'
               }`}
               style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
             >
@@ -452,22 +475,7 @@ export const MessageBubble = ({
               </button>
 
               <button
-                onClick={() => {
-                  const triggerRect = menuTriggerRef.current?.getBoundingClientRect();
-                  if (triggerRect) {
-                    const estimatedMenuHeight = 132;
-                    const estimatedMenuWidth = 176;
-                    const openAbove = triggerRect.top > estimatedMenuHeight + 16;
-                    const top = openAbove
-                      ? triggerRect.top - estimatedMenuHeight - 8
-                      : triggerRect.bottom + 8;
-                    const left = message.isOwn
-                      ? Math.max(8, triggerRect.left - estimatedMenuWidth - 8)
-                      : Math.min(window.innerWidth - estimatedMenuWidth - 8, triggerRect.right + 8);
-                    setMenuPosition({ top, left });
-                  }
-                  setShowMenu(!showMenu);
-                }}
+                onClick={openActionMenu}
                 ref={menuTriggerRef}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer relative"
                 title="Tùy chọn khác"
@@ -522,14 +530,14 @@ export const MessageBubble = ({
             </div>
           )}
 
-          {!message.deleted && showMenu && (
+          {!message.deleted && showMenu && menuPosition && createPortal(
             <div
-              className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[160px] z-[200]"
+              className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[184px] z-[260]"
               ref={menuRef}
               style={{
                 fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif',
-                top: `${menuPosition?.top ?? 0}px`,
-                left: `${menuPosition?.left ?? 0}px`,
+                top: `${menuPosition.top}px`,
+                left: `${menuPosition.left}px`,
               }}
             >
               {message.isOwn && (
@@ -571,7 +579,8 @@ export const MessageBubble = ({
               >
                 Báo cáo
               </button>
-            </div>
+            </div>,
+            document.body,
           )}
         </div>
 

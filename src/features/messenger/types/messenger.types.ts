@@ -11,6 +11,7 @@ export interface Conversation {
   timestamp: string;
   isUnread: boolean;
   isGroup?: boolean;
+  themeColor?: string | null;
 }
 
 export type MessengerFilter = 'all' | 'unread' | 'groups';

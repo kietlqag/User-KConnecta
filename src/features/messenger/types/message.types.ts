@@ -31,6 +31,8 @@ export interface Message {
 export interface ChatUser {
   id: string; // userId (UUID) dùng làm receiverId
   name: string;
+  fullName?: string;
+  nickname?: string | null;
   avatar: string;
   isOnline: boolean;
   lastActiveAt?: string;
@@ -65,6 +67,21 @@ export interface IncomingPresenceStatus {
   userId: string;
   online: boolean;
   lastActiveAt?: string;
+}
+
+export interface IncomingPinnedMessage {
+  id?: string | null;
+  peerUserId?: string | null;
+  conversationId?: string | null;
+  messageId?: string | null;
+  pinnedBy?: string | null;
+  pinnedAt?: string | null;
+  senderId?: string | null;
+  senderName?: string | null;
+  senderAvatarUrl?: string | null;
+  messagePreview?: string | null;
+  messageCreatedAt?: string | null;
+  pinned: boolean;
 }
 
 export type CallSignalType =

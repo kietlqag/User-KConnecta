@@ -19,12 +19,14 @@ import type {
   IncomingCallSignal,
   IncomingChatMessage,
   IncomingMessageStatus,
+  IncomingPinnedMessage,
   IncomingPresenceStatus,
 } from '@/features/messenger/types/message.types';
 
 type MessageListener = (msg: IncomingChatMessage) => void;
 type MessageStatusListener = (status: IncomingMessageStatus) => void;
 type PresenceStatusListener = (status: IncomingPresenceStatus) => void;
+type PinnedMessageListener = (event: IncomingPinnedMessage) => void;
 
 interface RealtimeCallContextValue {
   connected: boolean;
@@ -34,6 +36,7 @@ interface RealtimeCallContextValue {
   subscribeMessages: (listener: MessageListener) => () => void;
   subscribeMessageStatuses: (listener: MessageStatusListener) => () => void;
   subscribePresenceStatuses: (listener: PresenceStatusListener) => () => void;
+  subscribePinnedMessages: (listener: PinnedMessageListener) => () => void;
   sendMessageDelivered: (messageId: string) => void;
   sendConversationSeen: (peerUserId: string) => void;
 }
@@ -51,6 +54,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const listenersRef = useRef<Set<MessageListener>>(new Set());
   const statusListenersRef = useRef<Set<MessageStatusListener>>(new Set());
   const presenceListenersRef = useRef<Set<PresenceStatusListener>>(new Set());
+  const pinnedMessageListenersRef = useRef<Set<PinnedMessageListener>>(new Set());
   const latestPresenceByUserRef = useRef<Record<string, IncomingPresenceStatus>>({});
   const callSignalHandlerRef = useRef<(signal: IncomingCallSignal) => void>(() => {});
   const desktopNotificationRef = useRef<Notification | null>(null);
@@ -82,6 +86,10 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const handleIncomingPresenceStatus = useCallback((status: IncomingPresenceStatus) => {
     latestPresenceByUserRef.current[status.userId] = status;
     presenceListenersRef.current.forEach((listener) => listener(status));
+  }, []);
+
+  const handleIncomingPinnedMessage = useCallback((event: IncomingPinnedMessage) => {
+    pinnedMessageListenersRef.current.forEach((listener) => listener(event));
   }, []);
 
   const closeDesktopNotification = useCallback(() => {
@@ -181,6 +189,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     handleIncomingCallSignal,
     handleIncomingMessageStatus,
     handleIncomingPresenceStatus,
+    handleIncomingPinnedMessage,
   );
 
   const voiceCall = useVoiceCall({
@@ -213,6 +222,13 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     Object.values(latestPresenceByUserRef.current).forEach((presence) => listener(presence));
     return () => {
       presenceListenersRef.current.delete(listener);
+    };
+  }, []);
+
+  const subscribePinnedMessages = useCallback((listener: PinnedMessageListener) => {
+    pinnedMessageListenersRef.current.add(listener);
+    return () => {
+      pinnedMessageListenersRef.current.delete(listener);
     };
   }, []);
 
@@ -453,6 +469,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       subscribeMessages,
       subscribeMessageStatuses,
       subscribePresenceStatuses,
+      subscribePinnedMessages,
       sendMessageDelivered,
       sendConversationSeen,
     }),
@@ -464,6 +481,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       sendMessageDelivered,
       subscribeMessageStatuses,
       subscribeMessages,
+      subscribePinnedMessages,
       subscribePresenceStatuses,
       voiceCall,
     ],

@@ -45,12 +45,14 @@ export interface GroupConversationMemberResponse {
   username: string;
   fullName: string;
   avatarUrl?: string | null;
+  nickname?: string | null;
 }
 
 export interface GroupConversationResponse {
   id: string;
   name: string;
   avatarUrl?: string | null;
+  themeColor?: string | null;
   createdAt: string;
   createdBy: string;
   members: GroupConversationMemberResponse[];
@@ -85,10 +87,17 @@ export interface ConversationPinResponse {
 }
 
 export interface PinnedMessageResponse {
+  id?: string | null;
   peerUserId?: string | null;
   conversationId?: string | null;
   messageId?: string | null;
+  pinnedBy?: string | null;
+  pinnedAt?: string | null;
+  senderId?: string | null;
+  senderName?: string | null;
+  senderAvatarUrl?: string | null;
   messagePreview?: string | null;
+  messageCreatedAt?: string | null;
   pinned: boolean;
 }
 
@@ -201,6 +210,14 @@ export const chatService = {
 
   addGroupMembers: (conversationId: string, memberIds: string[]) => {
     return api.post<GroupConversationResponse>(`/chat/conversations/${conversationId}/members`, { memberIds });
+  },
+
+  updateGroupConversation: (conversationId: string, payload: { name?: string; avatarUrl?: string | null; themeColor?: string | null }) => {
+    return api.put<GroupConversationResponse>(`/chat/conversations/${conversationId}`, payload);
+  },
+
+  updateGroupMemberNickname: (conversationId: string, memberUserId: string, nickname: string | null) => {
+    return api.put<GroupConversationResponse>(`/chat/conversations/${conversationId}/members/${memberUserId}/nickname`, { nickname });
   },
 
   getMyGroupConversations: () => {

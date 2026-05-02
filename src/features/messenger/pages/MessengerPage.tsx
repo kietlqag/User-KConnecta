@@ -18,9 +18,15 @@ import {
   FileText,
   Link as LinkIcon,
   Video,
+  Pin,
+  Pencil,
+  ImagePlus,
+  Palette,
+  Type,
 } from 'lucide-react';
 import { Header } from '../../home/components';
 import { ConversationItem, ChatWindow } from '../components';
+import type { PinnedChatMessage } from '../components/ChatWindow/components/PinnedMessagesModal';
 import { Conversation, MessengerFilter } from '../types/messenger.types';
 import { ChatUser, IncomingChatMessage, IncomingMessageStatus, Message } from '../types/message.types';
 import { useFriendConversations } from '../hooks/useFriendConversations';
@@ -238,6 +244,11 @@ function ChatInfoPanel({
   groupCreatorId,
   currentUserId,
   onOpenAddMembers,
+  onOpenPinnedMessages,
+  onOpenRenameGroup,
+  onOpenChangeGroupImage,
+  onOpenChangeTheme,
+  onOpenNicknames,
 }: {
   user: ChatUser;
   messages: Message[];
@@ -246,15 +257,20 @@ function ChatInfoPanel({
   groupCreatorId?: string;
   currentUserId?: string | null;
   onOpenAddMembers?: () => void;
+  onOpenPinnedMessages?: () => void;
+  onOpenRenameGroup?: () => void;
+  onOpenChangeGroupImage?: () => void;
+  onOpenChangeTheme?: () => void;
+  onOpenNicknames?: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<InfoPanelTab>('media');
   const [infoView, setInfoView] = useState<'overview' | 'files'>('overview');
-  const [isMediaSectionOpen, setIsMediaSectionOpen] = useState(true);
+  const [isMediaSectionOpen, setIsMediaSectionOpen] = useState(false);
   const [groupSectionsOpen, setGroupSectionsOpen] = useState({
     info: false,
     customize: false,
     options: false,
-    members: true,
+    members: false,
   });
   const [visibleLimits, setVisibleLimits] = useState<Record<InfoPanelTab, number>>({
     media: INFO_PANEL_PAGE_SIZE,
@@ -270,12 +286,12 @@ function ChatInfoPanel({
     });
     setInfoView('overview');
     setActiveTab('media');
-    setIsMediaSectionOpen(true);
+    setIsMediaSectionOpen(false);
     setGroupSectionsOpen({
       info: false,
       customize: false,
       options: false,
-      members: true,
+      members: false,
     });
   }, [user.id]);
 
@@ -459,14 +475,11 @@ function ChatInfoPanel({
     const renderGroupSectionHeader = (
       section: keyof typeof groupSectionsOpen,
       label: string,
-      highlighted = false,
     ) => (
       <button
         type="button"
         onClick={() => toggleGroupSection(section)}
-        className={`flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left ${
-          highlighted ? 'bg-gray-100' : 'hover:bg-gray-50'
-        }`}
+        className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-gray-50"
       >
         <span className="text-[15px] font-semibold text-gray-900">{label}</span>
         <ChevronUp className={`h-4.5 w-4.5 text-gray-900 transition-transform ${groupSectionsOpen[section] ? '' : 'rotate-180'}`} />
@@ -504,30 +517,45 @@ function ChatInfoPanel({
         </div>
 
         <div className="space-y-2">
-          {renderGroupSectionHeader('info', 'Thông tin về đoạn chat', true)}
+          {renderGroupSectionHeader('info', 'Thông tin về đoạn chat')}
           {groupSectionsOpen.info && (
             <div className="px-3 pb-3 text-sm text-gray-500">
-              <div className="flex items-center gap-3">
-                <img
-                  src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=2563eb&color=ffffff`}
-                  alt={user.name}
-                  className="h-10 w-10 rounded-full object-cover"
-                />
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-gray-900">{user.name}</p>
-                  <p>{groupMembers.length} thành viên</p>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={onOpenPinnedMessages}
+                className="flex w-full items-center gap-3 rounded-lg py-2 text-left text-gray-900 hover:bg-gray-50"
+                title="Xem tin nhắn đã ghim"
+              >
+                <Pin className="h-5 w-5 shrink-0 fill-gray-900 text-gray-900" />
+                <span className="text-[15px] font-semibold">Xem tin nhắn đã ghim</span>
+              </button>
             </div>
           )}
 
           {renderGroupSectionHeader('customize', 'Tùy chỉnh đoạn chat')}
           {groupSectionsOpen.customize && (
-            <div className="space-y-2 px-3 pb-3 text-sm text-gray-600">
-              <button type="button" className="block w-full rounded-lg py-2 text-left hover:text-gray-900">
+            <div className="space-y-1 px-3 pb-3 text-sm text-gray-900">
+              <button type="button" onClick={onOpenRenameGroup} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
+                <Pencil className="h-5 w-5 shrink-0 text-gray-900" />
+                <span className="text-[15px] font-semibold">Đổi tên đoạn chat</span>
+              </button>
+              <button type="button" onClick={onOpenChangeGroupImage} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
+                <ImagePlus className="h-5 w-5 shrink-0 text-gray-900" />
+                <span className="text-[15px] font-semibold">Thay đổi ảnh</span>
+              </button>
+              <button type="button" onClick={onOpenChangeTheme} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
+                <Palette className="h-5 w-5 shrink-0 text-indigo-600" />
+                <span className="text-[15px] font-semibold">Đổi chủ đề</span>
+              </button>
+              <button type="button" onClick={onOpenNicknames} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
+                <Type className="h-5 w-5 shrink-0 text-gray-900" />
+                <span className="text-[15px] font-semibold">Chỉnh sửa biệt danh</span>
+              </button>
+              {/* Legacy actions remain intentionally hidden until wired to real handlers. */}
+              <button type="button" className="hidden">
                 Đổi tên đoạn chat
               </button>
-              <button type="button" className="block w-full rounded-lg py-2 text-left hover:text-gray-900">
+              <button type="button" className="hidden">
                 Đổi ảnh nhóm
               </button>
             </div>
@@ -815,9 +843,17 @@ export default function MessengerPage() {
   const [addGroupMemberSearch, setAddGroupMemberSearch] = useState('');
   const [selectedAddGroupMemberIds, setSelectedAddGroupMemberIds] = useState<string[]>([]);
   const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
+  const [groupSettingsModal, setGroupSettingsModal] = useState<null | 'rename' | 'image' | 'theme' | 'nicknames'>(null);
+  const [groupNameDraft, setGroupNameDraft] = useState('');
+  const [groupImageDraft, setGroupImageDraft] = useState('');
+  const [groupThemeDraft, setGroupThemeDraft] = useState('#2563eb');
+  const [nicknameEditingUserId, setNicknameEditingUserId] = useState<string | null>(null);
+  const [nicknameDraft, setNicknameDraft] = useState('');
+  const [isSavingGroupSettings, setIsSavingGroupSettings] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
   const [selectedForwardTargetIds, setSelectedForwardTargetIds] = useState<string[]>([]);
-  const [pinnedMessageByConversation, setPinnedMessageByConversation] = useState<Record<string, { id: string; text: string }>>({});
+  const [pinnedMessagesByConversation, setPinnedMessagesByConversation] = useState<Record<string, PinnedChatMessage[]>>({});
+  const [openPinnedMessagesSignal, setOpenPinnedMessagesSignal] = useState(0);
   const [pinnedConversationUserIds, setPinnedConversationUserIds] = useState<string[]>([]);
   const [serverGroupConversations, setServerGroupConversations] = useState<Conversation[]>([]);
   const [groupMembersById, setGroupMembersById] = useState<Record<string, ChatUser[]>>({});
@@ -883,27 +919,62 @@ export default function MessengerPage() {
     void loadPinnedConversations();
   }, [loadPinnedConversations]);
 
+  const getPinnedConversationKey = useCallback((row: {
+    peerUserId?: string | null;
+    conversationId?: string | null;
+  }) => {
+    if (row.peerUserId) return row.peerUserId;
+    if (row.conversationId) return `group:${row.conversationId}`;
+    return null;
+  }, []);
+
+  const mapPinnedMessageRow = useCallback((row: {
+    id?: string | null;
+    peerUserId?: string | null;
+    conversationId?: string | null;
+    messageId?: string | null;
+    pinnedBy?: string | null;
+    pinnedAt?: string | null;
+    senderId?: string | null;
+    senderName?: string | null;
+    senderAvatarUrl?: string | null;
+    messagePreview?: string | null;
+    messageCreatedAt?: string | null;
+  }): PinnedChatMessage | null => {
+    const conversationKey = getPinnedConversationKey(row);
+    if (!conversationKey || !row.messageId) return null;
+    const previewFields = mapBackendContentToMessageFields(row.messagePreview || '');
+    return {
+      id: row.id,
+      messageId: row.messageId,
+      conversationKey,
+      pinnedBy: row.pinnedBy,
+      pinnedAt: row.pinnedAt ? new Date(row.pinnedAt) : null,
+      senderId: row.senderId,
+      senderName: row.senderName || 'Người dùng',
+      senderAvatar: row.senderAvatarUrl,
+      text: previewFields.text || row.messagePreview || 'Tin nhắn',
+      messageCreatedAt: row.messageCreatedAt ? new Date(row.messageCreatedAt) : null,
+    };
+  }, [getPinnedConversationKey]);
+
   const loadPinnedMessages = useCallback(async () => {
     try {
       const rows = await chatService.getPinnedMessages();
-      const mapped: Record<string, { id: string; text: string }> = {};
+      const mapped: Record<string, PinnedChatMessage[]> = {};
       rows.forEach((row) => {
-        const key = row.peerUserId
-          ? row.peerUserId
-          : row.conversationId
-            ? `group:${row.conversationId}`
-            : null;
-        if (!key || !row.messageId) return;
-        mapped[key] = {
-          id: row.messageId,
-          text: row.messagePreview || 'Tin nhắn',
-        };
+        const item = mapPinnedMessageRow(row);
+        if (!item) return;
+        mapped[item.conversationKey] = [...(mapped[item.conversationKey] ?? []), item];
       });
-      setPinnedMessageByConversation(mapped);
+      Object.keys(mapped).forEach((key) => {
+        mapped[key] = mapped[key].sort((a, b) => (b.pinnedAt?.getTime() ?? 0) - (a.pinnedAt?.getTime() ?? 0));
+      });
+      setPinnedMessagesByConversation(mapped);
     } catch {
-      setPinnedMessageByConversation({});
+      setPinnedMessagesByConversation({});
     }
-  }, []);
+  }, [mapPinnedMessageRow]);
 
   useEffect(() => {
     void loadPinnedMessages();
@@ -939,6 +1010,11 @@ export default function MessengerPage() {
     };
   }, [activeChatUserId, conversations]);
 
+  const activeChatThemeColor = useMemo(() => {
+    if (!activeChatUserId) return null;
+    return conversations.find((conversation) => conversation.user.id === activeChatUserId)?.themeColor ?? null;
+  }, [activeChatUserId, conversations]);
+
   const selectableFriends = useMemo(() => baseConversationItems.map((c) => c.user), [baseConversationItems]);
 
   const loadGroupConversations = useCallback(async () => {
@@ -958,6 +1034,7 @@ export default function MessengerPage() {
         timestamp: '',
         isUnread: false,
         isGroup: true,
+        themeColor: group.themeColor,
       }));
 
       const membersMap: Record<string, ChatUser[]> = {};
@@ -966,7 +1043,9 @@ export default function MessengerPage() {
         const chatUserId = `group:${group.id}`;
         membersMap[chatUserId] = group.members.map((member) => ({
           id: member.userId,
-          name: member.fullName || member.username || 'Người dùng',
+          name: member.nickname || member.fullName || member.username || 'Người dùng',
+          fullName: member.fullName || member.username || 'Người dùng',
+          nickname: member.nickname,
           avatar:
             member.avatarUrl?.trim() ||
             `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(member.fullName || member.username || 'User')}`,
@@ -986,6 +1065,41 @@ export default function MessengerPage() {
   useEffect(() => {
     void loadGroupConversations();
   }, [loadGroupConversations]);
+
+  const applyGroupConversationResponse = useCallback((group: Awaited<ReturnType<typeof chatService.getMyGroupConversations>>[number]) => {
+    const chatUserId = `group:${group.id}`;
+    const conversation: Conversation = {
+      id: group.id,
+      user: {
+        id: chatUserId,
+        name: group.name,
+        avatar:
+          group.avatarUrl?.trim() ||
+          `https://ui-avatars.com/api/?background=2563eb&color=ffffff&bold=true&name=${encodeURIComponent('Group')}`,
+        isOnline: false,
+      },
+      lastMessage: overrides[chatUserId]?.lastMessage || 'Chưa có tin nhắn',
+      timestamp: overrides[chatUserId]?.timestamp || '',
+      isUnread: Boolean(overrides[chatUserId]?.isUnread),
+      isGroup: true,
+      themeColor: group.themeColor,
+    };
+    setServerGroupConversations((prev) => [conversation, ...prev.filter((item) => item.user.id !== chatUserId)]);
+    setGroupMembersById((prev) => ({
+      ...prev,
+      [chatUserId]: group.members.map((member) => ({
+        id: member.userId,
+        name: member.nickname || member.fullName || member.username || 'Người dùng',
+        fullName: member.fullName || member.username || 'Người dùng',
+        nickname: member.nickname,
+        avatar:
+          member.avatarUrl?.trim() ||
+          `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(member.fullName || member.username || 'User')}`,
+        isOnline: false,
+      })),
+    }));
+    setGroupCreatorById((prev) => ({ ...prev, [chatUserId]: group.createdBy }));
+  }, [overrides]);
 
   const loadInitialHistory = useCallback(
     async (peerUserId: string) => {
@@ -1138,6 +1252,7 @@ export default function MessengerPage() {
     subscribeMessages,
     subscribeMessageStatuses,
     subscribePresenceStatuses,
+    subscribePinnedMessages,
     sendMessageDelivered,
     sendConversationSeen,
   } = useRealtimeCall();
@@ -1186,6 +1301,21 @@ export default function MessengerPage() {
           isUnread: activeChatUserId !== otherUserId,
         },
       }));
+
+      if (newMsg.deleted) {
+        setPinnedMessagesByConversation((prev) => {
+          const current = prev[otherUserId] ?? [];
+          if (!current.some((item) => item.messageId === newMsg.id)) return prev;
+          const nextItems = current.filter((item) => item.messageId !== newMsg.id);
+          const next = { ...prev };
+          if (nextItems.length === 0) {
+            delete next[otherUserId];
+          } else {
+            next[otherUserId] = nextItems;
+          }
+          return next;
+        });
+      }
 
       if (msg.senderId !== myId && !msg.conversationId) {
         sendMessageDelivered(msg.id);
@@ -1260,6 +1390,27 @@ export default function MessengerPage() {
       });
     });
   }, [subscribePresenceStatuses]);
+
+  useEffect(() => {
+    return subscribePinnedMessages((event) => {
+      const item = mapPinnedMessageRow(event);
+      const key = item?.conversationKey ?? getPinnedConversationKey(event);
+      if (!key || !event.messageId) return;
+      setPinnedMessagesByConversation((prev) => {
+        const current = prev[key] ?? [];
+        const nextItems = event.pinned && item
+          ? [item, ...current.filter((existing) => existing.messageId !== event.messageId)]
+          : current.filter((existing) => existing.messageId !== event.messageId);
+        const next = { ...prev };
+        if (nextItems.length === 0) {
+          delete next[key];
+        } else {
+          next[key] = nextItems.sort((a, b) => (b.pinnedAt?.getTime() ?? 0) - (a.pinnedAt?.getTime() ?? 0));
+        }
+        return next;
+      });
+    });
+  }, [getPinnedConversationKey, mapPinnedMessageRow, subscribePinnedMessages]);
 
   useEffect(() => {
     if (!activeChatUserId) return;
@@ -1546,41 +1697,125 @@ export default function MessengerPage() {
 
   const handlePinMessage = useCallback(async (message: Message) => {
     if (!activeChatUserId) return;
-    const current = pinnedMessageByConversation[activeChatUserId];
-    const isUnpin = current?.id === message.id;
+    const current = pinnedMessagesByConversation[activeChatUserId] ?? [];
+    const isUnpin = current.some((item) => item.messageId === message.id);
+    const sender = message.senderId === currentUser?.id
+      ? {
+          name: currentUser.fullName || currentUser.username || 'Bạn',
+          avatar: currentUser.avatarUrl,
+        }
+      : (groupMembersById[activeChatUserId]?.find((member) => member.id === message.senderId) || activeChatUser);
+    const optimisticItem: PinnedChatMessage = {
+      messageId: message.id,
+      conversationKey: activeChatUserId,
+      pinnedBy: currentUser?.id,
+      pinnedAt: new Date(),
+      senderId: message.senderId,
+      senderName: sender?.name || 'Người dùng',
+      senderAvatar: sender?.avatar,
+      text: message.text || 'Tin nhắn',
+      messageCreatedAt: message.timestamp,
+    };
+
+    setPinnedMessagesByConversation((prev) => {
+      const existing = prev[activeChatUserId] ?? [];
+      const nextItems = isUnpin
+        ? existing.filter((item) => item.messageId !== message.id)
+        : [optimisticItem, ...existing.filter((item) => item.messageId !== message.id)];
+      const next = { ...prev };
+      if (nextItems.length === 0) {
+        delete next[activeChatUserId];
+      } else {
+        next[activeChatUserId] = nextItems;
+      }
+      return next;
+    });
+
+    try {
+      if (activeChatUserId.startsWith('group:')) {
+        const response = await chatService.setPinnedMessage({
+          conversationId: activeChatUserId.replace('group:', ''),
+          messageId: message.id,
+          pinned: !isUnpin,
+        });
+        const serverItem = mapPinnedMessageRow(response);
+        if (serverItem && response.pinned) {
+          setPinnedMessagesByConversation((prev) => ({
+            ...prev,
+            [activeChatUserId]: [serverItem, ...(prev[activeChatUserId] ?? []).filter((item) => item.messageId !== serverItem.messageId)],
+          }));
+        }
+      } else {
+        const response = await chatService.setPinnedMessage({
+          peerUserId: activeChatUserId,
+          messageId: message.id,
+          pinned: !isUnpin,
+        });
+        const serverItem = mapPinnedMessageRow(response);
+        if (serverItem && response.pinned) {
+          setPinnedMessagesByConversation((prev) => ({
+            ...prev,
+            [activeChatUserId]: [serverItem, ...(prev[activeChatUserId] ?? []).filter((item) => item.messageId !== serverItem.messageId)],
+          }));
+        }
+      }
+    } catch {
+      setPinnedMessagesByConversation((prev) => {
+        const existing = prev[activeChatUserId] ?? [];
+        const nextItems = isUnpin
+          ? [optimisticItem, ...existing.filter((item) => item.messageId !== message.id)]
+          : existing.filter((item) => item.messageId !== message.id);
+        const next = { ...prev };
+        if (nextItems.length === 0) {
+          delete next[activeChatUserId];
+        } else {
+          next[activeChatUserId] = nextItems;
+        }
+        return next;
+      });
+      toast.error('Không thể cập nhật ghim tin nhắn.');
+    }
+  }, [activeChatUser, activeChatUserId, currentUser, groupMembersById, mapPinnedMessageRow, pinnedMessagesByConversation]);
+
+  const handleUnpinPinnedMessage = useCallback(async (messageId: string) => {
+    if (!activeChatUserId) return;
+    const currentItems = pinnedMessagesByConversation[activeChatUserId] ?? [];
+    const removed = currentItems.find((item) => item.messageId === messageId);
+    if (!removed) return;
+
+    setPinnedMessagesByConversation((prev) => {
+      const nextItems = (prev[activeChatUserId] ?? []).filter((item) => item.messageId !== messageId);
+      const next = { ...prev };
+      if (nextItems.length === 0) {
+        delete next[activeChatUserId];
+      } else {
+        next[activeChatUserId] = nextItems;
+      }
+      return next;
+    });
+
     try {
       if (activeChatUserId.startsWith('group:')) {
         await chatService.setPinnedMessage({
           conversationId: activeChatUserId.replace('group:', ''),
-          messageId: isUnpin ? undefined : message.id,
-          pinned: !isUnpin,
+          messageId,
+          pinned: false,
         });
       } else {
         await chatService.setPinnedMessage({
           peerUserId: activeChatUserId,
-          messageId: isUnpin ? undefined : message.id,
-          pinned: !isUnpin,
+          messageId,
+          pinned: false,
         });
       }
-
-      setPinnedMessageByConversation((prev) => {
-        if (isUnpin) {
-          const next = { ...prev };
-          delete next[activeChatUserId];
-          return next;
-        }
-        return {
-          ...prev,
-          [activeChatUserId]: {
-            id: message.id,
-            text: message.text || 'Tin nhắn',
-          },
-        };
-      });
     } catch {
-      toast.error('Không thể cập nhật ghim tin nhắn.');
+      setPinnedMessagesByConversation((prev) => ({
+        ...prev,
+        [activeChatUserId]: [removed, ...(prev[activeChatUserId] ?? []).filter((item) => item.messageId !== messageId)],
+      }));
+      toast.error('Không thể bỏ ghim tin nhắn.');
     }
-  }, [activeChatUserId, pinnedMessageByConversation]);
+  }, [activeChatUserId, pinnedMessagesByConversation]);
 
   const handleSendMessage = useCallback(
     (content: string) => {
@@ -1981,12 +2216,10 @@ export default function MessengerPage() {
       return friend.name.toLowerCase().includes(query);
     });
   }, [activeChatUserId, addGroupMemberSearch, groupMembersById, isActiveGroupChat, selectableFriends]);
-  const activePinnedMessage = useMemo(() => {
-    if (!activeChatUserId) return null;
-    const pinned = pinnedMessageByConversation[activeChatUserId];
-    if (!pinned) return null;
-    return activeMessages.find((m) => m.id === pinned.id) ?? null;
-  }, [activeChatUserId, activeMessages, pinnedMessageByConversation]);
+  const activePinnedMessages = useMemo(() => {
+    if (!activeChatUserId) return [];
+    return pinnedMessagesByConversation[activeChatUserId] ?? [];
+  }, [activeChatUserId, pinnedMessagesByConversation]);
   const activeHistory = activeChatUserId ? historyByUser[activeChatUserId] : undefined;
   const loadingMessages = Boolean(activeChatUserId && activeHistory?.loadingInitial && activeMessages.length === 0);
   const loadingOlderMessages = Boolean(activeChatUserId && activeHistory?.loadingOlder);
@@ -1996,6 +2229,55 @@ export default function MessengerPage() {
     if (!activeChatUserId) return;
     await loadOlderHistory(activeChatUserId);
   }, [activeChatUserId, loadOlderHistory]);
+
+  const openGroupSettingsModal = useCallback((mode: 'rename' | 'image' | 'theme' | 'nicknames') => {
+    if (!activeChatUserId?.startsWith('group:') || !activeChatUser) return;
+    setGroupSettingsModal(mode);
+    if (mode === 'rename') {
+      setGroupNameDraft(activeChatUser.name);
+    }
+    if (mode === 'image') {
+      setGroupImageDraft(activeChatUser.avatar || '');
+    }
+    if (mode === 'theme') {
+      setGroupThemeDraft(activeChatThemeColor || '#2563eb');
+    }
+    if (mode === 'nicknames') {
+      setNicknameEditingUserId(null);
+      setNicknameDraft('');
+    }
+  }, [activeChatThemeColor, activeChatUser, activeChatUserId]);
+
+  const handleUpdateGroupConversation = useCallback(async (payload: { name?: string; avatarUrl?: string | null; themeColor?: string | null }) => {
+    if (!activeChatUserId?.startsWith('group:')) return;
+    const conversationId = activeChatUserId.replace('group:', '');
+    setIsSavingGroupSettings(true);
+    try {
+      const updated = await chatService.updateGroupConversation(conversationId, payload);
+      applyGroupConversationResponse(updated);
+      setGroupSettingsModal(null);
+    } catch {
+      toast.error('Không thể cập nhật đoạn chat.');
+    } finally {
+      setIsSavingGroupSettings(false);
+    }
+  }, [activeChatUserId, applyGroupConversationResponse]);
+
+  const handleSaveNickname = useCallback(async (memberUserId: string, nickname: string) => {
+    if (!activeChatUserId?.startsWith('group:')) return;
+    const conversationId = activeChatUserId.replace('group:', '');
+    setIsSavingGroupSettings(true);
+    try {
+      const updated = await chatService.updateGroupMemberNickname(conversationId, memberUserId, nickname.trim() || null);
+      applyGroupConversationResponse(updated);
+      setNicknameEditingUserId(null);
+      setNicknameDraft('');
+    } catch {
+      toast.error('Không thể cập nhật biệt danh.');
+    } finally {
+      setIsSavingGroupSettings(false);
+    }
+  }, [activeChatUserId, applyGroupConversationResponse]);
 
   const activeWindowCallStatus = useMemo<
     'idle' | 'calling' | 'ringing' | 'connecting' | 'in_call' | 'ended' | 'error'
@@ -2143,7 +2425,10 @@ export default function MessengerPage() {
                 onReportMessage={handleReportMessage}
                 onForwardMessage={handleOpenForwardModal}
                 onPinMessage={handlePinMessage}
-                pinnedMessage={activePinnedMessage}
+                pinnedMessages={activePinnedMessages}
+                onUnpinPinnedMessage={handleUnpinPinnedMessage}
+                currentUserId={currentUser?.id}
+                openPinnedMessagesSignal={openPinnedMessagesSignal}
                 onClose={handleBackToList}
                 onMinimize={handleBackToList}
                 fullScreen
@@ -2167,6 +2452,7 @@ export default function MessengerPage() {
                 isGroupCreator={isActiveGroupCreator}
                 groupCreatorName={activeGroupCreatorName}
                 groupMembers={activeChatUserId ? groupMembersById[activeChatUserId] ?? [] : []}
+                themeColor={activeChatThemeColor}
               />
             </div>
           ) : activeChatUserId && loadingConversations ? (
@@ -2194,10 +2480,178 @@ export default function MessengerPage() {
               groupCreatorId={activeChatUserId ? groupCreatorById[activeChatUserId] : undefined}
               currentUserId={currentUser?.id}
               onOpenAddMembers={openAddGroupMembersModal}
+              onOpenPinnedMessages={() => setOpenPinnedMessagesSignal((value) => value + 1)}
+              onOpenRenameGroup={() => openGroupSettingsModal('rename')}
+              onOpenChangeGroupImage={() => openGroupSettingsModal('image')}
+              onOpenChangeTheme={() => openGroupSettingsModal('theme')}
+              onOpenNicknames={() => openGroupSettingsModal('nicknames')}
             />
           )}
         </div>
       </div>
+
+      {groupSettingsModal && activeChatUserId?.startsWith('group:') && activeChatUser && (
+        <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/35 p-4">
+          <div className="flex max-h-[86vh] w-full max-w-[660px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+            <div className="relative flex shrink-0 items-center justify-center border-b border-gray-200 px-5 py-4">
+              <h3 className="text-[24px] font-bold text-gray-900">
+                {groupSettingsModal === 'rename'
+                  ? 'Đổi tên đoạn chat'
+                  : groupSettingsModal === 'image'
+                    ? 'Thay đổi ảnh'
+                    : groupSettingsModal === 'theme'
+                      ? 'Đổi chủ đề'
+                      : 'Biệt danh'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setGroupSettingsModal(null)}
+                disabled={isSavingGroupSettings}
+                className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 disabled:opacity-60"
+                title="Đóng"
+              >
+                <X className="h-7 w-7" />
+              </button>
+            </div>
+
+            {groupSettingsModal === 'rename' && (
+              <div className="space-y-4 p-5">
+                <input
+                  value={groupNameDraft}
+                  onChange={(event) => setGroupNameDraft(event.target.value)}
+                  className="h-12 w-full rounded-full bg-gray-100 px-4 text-[16px] outline-none focus:bg-gray-200"
+                  placeholder="Tên đoạn chat"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => handleUpdateGroupConversation({ name: groupNameDraft })}
+                  disabled={isSavingGroupSettings || !groupNameDraft.trim()}
+                  className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
+                >
+                  Lưu
+                </button>
+              </div>
+            )}
+
+            {groupSettingsModal === 'image' && (
+              <div className="space-y-4 p-5">
+                <div className="flex justify-center">
+                  <img
+                    src={groupImageDraft || activeChatUser.avatar}
+                    alt={activeChatUser.name}
+                    className="h-24 w-24 rounded-full object-cover"
+                  />
+                </div>
+                <input
+                  value={groupImageDraft}
+                  onChange={(event) => setGroupImageDraft(event.target.value)}
+                  className="h-12 w-full rounded-full bg-gray-100 px-4 text-[16px] outline-none focus:bg-gray-200"
+                  placeholder="Dán URL ảnh nhóm"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleUpdateGroupConversation({ avatarUrl: groupImageDraft.trim() || null })}
+                  disabled={isSavingGroupSettings}
+                  className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
+                >
+                  Lưu
+                </button>
+              </div>
+            )}
+
+            {groupSettingsModal === 'theme' && (
+              <div className="space-y-4 p-5">
+                <div className="grid grid-cols-5 gap-3">
+                  {['#2563eb', '#7c3aed', '#db2777', '#16a34a', '#f97316', '#0891b2', '#111827', '#dc2626', '#4f46e5', '#0f766e'].map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setGroupThemeDraft(color)}
+                      className={`h-11 rounded-full border-2 ${groupThemeDraft === color ? 'border-gray-900' : 'border-transparent'}`}
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateGroupConversation({ themeColor: groupThemeDraft })}
+                  disabled={isSavingGroupSettings}
+                  className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
+                >
+                  Lưu
+                </button>
+              </div>
+            )}
+
+            {groupSettingsModal === 'nicknames' && (
+              <div className="min-h-0 flex-1 overflow-y-auto p-5">
+                <div className="space-y-4">
+                  {(activeChatUserId ? groupMembersById[activeChatUserId] ?? [] : []).map((member) => {
+                    const editing = nicknameEditingUserId === member.id;
+                    const realName = member.fullName || member.name;
+                    return (
+                      <div key={member.id} className="flex items-center gap-3">
+                        <img
+                          src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(realName)}&background=random`}
+                          alt={realName}
+                          className="h-12 w-12 rounded-full object-cover"
+                        />
+                        {editing ? (
+                          <>
+                            <input
+                              value={nicknameDraft}
+                              onChange={(event) => setNicknameDraft(event.target.value)}
+                              className="h-11 min-w-0 flex-1 rounded-full bg-gray-100 px-4 text-[16px] outline-none focus:bg-gray-200"
+                              placeholder={realName}
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSaveNickname(member.id, nicknameDraft)}
+                              disabled={isSavingGroupSettings}
+                              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-900 hover:bg-gray-100 disabled:opacity-60"
+                              title="Lưu biệt danh"
+                            >
+                              <Check className="h-6 w-6" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNicknameEditingUserId(member.id);
+                                setNicknameDraft(member.nickname || '');
+                              }}
+                              className="min-w-0 flex-1 text-left"
+                            >
+                              <p className="truncate text-[16px] font-semibold text-gray-900">{realName}</p>
+                              <p className="truncate text-sm text-gray-600">{member.nickname || 'Đặt biệt danh'}</p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNicknameEditingUserId(member.id);
+                                setNicknameDraft(member.nickname || '');
+                              }}
+                              className="flex h-10 w-10 items-center justify-center rounded-full text-gray-900 hover:bg-gray-100"
+                              title="Sửa biệt danh"
+                            >
+                              <Pencil className="h-5 w-5 fill-gray-900" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {isCreateGroupOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/35 p-4">

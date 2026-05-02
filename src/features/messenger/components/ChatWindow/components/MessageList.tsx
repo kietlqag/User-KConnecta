@@ -16,7 +16,7 @@ interface MessageListProps {
   onReplyMessage: (msg: Message) => void;
   onForwardMessage: (msg: Message) => void;
   onPinMessage?: (msg: Message) => void;
-  pinnedMessageId?: string | null;
+  pinnedMessageIds?: string[];
   onReportMessage: (msg: Message) => void;
   onScroll: () => void;
   onUserScrollIntent: () => void;
@@ -28,6 +28,7 @@ interface MessageListProps {
   groupMembers?: ChatUser[];
   peerAvatar?: string;
   peerName?: string;
+  themeColor?: string | null;
 }
 
 export const MessageList = forwardRef(({
@@ -43,7 +44,7 @@ export const MessageList = forwardRef(({
   onReplyMessage,
   onForwardMessage,
   onPinMessage,
-  pinnedMessageId = null,
+  pinnedMessageIds = [],
   onReportMessage,
   onScroll,
   onUserScrollIntent,
@@ -55,8 +56,10 @@ export const MessageList = forwardRef(({
   groupMembers = [],
   peerAvatar = '',
   peerName = 'Người dùng',
+  themeColor,
 }: MessageListProps, ref: ForwardedRef<HTMLDivElement>) => {
   const senderById = new Map(groupMembers.map((member) => [member.id, member]));
+  const pinnedMessageIdSet = new Set(pinnedMessageIds);
   const shouldShowSenderAvatar = (index: number) => {
     const current = messages[index];
     if (!current || current.isOwn) return false;
@@ -106,10 +109,6 @@ export const MessageList = forwardRef(({
             key={message.id}
             id={`chat-message-${message.id}`}
             className="min-w-0"
-            style={{
-              contentVisibility: 'auto',
-              containIntrinsicSize: message.systemType ? '72px' : '96px',
-            }}
           >
             <MessageBubble
               message={message}
@@ -124,9 +123,10 @@ export const MessageList = forwardRef(({
               onDelete={onDeleteMessage}
               onForward={onForwardMessage}
               onPinMessage={onPinMessage}
-              isPinnedMessage={pinnedMessageId === message.id}
+              isPinnedMessage={pinnedMessageIdSet.has(message.id)}
               onReport={onReportMessage}
               onJumpToMessage={onJumpToMessage}
+              themeColor={themeColor}
             />
           </div>
         ))}

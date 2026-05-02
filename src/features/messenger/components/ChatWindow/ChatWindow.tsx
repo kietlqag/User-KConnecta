@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
+import { useEffect } from 'react';
 import { Pin } from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { ChatHeader } from './components/ChatHeader';
@@ -6,6 +7,7 @@ import { MessageList } from './components/MessageList';
 import { PendingAttachments } from './components/PendingAttachments';
 import { Composer } from './components/Composer';
 import { CameraModal } from './components/CameraModal';
+import { PinnedMessagesModal, type PinnedChatMessage } from './components/PinnedMessagesModal';
 import { useChatScroll } from './hooks/useChatScroll';
 import { useVoiceRecorder } from './hooks/useVoiceRecorder';
 import { useAttachments } from './hooks/useAttachments';
@@ -27,7 +29,10 @@ interface ChatWindowProps {
   onReportMessage?: (messageId: string) => Promise<boolean> | boolean;
   onForwardMessage?: (message: Message) => void;
   onPinMessage?: (message: Message) => void;
-  pinnedMessage?: Message | null;
+  pinnedMessages?: PinnedChatMessage[];
+  onUnpinPinnedMessage?: (messageId: string) => void;
+  currentUserId?: string | null;
+  openPinnedMessagesSignal?: number;
   onClose: () => void;
   onMinimize?: () => void;
   fullScreen?: boolean;
@@ -45,6 +50,7 @@ interface ChatWindowProps {
   isGroupCreator?: boolean;
   groupCreatorName?: string;
   groupMembers?: ChatUser[];
+  themeColor?: string | null;
 }
 
 function formatVoiceDuration(totalSec: number) {
@@ -68,7 +74,10 @@ export const ChatWindow = ({
   onReportMessage,
   onForwardMessage,
   onPinMessage,
-  pinnedMessage = null,
+  pinnedMessages = [],
+  onUnpinPinnedMessage,
+  currentUserId,
+  openPinnedMessagesSignal = 0,
   onClose,
   fullScreen,
   callStatus = 'idle',
@@ -84,12 +93,14 @@ export const ChatWindow = ({
   isGroupCreator = false,
   groupCreatorName = 'Người tạo',
   groupMembers = [],
+  themeColor,
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [showPinnedModal, setShowPinnedModal] = useState(false);
 
   const { messageListRef, showJumpToLatest, scrollToBottom, handleListScroll, markUserScrollIntent } = useChatScroll(
     messages.length,
@@ -201,6 +212,12 @@ export const ChatWindow = ({
   const isStartingVoiceCall = callStatus === 'calling' || callStatus === 'connecting';
   const isVideoCall = hasActiveVoiceCall && callMediaType === 'video';
 
+  useEffect(() => {
+    if (openPinnedMessagesSignal > 0) {
+      setShowPinnedModal(true);
+    }
+  }, [openPinnedMessagesSignal]);
+
   return (
     <div className={`
       ${fullScreen 
@@ -225,21 +242,25 @@ export const ChatWindow = ({
         onToggleMute={onToggleMute}
       />
 
-      {pinnedMessage && (
+      {pinnedMessages.length > 0 && (
         <button
           type="button"
-          onClick={() => void jumpToMessage(pinnedMessage.id)}
+          onClick={() => setShowPinnedModal(true)}
           className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 text-left hover:bg-gray-100"
-          title="Đi đến tin nhắn đã ghim"
+          title="Tin nhắn đã ghim"
         >
           <Pin className="h-4 w-4 shrink-0 text-gray-500" />
           <span className="text-sm text-gray-500">Đã ghim</span>
           <span className="truncate text-sm font-medium text-gray-900">
-            {pinnedMessage.text || 'Tin nhắn'}
+            {pinnedMessages[0]?.text || 'Tin nhắn'}
           </span>
+          {pinnedMessages.length > 1 && (
+            <span className="ml-auto rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">
+              {pinnedMessages.length}
+            </span>
+          )}
         </button>
       )}
-
       <MessageList 
         ref={messageListRef}
         messages={messages}
@@ -260,7 +281,7 @@ export const ChatWindow = ({
           setInputText(prev => prev ? `${prev}\n${msg.text}` : msg.text);
         }}
         onPinMessage={onPinMessage}
-        pinnedMessageId={pinnedMessage?.id ?? null}
+        pinnedMessageIds={pinnedMessages.map((item) => item.messageId)}
         onReportMessage={handleReport}
         onScroll={handleListScroll}
         onUserScrollIntent={markUserScrollIntent}
@@ -272,6 +293,7 @@ export const ChatWindow = ({
         peerName={user.name}
         groupName={user.name}
         groupAvatar={user.avatar}
+        themeColor={themeColor}
       />
 
       <PendingAttachments 
@@ -320,6 +342,16 @@ export const ChatWindow = ({
           {reportNotice}
         </div>
       )}
+
+      <PinnedMessagesModal
+        open={showPinnedModal}
+        items={pinnedMessages}
+        currentUserId={currentUserId}
+        onClose={() => setShowPinnedModal(false)}
+        onJumpToMessage={(messageId) => void jumpToMessage(messageId)}
+        onUnpinMessage={(messageId) => onUnpinPinnedMessage?.(messageId)}
+      />
     </div>
   );
+
 };
