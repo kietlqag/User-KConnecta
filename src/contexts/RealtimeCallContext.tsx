@@ -551,6 +551,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
           isMuted={voiceCall.isMuted}
           remoteVideoRef={remoteVideoRef}
           localVideoRef={localVideoRef}
+          localStream={voiceCall.localStream}
           groupCallParticipants={voiceCall.groupCallParticipants}
           remoteStreams={voiceCall.remoteStreams}
           currentUserId={currentUser?.id}

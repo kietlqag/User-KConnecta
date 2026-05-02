@@ -1,5 +1,5 @@
-import { useEffect, useRef, type RefObject } from 'react';
-import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume1, Volume2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { ChevronLeft, ChevronRight, Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume1, Volume2, X } from 'lucide-react';
 import type { GroupCallParticipant } from '../../types/message.types';
 
 type CallStatus = 'idle' | 'calling' | 'ringing' | 'connecting' | 'in_call' | 'ended' | 'error';
@@ -24,6 +24,7 @@ interface CallOverlayModalProps {
   isMuted?: boolean;
   remoteVideoRef?: RefObject<HTMLVideoElement | null>;
   localVideoRef?: RefObject<HTMLVideoElement | null>;
+  localStream?: MediaStream | null;
   groupCallParticipants?: GroupCallParticipant[];
   remoteStreams?: Array<{ userId: string; stream: MediaStream }>;
   currentUserId?: string;
@@ -77,7 +78,7 @@ function GroupVideoTile({
   const joined = participant.status === 'joined';
   return (
     <div className="relative min-h-[150px] overflow-hidden rounded-xl bg-gray-950">
-      {stream && joined ? (
+      {stream && joined && participant.cameraEnabled ? (
         <video ref={videoRef} autoPlay muted={isSelf} playsInline className="h-full w-full object-cover" />
       ) : (
         <div className="flex h-full min-h-[150px] flex-col items-center justify-center gap-2 bg-gray-100">
@@ -110,6 +111,7 @@ export function CallOverlayModal({
   isMuted = false,
   remoteVideoRef,
   localVideoRef,
+  localStream,
   groupCallParticipants = [],
   remoteStreams = [],
   currentUserId,
@@ -123,12 +125,33 @@ export function CallOverlayModal({
   onToggleMute,
   onEndCall,
 }: CallOverlayModalProps) {
-  if (!show) return null;
-
   const isGroupCall = groupCallParticipants.length > 0;
   const caller = callerUserId ? groupCallParticipants.find((participant) => participant.userId === callerUserId) : undefined;
   const joinedParticipants = groupCallParticipants.filter((participant) => participant.status === 'joined');
-  const pendingParticipants = groupCallParticipants.filter((participant) => participant.status !== 'joined');
+  const videoPageSize = 4;
+  const [videoPage, setVideoPage] = useState(0);
+  const videoParticipants = useMemo(
+    () => groupCallParticipants.filter((participant) => participant.status === 'joined'),
+    [groupCallParticipants],
+  );
+  const videoPageCount = Math.max(1, Math.ceil(videoParticipants.length / videoPageSize));
+  const visibleVideoParticipants = videoParticipants.slice(
+    videoPage * videoPageSize,
+    videoPage * videoPageSize + videoPageSize,
+  );
+  const centeredGroupGridClass =
+    visibleVideoParticipants.length <= 1
+      ? 'grid-cols-1 max-w-[360px]'
+      : visibleVideoParticipants.length === 2
+        ? 'grid-cols-1 sm:grid-cols-2 max-w-[620px]'
+        : 'grid-cols-1 sm:grid-cols-2 max-w-[620px]';
+
+  useEffect(() => {
+    setVideoPage((prev) => Math.min(prev, videoPageCount - 1));
+  }, [videoPageCount]);
+
+  if (!show) return null;
+
   const isWideLayout = mode === 'ongoing' && (isVideoCall || isGroupCall);
   const cardClassName = `relative rounded-2xl bg-white border border-gray-200 shadow-2xl p-6 ${
     isWideLayout ? 'w-[min(760px,calc(100vw-32px))]' : 'w-[min(408px,calc(100vw-32px))]'
@@ -167,6 +190,32 @@ export function CallOverlayModal({
     </div>
   );
 
+  const groupPageControls = videoParticipants.length > videoPageSize && (
+    <div className="mt-3 flex items-center justify-center gap-3">
+      <button
+        type="button"
+        onClick={() => setVideoPage((prev) => Math.max(0, prev - 1))}
+        disabled={videoPage === 0}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+        title="Trang trước"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <span className="text-sm font-medium text-gray-600">
+        {videoPage + 1}/{videoPageCount}
+      </span>
+      <button
+        type="button"
+        onClick={() => setVideoPage((prev) => Math.min(videoPageCount - 1, prev + 1))}
+        disabled={videoPage >= videoPageCount - 1}
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+        title="Trang sau"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+
   if (mode === 'incoming') {
     return (
       <div className={`fixed inset-0 ${zIndexClassName} flex items-center justify-center bg-black/20 p-4`}>
@@ -184,8 +233,6 @@ export function CallOverlayModal({
                   : 'Đang gọi thoại cho bạn'}
             </p>
           </div>
-
-          {isGroupCall && groupParticipantList}
 
           <div className="mt-8 flex items-center justify-center gap-7">
             <button onClick={onRejectIncoming} className={`${iconButtonClassName} bg-red-500 hover:bg-red-600`} title="Từ chối">
@@ -205,18 +252,43 @@ export function CallOverlayModal({
     if (isVideoCall) {
       return (
         <>
-          <div className="mt-7 grid max-h-[380px] grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-2">
-            {groupCallParticipants.map((participant) => (
+          <div className={`mx-auto mt-7 grid max-h-[380px] w-full ${centeredGroupGridClass} gap-3 overflow-y-auto`}>
+            {visibleVideoParticipants.map((participant) => (
               <GroupVideoTile
                 key={participant.userId}
                 participant={participant}
-                stream={participant.userId === currentUserId ? undefined : remoteStreams.find((item) => item.userId === participant.userId)?.stream}
+                stream={participant.userId === currentUserId ? localStream ?? undefined : remoteStreams.find((item) => item.userId === participant.userId)?.stream}
                 isSelf={participant.userId === currentUserId}
               />
             ))}
           </div>
+          {videoParticipants.length > videoPageSize && (
+            <div className="mt-3 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setVideoPage((prev) => Math.max(0, prev - 1))}
+                disabled={videoPage === 0}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+                title="Trang trước"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-medium text-gray-600">
+                {videoPage + 1}/{videoPageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setVideoPage((prev) => Math.min(videoPageCount - 1, prev + 1))}
+                disabled={videoPage >= videoPageCount - 1}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+                title="Trang sau"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <div className="mt-3 text-center">
-            <p className="text-lg font-semibold text-gray-900">{joinedParticipants.length} người đang trong cuộc gọi</p>
+            <p className="text-lg font-semibold text-gray-900">{videoParticipants.length} người đang trong cuộc gọi</p>
             <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
           </div>
         </>
@@ -224,8 +296,8 @@ export function CallOverlayModal({
     }
     return (
       <div className="pt-7 text-center">
-        <div className="mx-auto grid max-w-[440px] grid-cols-3 gap-3">
-          {joinedParticipants.map((participant) => (
+        <div className={`mx-auto grid w-full ${centeredGroupGridClass} gap-3`}>
+          {visibleVideoParticipants.map((participant) => (
             <div key={participant.userId} className="rounded-xl bg-gray-50 px-2 py-3">
               <img src={participant.avatar} alt={participant.name} className="mx-auto h-16 w-16 rounded-full object-cover" />
               <p className="mt-2 truncate text-sm font-semibold text-gray-900">{participant.name}</p>
@@ -233,8 +305,8 @@ export function CallOverlayModal({
             </div>
           ))}
         </div>
+        {groupPageControls}
         <p className="mt-4 text-[16px] text-gray-500">{callStatusText}</p>
-        {pendingParticipants.length > 0 && groupParticipantList}
       </div>
     );
   };

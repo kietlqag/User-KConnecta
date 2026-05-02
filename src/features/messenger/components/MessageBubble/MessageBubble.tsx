@@ -216,8 +216,18 @@ export const MessageBubble = ({
   if (message.systemType === 'call_log' || message.systemType === 'missed_call') {
     const isCompleted = message.callLogKind === 'completed';
     const isVideoCall = message.callMediaType === 'video' || message.text.toLowerCase().includes('video');
+    const avatarUrl = senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName || 'User')}&background=random`;
+    const avatar = (
+      <img
+        src={avatarUrl}
+        alt={senderName}
+        className="h-8 w-8 shrink-0 rounded-full object-cover"
+        title={senderName}
+      />
+    );
     return (
-      <div className={`flex min-w-0 ${message.isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
+      <div className={`flex min-w-0 items-end gap-2 ${message.isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
+        {!message.isOwn && avatar}
         <div
           className="w-[286px] max-w-full rounded-2xl bg-[#eef1e5] border border-[#dde2d2] p-2.5"
           style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
@@ -255,6 +265,7 @@ export const MessageBubble = ({
             {isVideoCall ? 'Gọi video lại' : 'Gọi lại'}
           </button>
         </div>
+        {message.isOwn && avatar}
       </div>
     );
   }

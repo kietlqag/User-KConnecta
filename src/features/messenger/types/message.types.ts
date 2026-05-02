@@ -133,6 +133,8 @@ export interface OutgoingCallSignal {
   groupParticipants?: GroupCallParticipantSignal[];
   participantUserId?: string;
   participantStatus?: GroupCallParticipantStatus;
+  participantMicEnabled?: boolean;
+  participantCameraEnabled?: boolean;
 }
 
 export interface IncomingCallSignal {
@@ -152,6 +154,8 @@ export interface IncomingCallSignal {
   groupParticipants?: GroupCallParticipantSignal[];
   participantUserId?: string;
   participantStatus?: GroupCallParticipantStatus;
+  participantMicEnabled?: boolean;
+  participantCameraEnabled?: boolean;
   createdAt: string;
   sessionStatus?: 'RINGING' | 'ONGOING' | 'MISSED' | 'COMPLETED';
   sessionMediaType?: 'audio' | 'video';
