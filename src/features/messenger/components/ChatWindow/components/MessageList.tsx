@@ -70,7 +70,7 @@ export const MessageList = forwardRef(({
 
   const lastOwnMessageId = (() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
-      if (messages[i].isOwn) return messages[i].id;
+      if (messages[i].isOwn && !messages[i].systemType) return messages[i].id;
     }
     return null;
   })();
@@ -85,6 +85,33 @@ export const MessageList = forwardRef(({
     }
     return 'Đã gửi';
   })();
+
+  const formatChatAction = (message: Message) => {
+    const actor = message.isOwn ? 'Bạn' : message.systemActionActorName || senderById.get(message.senderId)?.name || peerName || 'Người dùng';
+    const target = message.systemActionTargetName || 'một thành viên';
+    const value = message.systemActionValue;
+
+    switch (message.systemActionType) {
+      case 'rename_conversation':
+        return `${actor} đã đổi tên đoạn chat${value ? ` thành ${value}` : ''}.`;
+      case 'change_group_photo':
+        return `${actor} đã đổi ảnh nhóm.`;
+      case 'change_theme':
+        return `${actor} đã đổi chủ đề đoạn chat.`;
+      case 'change_nickname':
+        return `${actor} đã đặt biệt danh cho ${target}${value ? ` là ${value}` : ''}.`;
+      case 'clear_nickname':
+        return `${actor} đã gỡ biệt danh của ${target}.`;
+      case 'add_members':
+        return `${actor} đã thêm ${value || 'người mới'} vào nhóm.`;
+      case 'pin_message':
+        return `${actor} đã ghim một tin nhắn.`;
+      case 'unpin_message':
+        return `${actor} đã bỏ ghim một tin nhắn.`;
+      default:
+        return message.text;
+    }
+  };
 
   return (
     <div className="flex-1 relative min-h-0 min-w-0 overflow-hidden bg-white">
@@ -110,24 +137,38 @@ export const MessageList = forwardRef(({
             id={`chat-message-${message.id}`}
             className="min-w-0"
           >
-            <MessageBubble
-              message={message}
-              showSenderAvatar={shouldShowSenderAvatar(index)}
-              senderAvatar={senderById.get(message.senderId)?.avatar || peerAvatar}
-              senderName={senderById.get(message.senderId)?.name || peerName}
-              isHighlighted={highlightedMessageId === message.id}
-              showDeliveryStatus={message.id === lastOwnMessageId}
-              deliveryStatusLabel={message.id === lastOwnMessageId ? latestOwnMessageStatus : undefined}
-              onReact={onReactMessage}
-              onReply={onReplyMessage}
-              onDelete={onDeleteMessage}
-              onForward={onForwardMessage}
-              onPinMessage={onPinMessage}
-              isPinnedMessage={pinnedMessageIdSet.has(message.id)}
-              onReport={onReportMessage}
-              onJumpToMessage={onJumpToMessage}
-              themeColor={themeColor}
-            />
+            {message.systemType === 'chat_action' ? (
+              <div className="flex justify-center px-4 py-2 text-center text-[13px] leading-5 text-gray-500">
+                <span>
+                  {formatChatAction(message)}
+                  {message.systemActionType === 'pin_message' && (
+                    <>
+                      {' '}
+                      <span className="font-semibold text-blue-600">Xem tất cả</span>
+                    </>
+                  )}
+                </span>
+              </div>
+            ) : (
+              <MessageBubble
+                message={message}
+                showSenderAvatar={shouldShowSenderAvatar(index)}
+                senderAvatar={senderById.get(message.senderId)?.avatar || peerAvatar}
+                senderName={senderById.get(message.senderId)?.name || peerName}
+                isHighlighted={highlightedMessageId === message.id}
+                showDeliveryStatus={message.id === lastOwnMessageId}
+                deliveryStatusLabel={message.id === lastOwnMessageId ? latestOwnMessageStatus : undefined}
+                onReact={onReactMessage}
+                onReply={onReplyMessage}
+                onDelete={onDeleteMessage}
+                onForward={onForwardMessage}
+                onPinMessage={onPinMessage}
+                isPinnedMessage={pinnedMessageIdSet.has(message.id)}
+                onReport={onReportMessage}
+                onJumpToMessage={onJumpToMessage}
+                themeColor={themeColor}
+              />
+            )}
           </div>
         ))}
 

@@ -43,6 +43,7 @@ const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
+const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 const HISTORY_PAGE_SIZE = 15;
 
 function uniqueByUserId<T extends { userId: string }>(items: T[]) {
@@ -57,8 +58,28 @@ function uniqueByUserId<T extends { userId: string }>(items: T[]) {
 
 function mapBackendContentToMessageFields(
   content: string,
-): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'callLogKind' | 'callDurationSec' | 'callMediaType'> {
+): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'systemActionType' | 'systemActionActorName' | 'systemActionTargetName' | 'systemActionValue' | 'callLogKind' | 'callDurationSec' | 'callMediaType'> {
   if (!content?.startsWith(CALL_LOG_PREFIX)) {
+    if (content?.startsWith(CHAT_ACTION_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(CHAT_ACTION_PREFIX.length));
+        const actionType =
+          typeof payload?.type === 'string' ? (payload.type as Message['systemActionType']) : undefined;
+        const actorName = typeof payload?.actorName === 'string' ? payload.actorName : undefined;
+        const targetName = typeof payload?.targetName === 'string' ? payload.targetName : undefined;
+        const value = typeof payload?.value === 'string' ? payload.value : undefined;
+        return {
+          text: actorName || 'Người dùng',
+          systemType: 'chat_action',
+          systemActionType: actionType,
+          systemActionActorName: actorName,
+          systemActionTargetName: targetName,
+          systemActionValue: value,
+        };
+      } catch {
+        return { text: content };
+      }
+    }
     if (content?.startsWith(REPLY_PREFIX)) {
       try {
         const payload = JSON.parse(content.slice(REPLY_PREFIX.length));
@@ -2506,9 +2527,13 @@ export default function MessengerPage() {
 
       {groupSettingsModal && activeChatUserId?.startsWith('group:') && activeChatUser && (
         <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/35 p-4">
-          <div className="flex max-h-[86vh] w-full max-w-[660px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
-            <div className="relative flex shrink-0 items-center justify-center border-b border-gray-200 px-5 py-4">
-              <h3 className="text-[24px] font-bold text-gray-900">
+          <div
+            className={`flex max-h-[86vh] w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl ${
+              groupSettingsModal === 'rename' ? 'max-w-[658px]' : 'max-w-[660px]'
+            }`}
+          >
+            <div className="relative flex min-h-[70px] shrink-0 items-center justify-center border-b border-gray-200 px-5 py-3">
+              <h3 className="text-[24px] font-bold leading-tight text-gray-900">
                 {groupSettingsModal === 'rename'
                   ? 'Đổi tên đoạn chat'
                   : groupSettingsModal === 'image'
@@ -2529,23 +2554,55 @@ export default function MessengerPage() {
             </div>
 
             {groupSettingsModal === 'rename' && (
-              <div className="space-y-4 p-5">
-                <input
-                  value={groupNameDraft}
-                  onChange={(event) => setGroupNameDraft(event.target.value)}
-                  className="h-12 w-full rounded-full bg-gray-100 px-4 text-[16px] outline-none focus:bg-gray-200"
-                  placeholder="Tên đoạn chat"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => handleUpdateGroupConversation({ name: groupNameDraft })}
-                  disabled={isSavingGroupSettings || !groupNameDraft.trim()}
-                  className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
-                >
-                  Lưu
-                </button>
-              </div>
+              <form
+                className="p-4 pt-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const nextName = groupNameDraft.trim();
+                  if (!nextName || nextName.length > 500 || nextName === activeChatUser.name.trim()) return;
+                  void handleUpdateGroupConversation({ name: nextName });
+                }}
+              >
+                <p className="mb-3 px-1 text-[17px] leading-6 text-gray-900">
+                  Mọi người đều biết khi tên nhóm chat thay đổi.
+                </p>
+
+                <label className="block rounded-[18px] border border-blue-600 px-5 pb-3 pt-4 shadow-[0_0_0_2px_#1d76ff]">
+                  <div className="mb-1 flex items-center justify-between gap-3">
+                    <span className="text-[13px] leading-4 text-blue-600">Tên đoạn chat</span>
+                    <span className="text-[15px] leading-4 text-gray-500">{groupNameDraft.length}/500</span>
+                  </div>
+                  <input
+                    value={groupNameDraft}
+                    onChange={(event) => setGroupNameDraft(event.target.value.slice(0, 500))}
+                    className="h-6 w-full bg-transparent text-[17px] leading-6 text-gray-900 outline-none"
+                    autoFocus
+                  />
+                </label>
+
+                <div className="mt-4 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGroupSettingsModal(null)}
+                    disabled={isSavingGroupSettings}
+                    className="h-10 rounded-lg px-4 text-[17px] font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-60"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      isSavingGroupSettings ||
+                      !groupNameDraft.trim() ||
+                      groupNameDraft.trim().length > 500 ||
+                      groupNameDraft.trim() === activeChatUser.name.trim()
+                    }
+                    className="h-10 rounded-lg bg-blue-600 px-5 text-[17px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
+                  >
+                    Lưu
+                  </button>
+                </div>
+              </form>
             )}
 
             {groupSettingsModal === 'image' && (

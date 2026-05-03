@@ -14,7 +14,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
-  const { conversations, loading, error, reload } = useFriendConversations();
+  const { conversations, loading, error, reload } = useFriendConversations({ includeGroups: true });
 
   const filters: { key: MessengerFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
@@ -38,8 +38,8 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
-      <div className="fixed top-14 right-4 w-[360px] bg-white rounded-lg shadow-2xl z-50 max-h-[calc(100vh-80px)] flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
-        <div className="p-4 border-b border-gray-200">
+      <div className="fixed top-14 right-4 z-50 flex h-[min(620px,calc(100vh-80px))] w-[360px] flex-col overflow-hidden rounded-lg bg-white shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="shrink-0 border-b border-gray-200 p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-bold">Đoạn chat</h2>
             <div className="flex items-center gap-2">
@@ -95,7 +95,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {loading ? (
             <div className="text-center py-8 text-gray-400 text-sm">Đang tải...</div>
           ) : error ? (
@@ -116,13 +116,13 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
           ) : (
             <div className="text-center py-8 text-gray-500 text-sm">
               {conversations.length === 0
-                ? 'Chưa có bạn bè nào. Kết bạn để bắt đầu chat!'
+                ? 'Chưa có đoạn chat nào.'
                 : 'Không tìm thấy cuộc trò chuyện'}
             </div>
           )}
         </div>
 
-        <div className="p-3 border-t border-gray-200">
+        <div className="shrink-0 border-t border-gray-200 p-3">
           <button
             onClick={() => {
               navigate('/messages');

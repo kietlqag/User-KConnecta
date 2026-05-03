@@ -22,7 +22,19 @@ export interface Message {
   reactions?: string[];
   deleted?: boolean;
   deletedAt?: string;
-  systemType?: 'call_log' | 'missed_call';
+  systemType?: 'call_log' | 'missed_call' | 'chat_action';
+  systemActionType?:
+    | 'rename_conversation'
+    | 'change_group_photo'
+    | 'change_theme'
+    | 'change_nickname'
+    | 'clear_nickname'
+    | 'add_members'
+    | 'pin_message'
+    | 'unpin_message';
+  systemActionActorName?: string;
+  systemActionTargetName?: string;
+  systemActionValue?: string;
   callLogKind?: 'missed' | 'completed';
   callDurationSec?: number;
   callMediaType?: 'audio' | 'video';

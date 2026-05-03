@@ -401,7 +401,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   );
 
   useEffect(() => {
-    if (status === 'in_call' || status === 'ended' || status === 'error' || status === 'idle') {
+    const isGroupInvitationStillTiming =
+      status === 'in_call' && Boolean(activeCallRef.current?.groupConversationId);
+    if (!isGroupInvitationStillTiming && (status === 'in_call' || status === 'ended' || status === 'error' || status === 'idle')) {
       clearCallTimeout();
       clearConnectTimeout();
     }
@@ -756,7 +758,47 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
       clearCallTimeout();
       callTimeoutRef.current = window.setTimeout(() => {
-        receivers.forEach((receiverId) => {
+        callTimeoutRef.current = null;
+        const currentCall = activeCallRef.current;
+        const currentReceivers =
+          currentCall?.callId === callId && currentCall.groupConversationId === conversationId
+            ? currentCall.participantIds ?? receivers
+            : receivers;
+        const unansweredReceivers = currentReceivers.filter(
+          (receiverId) =>
+            receiverId &&
+            !connectedGroupParticipantIdsRef.current.has(receiverId) &&
+            !settledGroupParticipantIdsRef.current.has(receiverId),
+        );
+        const connectedReceivers = currentReceivers.filter((receiverId) =>
+          connectedGroupParticipantIdsRef.current.has(receiverId),
+        );
+
+        if (connectedReceivers.length > 0 && currentCall?.groupConversationId === conversationId) {
+          unansweredReceivers.forEach((receiverId) => {
+            settledGroupParticipantIdsRef.current.add(receiverId);
+            closePeerConnection(receiverId);
+            updateGroupParticipant(receiverId, { status: 'missed', leftAt: Date.now() });
+            sendSignal(receiverId, callId, 'CALL_CANCEL', {
+              conversationId,
+              participantUserId: receiverId,
+              participantStatus: 'missed',
+            });
+          });
+          connectedReceivers.forEach((receiverId) => {
+            unansweredReceivers.forEach((missedUserId) => {
+              sendSignal(receiverId, callId, 'CALL_PARTICIPANT_UPDATE', {
+                conversationId,
+                participantUserId: missedUserId,
+                participantStatus: 'missed',
+              });
+            });
+          });
+          setStatus((prev) => (prev === 'calling' || prev === 'connecting' ? 'in_call' : prev));
+          return;
+        }
+
+        currentReceivers.forEach((receiverId) => {
           sendSignal(receiverId, callId, 'CALL_CANCEL', { conversationId });
         });
         setErrorMessage('Cuộc gọi không phản hồi.');
@@ -804,9 +846,11 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       createPeerConnection,
       currentUserId,
       ensureLocalStream,
+      closePeerConnection,
       refreshGroupParticipantCount,
       sendSignal,
       status,
+      updateGroupParticipant,
     ],
   );
 
@@ -1115,7 +1159,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
                   }
                 : prev,
             );
-            clearCallTimeout();
+            if (!activeCall.groupConversationId) {
+              clearCallTimeout();
+            }
             applyAuthoritativeSnapshot({
               status: signal.sessionStatus,
               answeredAt: signal.sessionAnsweredAt ?? signal.createdAt,
@@ -1202,7 +1248,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
             });
             addGroupParticipant(signal.fromUserId);
           }
-          clearCallTimeout();
+          if (!activeCall?.groupConversationId) {
+            clearCallTimeout();
+          }
           applyAuthoritativeSnapshot({
             status: signal.sessionStatus,
             answeredAt: signal.sessionAnsweredAt ?? signal.createdAt,
