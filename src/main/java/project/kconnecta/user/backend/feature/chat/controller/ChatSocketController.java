@@ -310,7 +310,13 @@ public class ChatSocketController {
                 session.setStatus("ONGOING");
             }
             case "CALL_CANCEL" -> {
-                if (session.getCaller() != null && session.getCaller().getId().equals(sender.getId())) {
+                boolean isParticipantTimeoutCancel = request.getParticipantUserId() != null
+                        && request.getReceiverId() != null
+                        && request.getParticipantUserId().equals(request.getReceiverId())
+                        && session.getAnsweredAt() != null;
+                if (!isParticipantTimeoutCancel
+                        && session.getCaller() != null
+                        && session.getCaller().getId().equals(sender.getId())) {
                     session.setEndedAt(now);
                     session.setStatus(session.getAnsweredAt() == null ? "MISSED" : "COMPLETED");
                     if (session.getAnsweredAt() != null) {

@@ -62,6 +62,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
+    private static final String CHAT_ACTION_PREFIX = "__CHAT_ACTION__:";
+
     private static final int DEFAULT_HISTORY_LIMIT = 15;
     private static final int MIN_HISTORY_LIMIT = 1;
     private static final int MAX_HISTORY_LIMIT = 50;
@@ -491,6 +493,9 @@ public class ChatServiceImpl implements ChatService {
         }
         ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        String previousName = conversation.getName();
+        String previousAvatarUrl = conversation.getAvatarUrl();
+        String previousThemeColor = conversation.getThemeColor();
 
         if (request != null) {
             if (request.getName() != null) {
@@ -510,6 +515,32 @@ public class ChatServiceImpl implements ChatService {
         }
 
         ChatConversation saved = chatConversationRepository.save(conversation);
+        if (request != null) {
+            if (request.getName() != null && !equalsNullable(previousName, saved.getName())) {
+                sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                        "rename_conversation",
+                        actor,
+                        null,
+                        saved.getName()
+                ));
+            }
+            if (request.getAvatarUrl() != null && !equalsNullable(previousAvatarUrl, saved.getAvatarUrl())) {
+                sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                        "change_group_photo",
+                        actor,
+                        null,
+                        null
+                ));
+            }
+            if (request.getThemeColor() != null && !equalsNullable(previousThemeColor, saved.getThemeColor())) {
+                sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                        "change_theme",
+                        actor,
+                        null,
+                        null
+                ));
+            }
+        }
         return toGroupConversationResponse(saved, chatConversationMemberRepository.findMembersByConversationId(conversationId));
     }
 
@@ -532,6 +563,7 @@ public class ChatServiceImpl implements ChatService {
         ChatConversationMember target = chatConversationMemberRepository
                 .findByConversationIdAndUserId(conversationId, memberUserId)
                 .orElseThrow(() -> new RuntimeException("Member not found"));
+        String previousNickname = target.getNickname();
 
         String nickname = request == null ? null : request.getNickname();
         if (nickname == null || nickname.trim().isBlank()) {
@@ -541,6 +573,14 @@ public class ChatServiceImpl implements ChatService {
             target.setNickname(normalized.length() > 120 ? normalized.substring(0, 120) : normalized);
         }
         chatConversationMemberRepository.save(target);
+        if (!equalsNullable(previousNickname, target.getNickname())) {
+            sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                    target.getNickname() == null ? "clear_nickname" : "change_nickname",
+                    actor,
+                    target.getUser(),
+                    target.getNickname()
+            ));
+        }
         return toGroupConversationResponse(target.getConversation(), chatConversationMemberRepository.findMembersByConversationId(conversationId));
     }
 
@@ -607,6 +647,16 @@ public class ChatServiceImpl implements ChatService {
 
         if (!newMembers.isEmpty()) {
             chatConversationMemberRepository.saveAll(newMembers);
+            String addedNames = newMembers.stream()
+                    .map(ChatConversationMember::getUser)
+                    .map(this::displayName)
+                    .collect(Collectors.joining(", "));
+            sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                    "add_members",
+                    actor,
+                    null,
+                    addedNames
+            ));
         }
 
         return toGroupConversationResponse(
@@ -883,6 +933,12 @@ public class ChatServiceImpl implements ChatService {
         }
         PinnedMessageResponse response = toPinnedMessageResponse(null, null, conversationId, message, actor, now, pinned);
         broadcastPinnedMessageChange(owners, response);
+        sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                pinned ? "pin_message" : "unpin_message",
+                actor,
+                null,
+                null
+        ));
         return response;
     }
 
@@ -1003,6 +1059,50 @@ public class ChatServiceImpl implements ChatService {
         }
         int durationSec = (int) ChronoUnit.SECONDS.between(startedAt, endedAt);
         return Math.max(durationSec, 0);
+    }
+
+    private boolean equalsNullable(String first, String second) {
+        if (first == null) {
+            return second == null;
+        }
+        return first.equals(second);
+    }
+
+    private String displayName(User user) {
+        if (user == null) {
+            return "Người dùng";
+        }
+        if (user.getFullName() != null && !user.getFullName().isBlank()) {
+            return user.getFullName();
+        }
+        return user.getUsername();
+    }
+
+    private String buildChatActionContent(String type, User actor, User target, String value) {
+        return CHAT_ACTION_PREFIX
+                + "{\"type\":\""
+                + escapeJson(type)
+                + "\",\"actorName\":\""
+                + escapeJson(displayName(actor))
+                + "\",\"targetName\":"
+                + (target == null ? "null" : "\"" + escapeJson(displayName(target)) + "\"")
+                + ",\"value\":"
+                + (value == null ? "null" : "\"" + escapeJson(value) + "\"")
+                + "}";
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\b", "\\b")
+                .replace("\f", "\\f")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     private ChatMessageResponse toMessageResponse(ChatMessage message) {
