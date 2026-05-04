@@ -38,18 +38,10 @@ export function useAttachments(connected: boolean, onSendMessage: (content: stri
     };
   }, []);
 
-  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = '';
+  const appendImageFiles = (files: File[]) => {
     if (files.length === 0 || !connected || isSendingImage) return;
-
     const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-    if (imageFiles.length !== files.length) {
-      setReportNotice('Vui lòng chọn file ảnh.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-      return;
-    }
-
+    if (imageFiles.length === 0) return;
     setPendingFiles([]);
     setPendingImages((prev) => {
       const availableSlots = Math.max(0, MAX_PENDING_IMAGES - prev.length);
@@ -69,16 +61,20 @@ export function useAttachments(connected: boolean, onSendMessage: (content: stri
     });
   };
 
+  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = '';
+    appendImageFiles(files);
+  };
+
+  const handlePasteImages = (files: File[]) => {
+    appendImageFiles(files);
+  };
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     event.target.value = '';
     if (files.length === 0 || !connected || isSendingFile) return;
-
-    const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-    if (imageFiles.length > 0) {
-      setReportNotice('Vui lòng dùng nút ảnh để gửi hình ảnh.');
-      window.setTimeout(() => setReportNotice(null), 1800);
-    }
 
     const nonImageFiles = files.filter((file) => !file.type.startsWith('image/'));
     const validFiles = nonImageFiles.filter((file) => file.size <= MAX_CHAT_FILE_BYTES);
@@ -202,6 +198,7 @@ export function useAttachments(connected: boolean, onSendMessage: (content: stri
     imageInputRef,
     fileInputRef,
     handleImageSelect,
+    handlePasteImages,
     handleFileSelect,
     removePendingImage,
     removePendingFile,
@@ -211,3 +208,4 @@ export function useAttachments(connected: boolean, onSendMessage: (content: stri
     sendPendingFiles,
   };
 }
+

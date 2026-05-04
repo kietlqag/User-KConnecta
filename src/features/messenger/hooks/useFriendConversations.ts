@@ -108,6 +108,39 @@ function parseBackendDate(value?: string | Date | null) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+type HistoryMessage = {
+  createdAt?: string | null;
+  content?: string | null;
+  senderId?: string | null;
+};
+
+function getLatestHistoryMessage(history: HistoryMessage[]) {
+  let latest: HistoryMessage | null = null;
+  let latestAt = -Infinity;
+  for (const message of history) {
+    const at = parseBackendDate(message.createdAt)?.getTime() ?? -Infinity;
+    if (at > latestAt) {
+      latestAt = at;
+      latest = message;
+    }
+  }
+  return latest;
+}
+
+function getLatestVisibleHistoryMessage(history: HistoryMessage[]) {
+  let latest: HistoryMessage | null = null;
+  let latestAt = -Infinity;
+  for (const message of history) {
+    if (isChatActionContent(message.content)) continue;
+    const at = parseBackendDate(message.createdAt)?.getTime() ?? -Infinity;
+    if (at > latestAt) {
+      latestAt = at;
+      latest = message;
+    }
+  }
+  return latest;
+}
+
 function formatTimestamp(iso?: string | null) {
   if (!iso) return '';
 
@@ -163,13 +196,14 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
         const friendItems = friends.map((friend, index) => {
           const historyResult = friendHistories[index];
           const history = historyResult.status === 'fulfilled' ? historyResult.value.messages : [];
-          const last = history.length > 0 ? history[history.length - 1] : null;
-          const lastVisible = [...history].reverse().find((message) => !isChatActionContent(message.content)) ?? null;
+          const last = getLatestHistoryMessage(history);
+          const lastVisible = getLatestVisibleHistoryMessage(history);
           const rawPreview = mapBackendContentToPreview(lastVisible?.content);
           const isOwnLastMessage = Boolean(
             lastVisible?.senderId && currentUser.id && lastVisible.senderId === currentUser.id,
           );
-          const sortAt = (parseBackendDate(last?.createdAt || friend.createdAt) ?? new Date(0)).getTime();
+          const previewTimestamp = lastVisible?.createdAt || last?.createdAt || friend.createdAt;
+          const sortAt = (parseBackendDate(previewTimestamp) ?? new Date(0)).getTime();
 
           return {
             sortAt: Number.isFinite(sortAt) ? sortAt : 0,
@@ -188,7 +222,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
               lastMessage:
                 formatConversationPreview(rawPreview, isOwnLastMessage) ||
                 'Hai bạn đã kết bạn. Hãy bắt đầu cuộc trò chuyện.',
-              timestamp: formatTimestamp(last?.createdAt || friend.createdAt),
+              timestamp: formatTimestamp(previewTimestamp),
               lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
               isUnread: false,
             } satisfies Conversation,
@@ -198,13 +232,14 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
         const groupItems = groups.map((group, index) => {
           const historyResult = groupHistories[index];
           const history = historyResult.status === 'fulfilled' ? historyResult.value.messages : [];
-          const last = history.length > 0 ? history[history.length - 1] : null;
-          const lastVisible = [...history].reverse().find((message) => !isChatActionContent(message.content)) ?? null;
+          const last = getLatestHistoryMessage(history);
+          const lastVisible = getLatestVisibleHistoryMessage(history);
           const rawPreview = mapBackendContentToPreview(lastVisible?.content);
           const isOwnLastMessage = Boolean(
             lastVisible?.senderId && currentUser.id && lastVisible.senderId === currentUser.id,
           );
-          const sortAt = (parseBackendDate(last?.createdAt || group.createdAt) ?? new Date(0)).getTime();
+          const previewTimestamp = lastVisible?.createdAt || last?.createdAt || group.createdAt;
+          const sortAt = (parseBackendDate(previewTimestamp) ?? new Date(0)).getTime();
 
           return {
             sortAt: Number.isFinite(sortAt) ? sortAt : 0,
@@ -221,7 +256,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
                 isOnline: false,
               },
               lastMessage: formatConversationPreview(rawPreview, isOwnLastMessage) || 'Nhóm chat đã được tạo.',
-              timestamp: formatTimestamp(last?.createdAt || group.createdAt),
+              timestamp: formatTimestamp(previewTimestamp),
               lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
               isUnread: false,
               isGroup: true,

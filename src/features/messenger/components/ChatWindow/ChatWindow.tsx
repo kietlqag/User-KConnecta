@@ -128,6 +128,7 @@ export const ChatWindow = ({
     imageInputRef,
     fileInputRef,
     handleImageSelect,
+    handlePasteImages,
     handleFileSelect,
     removePendingImage,
     removePendingFile,
@@ -313,6 +314,8 @@ export const ChatWindow = ({
         isSendingImage={isSendingImage}
         isSendingFile={isSendingFile}
         isOpeningCamera={isOpeningCamera}
+        hasPendingImages={pendingImages.length > 0}
+        hasPendingFiles={pendingFiles.length > 0}
         onStartVoice={startVoiceRecording}
         onStopAndSendVoice={stopAndSendVoiceRecording}
         onCancelVoice={cancelVoiceRecording}
@@ -328,6 +331,13 @@ export const ChatWindow = ({
         fileInputRef={fileInputRef}
         handleImageSelect={handleImageSelect}
         handleFileSelect={handleFileSelect}
+        onPaste={(event) => {
+          const files = Array.from(event.clipboardData?.files ?? []);
+          const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+          if (imageFiles.length === 0) return;
+          event.preventDefault();
+          handlePasteImages(imageFiles);
+        }}
       />
 
       <CameraModal 

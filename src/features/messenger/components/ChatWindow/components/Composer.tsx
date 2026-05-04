@@ -12,6 +12,8 @@ interface ComposerProps {
   isSendingImage: boolean;
   isSendingFile: boolean;
   isOpeningCamera: boolean;
+  hasPendingImages: boolean;
+  hasPendingFiles: boolean;
   onStartVoice: () => void;
   onStopAndSendVoice: () => void;
   onCancelVoice: () => void;
@@ -27,6 +29,7 @@ interface ComposerProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
 }
 
 export const Composer: React.FC<ComposerProps> = ({
@@ -39,6 +42,8 @@ export const Composer: React.FC<ComposerProps> = ({
   isSendingImage,
   isSendingFile,
   isOpeningCamera,
+  hasPendingImages,
+  hasPendingFiles,
   onStartVoice,
   onStopAndSendVoice,
   onCancelVoice,
@@ -54,8 +59,14 @@ export const Composer: React.FC<ComposerProps> = ({
   fileInputRef,
   handleImageSelect,
   handleFileSelect,
+  onPaste,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const canSend =
+    connected &&
+    (Boolean(inputText.trim()) || hasPendingImages || hasPendingFiles) &&
+    !isSendingImage &&
+    !isSendingFile;
 
   const resizeTextarea = () => {
     const textarea = textareaRef.current;
@@ -160,7 +171,14 @@ export const Composer: React.FC<ComposerProps> = ({
               >
                 <Camera className="w-5 h-5" />
               </button>
-              <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.rar,.7z,.json,.xml,.mp3,.wav,.m4a,.mp4,.mov,.avi,.mkv"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
               <button
                 type="button"
                 onClick={onFileClick}
@@ -179,6 +197,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 onChange={(e) => {
                   setInputText(e.target.value);
                 }}
+                onPaste={onPaste}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -203,9 +222,9 @@ export const Composer: React.FC<ComposerProps> = ({
 
             <button
               onClick={onSend}
-              disabled={!inputText.trim() && !isSendingImage && !isSendingFile}
+              disabled={!canSend}
               className={`p-2 rounded-full transition-all ${
-                inputText.trim() && connected ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-blue-300'
+                canSend ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-blue-300'
               }`}
             >
               <Send className="w-5 h-5" />

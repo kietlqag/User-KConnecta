@@ -13,6 +13,8 @@ import {
   UserRoundPlus,
   Check,
   X,
+  ChevronLeft,
+  ChevronRight,
   Search as SearchIcon,
   Image as ImageIcon,
   FileText,
@@ -21,7 +23,6 @@ import {
   Pin,
   Pencil,
   ImagePlus,
-  Palette,
   Type,
 } from 'lucide-react';
 import { Header } from '../../home/components';
@@ -274,10 +275,23 @@ function formatConversationPreview(text: string, isOwn: boolean) {
   return isOwn ? `Bạn: ${normalized}` : normalized;
 }
 
+function parseBackendDate(value?: string | Date | null) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const normalized = raw.includes(' ') ? raw.replace(' ', 'T') : raw;
+  const hasOffset = /(?:Z|[+\-]\d{2}:\d{2})$/i.test(normalized);
+  const date = new Date(hasOffset ? normalized : `${normalized}+07:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function formatRelativeConversationTime(dateInput?: Date | string | null) {
   if (!dateInput) return '';
-  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
-  if (Number.isNaN(date.getTime())) return '';
+  const date = parseBackendDate(dateInput);
+  if (!date) return '';
 
   const diffMs = Date.now() - date.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
@@ -298,11 +312,12 @@ function resolveDeliveryStatus(delivered?: boolean, seen?: boolean): Message['de
 }
 
 function mapIncomingToMessage(raw: IncomingChatMessage, currentUserId?: string | null): Message {
+  const parsedTimestamp = parseBackendDate(raw.createdAt) ?? new Date();
   return {
     ...mapBackendContentToMessageFields(raw.content),
     id: raw.id,
     senderId: raw.senderId,
-    timestamp: new Date(raw.createdAt),
+    timestamp: parsedTimestamp,
     isOwn: raw.senderId === currentUserId,
     deliveryStatus: resolveDeliveryStatus(raw.delivered, raw.seen),
     seenAt: raw.seenAt,
@@ -310,6 +325,33 @@ function mapIncomingToMessage(raw: IncomingChatMessage, currentUserId?: string |
     deletedAt: raw.deletedAt,
     reactions: raw.reactions ?? [],
   };
+}
+
+function getLatestMessage(messages: Message[]) {
+  let latest: Message | null = null;
+  let latestAt = -Infinity;
+  for (const message of messages) {
+    const at = message.timestamp?.getTime?.() ?? -Infinity;
+    if (at > latestAt) {
+      latestAt = at;
+      latest = message;
+    }
+  }
+  return latest;
+}
+
+function getLatestVisibleMessage(messages: Message[]) {
+  let latest: Message | null = null;
+  let latestAt = -Infinity;
+  for (const message of messages) {
+    if (message.systemType === 'chat_action') continue;
+    const at = message.timestamp?.getTime?.() ?? -Infinity;
+    if (at > latestAt) {
+      latestAt = at;
+      latest = message;
+    }
+  }
+  return latest;
 }
 
 interface HistoryState {
@@ -346,6 +388,63 @@ function extractLinksFromText(text?: string | null) {
   return matches.map((link) => link.replace(/[),.;!?]+$/, ''));
 }
 
+function formatCalendarDateTitle(dateValue?: string | Date | null) {
+  const parsed = parseBackendDate(dateValue);
+  if (!parsed) return 'Không rõ ngày';
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const month = parsed.getMonth() + 1;
+  const year = parsed.getFullYear();
+  return `Ngày ${day} Tháng ${month} Năm ${year}`;
+}
+
+function getCalendarDateKey(dateValue?: string | Date | null) {
+  const parsed = parseBackendDate(dateValue);
+  if (!parsed) return 'unknown-date';
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth() + 1).padStart(2, '0');
+  const d = String(parsed.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function groupItemsByCalendarDate<T extends { createdAt?: string | null }>(items: T[]) {
+  const grouped = new Map<string, { key: string; title: string; sortAt: number; items: T[] }>();
+  items.forEach((item) => {
+    const key = getCalendarDateKey(item.createdAt);
+    const parsed = parseBackendDate(item.createdAt);
+    const sortAt = parsed ? new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()).getTime() : 0;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        key,
+        title: formatCalendarDateTitle(item.createdAt),
+        sortAt,
+        items: [],
+      });
+    }
+    grouped.get(key)!.items.push(item);
+  });
+  return Array.from(grouped.values())
+    .sort((a, b) => b.sortAt - a.sortAt)
+    .map((group) => ({ ...group, items: group.items }));
+}
+
+const HIDDEN_LINK_HOSTS = new Set([
+  'res.cloudinary.com',
+  'cloudinary.com',
+  'storage.googleapis.com',
+  'firebasestorage.googleapis.com',
+  's3.amazonaws.com',
+  'amazonaws.com',
+]);
+
+function shouldHideLinkHost(host: string) {
+  const normalized = host.toLowerCase();
+  if (HIDDEN_LINK_HOSTS.has(normalized)) return true;
+  for (const blocked of HIDDEN_LINK_HOSTS) {
+    if (normalized.endsWith(`.${blocked}`)) return true;
+  }
+  return false;
+}
+
 function ChatInfoPanel({
   user,
   messages,
@@ -357,7 +456,6 @@ function ChatInfoPanel({
   onOpenPinnedMessages,
   onOpenRenameGroup,
   onOpenChangeGroupImage,
-  onOpenChangeTheme,
   onOpenNicknames,
   onLoadMoreHistory,
   hasMoreHistory = false,
@@ -373,7 +471,6 @@ function ChatInfoPanel({
   onOpenPinnedMessages?: () => void;
   onOpenRenameGroup?: () => void;
   onOpenChangeGroupImage?: () => void;
-  onOpenChangeTheme?: () => void;
   onOpenNicknames?: () => void;
   onLoadMoreHistory?: () => Promise<void> | void;
   hasMoreHistory?: boolean;
@@ -394,7 +491,9 @@ function ChatInfoPanel({
     links: INFO_PANEL_PAGE_SIZE,
   });
   const [mediaLightboxIndex, setMediaLightboxIndex] = useState<number | null>(null);
-  const [assetItemsByTab, setAssetItemsByTab] = useState<Record<InfoPanelTab, Array<{ id: string; url: string; type?: string; label?: string; meta?: string }>>>({
+  const [mediaActionMenuId, setMediaActionMenuId] = useState<string | null>(null);
+  const [mediaActionMenuPosition, setMediaActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [assetItemsByTab, setAssetItemsByTab] = useState<Record<InfoPanelTab, Array<{ id: string; url: string; type?: string; label?: string; meta?: string; createdAt?: string | null }>>>({
     media: [],
     files: [],
     links: [],
@@ -437,26 +536,51 @@ function ChatInfoPanel({
   }, [user.id]);
 
   const mediaItems = useMemo(
-    () => assetItemsByTab.media.map((item) => ({ id: item.id, url: item.url, type: item.type === 'video' ? 'video' : 'image' })),
+    () =>
+      assetItemsByTab.media.map((item) => ({
+        id: item.id,
+        url: item.url,
+        type: item.type === 'video' ? 'video' : 'image',
+        createdAt: item.createdAt,
+      })),
     [assetItemsByTab.media],
   );
   const fileItems = useMemo(
-    () => assetItemsByTab.files.map((item) => ({ id: item.id, url: item.url, label: item.label || 'File', meta: item.meta || 'File' })),
+    () =>
+      assetItemsByTab.files.map((item) => ({
+        id: item.id,
+        url: item.url,
+        label: item.label || 'File',
+        meta: item.meta || 'File',
+        createdAt: item.createdAt,
+      })),
     [assetItemsByTab.files],
   );
   const linkItems = useMemo(
     () =>
-      assetItemsByTab.links.map((item) => ({
-        id: item.id,
-        url: item.url,
-        host: (() => {
+      assetItemsByTab.links
+        .map((item) => {
           try {
-            return new URL(item.url).hostname.replace(/^www\./, '');
+            const parsed = new URL(item.url);
+            const host = parsed.hostname.replace(/^www\./, '');
+            return {
+              id: item.id,
+              url: item.url,
+              host,
+              createdAt: item.createdAt,
+              hidden: shouldHideLinkHost(host),
+            };
           } catch {
-            return item.url;
+            return {
+              id: item.id,
+              url: item.url,
+              host: item.url,
+              createdAt: item.createdAt,
+              hidden: false,
+            };
           }
-        })(),
-      })),
+        })
+        .filter((item) => !item.hidden),
     [assetItemsByTab.links],
   );
 
@@ -483,6 +607,128 @@ function ChatInfoPanel({
 
   const activeLightboxMedia = mediaLightboxIndex === null ? null : mediaItems[mediaLightboxIndex];
 
+  useEffect(() => {
+    if (!mediaActionMenuId) return;
+    const close = () => setMediaActionMenuId(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [mediaActionMenuId]);
+
+  useEffect(() => {
+    if (!mediaActionMenuId) {
+      setMediaActionMenuPosition(null);
+    }
+  }, [mediaActionMenuId]);
+
+  const downloadMedia = useCallback((url: string, suggestedName?: string) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = suggestedName || 'media';
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
+  const copyText = useCallback(async (value: string, successText = 'Đã sao chép.') => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(successText);
+    } catch {
+      toast.error('Không thể sao chép.');
+    }
+  }, []);
+
+  const copyImageToClipboard = useCallback(async (url: string) => {
+    try {
+      const response = await fetch(url, { mode: 'cors' });
+      const blob = await response.blob();
+      if (!blob.type.startsWith('image/')) {
+        toast.error('Nội dung này không phải ảnh để copy.');
+        return;
+      }
+      if (!('ClipboardItem' in window) || !navigator.clipboard?.write) {
+        toast.error('Trình duyệt không hỗ trợ copy ảnh trực tiếp.');
+        return;
+      }
+      const item = new ClipboardItem({ [blob.type]: blob });
+      await navigator.clipboard.write([item]);
+      toast.success('Đã copy ảnh.');
+    } catch {
+      toast.error('Không thể copy ảnh.');
+    }
+  }, []);
+
+  useEffect(() => {
+    const latest = messages[messages.length - 1];
+    if (!latest || latest.deleted) return;
+
+    const createdAt = latest.timestamp instanceof Date ? latest.timestamp.toISOString() : null;
+    const imageUrls = latest.imageUrls && latest.imageUrls.length > 0
+      ? latest.imageUrls
+      : latest.imageUrl
+        ? [latest.imageUrl]
+        : [];
+    const textLinks = extractLinksFromText(latest.text);
+
+    setAssetItemsByTab((prev) => {
+      let changed = false;
+      const next = {
+        media: [...prev.media],
+        files: [...prev.files],
+        links: [...prev.links],
+      };
+
+      imageUrls.forEach((url, index) => {
+        const trimmed = url?.trim();
+        if (!trimmed) return;
+        if (next.media.some((item) => item.url === trimmed)) return;
+        next.media.unshift({
+          id: `local-media-${latest.id}-${index}`,
+          url: trimmed,
+          type: 'image',
+          createdAt,
+        });
+        changed = true;
+      });
+
+      if (latest.fileUrl?.trim()) {
+        const fileUrl = latest.fileUrl.trim();
+        if (!next.files.some((item) => item.url === fileUrl)) {
+          next.files.unshift({
+            id: `local-file-${latest.id}`,
+            url: fileUrl,
+            type: 'file',
+            label: latest.fileName || 'File',
+            createdAt,
+          });
+          changed = true;
+        }
+      }
+
+      textLinks.forEach((url, index) => {
+        const trimmed = url.trim();
+        if (!trimmed) return;
+        try {
+          const host = new URL(trimmed).hostname.replace(/^www\./, '');
+          if (shouldHideLinkHost(host)) return;
+        } catch {
+          return;
+        }
+        if (next.links.some((item) => item.url === trimmed)) return;
+        next.links.unshift({
+          id: `local-link-${latest.id}-${index}`,
+          url: trimmed,
+          type: 'link',
+          createdAt,
+        });
+        changed = true;
+      });
+
+      return changed ? next : prev;
+    });
+  }, [messages]);
+
   const loadAssetsForTab = useCallback(
     async (tab: InfoPanelTab) => {
       if (assetLoadingByTab[tab]) return;
@@ -500,6 +746,7 @@ function ChatInfoPanel({
           type: item.type,
           label: item.label || undefined,
           meta: item.meta || undefined,
+          createdAt: item.createdAt || null,
         }));
         setAssetItemsByTab((prev) => ({ ...prev, [tab]: beforeCreatedAt ? [...prev[tab], ...mapped] : mapped }));
         setAssetCursorByTab((prev) => ({ ...prev, [tab]: response.nextBeforeCreatedAt || null }));
@@ -568,25 +815,130 @@ function ChatInfoPanel({
   const renderMediaGrid = () => (
     mediaItems.length > 0 ? (
       <>
-        <div className="grid grid-cols-2 gap-1">
-          {visibleMediaItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                const index = mediaItems.findIndex((media) => media.id === item.id);
-                setMediaLightboxIndex(index >= 0 ? index : 0);
-              }}
-              className="relative aspect-square overflow-hidden bg-gray-100"
-              title="Mở media"
-            >
-              <img src={item.url} alt="Media đã gửi" className="h-full w-full object-cover" loading="lazy" />
-              {item.type === 'video' && (
-                <span className="absolute bottom-1 right-1 rounded-full bg-black/60 p-1 text-white">
-                  <Video className="h-3 w-3" />
-                </span>
-              )}
-            </button>
+        <div className="space-y-5">
+          {groupItemsByCalendarDate(visibleMediaItems).map((group) => (
+            <div key={group.key} className="space-y-2">
+              <h4 className="text-[14px] font-semibold text-slate-700">{group.title}</h4>
+              <div className="grid grid-cols-2 gap-1">
+                {group.items.map((item) => (
+                  <div key={item.id} className="group/item relative aspect-square bg-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const index = mediaItems.findIndex((media) => media.id === item.id);
+                        setMediaLightboxIndex(index >= 0 ? index : 0);
+                      }}
+                      className="h-full w-full overflow-hidden"
+                      title="Mở media"
+                    >
+                      <img src={item.url} alt="Media đã gửi" className="h-full w-full object-cover" loading="lazy" />
+                      {item.type === 'video' && (
+                        <span className="absolute bottom-1 right-1 rounded-full bg-black/60 p-1 text-white">
+                          <Video className="h-3 w-3" />
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                        const menuWidth = 224;
+                        const viewportPadding = 8;
+                        const left = Math.min(
+                          Math.max(viewportPadding, rect.right - menuWidth),
+                          window.innerWidth - menuWidth - viewportPadding,
+                        );
+                        const top = Math.min(rect.bottom + 6, window.innerHeight - 360);
+                        setMediaActionMenuPosition({ top, left });
+                        setMediaActionMenuId((prev) => (prev === item.id ? null : item.id));
+                      }}
+                      className="absolute right-1 top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white opacity-0 transition group-hover/item:opacity-100 hover:bg-black/60"
+                      title="Tùy chọn"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                    {mediaActionMenuId === item.id && mediaActionMenuPosition && (
+                      <div
+                        className="fixed z-[350] w-56 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-2xl"
+                        style={{ top: mediaActionMenuPosition.top, left: mediaActionMenuPosition.left }}
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await copyImageToClipboard(item.url);
+                            setMediaActionMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 hover:bg-gray-100"
+                        >
+                          Copy
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (navigator.share) {
+                              try {
+                                await navigator.share({ url: item.url });
+                              } catch {
+                                // ignore cancel
+                              }
+                            } else {
+                              await copyText(item.url, 'Đã sao chép để chia sẻ.');
+                            }
+                            setMediaActionMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 hover:bg-gray-100"
+                        >
+                          Chuyển tiếp
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toast.info('Chức năng xem tin nhắn gốc sẽ được cập nhật.');
+                            setMediaActionMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 hover:bg-gray-100"
+                        >
+                          Xem tin nhắn gốc
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            downloadMedia(item.url, `media-${item.id}`);
+                            setMediaActionMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 hover:bg-gray-100"
+                        >
+                          Lưu về máy
+                        </button>
+                        <div className="my-1 h-px bg-gray-200" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toast.info('Chức năng này sẽ được cập nhật.');
+                            setMediaActionMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-[15px] text-red-600 hover:bg-red-50"
+                        >
+                          Gỡ ở phía tôi
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toast.info('Chức năng thu hồi sẽ được cập nhật.');
+                            setMediaActionMenuId(null);
+                          }}
+                          className="w-full px-4 py-2 text-left text-[15px] text-red-600 hover:bg-red-50"
+                        >
+                          Gỡ cho mọi người
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         {renderSeeMoreButton('media', mediaItems.length)}
@@ -599,23 +951,29 @@ function ChatInfoPanel({
   const renderFileList = () => (
     fileItems.length > 0 ? (
       <>
-        <div className="space-y-2">
-          {visibleFileItems.map((item) => (
-            <a
-              key={item.id}
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-3 hover:bg-gray-100"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                <FileText className="h-5 w-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-gray-900">{item.label}</span>
-                <span className="block text-xs text-gray-500">{item.meta}</span>
-              </span>
-            </a>
+        <div className="space-y-5">
+          {groupItemsByCalendarDate(visibleFileItems).map((group) => (
+            <div key={group.key} className="space-y-2">
+              <h4 className="text-[14px] font-semibold text-slate-700">{group.title}</h4>
+              <div className="space-y-2">
+                {group.items.map((item) => (
+                  <a
+                    key={item.id}
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-3 hover:bg-gray-100"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                      <FileText className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-gray-900">{item.label}</span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         {renderSeeMoreButton('files', fileItems.length)}
@@ -628,23 +986,30 @@ function ChatInfoPanel({
   const renderLinkList = () => (
     linkItems.length > 0 ? (
       <>
-        <div className="space-y-2">
-          {visibleLinkItems.map((item) => (
-            <a
-              key={item.id}
-              href={item.url}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-3 hover:bg-gray-100"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                <LinkIcon className="h-5 w-5" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-semibold text-gray-900">{item.host}</span>
-                <span className="block truncate text-xs text-gray-500">{item.url}</span>
-              </span>
-            </a>
+        <div className="space-y-5">
+          {groupItemsByCalendarDate(visibleLinkItems).map((group) => (
+            <div key={group.key} className="space-y-2">
+              <h4 className="text-[14px] font-semibold text-slate-700">{group.title}</h4>
+              <div className="space-y-2">
+                {group.items.map((item) => (
+                  <a
+                    key={item.id}
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-3 hover:bg-gray-100"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                      <LinkIcon className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-gray-900">{item.host}</span>
+                      <span className="block truncate text-xs text-gray-500">{item.url}</span>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
         {renderSeeMoreButton('links', linkItems.length)}
@@ -743,10 +1108,6 @@ function ChatInfoPanel({
               <button type="button" onClick={onOpenChangeGroupImage} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
                 <ImagePlus className="h-5 w-5 shrink-0 text-gray-900" />
                 <span className="text-[15px] font-semibold">Thay đổi ảnh</span>
-              </button>
-              <button type="button" onClick={onOpenChangeTheme} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
-                <Palette className="h-5 w-5 shrink-0 text-indigo-600" />
-                <span className="text-[15px] font-semibold">Đổi chủ đề</span>
               </button>
               <button type="button" onClick={onOpenNicknames} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
                 <Type className="h-5 w-5 shrink-0 text-gray-900" />
@@ -1147,13 +1508,12 @@ export default function MessengerPage() {
   const [addGroupMemberSearch, setAddGroupMemberSearch] = useState('');
   const [selectedAddGroupMemberIds, setSelectedAddGroupMemberIds] = useState<string[]>([]);
   const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
-  const [groupSettingsModal, setGroupSettingsModal] = useState<null | 'rename' | 'image' | 'theme' | 'nicknames'>(null);
+  const [groupSettingsModal, setGroupSettingsModal] = useState<null | 'rename' | 'image' | 'nicknames'>(null);
   const [groupNameDraft, setGroupNameDraft] = useState('');
   const [groupImagePreview, setGroupImagePreview] = useState('');
   const [groupImageZoom, setGroupImageZoom] = useState(1);
   const [groupImageOffsetX, setGroupImageOffsetX] = useState(0);
   const [groupImageOffsetY, setGroupImageOffsetY] = useState(0);
-  const [groupThemeDraft, setGroupThemeDraft] = useState('#2563eb');
   const [nicknameEditingUserId, setNicknameEditingUserId] = useState<string | null>(null);
   const [nicknameDraft, setNicknameDraft] = useState('');
   const [isSavingGroupSettings, setIsSavingGroupSettings] = useState(false);
@@ -1207,7 +1567,17 @@ export default function MessengerPage() {
     ...(overrides[c.user.id] ?? {}),
   }));
 
-  const conversations: Conversation[] = [...groupConversationItems, ...baseConversationItems];
+  const conversations: Conversation[] = [...groupConversationItems, ...baseConversationItems].sort((first, second) => {
+    const firstActivity =
+      first.lastActivityAt ??
+      parseBackendDate(first.timestamp)?.getTime() ??
+      0;
+    const secondActivity =
+      second.lastActivityAt ??
+      parseBackendDate(second.timestamp)?.getTime() ??
+      0;
+    return secondActivity - firstActivity;
+  });
   const pinnedConversationSet = useMemo(() => new Set(pinnedConversationUserIds), [pinnedConversationUserIds]);
 
   const loadPinnedConversations = useCallback(async () => {
@@ -1329,7 +1699,22 @@ export default function MessengerPage() {
   const loadGroupConversations = useCallback(async () => {
     try {
       const groups = await chatService.getMyGroupConversations();
-      const mapped: Conversation[] = groups.map((group) => ({
+      const groupHistoryResults = await Promise.allSettled(
+        groups.map((group) => chatService.getGroupChatHistory(group.id, { limit: HISTORY_PAGE_SIZE })),
+      );
+
+      const mapped: Conversation[] = groups.map((group, index) => {
+        const historyResult = groupHistoryResults[index];
+        const historyMessages =
+          historyResult.status === 'fulfilled'
+            ? historyResult.value.messages.map((message) => mapIncomingToMessage(message, currentUser?.id))
+            : [];
+        const lastVisible = getLatestVisibleMessage(historyMessages);
+        const preview = lastVisible ? formatConversationPreview(lastVisible.text, lastVisible.isOwn) : '';
+        const timestamp = lastVisible ? formatRelativeConversationTime(lastVisible.timestamp) : '';
+        const lastActivityAt = lastVisible ? lastVisible.timestamp.getTime() : 0;
+
+        return {
         id: group.id,
         user: {
           id: `group:${group.id}`,
@@ -1339,12 +1724,14 @@ export default function MessengerPage() {
             `https://ui-avatars.com/api/?background=2563eb&color=ffffff&bold=true&name=${encodeURIComponent('Group')}`,
           isOnline: false,
         },
-        lastMessage: 'Chưa có tin nhắn',
-        timestamp: '',
+        lastMessage: preview || 'Chưa có tin nhắn',
+        timestamp,
+        lastActivityAt,
         isUnread: false,
         isGroup: true,
         themeColor: group.themeColor,
-      }));
+      };
+      });
 
       const membersMap: Record<string, ChatUser[]> = {};
       const creatorsMap: Record<string, string> = {};
@@ -1364,12 +1751,25 @@ export default function MessengerPage() {
       });
 
       setServerGroupConversations(mapped);
+      setOverrides((prev) => {
+        const next = { ...prev };
+        mapped.forEach((conversation) => {
+          const conversationId = conversation.user.id;
+          next[conversationId] = {
+            ...(next[conversationId] ?? {}),
+            lastMessage: conversation.lastMessage,
+            timestamp: conversation.timestamp,
+            lastActivityAt: conversation.lastActivityAt,
+          };
+        });
+        return next;
+      });
       setGroupMembersById((prev) => ({ ...prev, ...membersMap }));
       setGroupCreatorById((prev) => ({ ...prev, ...creatorsMap }));
     } catch {
       // keep current state on failure
     }
-  }, []);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     void loadGroupConversations();
@@ -1389,6 +1789,7 @@ export default function MessengerPage() {
       },
       lastMessage: overrides[chatUserId]?.lastMessage || 'Chưa có tin nhắn',
       timestamp: overrides[chatUserId]?.timestamp || '',
+      lastActivityAt: overrides[chatUserId]?.lastActivityAt ?? 0,
       isUnread: Boolean(overrides[chatUserId]?.isUnread),
       isGroup: true,
       themeColor: group.themeColor,
@@ -1448,13 +1849,15 @@ export default function MessengerPage() {
         }));
 
         if (msgs.length > 0) {
-          const last = msgs[msgs.length - 1];
+          const last = getLatestVisibleMessage(msgs) ?? getLatestMessage(msgs);
+          if (!last) return;
           setOverrides((prev) => ({
             ...prev,
             [peerUserId]: {
               ...(prev[peerUserId] ?? {}),
               lastMessage: formatConversationPreview(last.text, last.isOwn),
               timestamp: formatRelativeConversationTime(last.timestamp),
+              lastActivityAt: last.timestamp.getTime(),
             },
           }));
         }
@@ -1604,6 +2007,7 @@ export default function MessengerPage() {
           ...(prev[otherUserId] ?? {}),
           lastMessage: formatConversationPreview(newMsg.text, msg.senderId === myId),
           timestamp: 'Vừa xong',
+          lastActivityAt: newMsg.timestamp.getTime(),
           isUnread: activeChatUserId !== otherUserId,
         },
       }));
@@ -1723,15 +2127,6 @@ export default function MessengerPage() {
     if (activeChatUserId.startsWith('group:')) return;
     if (!connected) return;
     sendConversationSeen(activeChatUserId);
-  }, [activeChatUserId, connected, sendConversationSeen]);
-
-  useEffect(() => {
-    if (!activeChatUserId || !connected) return;
-    if (activeChatUserId.startsWith('group:')) return;
-    const intervalId = window.setInterval(() => {
-      sendConversationSeen(activeChatUserId);
-    }, 5000);
-    return () => window.clearInterval(intervalId);
   }, [activeChatUserId, connected, sendConversationSeen]);
 
   const stopAndUploadCallRecording = useCallback(
@@ -2317,6 +2712,7 @@ export default function MessengerPage() {
         },
         lastMessage: 'Nhóm chat mới được tạo',
         timestamp: 'Vừa xong',
+        lastActivityAt: Date.now(),
         isUnread: false,
         isGroup: true,
       };
@@ -2505,10 +2901,15 @@ export default function MessengerPage() {
       return true;
     })
     .sort((a, b) => {
-      const aPinned = pinnedConversationSet.has(a.user.id);
-      const bPinned = pinnedConversationSet.has(b.user.id);
-      if (aPinned === bPinned) return 0;
-      return aPinned ? -1 : 1;
+      const aActivityAt =
+        a.lastActivityAt ??
+        parseBackendDate(a.timestamp)?.getTime() ??
+        0;
+      const bActivityAt =
+        b.lastActivityAt ??
+        parseBackendDate(b.timestamp)?.getTime() ??
+        0;
+      return bActivityAt - aActivityAt;
     });
 
   const activeMessages = activeChatUserId ? (messagesByUser[activeChatUserId] ?? []) : [];
@@ -2567,7 +2968,7 @@ export default function MessengerPage() {
     reader.readAsDataURL(file);
   }, []);
 
-  const openGroupSettingsModal = useCallback((mode: 'rename' | 'image' | 'theme' | 'nicknames') => {
+  const openGroupSettingsModal = useCallback((mode: 'rename' | 'image' | 'nicknames') => {
     if (!activeChatUserId?.startsWith('group:') || !activeChatUser) return;
     setGroupSettingsModal(mode);
     if (mode === 'rename') {
@@ -2579,14 +2980,11 @@ export default function MessengerPage() {
       setGroupImageOffsetX(0);
       setGroupImageOffsetY(0);
     }
-    if (mode === 'theme') {
-      setGroupThemeDraft(activeChatThemeColor || '#2563eb');
-    }
     if (mode === 'nicknames') {
       setNicknameEditingUserId(null);
       setNicknameDraft('');
     }
-  }, [activeChatThemeColor, activeChatUser, activeChatUserId]);
+  }, [activeChatUser, activeChatUserId]);
 
   const handleUpdateGroupConversation = useCallback(async (payload: { name?: string; avatarUrl?: string | null; themeColor?: string | null }) => {
     if (!activeChatUserId?.startsWith('group:')) return;
@@ -2823,7 +3221,6 @@ export default function MessengerPage() {
               onOpenPinnedMessages={() => setOpenPinnedMessagesSignal((value) => value + 1)}
               onOpenRenameGroup={() => openGroupSettingsModal('rename')}
               onOpenChangeGroupImage={openGroupImagePicker}
-              onOpenChangeTheme={() => openGroupSettingsModal('theme')}
               onOpenNicknames={() => openGroupSettingsModal('nicknames')}
               onLoadMoreHistory={handleLoadOlderMessages}
               hasMoreHistory={hasOlderMessages}
@@ -2854,9 +3251,7 @@ export default function MessengerPage() {
                   ? 'Đổi tên đoạn chat'
                   : groupSettingsModal === 'image'
                     ? 'Thay đổi ảnh'
-                    : groupSettingsModal === 'theme'
-                      ? 'Đổi chủ đề'
-                      : 'Biệt danh'}
+                    : 'Biệt danh'}
               </h3>
               <button
                 type="button"
@@ -3031,31 +3426,6 @@ export default function MessengerPage() {
                 </div>
               </div>
             )}
-            {groupSettingsModal === 'theme' && (
-              <div className="space-y-4 p-5">
-                <div className="grid grid-cols-5 gap-3">
-                  {['#2563eb', '#7c3aed', '#db2777', '#16a34a', '#f97316', '#0891b2', '#111827', '#dc2626', '#4f46e5', '#0f766e'].map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setGroupThemeDraft(color)}
-                      className={`h-11 rounded-full border-2 ${groupThemeDraft === color ? 'border-gray-900' : 'border-transparent'}`}
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    />
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleUpdateGroupConversation({ themeColor: groupThemeDraft })}
-                  disabled={isGroupSettingsBusy}
-                  className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
-                >
-                  Lưu
-                </button>
-              </div>
-            )}
-
             {groupSettingsModal === 'nicknames' && (
               <div className="min-h-0 flex-1 overflow-y-auto p-5">
                 <div className="space-y-4">
