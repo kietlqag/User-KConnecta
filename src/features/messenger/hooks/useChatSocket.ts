@@ -2,6 +2,7 @@
 import { Client } from '@stomp/stompjs';
 import { getWsBaseUrl } from '@/utils/apiBaseUrl';
 import type {
+  IncomingCallError,
   IncomingChatMessage,
   IncomingCallSignal,
   IncomingMessageStatus,
@@ -17,6 +18,7 @@ export function useChatSocket(
   token: string | null | undefined,
   onMessage: (msg: IncomingChatMessage) => void,
   onCallSignal?: (signal: IncomingCallSignal) => void,
+  onCallError?: (error: IncomingCallError) => void,
   onMessageStatus?: (status: IncomingMessageStatus) => void,
   onPresenceStatus?: (status: IncomingPresenceStatus) => void,
   onPinnedMessage?: (event: IncomingPinnedMessage) => void,
@@ -27,11 +29,13 @@ export function useChatSocket(
   const onMessageRef = useRef(onMessage);
   const onCallSignalRef = useRef(onCallSignal);
   const onMessageStatusRef = useRef(onMessageStatus);
+  const onCallErrorRef = useRef(onCallError);
   const onPresenceStatusRef = useRef(onPresenceStatus);
   const onPinnedMessageRef = useRef(onPinnedMessage);
   onMessageRef.current = onMessage;
   onCallSignalRef.current = onCallSignal;
   onMessageStatusRef.current = onMessageStatus;
+  onCallErrorRef.current = onCallError;
   onPresenceStatusRef.current = onPresenceStatus;
   onPinnedMessageRef.current = onPinnedMessage;
 
@@ -62,6 +66,15 @@ export function useChatSocket(
             onCallSignalRef.current?.(signal);
           } catch (e) {
             console.error('[useChatSocket] Failed to parse call signal:', e);
+          }
+        });
+
+        client.subscribe('/user/queue/call-errors', (frame) => {
+          try {
+            const error = JSON.parse(frame.body) as IncomingCallError;
+            onCallErrorRef.current?.(error);
+          } catch (e) {
+            console.error('[useChatSocket] Failed to parse call error:', e);
           }
         });
 

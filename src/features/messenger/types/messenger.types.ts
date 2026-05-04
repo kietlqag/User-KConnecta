@@ -9,6 +9,7 @@ export interface Conversation {
   };
   lastMessage: string;
   timestamp: string;
+  lastActivityAt?: number;
   isUnread: boolean;
   isGroup?: boolean;
   themeColor?: string | null;

@@ -40,6 +40,21 @@ export interface ChatHistoryPageResponse {
   nextBeforeCreatedAt?: string | null;
 }
 
+export interface ChatAssetItemResponse {
+  id: string;
+  type: 'image' | 'file' | 'link' | string;
+  url: string;
+  label?: string | null;
+  meta?: string | null;
+  createdAt?: string | null;
+}
+
+export interface ChatAssetPageResponse {
+  items: ChatAssetItemResponse[];
+  hasMore: boolean;
+  nextBeforeCreatedAt?: string | null;
+}
+
 export interface GroupConversationMemberResponse {
   userId: string;
   username: string;
@@ -264,6 +279,28 @@ export const chatService = {
       ? `/chat/conversations/${conversationId}/history?${query}`
       : `/chat/conversations/${conversationId}/history`;
     return api.get<ChatHistoryPageResponse>(url);
+  },
+
+  getPrivateAssets: (
+    peerUserId: string,
+    type: 'media' | 'files' | 'links',
+    options?: { beforeCreatedAt?: string | null; limit?: number },
+  ) => {
+    const params = new URLSearchParams({ type });
+    if (options?.beforeCreatedAt) params.set('beforeCreatedAt', options.beforeCreatedAt);
+    if (typeof options?.limit === 'number') params.set('limit', String(options.limit));
+    return api.get<ChatAssetPageResponse>(`/chat/assets/private/${peerUserId}?${params.toString()}`);
+  },
+
+  getGroupAssets: (
+    conversationId: string,
+    type: 'media' | 'files' | 'links',
+    options?: { beforeCreatedAt?: string | null; limit?: number },
+  ) => {
+    const params = new URLSearchParams({ type });
+    if (options?.beforeCreatedAt) params.set('beforeCreatedAt', options.beforeCreatedAt);
+    if (typeof options?.limit === 'number') params.set('limit', String(options.limit));
+    return api.get<ChatAssetPageResponse>(`/chat/assets/group/${conversationId}?${params.toString()}`);
   },
 
   sendGroupMessage: (conversationId: string, content: string) => {

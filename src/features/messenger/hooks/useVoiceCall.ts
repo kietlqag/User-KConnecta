@@ -6,6 +6,7 @@ import type {
   CallSignalType,
   GroupCallParticipant,
   GroupCallParticipantSignal,
+  IncomingCallError,
   IncomingCallSignal,
   OutgoingCallSignal,
 } from '../types/message.types';
@@ -1326,6 +1327,19 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     });
   }, [applyAuthoritativeSnapshot]);
 
+  const handleCallError = useCallback((error: IncomingCallError) => {
+    if (!error) return;
+    const relatedCallId = error.callId ?? null;
+    const isRelated =
+      (relatedCallId && (activeCallRef.current?.callId === relatedCallId || incomingSignal?.callId === relatedCallId)) ||
+      (!relatedCallId && (status === 'calling' || status === 'connecting' || status === 'ringing'));
+    if (!isRelated) return;
+
+    setErrorMessage(error.message || 'Cuộc gọi gặp lỗi');
+    setStatus('error');
+    cleanup(true);
+  }, [cleanup, incomingSignal?.callId, status]);
+
   const incomingPeerUserId = incomingSignal?.fromUserId ?? null;
   const incomingGroupConversationId = incomingSignal?.conversationId ?? null;
 
@@ -1367,6 +1381,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       toggleCamera,
       handleIncomingSignal,
       syncAuthoritativeSession,
+      handleCallError,
     }),
     [
       acceptIncoming,
@@ -1398,6 +1413,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       authoritativeSessionStatus,
       authoritativeDurationSec,
       syncAuthoritativeSession,
+      handleCallError,
       startCall,
       startGroupCall,
       status,

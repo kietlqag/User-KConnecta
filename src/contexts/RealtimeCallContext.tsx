@@ -9,6 +9,7 @@
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
 import { CallMinimizedBar, CallOverlayModal } from '@/features/messenger/components';
@@ -16,6 +17,7 @@ import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import { useVoiceCall } from '@/features/messenger/hooks/useVoiceCall';
 import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '@/features/messenger/utils/callDuration';
 import type {
+  IncomingCallError,
   IncomingCallSignal,
   IncomingChatMessage,
   IncomingMessageStatus,
@@ -57,6 +59,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const pinnedMessageListenersRef = useRef<Set<PinnedMessageListener>>(new Set());
   const latestPresenceByUserRef = useRef<Record<string, IncomingPresenceStatus>>({});
   const callSignalHandlerRef = useRef<(signal: IncomingCallSignal) => void>(() => {});
+  const callErrorHandlerRef = useRef<(error: IncomingCallError) => void>(() => {});
   const desktopNotificationRef = useRef<Notification | null>(null);
   const notifiedCallIdRef = useRef<string | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -183,10 +186,18 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     [closeDesktopNotification, maybeShowDesktopNotification],
   );
 
+  const handleIncomingCallError = useCallback((error: IncomingCallError) => {
+    if (error?.message) {
+      toast.error(error.message);
+    }
+    callErrorHandlerRef.current(error);
+  }, []);
+
   const { connected, sendMessage, sendGroupMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen } = useChatSocket(
     currentUser?.token,
     handleIncomingMessage,
     handleIncomingCallSignal,
+    handleIncomingCallError,
     handleIncomingMessageStatus,
     handleIncomingPresenceStatus,
     handleIncomingPinnedMessage,
@@ -202,6 +213,12 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       void voiceCall.handleIncomingSignal(signal);
     };
   }, [voiceCall.handleIncomingSignal]);
+
+  useEffect(() => {
+    callErrorHandlerRef.current = (error: IncomingCallError) => {
+      voiceCall.handleCallError(error);
+    };
+  }, [voiceCall.handleCallError]);
 
   const subscribeMessages = useCallback((listener: MessageListener) => {
     listenersRef.current.add(listener);

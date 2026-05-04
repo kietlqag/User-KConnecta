@@ -23,6 +23,11 @@ const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 
+function isChatActionContent(content?: string | null) {
+  const raw = content?.trim();
+  return Boolean(raw && raw.startsWith(CHAT_ACTION_PREFIX));
+}
+
 function mapBackendContentToPreview(content?: string | null) {
   const raw = content?.trim();
   if (!raw) return '';
@@ -49,33 +54,7 @@ function mapBackendContentToPreview(content?: string | null) {
   }
 
   if (raw.startsWith(CHAT_ACTION_PREFIX)) {
-    try {
-      const payload = JSON.parse(raw.slice(CHAT_ACTION_PREFIX.length));
-      const actor = typeof payload?.actorName === 'string' ? payload.actorName : 'Người dùng';
-      const value = typeof payload?.value === 'string' ? payload.value : '';
-      switch (payload?.type) {
-        case 'rename_conversation':
-          return `${actor} đã đổi tên đoạn chat${value ? ` thành ${value}` : ''}.`;
-        case 'change_group_photo':
-          return `${actor} đã đổi ảnh nhóm.`;
-        case 'change_theme':
-          return `${actor} đã đổi chủ đề đoạn chat.`;
-        case 'change_nickname':
-          return `${actor} đã đổi biệt danh.`;
-        case 'clear_nickname':
-          return `${actor} đã gỡ biệt danh.`;
-        case 'add_members':
-          return `${actor} đã thêm người vào nhóm.`;
-        case 'pin_message':
-          return `${actor} đã ghim một tin nhắn.`;
-        case 'unpin_message':
-          return `${actor} đã bỏ ghim một tin nhắn.`;
-        default:
-          return raw;
-      }
-    } catch {
-      return raw;
-    }
+    return '';
   }
 
   if (raw.startsWith(REPLY_PREFIX)) {
@@ -116,11 +95,24 @@ function formatConversationPreview(text: string, isOwn: boolean) {
   return isOwn ? `Bạn: ${normalized}` : normalized;
 }
 
+function parseBackendDate(value?: string | Date | null) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const normalized = raw.includes(' ') ? raw.replace(' ', 'T') : raw;
+  const hasOffset = /(?:Z|[+\-]\d{2}:\d{2})$/i.test(normalized);
+  const date = new Date(hasOffset ? normalized : `${normalized}+07:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 function formatTimestamp(iso?: string | null) {
   if (!iso) return '';
 
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return '';
+  const date = parseBackendDate(iso);
+  if (!date) return '';
 
   const diffMs = Date.now() - date.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
@@ -162,19 +154,22 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
     ])
       .then(async ([friends, groups]) => {
         const friendHistories = await Promise.allSettled(
-          friends.map((friend) => chatService.getChatHistory(currentUser.id, friend.userId, { limit: 1 })),
+          friends.map((friend) => chatService.getChatHistory(currentUser.id, friend.userId, { limit: 20 })),
         );
         const groupHistories = await Promise.allSettled(
-          groups.map((group) => chatService.getGroupChatHistory(group.id, { limit: 1 })),
+          groups.map((group) => chatService.getGroupChatHistory(group.id, { limit: 20 })),
         );
 
         const friendItems = friends.map((friend, index) => {
           const historyResult = friendHistories[index];
           const history = historyResult.status === 'fulfilled' ? historyResult.value.messages : [];
           const last = history.length > 0 ? history[history.length - 1] : null;
-          const rawPreview = mapBackendContentToPreview(last?.content);
-          const isOwnLastMessage = Boolean(last?.senderId && currentUser.id && last.senderId === currentUser.id);
-          const sortAt = new Date(last?.createdAt || friend.createdAt || 0).getTime();
+          const lastVisible = [...history].reverse().find((message) => !isChatActionContent(message.content)) ?? null;
+          const rawPreview = mapBackendContentToPreview(lastVisible?.content);
+          const isOwnLastMessage = Boolean(
+            lastVisible?.senderId && currentUser.id && lastVisible.senderId === currentUser.id,
+          );
+          const sortAt = (parseBackendDate(last?.createdAt || friend.createdAt) ?? new Date(0)).getTime();
 
           return {
             sortAt: Number.isFinite(sortAt) ? sortAt : 0,
@@ -194,6 +189,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
                 formatConversationPreview(rawPreview, isOwnLastMessage) ||
                 'Hai bạn đã kết bạn. Hãy bắt đầu cuộc trò chuyện.',
               timestamp: formatTimestamp(last?.createdAt || friend.createdAt),
+              lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
               isUnread: false,
             } satisfies Conversation,
           };
@@ -203,9 +199,12 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
           const historyResult = groupHistories[index];
           const history = historyResult.status === 'fulfilled' ? historyResult.value.messages : [];
           const last = history.length > 0 ? history[history.length - 1] : null;
-          const rawPreview = mapBackendContentToPreview(last?.content);
-          const isOwnLastMessage = Boolean(last?.senderId && currentUser.id && last.senderId === currentUser.id);
-          const sortAt = new Date(last?.createdAt || group.createdAt || 0).getTime();
+          const lastVisible = [...history].reverse().find((message) => !isChatActionContent(message.content)) ?? null;
+          const rawPreview = mapBackendContentToPreview(lastVisible?.content);
+          const isOwnLastMessage = Boolean(
+            lastVisible?.senderId && currentUser.id && lastVisible.senderId === currentUser.id,
+          );
+          const sortAt = (parseBackendDate(last?.createdAt || group.createdAt) ?? new Date(0)).getTime();
 
           return {
             sortAt: Number.isFinite(sortAt) ? sortAt : 0,
@@ -223,6 +222,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
               },
               lastMessage: formatConversationPreview(rawPreview, isOwnLastMessage) || 'Nhóm chat đã được tạo.',
               timestamp: formatTimestamp(last?.createdAt || group.createdAt),
+              lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
               isUnread: false,
               isGroup: true,
               themeColor: group.themeColor,
@@ -249,4 +249,5 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
 
   return { conversations, loading, error, reload: load };
 }
+
 

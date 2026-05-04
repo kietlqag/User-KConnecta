@@ -176,3 +176,12 @@ export interface IncomingCallSignal {
   sessionEndedAt?: string;
   sessionDurationSec?: number;
 }
+
+export interface IncomingCallError {
+  code: string;
+  message: string;
+  callId?: string | null;
+  type?: string | null;
+  conversationId?: string | null;
+  occurredAt?: string;
+}

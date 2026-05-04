@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+﻿import { useState, useCallback, useEffect, useMemo, useRef, type ChangeEvent, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -45,6 +45,8 @@ const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 const HISTORY_PAGE_SIZE = 15;
+const GROUP_AVATAR_CROP_SIZE = 180;
+const GROUP_AVATAR_EXPORT_SIZE = 512;
 
 function uniqueByUserId<T extends { userId: string }>(items: T[]) {
   const byId = new Map<string, T>();
@@ -54,6 +56,62 @@ function uniqueByUserId<T extends { userId: string }>(items: T[]) {
     }
   });
   return Array.from(byId.values());
+}
+
+function loadImageElement(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Cannot load image'));
+    image.src = src;
+  });
+}
+
+async function renderCroppedAvatarDataUrl(
+  imageSrc: string,
+  zoom: number,
+  offsetX: number,
+  offsetY: number,
+): Promise<string> {
+  const image = await loadImageElement(imageSrc);
+  const canvas = document.createElement('canvas');
+  canvas.width = GROUP_AVATAR_EXPORT_SIZE;
+  canvas.height = GROUP_AVATAR_EXPORT_SIZE;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Canvas not supported');
+  }
+
+  const baseScale = Math.max(
+    GROUP_AVATAR_EXPORT_SIZE / image.width,
+    GROUP_AVATAR_EXPORT_SIZE / image.height,
+  );
+  const scale = baseScale * zoom;
+  const drawWidth = image.width * scale;
+  const drawHeight = image.height * scale;
+  const translateScale = GROUP_AVATAR_EXPORT_SIZE * 0.35;
+  const drawX = (GROUP_AVATAR_EXPORT_SIZE - drawWidth) / 2 + (offsetX / 100) * translateScale;
+  const drawY = (GROUP_AVATAR_EXPORT_SIZE - drawHeight) / 2 + (offsetY / 100) * translateScale;
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+function dataUrlToFile(dataUrl: string, fileName: string): File {
+  const parts = dataUrl.split(',');
+  if (parts.length < 2) {
+    throw new Error('Invalid data URL');
+  }
+  const mimeMatch = parts[0].match(/data:([^;]+);base64/i);
+  const mimeType = mimeMatch?.[1] || 'image/jpeg';
+  const binary = atob(parts[1]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new File([bytes], fileName, { type: mimeType });
 }
 
 function mapBackendContentToMessageFields(
@@ -216,6 +274,23 @@ function formatConversationPreview(text: string, isOwn: boolean) {
   return isOwn ? `Bạn: ${normalized}` : normalized;
 }
 
+function formatRelativeConversationTime(dateInput?: Date | string | null) {
+  if (!dateInput) return '';
+  const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  if (diffMinutes < 1) return 'Vừa xong';
+  if (diffMinutes < 60) return `${diffMinutes} phút`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} giờ`;
+
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} ngày`;
+}
+
 function resolveDeliveryStatus(delivered?: boolean, seen?: boolean): Message['deliveryStatus'] {
   if (seen) return 'SEEN';
   if (delivered) return 'DELIVERED';
@@ -256,7 +331,7 @@ function defaultHistoryState(): HistoryState {
 }
 
 type InfoPanelTab = 'media' | 'files' | 'links';
-const INFO_PANEL_PAGE_SIZE = 9;
+const INFO_PANEL_PAGE_SIZE = 10;
 
 function formatFileSize(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return 'File';
@@ -284,6 +359,9 @@ function ChatInfoPanel({
   onOpenChangeGroupImage,
   onOpenChangeTheme,
   onOpenNicknames,
+  onLoadMoreHistory,
+  hasMoreHistory = false,
+  isLoadingMoreHistory = false,
 }: {
   user: ChatUser;
   messages: Message[];
@@ -297,6 +375,9 @@ function ChatInfoPanel({
   onOpenChangeGroupImage?: () => void;
   onOpenChangeTheme?: () => void;
   onOpenNicknames?: () => void;
+  onLoadMoreHistory?: () => Promise<void> | void;
+  hasMoreHistory?: boolean;
+  isLoadingMoreHistory?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<InfoPanelTab>('media');
   const [infoView, setInfoView] = useState<'overview' | 'files'>('overview');
@@ -312,6 +393,27 @@ function ChatInfoPanel({
     files: INFO_PANEL_PAGE_SIZE,
     links: INFO_PANEL_PAGE_SIZE,
   });
+  const [mediaLightboxIndex, setMediaLightboxIndex] = useState<number | null>(null);
+  const [assetItemsByTab, setAssetItemsByTab] = useState<Record<InfoPanelTab, Array<{ id: string; url: string; type?: string; label?: string; meta?: string }>>>({
+    media: [],
+    files: [],
+    links: [],
+  });
+  const [assetCursorByTab, setAssetCursorByTab] = useState<Record<InfoPanelTab, string | null>>({
+    media: null,
+    files: null,
+    links: null,
+  });
+  const [assetHasMoreByTab, setAssetHasMoreByTab] = useState<Record<InfoPanelTab, boolean>>({
+    media: true,
+    files: true,
+    links: true,
+  });
+  const [assetLoadingByTab, setAssetLoadingByTab] = useState<Record<InfoPanelTab, boolean>>({
+    media: false,
+    files: false,
+    links: false,
+  });
 
   useEffect(() => {
     setVisibleLimits({
@@ -319,6 +421,10 @@ function ChatInfoPanel({
       files: INFO_PANEL_PAGE_SIZE,
       links: INFO_PANEL_PAGE_SIZE,
     });
+    setAssetItemsByTab({ media: [], files: [], links: [] });
+    setAssetCursorByTab({ media: null, files: null, links: null });
+    setAssetHasMoreByTab({ media: true, files: true, links: true });
+    setAssetLoadingByTab({ media: false, files: false, links: false });
     setInfoView('overview');
     setActiveTab('media');
     setIsMediaSectionOpen(false);
@@ -331,77 +437,133 @@ function ChatInfoPanel({
   }, [user.id]);
 
   const mediaItems = useMemo(
-    () =>
-      messages.flatMap((message) => {
-        if (message.deleted) return [];
-        const urls = message.imageUrls?.length ? message.imageUrls : message.imageUrl ? [message.imageUrl] : [];
-        return urls.map((url, index) => ({
-          id: `${message.id}-media-${index}`,
-          url,
-          type: message.imageMimeType?.startsWith('video/') ? 'video' : 'image',
-        }));
-      }),
-    [messages],
+    () => assetItemsByTab.media.map((item) => ({ id: item.id, url: item.url, type: item.type === 'video' ? 'video' : 'image' })),
+    [assetItemsByTab.media],
   );
-
   const fileItems = useMemo(
-    () =>
-      messages.flatMap((message) => {
-        if (message.deleted || !message.fileUrl) return [];
-        return [
-          {
-            id: `${message.id}-file`,
-            url: message.fileUrl,
-            label: message.fileName || 'File',
-            meta: message.fileSizeBytes ? formatFileSize(message.fileSizeBytes) : message.fileMimeType || 'File',
-          },
-        ];
-      }),
-    [messages],
+    () => assetItemsByTab.files.map((item) => ({ id: item.id, url: item.url, label: item.label || 'File', meta: item.meta || 'File' })),
+    [assetItemsByTab.files],
   );
-
   const linkItems = useMemo(
     () =>
-      messages.flatMap((message) => {
-        if (message.deleted) return [];
-        return extractLinksFromText(message.imageCaption || message.text).map((url, index) => ({
-          id: `${message.id}-link-${index}`,
-          url,
-          host: (() => {
-            try {
-              return new URL(url).hostname.replace(/^www\./, '');
-            } catch {
-              return url;
-            }
-          })(),
-        }));
-      }),
-    [messages],
+      assetItemsByTab.links.map((item) => ({
+        id: item.id,
+        url: item.url,
+        host: (() => {
+          try {
+            return new URL(item.url).hostname.replace(/^www\./, '');
+          } catch {
+            return item.url;
+          }
+        })(),
+      })),
+    [assetItemsByTab.links],
   );
 
   const visibleMediaItems = mediaItems.slice(0, visibleLimits.media);
   const visibleFileItems = fileItems.slice(0, visibleLimits.files);
   const visibleLinkItems = linkItems.slice(0, visibleLimits.links);
 
+  useEffect(() => {
+    if (mediaLightboxIndex === null) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMediaLightboxIndex(null);
+      if (event.key === 'ArrowLeft') {
+        setMediaLightboxIndex((prev) =>
+          prev === null ? null : (prev - 1 + mediaItems.length) % mediaItems.length,
+        );
+      }
+      if (event.key === 'ArrowRight') {
+        setMediaLightboxIndex((prev) => (prev === null ? null : (prev + 1) % mediaItems.length));
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mediaItems.length, mediaLightboxIndex]);
+
+  const activeLightboxMedia = mediaLightboxIndex === null ? null : mediaItems[mediaLightboxIndex];
+
+  const loadAssetsForTab = useCallback(
+    async (tab: InfoPanelTab) => {
+      if (assetLoadingByTab[tab]) return;
+      if (!assetHasMoreByTab[tab] && assetItemsByTab[tab].length > 0) return;
+      setAssetLoadingByTab((prev) => ({ ...prev, [tab]: true }));
+      try {
+        const type = tab === 'media' ? 'media' : tab === 'files' ? 'files' : 'links';
+        const beforeCreatedAt = assetCursorByTab[tab] || undefined;
+        const response = user.id.startsWith('group:')
+          ? await chatService.getGroupAssets(user.id.replace('group:', ''), type, { beforeCreatedAt, limit: INFO_PANEL_PAGE_SIZE })
+          : await chatService.getPrivateAssets(user.id, type, { beforeCreatedAt, limit: INFO_PANEL_PAGE_SIZE });
+        const mapped = (response.items || []).map((item) => ({
+          id: item.id,
+          url: item.url,
+          type: item.type,
+          label: item.label || undefined,
+          meta: item.meta || undefined,
+        }));
+        setAssetItemsByTab((prev) => ({ ...prev, [tab]: beforeCreatedAt ? [...prev[tab], ...mapped] : mapped }));
+        setAssetCursorByTab((prev) => ({ ...prev, [tab]: response.nextBeforeCreatedAt || null }));
+        setAssetHasMoreByTab((prev) => ({ ...prev, [tab]: Boolean(response.hasMore) }));
+      } finally {
+        setAssetLoadingByTab((prev) => ({ ...prev, [tab]: false }));
+      }
+    },
+    [assetCursorByTab, assetHasMoreByTab, assetItemsByTab, assetLoadingByTab, user.id],
+  );
+
+  useEffect(() => {
+    if (assetItemsByTab[activeTab].length === 0 && !assetLoadingByTab[activeTab]) {
+      void loadAssetsForTab(activeTab);
+    }
+  }, [activeTab, assetItemsByTab, assetLoadingByTab, loadAssetsForTab]);
+
   const renderSeeMoreButton = (tab: InfoPanelTab, total: number) => {
     const visibleCount = visibleLimits[tab];
     const remainingCount = total - visibleCount;
-    if (remainingCount <= 0) return null;
+    const hasMore = assetHasMoreByTab[tab];
+    const isLoading = assetLoadingByTab[tab];
+    if (remainingCount <= 0 && !hasMore) return null;
     return (
       <button
         type="button"
-        onClick={() =>
+        disabled={isLoading}
+        onClick={async () => {
           setVisibleLimits((prev) => ({
             ...prev,
-            [tab]: Math.min(total, prev[tab] + INFO_PANEL_PAGE_SIZE),
-          }))
-        }
+            [tab]: prev[tab] + INFO_PANEL_PAGE_SIZE,
+          }));
+          if (remainingCount <= 0 && hasMore) {
+            await loadAssetsForTab(tab);
+          }
+        }}
         className="mt-3 w-full rounded-full bg-gray-100 px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
       >
-        Xem thêm
+        {isLoading ? 'Đang tải...' : 'Xem thêm'}
       </button>
     );
   };
+
+  useEffect(() => {
+    if (!assetHasMoreByTab[activeTab] || assetLoadingByTab[activeTab]) return;
+    const visibleCount = visibleLimits[activeTab];
+    const totalCount =
+      activeTab === 'media'
+        ? mediaItems.length
+        : activeTab === 'files'
+          ? fileItems.length
+          : linkItems.length;
+    if (totalCount >= visibleCount) return;
+    void loadAssetsForTab(activeTab);
+  }, [
+    activeTab,
+    assetHasMoreByTab,
+    assetLoadingByTab,
+    fileItems.length,
+    linkItems.length,
+    loadAssetsForTab,
+    mediaItems.length,
+    visibleLimits,
+  ]);
 
   const renderMediaGrid = () => (
     mediaItems.length > 0 ? (
@@ -411,7 +573,10 @@ function ChatInfoPanel({
             <button
               key={item.id}
               type="button"
-              onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}
+              onClick={() => {
+                const index = mediaItems.findIndex((media) => media.id === item.id);
+                setMediaLightboxIndex(index >= 0 ? index : 0);
+              }}
               className="relative aspect-square overflow-hidden bg-gray-100"
               title="Mở media"
             >
@@ -522,6 +687,7 @@ function ChatInfoPanel({
     );
 
     return (
+      <>
       <aside
         className="hidden h-full min-h-0 w-[320px] shrink-0 overflow-y-auto border-l border-gray-200 bg-white px-4 py-4 xl:flex xl:flex-col"
         style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
@@ -708,10 +874,62 @@ function ChatInfoPanel({
           </section>
         </div>
       </aside>
+      {activeLightboxMedia && (
+        <div
+          className="fixed inset-0 z-[240] bg-black/80"
+          onClick={() => setMediaLightboxIndex(null)}
+          role="presentation"
+        >
+          <button
+            type="button"
+            onClick={() => setMediaLightboxIndex(null)}
+            className="absolute right-4 top-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+            title="Đóng"
+          >
+            <X className="h-8 w-8" />
+          </button>
+          {mediaItems.length > 1 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setMediaLightboxIndex((prev) => (prev === null ? 0 : (prev - 1 + mediaItems.length) % mediaItems.length));
+              }}
+              className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white hover:bg-black/70"
+              title="Ảnh trước"
+            >
+              <ChevronLeft className="h-8 w-8" />
+            </button>
+          )}
+          <div className="flex h-full w-full items-center justify-center p-8">
+            <img
+              src={activeLightboxMedia.url}
+              alt="Media"
+              className="max-h-[92vh] max-w-[92vw] object-contain"
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+          {mediaItems.length > 1 && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setMediaLightboxIndex((prev) => (prev === null ? 0 : (prev + 1) % mediaItems.length));
+              }}
+              className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white hover:bg-black/70"
+              title="Ảnh sau"
+            >
+              <ChevronRight className="h-8 w-8" />
+            </button>
+          )}
+        </div>
+      )}
+      </>
     );
   }
 
   return (
+    <>
     <aside
       className="hidden xl:flex h-full min-h-0 w-[320px] shrink-0 overflow-hidden border-l border-gray-200 bg-white flex-col"
       style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
@@ -839,6 +1057,57 @@ function ChatInfoPanel({
         </div>
       )}
     </aside>
+    {activeLightboxMedia && (
+      <div
+        className="fixed inset-0 z-[240] bg-black/80"
+        onClick={() => setMediaLightboxIndex(null)}
+        role="presentation"
+      >
+        <button
+          type="button"
+          onClick={() => setMediaLightboxIndex(null)}
+          className="absolute right-4 top-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+          title="Đóng"
+        >
+          <X className="h-8 w-8" />
+        </button>
+        {mediaItems.length > 1 && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setMediaLightboxIndex((prev) => (prev === null ? 0 : (prev - 1 + mediaItems.length) % mediaItems.length));
+            }}
+            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white hover:bg-black/70"
+            title="Ảnh trước"
+          >
+            <ChevronLeft className="h-8 w-8" />
+          </button>
+        )}
+        <div className="flex h-full w-full items-center justify-center p-8">
+          <img
+            src={activeLightboxMedia.url}
+            alt="Media"
+            className="max-h-[92vh] max-w-[92vw] object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+        {mediaItems.length > 1 && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setMediaLightboxIndex((prev) => (prev === null ? 0 : (prev + 1) % mediaItems.length));
+            }}
+            className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white hover:bg-black/70"
+            title="Ảnh sau"
+          >
+            <ChevronRight className="h-8 w-8" />
+          </button>
+        )}
+      </div>
+    )}
+    </>
   );
 }
 
@@ -880,11 +1149,15 @@ export default function MessengerPage() {
   const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
   const [groupSettingsModal, setGroupSettingsModal] = useState<null | 'rename' | 'image' | 'theme' | 'nicknames'>(null);
   const [groupNameDraft, setGroupNameDraft] = useState('');
-  const [groupImageDraft, setGroupImageDraft] = useState('');
+  const [groupImagePreview, setGroupImagePreview] = useState('');
+  const [groupImageZoom, setGroupImageZoom] = useState(1);
+  const [groupImageOffsetX, setGroupImageOffsetX] = useState(0);
+  const [groupImageOffsetY, setGroupImageOffsetY] = useState(0);
   const [groupThemeDraft, setGroupThemeDraft] = useState('#2563eb');
   const [nicknameEditingUserId, setNicknameEditingUserId] = useState<string | null>(null);
   const [nicknameDraft, setNicknameDraft] = useState('');
   const [isSavingGroupSettings, setIsSavingGroupSettings] = useState(false);
+  const [isProcessingGroupImage, setIsProcessingGroupImage] = useState(false);
   const [forwardMessage, setForwardMessage] = useState<Message | null>(null);
   const [selectedForwardTargetIds, setSelectedForwardTargetIds] = useState<string[]>([]);
   const [pinnedMessagesByConversation, setPinnedMessagesByConversation] = useState<Record<string, PinnedChatMessage[]>>({});
@@ -910,6 +1183,7 @@ export default function MessengerPage() {
   const pendingMessageStatusRef = useRef<
     Record<string, { status: IncomingMessageStatus['status']; updatedAt?: string }>
   >({});
+  const groupImageFileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -1180,10 +1454,7 @@ export default function MessengerPage() {
             [peerUserId]: {
               ...(prev[peerUserId] ?? {}),
               lastMessage: formatConversationPreview(last.text, last.isOwn),
-              timestamp: last.timestamp.toLocaleTimeString('vi-VN', {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
+              timestamp: formatRelativeConversationTime(last.timestamp),
             },
           }));
         }
@@ -2264,6 +2535,37 @@ export default function MessengerPage() {
     if (!activeChatUserId) return;
     await loadOlderHistory(activeChatUserId);
   }, [activeChatUserId, loadOlderHistory]);
+  const isGroupSettingsBusy = isSavingGroupSettings || isProcessingGroupImage;
+
+  const openGroupImagePicker = useCallback(() => {
+    if (!activeChatUserId?.startsWith('group:') || !activeChatUser) return;
+    groupImageFileInputRef.current?.click();
+  }, [activeChatUser, activeChatUserId]);
+
+  const handleSelectGroupImageFile = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Chỉ chấp nhận tệp ảnh.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      if (!result) {
+        toast.error('Không thể đọc ảnh đã chọn.');
+        return;
+      }
+      setGroupImagePreview(result);
+      setGroupImageZoom(1);
+      setGroupImageOffsetX(0);
+      setGroupImageOffsetY(0);
+      setGroupSettingsModal('image');
+    };
+    reader.onerror = () => toast.error('Không thể đọc ảnh đã chọn.');
+    reader.readAsDataURL(file);
+  }, []);
 
   const openGroupSettingsModal = useCallback((mode: 'rename' | 'image' | 'theme' | 'nicknames') => {
     if (!activeChatUserId?.startsWith('group:') || !activeChatUser) return;
@@ -2272,7 +2574,10 @@ export default function MessengerPage() {
       setGroupNameDraft(activeChatUser.name);
     }
     if (mode === 'image') {
-      setGroupImageDraft(activeChatUser.avatar || '');
+      setGroupImagePreview(activeChatUser.avatar || '');
+      setGroupImageZoom(1);
+      setGroupImageOffsetX(0);
+      setGroupImageOffsetY(0);
     }
     if (mode === 'theme') {
       setGroupThemeDraft(activeChatThemeColor || '#2563eb');
@@ -2517,19 +2822,30 @@ export default function MessengerPage() {
               onOpenAddMembers={openAddGroupMembersModal}
               onOpenPinnedMessages={() => setOpenPinnedMessagesSignal((value) => value + 1)}
               onOpenRenameGroup={() => openGroupSettingsModal('rename')}
-              onOpenChangeGroupImage={() => openGroupSettingsModal('image')}
+              onOpenChangeGroupImage={openGroupImagePicker}
               onOpenChangeTheme={() => openGroupSettingsModal('theme')}
               onOpenNicknames={() => openGroupSettingsModal('nicknames')}
+              onLoadMoreHistory={handleLoadOlderMessages}
+              hasMoreHistory={hasOlderMessages}
+              isLoadingMoreHistory={loadingOlderMessages}
             />
           )}
         </div>
       </div>
 
+      <input
+        ref={groupImageFileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleSelectGroupImageFile}
+      />
+
       {groupSettingsModal && activeChatUserId?.startsWith('group:') && activeChatUser && (
         <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/35 p-4">
           <div
             className={`flex max-h-[86vh] w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl ${
-              groupSettingsModal === 'rename' ? 'max-w-[658px]' : 'max-w-[660px]'
+              groupSettingsModal === 'rename' ? 'max-w-[620px]' : 'max-w-[620px]'
             }`}
           >
             <div className="relative flex min-h-[70px] shrink-0 items-center justify-center border-b border-gray-200 px-5 py-3">
@@ -2545,7 +2861,7 @@ export default function MessengerPage() {
               <button
                 type="button"
                 onClick={() => setGroupSettingsModal(null)}
-                disabled={isSavingGroupSettings}
+                disabled={isGroupSettingsBusy}
                 className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 disabled:opacity-60"
                 title="Đóng"
               >
@@ -2584,7 +2900,7 @@ export default function MessengerPage() {
                   <button
                     type="button"
                     onClick={() => setGroupSettingsModal(null)}
-                    disabled={isSavingGroupSettings}
+                    disabled={isGroupSettingsBusy}
                     className="h-10 rounded-lg px-4 text-[17px] font-semibold text-blue-600 hover:bg-blue-50 disabled:opacity-60"
                   >
                     Hủy
@@ -2606,31 +2922,115 @@ export default function MessengerPage() {
             )}
 
             {groupSettingsModal === 'image' && (
-              <div className="space-y-4 p-5">
+              <div className="space-y-3 p-3 sm:p-4">
                 <div className="flex justify-center">
-                  <img
-                    src={groupImageDraft || activeChatUser.avatar}
-                    alt={activeChatUser.name}
-                    className="h-24 w-24 rounded-full object-cover"
-                  />
+                  <div
+                    className="relative overflow-hidden rounded-full border border-gray-200 bg-gray-100"
+                    style={{ width: GROUP_AVATAR_CROP_SIZE, height: GROUP_AVATAR_CROP_SIZE }}
+                  >
+                    {groupImagePreview ? (
+                      <img
+                        src={groupImagePreview}
+                        alt={activeChatUser.name}
+                        className="pointer-events-none absolute left-1/2 top-1/2 max-w-none select-none"
+                        style={{
+                          transform: `translate(-50%, -50%) translate(${groupImageOffsetX}%, ${groupImageOffsetY}%) scale(${groupImageZoom})`,
+                          transformOrigin: 'center center',
+                        }}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-sm text-gray-500">Chưa có ảnh</div>
+                    )}
+                  </div>
                 </div>
-                <input
-                  value={groupImageDraft}
-                  onChange={(event) => setGroupImageDraft(event.target.value)}
-                  className="h-12 w-full rounded-full bg-gray-100 px-4 text-[16px] outline-none focus:bg-gray-200"
-                  placeholder="Dán URL ảnh nhóm"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleUpdateGroupConversation({ avatarUrl: groupImageDraft.trim() || null })}
-                  disabled={isSavingGroupSettings}
-                  className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
-                >
-                  Lưu
-                </button>
+
+                <p className="text-center text-sm text-gray-500">Kéo thanh để căn ảnh trước khi lưu.</p>
+
+                <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-2.5">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Phóng to / thu nhỏ</label>
+                    <input
+                      type="range"
+                      min={1}
+                      max={3}
+                      step={0.01}
+                      value={groupImageZoom}
+                      onChange={(event) => setGroupImageZoom(Number(event.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Di chuyển ngang</label>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={groupImageOffsetX}
+                      onChange={(event) => setGroupImageOffsetX(Number(event.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-gray-700">Di chuyển dọc</label>
+                    <input
+                      type="range"
+                      min={-100}
+                      max={100}
+                      step={1}
+                      value={groupImageOffsetY}
+                      onChange={(event) => setGroupImageOffsetY(Number(event.target.value))}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setGroupSettingsModal(null)}
+                    disabled={isGroupSettingsBusy}
+                    className="h-10 flex-1 rounded-lg border border-gray-300 bg-white text-[15px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openGroupImagePicker}
+                    disabled={isGroupSettingsBusy}
+                    className="h-10 flex-1 rounded-lg border border-gray-300 bg-white text-[15px] font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-60"
+                  >
+                    Chọn lại
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!groupImagePreview || isGroupSettingsBusy) return;
+                      setIsProcessingGroupImage(true);
+                      try {
+                        const croppedDataUrl = await renderCroppedAvatarDataUrl(
+                          groupImagePreview,
+                          groupImageZoom,
+                          groupImageOffsetX,
+                          groupImageOffsetY,
+                        );
+                        const imageFile = dataUrlToFile(croppedDataUrl, 'group-avatar.jpg');
+                        const uploaded = await chatService.uploadChatImage(imageFile);
+                        await handleUpdateGroupConversation({ avatarUrl: uploaded.imageUrl });
+                      } catch {
+                        toast.error('Không thể xử lý ảnh đã chọn.');
+                      } finally {
+                        setIsProcessingGroupImage(false);
+                      }
+                    }}
+                    disabled={isGroupSettingsBusy || !groupImagePreview}
+                    className="h-10 flex-1 rounded-lg bg-blue-600 text-[15px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
+                  >
+                    Lưu
+                  </button>
+                </div>
               </div>
             )}
-
             {groupSettingsModal === 'theme' && (
               <div className="space-y-4 p-5">
                 <div className="grid grid-cols-5 gap-3">
@@ -2648,7 +3048,7 @@ export default function MessengerPage() {
                 <button
                   type="button"
                   onClick={() => handleUpdateGroupConversation({ themeColor: groupThemeDraft })}
-                  disabled={isSavingGroupSettings}
+                  disabled={isGroupSettingsBusy}
                   className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
                 >
                   Lưu
@@ -2681,7 +3081,7 @@ export default function MessengerPage() {
                             <button
                               type="button"
                               onClick={() => handleSaveNickname(member.id, nicknameDraft)}
-                              disabled={isSavingGroupSettings}
+                              disabled={isGroupSettingsBusy}
                               className="flex h-10 w-10 items-center justify-center rounded-full text-gray-900 hover:bg-gray-100 disabled:opacity-60"
                               title="Lưu biệt danh"
                             >
@@ -3007,3 +3407,6 @@ export default function MessengerPage() {
     </div>
   );
 }
+
+
+
