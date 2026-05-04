@@ -109,4 +109,33 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             ORDER BY m.createdAt ASC
             """)
     List<ChatMessage> findUnseenMessages(@Param("senderId") UUID senderId, @Param("receiverId") UUID receiverId);
+
+    @Query("""
+            SELECT m FROM ChatMessage m
+            WHERE (
+                    (m.sender.id = :userId1 AND m.receiver.id = :userId2)
+                 OR (m.sender.id = :userId2 AND m.receiver.id = :userId1)
+            )
+              AND m.conversation IS NULL
+              AND m.createdAt < COALESCE(:beforeCreatedAt, CURRENT_TIMESTAMP)
+            ORDER BY m.createdAt DESC
+            """)
+    List<ChatMessage> findPrivateChunkForAssets(
+            @Param("userId1") UUID userId1,
+            @Param("userId2") UUID userId2,
+            @Param("beforeCreatedAt") LocalDateTime beforeCreatedAt,
+            Pageable pageable
+    );
+
+    @Query("""
+            SELECT m FROM ChatMessage m
+            WHERE m.conversation.id = :conversationId
+              AND m.createdAt < COALESCE(:beforeCreatedAt, CURRENT_TIMESTAMP)
+            ORDER BY m.createdAt DESC
+            """)
+    List<ChatMessage> findGroupChunkForAssets(
+            @Param("conversationId") UUID conversationId,
+            @Param("beforeCreatedAt") LocalDateTime beforeCreatedAt,
+            Pageable pageable
+    );
 }

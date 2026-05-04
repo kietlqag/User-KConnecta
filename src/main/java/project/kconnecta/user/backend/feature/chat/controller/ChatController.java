@@ -23,6 +23,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.ChatFileUploadRe
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatImageUploadResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatAssetPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSessionResponse;
@@ -71,6 +72,34 @@ public class ChatController {
             return ResponseEntity.status(401).build();
         }
         return ResponseEntity.ok(chatService.getGroupChatHistory(principal.getName(), conversationId, beforeCreatedAt, limit));
+    }
+
+    @GetMapping("/assets/private/{peerUserId}")
+    public ResponseEntity<ChatAssetPageResponse> getPrivateAssets(
+            @PathVariable UUID peerUserId,
+            @RequestParam String type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime beforeCreatedAt,
+            @RequestParam(required = false) Integer limit,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getPrivateAssets(principal.getName(), peerUserId, type, beforeCreatedAt, limit));
+    }
+
+    @GetMapping("/assets/group/{conversationId}")
+    public ResponseEntity<ChatAssetPageResponse> getGroupAssets(
+            @PathVariable UUID conversationId,
+            @RequestParam String type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime beforeCreatedAt,
+            @RequestParam(required = false) Integer limit,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getGroupAssets(principal.getName(), conversationId, type, beforeCreatedAt, limit));
     }
 
     @PostMapping("/conversations/group")
@@ -212,6 +241,9 @@ public class ChatController {
             @RequestParam(value = "mediaType", required = false) String mediaType,
             Principal principal
     ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
         String username = principal == null ? null : principal.getName();
         return ResponseEntity.ok(callRecordingService.saveRecording(callId, username, file, durationSec, mediaType));
     }

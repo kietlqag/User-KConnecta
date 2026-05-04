@@ -1,10 +1,15 @@
 package project.kconnecta.user.backend.feature.chat.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.kconnecta.user.backend.exception.BadRequestException;
+import project.kconnecta.user.backend.exception.ForbiddenException;
+import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRequest;
@@ -18,6 +23,8 @@ import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupConver
 import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupMemberNicknameRequest;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatAssetItemResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatAssetPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
@@ -58,15 +65,26 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
     private static final String CHAT_ACTION_PREFIX = "__CHAT_ACTION__:";
+    private static final String IMAGE_MESSAGE_PREFIX = "__IMAGE__:";
+    private static final String FILE_MESSAGE_PREFIX = "__FILE__:";
+    private static final String REPLY_PREFIX = "__REPLY__:";
+    private static final String LINK_REGEX = "https?://[^\\s<>\"']+";
 
     private static final int DEFAULT_HISTORY_LIMIT = 15;
     private static final int MIN_HISTORY_LIMIT = 1;
     private static final int MAX_HISTORY_LIMIT = 50;
+    private static final int MAX_ASSET_LIMIT = 30;
+    private static final int ASSET_SCAN_BATCH = 60;
+    private static final int ASSET_SCAN_MAX_ROUNDS = 12;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
@@ -433,6 +451,46 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ChatAssetPageResponse getPrivateAssets(String currentUsername, UUID peerUserId, String type, LocalDateTime beforeCreatedAt, Integer limit) {
+        User viewer = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (peerUserId == null) {
+            throw new BadRequestException("Peer user ID is required");
+        }
+        AssetType assetType = normalizeAssetType(type);
+        int normalizedLimit = normalizeAssetLimit(limit);
+        return collectAssets(
+                normalizedLimit,
+                beforeCreatedAt,
+                cursor -> chatMessageRepository.findPrivateChunkForAssets(viewer.getId(), peerUserId, cursor, PageRequest.of(0, ASSET_SCAN_BATCH)),
+                assetType
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ChatAssetPageResponse getGroupAssets(String currentUsername, UUID conversationId, String type, LocalDateTime beforeCreatedAt, Integer limit) {
+        User viewer = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (conversationId == null) {
+            throw new BadRequestException("Conversation ID is required");
+        }
+        boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, viewer.getId());
+        if (!isMember) {
+            throw new ForbiddenException("Forbidden");
+        }
+        AssetType assetType = normalizeAssetType(type);
+        int normalizedLimit = normalizeAssetLimit(limit);
+        return collectAssets(
+                normalizedLimit,
+                beforeCreatedAt,
+                cursor -> chatMessageRepository.findGroupChunkForAssets(conversationId, cursor, PageRequest.of(0, ASSET_SCAN_BATCH)),
+                assetType
+        );
+    }
+
+    @Override
     @Transactional
     public GroupConversationResponse createGroupConversation(String currentUsername, CreateGroupConversationRequest request) {
         User creator = userRepository.findByUsername(currentUsername)
@@ -506,6 +564,9 @@ public class ChatServiceImpl implements ChatService {
             }
             if (request.getAvatarUrl() != null) {
                 String avatarUrl = request.getAvatarUrl().trim();
+                if (!avatarUrl.isBlank() && avatarUrl.length() > 1000) {
+                    throw new BadRequestException("Avatar URL is too long");
+                }
                 conversation.setAvatarUrl(avatarUrl.isBlank() ? null : avatarUrl);
             }
             if (request.getThemeColor() != null) {
@@ -706,16 +767,16 @@ public class ChatServiceImpl implements ChatService {
             CreateGroupCallSessionRequest request
     ) {
         User caller = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         if (conversationId == null) {
-            throw new RuntimeException("Conversation ID is required");
+            throw new BadRequestException("Conversation ID is required");
         }
         if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, caller.getId())) {
-            throw new RuntimeException("You are not a member of this conversation");
+            throw new ForbiddenException("You are not a member of this conversation");
         }
 
         ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
         String mediaType = request != null && "video".equalsIgnoreCase(request.getMediaType()) ? "video" : "audio";
         LocalDateTime now = LocalDateTime.now();
 
@@ -736,12 +797,12 @@ public class ChatServiceImpl implements ChatService {
     @Transactional(readOnly = true)
     public GroupCallSessionResponse getGroupCallSessionSnapshot(String currentUsername, UUID callId) {
         User viewer = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         GroupCallSession session = groupCallSessionRepository.findByCallIdWithDetails(callId)
-                .orElseThrow(() -> new RuntimeException("Group call session not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Group call session not found"));
         UUID conversationId = session.getConversation().getId();
         if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, viewer.getId())) {
-            throw new RuntimeException("You are not a member of this conversation");
+            throw new ForbiddenException("You are not a member of this conversation");
         }
         return toGroupCallSessionResponse(session, LocalDateTime.now());
     }
@@ -1021,17 +1082,17 @@ public class ChatServiceImpl implements ChatService {
     @Transactional(readOnly = true)
     public CallSessionSnapshotResponse getCallSessionSnapshot(String currentUsername, UUID callId) {
         if (callId == null) {
-            throw new RuntimeException("Call ID is required");
+            throw new BadRequestException("Call ID is required");
         }
         User currentUser = userRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         CallSession session = callSessionRepository.findByCallIdWithUsers(callId)
-                .orElseThrow(() -> new RuntimeException("Call session not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Call session not found"));
 
         UUID userId = currentUser.getId();
         boolean isParticipant = session.getCaller().getId().equals(userId) || session.getCallee().getId().equals(userId);
         if (!isParticipant) {
-            throw new RuntimeException("Forbidden");
+            throw new ForbiddenException("Forbidden");
         }
 
         return toSnapshot(session, LocalDateTime.now());
@@ -1199,6 +1260,173 @@ public class ChatServiceImpl implements ChatService {
         messages.forEach(message -> message.setReactions(
                 reactionsByMessage.getOrDefault(message.getId(), Collections.emptyList())
         ));
+    }
+
+    private AssetType normalizeAssetType(String type) {
+        if (type == null || type.isBlank()) {
+            throw new BadRequestException("Asset type is required");
+        }
+        return switch (type.trim().toLowerCase()) {
+            case "media" -> AssetType.MEDIA;
+            case "files", "file" -> AssetType.FILES;
+            case "links", "link" -> AssetType.LINKS;
+            default -> throw new BadRequestException("Unsupported asset type");
+        };
+    }
+
+    private int normalizeAssetLimit(Integer limit) {
+        if (limit == null) return 10;
+        return Math.max(1, Math.min(MAX_ASSET_LIMIT, limit));
+    }
+
+    private ChatAssetPageResponse collectAssets(
+            int limit,
+            LocalDateTime beforeCreatedAt,
+            java.util.function.Function<LocalDateTime, List<ChatMessage>> loader,
+            AssetType type
+    ) {
+        List<ChatAssetItemResponse> collected = new ArrayList<>();
+        LocalDateTime cursor = beforeCreatedAt;
+        boolean sourceHasMore = true;
+        int rounds = 0;
+
+        while (collected.size() < limit + 1 && sourceHasMore && rounds < ASSET_SCAN_MAX_ROUNDS) {
+            List<ChatMessage> chunk = loader.apply(cursor);
+            if (chunk.isEmpty()) {
+                sourceHasMore = false;
+                break;
+            }
+            for (ChatMessage message : chunk) {
+                if (Boolean.TRUE.equals(message.getDeleted())) continue;
+                collected.addAll(mapMessageToAssets(message, type));
+                if (collected.size() >= limit + 1) break;
+            }
+            sourceHasMore = chunk.size() >= ASSET_SCAN_BATCH;
+            cursor = chunk.get(chunk.size() - 1).getCreatedAt();
+            rounds += 1;
+        }
+
+        boolean hasMore = collected.size() > limit || sourceHasMore;
+        List<ChatAssetItemResponse> page = collected.size() > limit
+                ? new ArrayList<>(collected.subList(0, limit))
+                : collected;
+        LocalDateTime nextBefore = page.isEmpty() ? cursor : page.get(page.size() - 1).getCreatedAt();
+        return ChatAssetPageResponse.builder()
+                .items(page)
+                .hasMore(hasMore)
+                .nextBeforeCreatedAt(nextBefore)
+                .build();
+    }
+
+    private List<ChatAssetItemResponse> mapMessageToAssets(ChatMessage message, AssetType type) {
+        String content = message.getContent();
+        if (content == null || content.isBlank()) return Collections.emptyList();
+        return switch (type) {
+            case MEDIA -> extractMediaAssets(message, content);
+            case FILES -> extractFileAssets(message, content);
+            case LINKS -> extractLinkAssets(message, content);
+        };
+    }
+
+    private List<ChatAssetItemResponse> extractMediaAssets(ChatMessage message, String content) {
+        if (!content.startsWith(IMAGE_MESSAGE_PREFIX)) return Collections.emptyList();
+        JsonNode payload = parseJsonContent(content.substring(IMAGE_MESSAGE_PREFIX.length()));
+        if (payload == null) return Collections.emptyList();
+
+        List<ChatAssetItemResponse> items = new ArrayList<>();
+        JsonNode imageUrls = payload.get("imageUrls");
+        if (imageUrls != null && imageUrls.isArray()) {
+            int index = 0;
+            for (JsonNode urlNode : imageUrls) {
+                String url = safeText(urlNode);
+                if (url == null || url.isBlank()) continue;
+                items.add(assetItem(message, "image", url, "Ảnh", null, index++));
+            }
+        } else {
+            String url = safeText(payload.get("imageUrl"));
+            if (url != null && !url.isBlank()) {
+                items.add(assetItem(message, "image", url, "Ảnh", null, 0));
+            }
+        }
+        return items;
+    }
+
+    private List<ChatAssetItemResponse> extractFileAssets(ChatMessage message, String content) {
+        if (!content.startsWith(FILE_MESSAGE_PREFIX)) return Collections.emptyList();
+        JsonNode payload = parseJsonContent(content.substring(FILE_MESSAGE_PREFIX.length()));
+        if (payload == null) return Collections.emptyList();
+
+        String url = safeText(payload.get("fileUrl"));
+        if (url == null || url.isBlank()) return Collections.emptyList();
+        String label = safeText(payload.get("fileName"));
+        String mime = safeText(payload.get("mimeType"));
+        String meta = mime == null || mime.isBlank() ? "File" : mime;
+
+        return List.of(assetItem(message, "file", url, (label == null || label.isBlank()) ? "File" : label, meta, 0));
+    }
+
+    private List<ChatAssetItemResponse> extractLinkAssets(ChatMessage message, String content) {
+        String source = extractPlainTextForLinks(content);
+        if (source == null || source.isBlank()) return Collections.emptyList();
+        Pattern pattern = Pattern.compile(LINK_REGEX);
+        Matcher matcher = pattern.matcher(source);
+        List<ChatAssetItemResponse> items = new ArrayList<>();
+        int index = 0;
+        while (matcher.find()) {
+            String url = matcher.group();
+            if (url == null || url.isBlank()) continue;
+            items.add(assetItem(message, "link", trimTrailingPunctuation(url), null, null, index++));
+        }
+        return items;
+    }
+
+    private String extractPlainTextForLinks(String content) {
+        if (content.startsWith(REPLY_PREFIX)) {
+            JsonNode payload = parseJsonContent(content.substring(REPLY_PREFIX.length()));
+            return payload == null ? "" : safeText(payload.get("text"));
+        }
+        if (content.startsWith(IMAGE_MESSAGE_PREFIX)) {
+            JsonNode payload = parseJsonContent(content.substring(IMAGE_MESSAGE_PREFIX.length()));
+            return payload == null ? "" : safeText(payload.get("caption"));
+        }
+        if (content.startsWith(FILE_MESSAGE_PREFIX) || content.startsWith(CHAT_ACTION_PREFIX) || content.startsWith("__CALL_LOG__:") || content.startsWith("__VOICE__:")) {
+            return "";
+        }
+        return content;
+    }
+
+    private ChatAssetItemResponse assetItem(ChatMessage message, String type, String url, String label, String meta, int index) {
+        return ChatAssetItemResponse.builder()
+                .id(message.getId() + "-" + type + "-" + index)
+                .type(type)
+                .url(url)
+                .label(label)
+                .meta(meta)
+                .createdAt(message.getCreatedAt())
+                .build();
+    }
+
+    private JsonNode parseJsonContent(String json) {
+        try {
+            return objectMapper.readTree(json);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String safeText(JsonNode node) {
+        if (node == null || node.isNull()) return null;
+        return node.asText(null);
+    }
+
+    private String trimTrailingPunctuation(String url) {
+        return url.replaceAll("[),.;!?]+$", "");
+    }
+
+    private enum AssetType {
+        MEDIA,
+        FILES,
+        LINKS
     }
 
     private GroupConversationResponse toGroupConversationResponse(ChatConversation conversation, List<ChatConversationMember> members) {

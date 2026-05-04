@@ -6,6 +6,8 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
+import project.kconnecta.user.backend.exception.BadRequestException;
+import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.feature.chat.dto.request.CallSignalRequest;
 import project.kconnecta.user.backend.feature.chat.dto.CallParticipantInfo;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationSeenRequest;
@@ -16,9 +18,12 @@ import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnaps
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSignalResponse;
 import project.kconnecta.user.backend.feature.chat.entity.CallSession;
 import project.kconnecta.user.backend.feature.chat.entity.CallSignalEvent;
+import project.kconnecta.user.backend.feature.chat.entity.ChatConversation;
 import project.kconnecta.user.backend.feature.chat.entity.GroupCallSession;
 import project.kconnecta.user.backend.feature.chat.repository.CallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.repository.CallSignalEventRepository;
+import project.kconnecta.user.backend.feature.chat.repository.ChatConversationMemberRepository;
+import project.kconnecta.user.backend.feature.chat.repository.ChatConversationRepository;
 import project.kconnecta.user.backend.feature.chat.repository.GroupCallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 import project.kconnecta.user.backend.feature.chat.service.impl.ChatServiceImpl;
@@ -29,6 +34,7 @@ import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +53,8 @@ public class ChatSocketController {
     private final CallSessionRepository callSessionRepository;
     private final CallSignalEventRepository callSignalEventRepository;
     private final GroupCallSessionRepository groupCallSessionRepository;
+    private final ChatConversationRepository chatConversationRepository;
+    private final ChatConversationMemberRepository chatConversationMemberRepository;
 
     @MessageMapping("/chat.private")
     public void sendPrivateMessage(PrivateMessageRequest request, Principal principal) {
@@ -83,57 +91,76 @@ public class ChatSocketController {
     @MessageMapping("/call.signal")
     @Transactional
     public void sendCallSignal(CallSignalRequest request, Principal principal) {
-        if (principal == null) {
-            throw new IllegalStateException("Unauthenticated WebSocket session");
-        }
+        try {
+            if (principal == null) {
+                throw new ForbiddenException("Unauthenticated WebSocket session");
+            }
+            if (request == null) {
+                throw new BadRequestException("Invalid call signal request");
+            }
+            if (request.getCallId() == null || request.getType() == null || request.getType().isBlank()) {
+                throw new BadRequestException("Call ID and type are required");
+            }
+            if (request.getReceiverId() == null) {
+                throw new BadRequestException("Receiver ID is required");
+            }
+            User sender = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new ForbiddenException("Sender not found"));
+            User receiver = userRepository.findById(request.getReceiverId())
+                    .orElseThrow(() -> new BadRequestException("Receiver not found"));
+            if (request.getConversationId() != null
+                    && !chatConversationMemberRepository.existsByConversationIdAndUserId(
+                    request.getConversationId(),
+                    receiver.getId()
+            )) {
+                throw new ForbiddenException("Receiver is not a member of this conversation");
+            }
 
-        User sender = userRepository.findByUsername(principal.getName())
-                .orElseThrow(() -> new IllegalStateException("Sender not found"));
-        User receiver = userRepository.findById(request.getReceiverId())
-                .orElseThrow(() -> new IllegalStateException("Receiver not found"));
-
-        LocalDateTime now = LocalDateTime.now();
-        CallSession session = request.getConversationId() == null
-                ? persistCallData(request, sender, receiver, now)
-                : null;
-        GroupCallSession groupSession = request.getConversationId() != null
-                ? persistGroupCallData(request, sender, now)
-                : null;
-        CallSessionSnapshotResponse snapshot = session != null
-                ? ChatServiceImpl.toSnapshot(session, now)
-                : groupSession != null
+            LocalDateTime now = LocalDateTime.now();
+            CallSession session = request.getConversationId() == null
+                    ? persistCallData(request, sender, receiver, now)
+                    : null;
+            GroupCallSession groupSession = request.getConversationId() != null
+                    ? persistGroupCallData(request, sender, now)
+                    : null;
+            CallSessionSnapshotResponse snapshot = session != null
+                    ? ChatServiceImpl.toSnapshot(session, now)
+                    : groupSession != null
                     ? toGroupSnapshot(groupSession, now)
                     : new CallSessionSnapshotResponse(request.getCallId(), null, null, null, null, null, null);
-        CallSignalResponse response = new CallSignalResponse(
-                request.getCallId(),
-                sender.getId(),
-                receiver.getId(),
-                request.getConversationId(),
-                request.getConversationName(),
-                request.getConversationAvatarUrl(),
-                displayName(sender),
-                request.getType(),
-                normalizeMediaType(request.getMediaType()),
-                request.getSdp(),
-                request.getCandidate(),
-                request.getSdpMid(),
-                request.getSdpMLineIndex(),
-                enrichGroupParticipants(request.getGroupParticipants(), sender, receiver),
-                request.getParticipantUserId(),
-                request.getParticipantStatus(),
-                request.getParticipantMicEnabled(),
-                request.getParticipantCameraEnabled(),
-                now,
-                snapshot.getStatus(),
-                snapshot.getMediaType(),
-                snapshot.getStartedAt(),
-                snapshot.getAnsweredAt(),
-                snapshot.getEndedAt(),
-                snapshot.getDurationSec()
-        );
+            CallSignalResponse response = new CallSignalResponse(
+                    request.getCallId(),
+                    sender.getId(),
+                    receiver.getId(),
+                    request.getConversationId(),
+                    request.getConversationName(),
+                    request.getConversationAvatarUrl(),
+                    displayName(sender),
+                    request.getType(),
+                    normalizeMediaType(request.getMediaType()),
+                    request.getSdp(),
+                    request.getCandidate(),
+                    request.getSdpMid(),
+                    request.getSdpMLineIndex(),
+                    enrichGroupParticipants(request.getGroupParticipants(), sender, receiver),
+                    request.getParticipantUserId(),
+                    request.getParticipantStatus(),
+                    request.getParticipantMicEnabled(),
+                    request.getParticipantCameraEnabled(),
+                    now,
+                    snapshot.getStatus(),
+                    snapshot.getMediaType(),
+                    snapshot.getStartedAt(),
+                    snapshot.getAnsweredAt(),
+                    snapshot.getEndedAt(),
+                    snapshot.getDurationSec()
+            );
 
-        messagingTemplate.convertAndSendToUser(receiver.getUsername(), "/queue/call", response);
-        messagingTemplate.convertAndSendToUser(sender.getUsername(), "/queue/call", response);
+            messagingTemplate.convertAndSendToUser(receiver.getUsername(), "/queue/call", response);
+            messagingTemplate.convertAndSendToUser(sender.getUsername(), "/queue/call", response);
+        } catch (Exception ex) {
+            sendCallSignalError(principal, request, ex);
+        }
     }
 
     private List<CallParticipantInfo> enrichGroupParticipants(List<CallParticipantInfo> participants, User sender, User receiver) {
@@ -289,7 +316,23 @@ public class ChatSocketController {
 
         GroupCallSession session = groupCallSessionRepository.findByCallIdForUpdate(callId).orElse(null);
         if (session == null) {
-            return null;
+            if (!"CALL_INVITE".equals(type) || request.getConversationId() == null) {
+                return null;
+            }
+            ChatConversation conversation = chatConversationRepository.findByIdPlain(request.getConversationId())
+                    .orElseThrow(() -> new BadRequestException("Conversation not found"));
+            if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversation.getId(), sender.getId())) {
+                throw new ForbiddenException("Forbidden");
+            }
+            session = GroupCallSession.builder()
+                    .callId(callId)
+                    .conversation(conversation)
+                    .caller(sender)
+                    .startedAt(now)
+                    .status("RINGING")
+                    .lastSignalType("CALL_INVITE")
+                    .callMediaType(MEDIA_TYPE_AUDIO)
+                    .build();
         }
 
         String mediaTypeFromSignal = resolveMediaType(request.getMediaType(), request.getSdp());
@@ -512,8 +555,41 @@ public class ChatSocketController {
     }
 
     @MessageExceptionHandler
-    public void handleSocketError(Exception ignored) {
-        // Keep websocket handler resilient; client will handle call timeout/retry.
+    public void handleSocketError(Exception ex, Principal principal) {
+        sendCallSignalError(principal, null, ex);
+    }
+
+    private void sendCallSignalError(Principal principal, CallSignalRequest request, Exception ex) {
+        String senderUsername = principal == null ? null : principal.getName();
+        if (senderUsername != null && !senderUsername.isBlank()) {
+            messagingTemplate.convertAndSendToUser(senderUsername, "/queue/call-errors", buildCallErrorPayload(request, ex));
+        }
+
+        if (request == null || request.getReceiverId() == null) {
+            return;
+        }
+        User receiver = userRepository.findById(request.getReceiverId()).orElse(null);
+        if (receiver == null) {
+            return;
+        }
+        if (senderUsername != null && senderUsername.equals(receiver.getUsername())) {
+            return;
+        }
+        messagingTemplate.convertAndSendToUser(receiver.getUsername(), "/queue/call-errors", buildCallErrorPayload(request, ex));
+    }
+
+    private Map<String, Object> buildCallErrorPayload(CallSignalRequest request, Exception ex) {
+        String message = ex == null || ex.getMessage() == null || ex.getMessage().isBlank()
+                ? "Unknown call signaling error"
+                : ex.getMessage();
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("code", "CALL_SIGNAL_ERROR");
+        payload.put("message", message);
+        payload.put("callId", request == null ? null : request.getCallId());
+        payload.put("type", request == null ? null : request.getType());
+        payload.put("conversationId", request == null ? null : request.getConversationId());
+        payload.put("occurredAt", LocalDateTime.now());
+        return payload;
     }
 }
 

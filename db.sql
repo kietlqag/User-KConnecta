@@ -223,6 +223,23 @@ CREATE INDEX IF NOT EXISTS idx_call_recordings_call_session_id ON public.call_re
 CREATE INDEX IF NOT EXISTS idx_call_recordings_owner_user_id ON public.call_recordings(owner_user_id);
 CREATE INDEX IF NOT EXISTS idx_call_recordings_created_at ON public.call_recordings(created_at DESC);
 
+CREATE TABLE IF NOT EXISTS public.group_call_recordings (
+    id UUID PRIMARY KEY,
+    group_call_session_id UUID NOT NULL REFERENCES public.group_call_sessions(id) ON DELETE CASCADE,
+    owner_user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    file_url TEXT NOT NULL,
+    recording_media_type VARCHAR(16) NOT NULL DEFAULT 'audio',
+    has_video BOOLEAN NOT NULL DEFAULT FALSE,
+    mime_type VARCHAR(120),
+    file_size_bytes BIGINT NOT NULL,
+    duration_sec INTEGER,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_group_call_recordings_session_id ON public.group_call_recordings(group_call_session_id);
+CREATE INDEX IF NOT EXISTS idx_group_call_recordings_owner_user_id ON public.group_call_recordings(owner_user_id);
+CREATE INDEX IF NOT EXISTS idx_group_call_recordings_created_at ON public.group_call_recordings(created_at DESC);
+
 -- -------------------------
 -- Post
 -- -------------------------
