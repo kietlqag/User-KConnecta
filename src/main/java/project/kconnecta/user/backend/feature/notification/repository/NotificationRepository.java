@@ -12,7 +12,8 @@ import java.util.UUID;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
     
-    List<Notification> findAllByRecipientIdOrderByCreatedAtDesc(UUID recipientId);
+    @Query("SELECT n FROM Notification n LEFT JOIN FETCH n.sender WHERE n.recipient.id = :recipientId ORDER BY n.createdAt DESC")
+    List<Notification> findAllByRecipientIdOrderByCreatedAtDesc(@Param("recipientId") UUID recipientId);
 
     @Query("SELECT COUNT(n) FROM Notification n WHERE n.recipient.id = :recipientId AND n.isRead = false")
     int countUnreadByRecipientId(@Param("recipientId") UUID recipientId);

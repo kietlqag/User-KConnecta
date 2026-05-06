@@ -14,10 +14,14 @@ import project.kconnecta.user.backend.feature.friend.service.FriendService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,25 +49,78 @@ public class FriendServiceImpl implements FriendService {
 
     @Override
     public List<FriendResponse> getSuggestions(UUID userId) {
-        Set<UUID> relatedIds = new HashSet<>();
-        relatedIds.addAll(friendshipRepository.findAddresseeIdsByRequesterId(userId));
-        relatedIds.addAll(friendshipRepository.findRequesterIdsByAddresseeId(userId));
-        relatedIds.add(userId);
+        // BFS Level 1: current user's accepted friends
+        Set<UUID> myFriendIds = new HashSet<>(
+                friendshipRepository.findFriendIdsByUserIdAndStatus(userId, FriendshipStatus.ACCEPTED));
 
-        return userRepository.findAll(PageRequest.of(0, 20))
-                .stream()
-                .filter(u -> !relatedIds.contains(u.getId()))
-                .map(u -> FriendResponse.builder()
-                        .friendshipId(null)
-                        .userId(u.getId())
-                        .username(u.getUsername())
-                        .fullName(u.getFullName())
-                        .avatarUrl(u.getAvatarUrl())
-                        .mutualFriends(0)
-                        .status(null)
-                        .createdAt(null)
-                        .build())
+        // All IDs to exclude: friends, pending sent/received, and self
+        Set<UUID> excluded = new HashSet<>(myFriendIds);
+        excluded.addAll(friendshipRepository.findAddresseeIdsByRequesterId(userId));
+        excluded.addAll(friendshipRepository.findRequesterIdsByAddresseeId(userId));
+        excluded.add(userId);
+
+        // BFS Level 2: traverse friends-of-friends, count how many mutual friends each candidate has
+        Map<UUID, Integer> mutualCountMap = new HashMap<>();
+        for (UUID friendId : myFriendIds) {
+            List<UUID> friendsOfFriend = friendshipRepository.findFriendIdsByUserIdAndStatus(friendId, FriendshipStatus.ACCEPTED);
+            for (UUID candidate : friendsOfFriend) {
+                if (!excluded.contains(candidate)) {
+                    mutualCountMap.merge(candidate, 1, Integer::sum);
+                }
+            }
+        }
+
+        // Sort candidates by mutual friend count descending, take top 20
+        List<UUID> sortedCandidates = mutualCountMap.entrySet().stream()
+                .sorted(Map.Entry.<UUID, Integer>comparingByValue().reversed())
+                .map(Map.Entry::getKey)
+                .limit(20)
                 .toList();
+
+        List<FriendResponse> result = new ArrayList<>();
+
+        if (!sortedCandidates.isEmpty()) {
+            Map<UUID, User> userMap = userRepository.findAllById(sortedCandidates).stream()
+                    .collect(Collectors.toMap(User::getId, u -> u));
+
+            sortedCandidates.stream()
+                    .filter(userMap::containsKey)
+                    .map(id -> {
+                        User u = userMap.get(id);
+                        return FriendResponse.builder()
+                                .friendshipId(null)
+                                .userId(u.getId())
+                                .username(u.getUsername())
+                                .fullName(u.getFullName())
+                                .avatarUrl(u.getAvatarUrl())
+                                .mutualFriends(mutualCountMap.get(id))
+                                .status(null)
+                                .createdAt(null)
+                                .build();
+                    })
+                    .forEach(result::add);
+        }
+
+        // Fallback: if BFS yields fewer than 10 results, fill with strangers (no mutual friends)
+        if (result.size() < 10) {
+            Set<UUID> fullyExcluded = new HashSet<>(excluded);
+            result.forEach(r -> fullyExcluded.add(r.getUserId()));
+
+            int needed = 10 - result.size();
+            userRepository.findSuggestionsExcluding(fullyExcluded, PageRequest.of(0, needed))
+                    .forEach(u -> result.add(FriendResponse.builder()
+                            .friendshipId(null)
+                            .userId(u.getId())
+                            .username(u.getUsername())
+                            .fullName(u.getFullName())
+                            .avatarUrl(u.getAvatarUrl())
+                            .mutualFriends(0)
+                            .status(null)
+                            .createdAt(null)
+                            .build()));
+        }
+
+        return result;
     }
 
     @Override

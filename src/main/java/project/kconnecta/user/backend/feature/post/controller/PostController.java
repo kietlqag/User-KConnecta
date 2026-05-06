@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
@@ -18,6 +19,8 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.service.PostService;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,11 +43,12 @@ public class PostController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PostResponse>> getPosts(
+    public ResponseEntity<?> getPosts(
             @RequestParam(required = false) UUID authorId,
             @RequestParam(required = false) UUID groupId,
             @RequestParam(required = false, defaultValue = "false") boolean isGroupFeed,
-            @RequestParam(required = false) UUID currentUserId
+            @RequestParam(required = false) UUID currentUserId,
+            @PageableDefault(size = 10) Pageable pageable
     ) {
         if (groupId != null) {
             return ResponseEntity.ok(postService.getPostsByGroupId(groupId, currentUserId));
@@ -55,7 +59,7 @@ public class PostController {
         if (isGroupFeed) {
             return ResponseEntity.ok(postService.getGroupFeedPosts(currentUserId));
         }
-        return ResponseEntity.ok(postService.getAllPosts(currentUserId));
+        return ResponseEntity.ok(postService.getAllPosts(currentUserId, pageable));
     }
 
     @GetMapping("/{id}")
@@ -107,5 +111,25 @@ public class PostController {
             @Valid @RequestBody SharePostRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(postService.sharePost(id, request));
+    }
+
+    @PostMapping("/saved")
+    public ResponseEntity<Void> savePost(@Valid @RequestBody SavePostRequest request) {
+        postService.savePost(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/saved/{userId}")
+    public ResponseEntity<List<PostResponse>> getSavedPosts(@PathVariable UUID userId) {
+        return ResponseEntity.ok(postService.getSavedPosts(userId));
+    }
+
+    @DeleteMapping("/saved")
+    public ResponseEntity<Void> unsavePost(
+            @RequestParam UUID userId,
+            @RequestParam UUID postId
+    ) {
+        postService.unsavePost(userId, postId);
+        return ResponseEntity.noContent().build();
     }
 }

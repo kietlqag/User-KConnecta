@@ -7,11 +7,11 @@ import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
-import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostMediaRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostMediaResponse;
@@ -25,6 +25,9 @@ import project.kconnecta.user.backend.feature.post.entity.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
+import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
+import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
+import project.kconnecta.user.backend.feature.post.entity.PostSaved;
 import project.kconnecta.user.backend.feature.post.repository.*;
 import project.kconnecta.user.backend.feature.post.service.PostService;
 import project.kconnecta.user.backend.feature.group.entity.Group;
@@ -33,37 +36,32 @@ import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class PostServiceImpl implements PostService {
-    private static final double FRESHNESS_WEIGHT = 0.60;
-    private static final double ENGAGEMENT_WEIGHT = 0.40;
-    private static final double COMMENT_WEIGHT = 2.0;
-    private static final double SHARE_WEIGHT = 2.0;
-    private static final double FRESHNESS_DECAY_HOURS = 6.0;
-    private static final double MAX_ENGAGEMENT_FOR_NORMALIZATION = 80.0;
+
 
     private final PostRepository postRepository;
-    private final PostMediaRepository postMediaRepository;
-    private final PostAudienceExclusionRepository postAudienceExclusionRepository;
-    private final PostMentionRepository postMentionRepository;
     private final PostReactionRepository postReactionRepository;
     private final PostCommentRepository postCommentRepository;
     private final PostShareRepository postShareRepository;
+    private final PostSavedRepository postSavedRepository;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
     private final CloudinaryService cloudinaryService;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -123,11 +121,10 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PostResponse> getAllPosts(UUID currentUserId) {
-        List<Post> posts = postRepository.findHomeFeedPostsOrderByCreatedAtDesc().stream()
-                .filter(p -> p.getGroup() == null || p.getGroup().getPrivacy() == GroupPrivacy.PUBLIC)
-                .toList();
-        return processPostsBulk(posts, currentUserId);
+    public Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable) {
+        Page<Post> postPage = postRepository.findHomeFeedPostsWithScoring(currentUserId, pageable);
+        List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
+        return new PageImpl<>(responses, pageable, postPage.getTotalElements());
     }
 
     @Override
@@ -175,26 +172,26 @@ public class PostServiceImpl implements PostService {
                 .collect(Collectors.toMap(PostShareRepository.CountProjection::getPostId, PostShareRepository.CountProjection::getCount));
 
         Map<UUID, ReactionType> userReactionsMap = Collections.emptyMap();
+        Set<UUID> savedPostIds = Collections.emptySet();
         if (currentUserId != null) {
             userReactionsMap = postReactionRepository.findAllByUserIdAndPostIdIn(currentUserId, postIds).stream()
                     .collect(Collectors.toMap(r -> r.getPost().getId(), PostReaction::getReactionType));
+            savedPostIds = postSavedRepository.findSavedPostIdsByUserIdAndPostIdIn(currentUserId, postIds);
         }
 
         final Map<UUID, Map<ReactionType, Long>> finalReactionCounts = reactionCountsMap;
         final Map<UUID, Long> finalCommentCounts = commentCountsMap;
         final Map<UUID, Long> finalShareCounts = shareCountsMap;
         final Map<UUID, ReactionType> finalUserReactions = userReactionsMap;
+        final Set<UUID> finalSavedPostIds = savedPostIds;
 
         return posts.stream()
                 .map(post -> mapToResponseOptimized(post, currentUserId,
                         finalReactionCounts.getOrDefault(post.getId(), Collections.emptyMap()),
                         finalCommentCounts.getOrDefault(post.getId(), 0L),
                         finalShareCounts.getOrDefault(post.getId(), 0L),
-                        finalUserReactions.get(post.getId())))
-                .sorted(
-                        Comparator.comparingDouble(this::calculateFeedScore).reversed()
-                                .thenComparing(PostResponse::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
-                )
+                        finalUserReactions.get(post.getId()),
+                        finalSavedPostIds.contains(post.getId())))
                 .toList();
     }
 
@@ -214,6 +211,16 @@ public class PostServiceImpl implements PostService {
         reaction.setReactionType(request.getReactionType());
 
         PostReaction saved = postReactionRepository.save(reaction);
+
+        // Push LIKE event → Queue → Listener creates notification FIFO
+        notificationEventPublisher.publish(
+                user.getId(),
+                post.getAuthor().getId(),
+                NotificationType.LIKE,
+                user.getFullName() + " đã thích bài viết của bạn.",
+                post.getId()
+        );
+
         return PostReactionResponse.builder()
                 .id(saved.getId())
                 .postId(saved.getPost().getId())
@@ -308,6 +315,15 @@ public class PostServiceImpl implements PostService {
                 .content(request.getContent().trim())
                 .build());
 
+        // Push COMMENT event → Queue → Listener creates notification FIFO
+        notificationEventPublisher.publish(
+                user.getId(),
+                post.getAuthor().getId(),
+                NotificationType.COMMENT,
+                user.getFullName() + " đã bình luận về bài viết của bạn.",
+                post.getId()
+        );
+
         return PostCommentResponse.builder()
                 .id(saved.getId())
                 .postId(saved.getPost().getId())
@@ -341,6 +357,30 @@ public class PostServiceImpl implements PostService {
                 .sharedContent(saved.getSharedContent())
                 .createdAt(saved.getCreatedAt())
                 .build();
+    }
+
+    @Override
+    public void savePost(SavePostRequest request) {
+        if (postSavedRepository.existsByPostIdAndUserId(request.getPostId(), request.getUserId())) {
+            return;
+        }
+        Post post = getPost(request.getPostId());
+        User user = getUser(request.getUserId(), "User not found");
+        postSavedRepository.save(PostSaved.builder().post(post).user(user).build());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostResponse> getSavedPosts(UUID userId) {
+        List<UUID> postIds = postSavedRepository.findPostIdsByUserId(userId);
+        if (postIds.isEmpty()) return Collections.emptyList();
+        List<Post> posts = postRepository.findAllById(postIds);
+        return processPostsBulk(posts, userId);
+    }
+
+    @Override
+    public void unsavePost(UUID userId, UUID postId) {
+        postSavedRepository.deleteByPostIdAndUserId(postId, userId);
     }
 
     private void attachMedia(Post post, List<CreatePostMediaRequest> mediaRequests) {
@@ -398,15 +438,18 @@ public class PostServiceImpl implements PostService {
                         .orElse(null);
         long commentCount = postCommentRepository.countByPostId(post.getId());
         long shareCount = postShareRepository.countByPostId(post.getId());
+        boolean savedByCurrentUser = currentUserId != null &&
+                postSavedRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
 
-        return mapToResponseOptimized(post, currentUserId, reactionCounts, commentCount, shareCount, currentUserReaction);
+        return mapToResponseOptimized(post, currentUserId, reactionCounts, commentCount, shareCount, currentUserReaction, savedByCurrentUser);
     }
 
     private PostResponse mapToResponseOptimized(Post post, UUID currentUserId,
                                                Map<ReactionType, Long> reactionCountsMap,
                                                long commentCount,
                                                long shareCount,
-                                               ReactionType currentUserReactionType) {
+                                               ReactionType currentUserReactionType,
+                                               boolean savedByCurrentUser) {
         List<PostMediaResponse> media = post.getMedia()
                 .stream()
                 .map(item -> PostMediaResponse.builder()
@@ -460,6 +503,7 @@ public class PostServiceImpl implements PostService {
                 .reactionCount(totalReactionCount)
                 .reactionCounts(reactionCounts)
                 .currentUserReactionType(currentUserReactionType)
+                .savedByCurrentUser(savedByCurrentUser)
                 .commentCount(commentCount)
                 .shareCount(shareCount)
                 .media(media)
@@ -484,29 +528,5 @@ public class PostServiceImpl implements PostService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private double calculateFeedScore(PostResponse post) {
-        double freshnessScore = calculateFreshnessScore(post);
-        double engagementScore = calculateEngagementScore(post);
-        return FRESHNESS_WEIGHT * freshnessScore + ENGAGEMENT_WEIGHT * engagementScore;
-    }
-
-    private double calculateFreshnessScore(PostResponse post) {
-        LocalDateTime publishedAt = post.getPublishedAt() != null ? post.getPublishedAt() : post.getCreatedAt();
-        if (publishedAt == null) {
-            return 0.0;
-        }
-
-        long hoursAgo = Math.max(0, ChronoUnit.HOURS.between(publishedAt, LocalDateTime.now()));
-        return 1.0 / (1.0 + (hoursAgo / FRESHNESS_DECAY_HOURS));
-    }
-
-    private double calculateEngagementScore(PostResponse post) {
-        double engagementRaw = post.getReactionCount()
-                + (post.getCommentCount() * COMMENT_WEIGHT)
-                + (post.getShareCount() * SHARE_WEIGHT);
-
-        return Math.min(engagementRaw / MAX_ENGAGEMENT_FOR_NORMALIZATION, 1.0);
     }
 }

@@ -8,7 +8,6 @@ import io.lettuce.core.SocketOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.CachingConfigurer;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,10 +34,10 @@ import java.time.Duration;
  * and Spring's auto-configuration does not create any RedisCacheManager.
  */
 @Configuration
-@ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis", matchIfMissing = false)
+@SuppressWarnings("null")
 public class RedisConfig implements CachingConfigurer {
 
-    @Value("${spring.data.redis.host}")
+    @Value("${spring.data.redis.host:localhost}")
     private String host;
 
     @Value("${spring.data.redis.port:6379}")
@@ -79,6 +78,7 @@ public class RedisConfig implements CachingConfigurer {
 
     @Bean
     @Override
+    @ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis")
     public RedisCacheManager cacheManager() {
         return RedisCacheManager.builder(redisConnectionFactory())
                 .cacheDefaults(redisCacheConfiguration())
@@ -126,6 +126,7 @@ public class RedisConfig implements CachingConfigurer {
     // -------------------------------------------------------------------------
 
     @Override
+    @ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis")
     public CacheErrorHandler errorHandler() {
         return new RedisCacheErrorHandler();
     }

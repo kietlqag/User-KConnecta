@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
 import project.kconnecta.user.backend.common.util.JwtUtil;
+import project.kconnecta.user.backend.config.security.TokenBlacklistService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
@@ -41,6 +42,7 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
@@ -109,6 +111,13 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
 
         return toResponse(user);
+    }
+
+    public void logout(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            tokenBlacklistService.blacklistToken(token);
+        }
     }
 
     public AuthResponse googleLogin(String idToken) {

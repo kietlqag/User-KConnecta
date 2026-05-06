@@ -24,6 +24,7 @@ import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 import project.kconnecta.user.backend.feature.user.service.UserService;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /*
@@ -95,7 +96,7 @@ public class UserServiceImpl implements UserService {
                 .dateOfBirth(request.getDateOfBirth())
                 .build();
 
-        return mapToResponse(userRepository.save(user));
+        return mapToResponse(userRepository.save(Objects.requireNonNull(user)));
     }
 
     // -------------------------------------------------------------------------
@@ -263,8 +264,12 @@ public class UserServiceImpl implements UserService {
     // -------------------------------------------------------------------------
 
     private void evict(String cacheName, Object key) {
-        Cache cache = cacheManager.getCache(cacheName);
-        if (cache != null) cache.evict(key);
+        String name = Objects.requireNonNull(cacheName);
+        Object k = Objects.requireNonNull(key);
+        Cache cache = cacheManager.getCache(name);
+        if (cache != null) {
+            cache.evict(k);
+        }
     }
 
     private void validateImage(MultipartFile file) {

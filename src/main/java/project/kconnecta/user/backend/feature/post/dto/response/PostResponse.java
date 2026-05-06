@@ -33,6 +33,7 @@ public class PostResponse {
     private long reactionCount;
     private List<PostReactionCountResponse> reactionCounts;
     private ReactionType currentUserReactionType;
+    private boolean savedByCurrentUser;
     private long commentCount;
     private long shareCount;
     private List<PostMediaResponse> media;

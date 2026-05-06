@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.feature.auth.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
@@ -10,19 +11,20 @@ import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
 
-import java.time.LocalDateTime;
-import java.util.Map;
+import java.time.Duration;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class OtpService {
 
+    private static final String REDIS_KEY_PREFIX = "otp:";
+    private static final long OTP_EXPIRATION_MINUTES = 1;
+
     private final MailService mailService;
     private final AccountRepository accountRepository;
-    private final Map<String, OtpSession> otpStore = new ConcurrentHashMap<>();
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public void sendOtp(String email) {
         Account account = accountRepository.findByEmail(email)
@@ -38,11 +40,12 @@ public class OtpService {
                 : OtpType.ACCOUNT_ACTIVATION;
 
         String code = String.format("%06d", new Random().nextInt(1_000_000));
-        LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(1);
         String htmlContent = getOtpEmailTemplate(code);
         mailService.sendMail(email, "Ma xac nhan KConnecta", htmlContent);
 
-        otpStore.put(buildKey(email, otpType), new OtpSession(code, otpType, expiresAt, false));
+        String key = buildKey(email, otpType);
+        OtpSession session = new OtpSession(code, otpType, false);
+        redisTemplate.opsForValue().set(key, session, Duration.ofMinutes(OTP_EXPIRATION_MINUTES));
     }
 
     public void verifyOtp(String email, String code) {
@@ -63,47 +66,34 @@ public class OtpService {
         if (otpType == OtpType.ACCOUNT_ACTIVATION) {
             account.setStatus(AccountStatus.ACTIVE);
             accountRepository.save(account);
-            otpStore.remove(key);
+            redisTemplate.delete(key);
             return;
         }
 
-        otpStore.put(key, otp.markVerified());
+        redisTemplate.opsForValue().set(key, otp.markVerified(), Duration.ofMinutes(OTP_EXPIRATION_MINUTES));
     }
 
     public boolean isVerified(String email) {
         String key = buildKey(email, OtpType.PASSWORD_RESET);
-        OtpSession otp = otpStore.get(key);
-
-        if (otp == null) {
-            return false;
-        }
-        if (LocalDateTime.now().isAfter(otp.expiresAt())) {
-            otpStore.remove(key);
-            return false;
-        }
-
-        return otp.verified();
+        OtpSession otp = (OtpSession) redisTemplate.opsForValue().get(key);
+        return otp != null && otp.verified();
     }
 
     public void clear(String email) {
-        otpStore.remove(buildKey(email, OtpType.PASSWORD_RESET));
-        otpStore.remove(buildKey(email, OtpType.ACCOUNT_ACTIVATION));
+        redisTemplate.delete(buildKey(email, OtpType.PASSWORD_RESET));
+        redisTemplate.delete(buildKey(email, OtpType.ACCOUNT_ACTIVATION));
     }
 
     private OtpSession getValidOtp(String key) {
-        OtpSession otp = otpStore.get(key);
+        OtpSession otp = (OtpSession) redisTemplate.opsForValue().get(key);
         if (otp == null) {
-            throw new ValidationException("Chua gui OTP cho email nay");
-        }
-        if (LocalDateTime.now().isAfter(otp.expiresAt())) {
-            otpStore.remove(key);
-            throw new ValidationException("Ma OTP da het han");
+            throw new ValidationException("Ma OTP da het han hoac chua duoc gui");
         }
         return otp;
     }
 
     private String buildKey(String email, OtpType otpType) {
-        return email.trim().toLowerCase() + ":" + otpType.name();
+        return REDIS_KEY_PREFIX + email.trim().toLowerCase() + ":" + otpType.name();
     }
 
     private String getOtpEmailTemplate(String code) {
@@ -147,11 +137,10 @@ public class OtpService {
     private record OtpSession(
             String code,
             OtpType type,
-            LocalDateTime expiresAt,
             boolean verified
     ) {
         private OtpSession markVerified() {
-            return new OtpSession(code, type, expiresAt, true);
+            return new OtpSession(code, type, true);
         }
     }
 }
