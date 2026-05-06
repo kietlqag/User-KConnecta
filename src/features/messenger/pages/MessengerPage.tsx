@@ -229,6 +229,7 @@ function mapBackendContentToMessageFields(
           videoShareId: payload.id,
           videoShareThumbnail: payload.thumbnail,
           videoShareTitle: payload.caption,
+          videoShareAuthorId: payload.authorId,
         };
       } catch {
         return { text: 'Video' };
@@ -771,7 +772,7 @@ function ChatInfoPanel({
     const isLoading = assetLoadingByTab[tab];
     if (remainingCount <= 0 && !hasMore) return null;
     return (
-      <button
+      <button className="cursor-pointer"
         type="button"
         disabled={isLoading}
         onClick={async () => {
@@ -822,7 +823,7 @@ function ChatInfoPanel({
               <div className="grid grid-cols-2 gap-1">
                 {group.items.map((item) => (
                   <div key={item.id} className="group/item relative aspect-square bg-gray-100">
-                    <button
+                    <button className="cursor-pointer"
                       type="button"
                       onClick={() => {
                         const index = mediaItems.findIndex((media) => media.id === item.id);
@@ -838,7 +839,7 @@ function ChatInfoPanel({
                         </span>
                       )}
                     </button>
-                    <button
+                    <button className="cursor-pointer"
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -864,7 +865,7 @@ function ChatInfoPanel({
                         style={{ top: mediaActionMenuPosition.top, left: mediaActionMenuPosition.left }}
                         onClick={(event) => event.stopPropagation()}
                       >
-                        <button
+                        <button className="cursor-pointer"
                           type="button"
                           onClick={async () => {
                             await copyImageToClipboard(item.url);
@@ -874,7 +875,7 @@ function ChatInfoPanel({
                         >
                           Copy
                         </button>
-                        <button
+                        <button className="cursor-pointer"
                           type="button"
                           onClick={async () => {
                             if (navigator.share) {
@@ -892,7 +893,7 @@ function ChatInfoPanel({
                         >
                           Chuyển tiếp
                         </button>
-                        <button
+                        <button className="cursor-pointer"
                           type="button"
                           onClick={() => {
                             toast.info('Chức năng xem tin nhắn gốc sẽ được cập nhật.');
@@ -902,7 +903,7 @@ function ChatInfoPanel({
                         >
                           Xem tin nhắn gốc
                         </button>
-                        <button
+                        <button className="cursor-pointer"
                           type="button"
                           onClick={() => {
                             downloadMedia(item.url, `media-${item.id}`);
@@ -913,7 +914,7 @@ function ChatInfoPanel({
                           Lưu về máy
                         </button>
                         <div className="my-1 h-px bg-gray-200" />
-                        <button
+                        <button className="cursor-pointer"
                           type="button"
                           onClick={() => {
                             toast.info('Chức năng này sẽ được cập nhật.');
@@ -923,7 +924,7 @@ function ChatInfoPanel({
                         >
                           Gỡ ở phía tôi
                         </button>
-                        <button
+                        <button className="cursor-pointer"
                           type="button"
                           onClick={() => {
                             toast.info('Chức năng thu hồi sẽ được cập nhật.');
@@ -1041,7 +1042,7 @@ function ChatInfoPanel({
       section: keyof typeof groupSectionsOpen,
       label: string,
     ) => (
-      <button
+      <button className="cursor-pointer"
         type="button"
         onClick={() => toggleGroupSection(section)}
         className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-gray-50"
@@ -1068,13 +1069,13 @@ function ChatInfoPanel({
         </div>
 
         <div className="flex shrink-0 items-start justify-center gap-8 pb-5 text-center">
-          <button type="button" className="group flex w-16 flex-col items-center gap-2" title="Tắt thông báo">
+          <button type="button" className="group flex w-16 flex-col items-center gap-2 cursor-pointer" title="Tắt thông báo">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 transition-colors group-hover:bg-gray-300">
               <BellOff className="h-4.5 w-4.5 text-gray-900" />
             </span>
             <span className="text-xs leading-tight text-gray-900">Tắt thông báo</span>
           </button>
-          <button type="button" className="group flex w-16 flex-col items-center gap-2" title="Tìm kiếm">
+          <button type="button" className="group flex w-16 flex-col items-center gap-2 cursor-pointer" title="Tìm kiếm">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 transition-colors group-hover:bg-gray-300">
               <SearchIcon className="h-4.5 w-4.5 text-gray-900" />
             </span>
@@ -1089,7 +1090,7 @@ function ChatInfoPanel({
               <button
                 type="button"
                 onClick={onOpenPinnedMessages}
-                className="flex w-full items-center gap-3 rounded-lg py-2 text-left text-gray-900 hover:bg-gray-50"
+                className="flex w-full items-center gap-3 rounded-lg py-2 text-left text-gray-900 hover:bg-gray-50 cursor-pointer"
                 title="Xem tin nhắn đã ghim"
               >
                 <Pin className="h-5 w-5 shrink-0 fill-gray-900 text-gray-900" />
@@ -1101,23 +1102,23 @@ function ChatInfoPanel({
           {renderGroupSectionHeader('customize', 'Tùy chỉnh đoạn chat')}
           {groupSectionsOpen.customize && (
             <div className="space-y-1 px-3 pb-3 text-sm text-gray-900">
-              <button type="button" onClick={onOpenRenameGroup} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
+              <button type="button" onClick={onOpenRenameGroup} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50 cursor-pointer">
                 <Pencil className="h-5 w-5 shrink-0 text-gray-900" />
                 <span className="text-[15px] font-semibold">Đổi tên đoạn chat</span>
               </button>
-              <button type="button" onClick={onOpenChangeGroupImage} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
+              <button type="button" onClick={onOpenChangeGroupImage} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50 cursor-pointer">
                 <ImagePlus className="h-5 w-5 shrink-0 text-gray-900" />
                 <span className="text-[15px] font-semibold">Thay đổi ảnh</span>
               </button>
-              <button type="button" onClick={onOpenNicknames} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50">
+              <button type="button" onClick={onOpenNicknames} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50 cursor-pointer">
                 <Type className="h-5 w-5 shrink-0 text-gray-900" />
                 <span className="text-[15px] font-semibold">Chỉnh sửa biệt danh</span>
               </button>
               {/* Legacy actions remain intentionally hidden until wired to real handlers. */}
-              <button type="button" className="hidden">
+              <button type="button" className="hidden cursor-pointer">
                 Đổi tên đoạn chat
               </button>
-              <button type="button" className="hidden">
+              <button type="button" className="hidden cursor-pointer">
                 Đổi ảnh nhóm
               </button>
             </div>
@@ -1126,10 +1127,10 @@ function ChatInfoPanel({
           {renderGroupSectionHeader('options', 'Tùy chọn nhóm')}
           {groupSectionsOpen.options && (
             <div className="space-y-2 px-3 pb-3 text-sm text-gray-600">
-              <button type="button" className="block w-full rounded-lg py-2 text-left hover:text-gray-900">
+              <button type="button" className="block w-full rounded-lg py-2 text-left hover:text-gray-900 cursor-pointer">
                 Tìm kiếm trong đoạn chat
               </button>
-              <button
+              <button className="cursor-pointer"
                 type="button"
                 onClick={() => {
                   setActiveTab('media');
@@ -1163,7 +1164,7 @@ function ChatInfoPanel({
                     </div>
                     <button
                       type="button"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-900 hover:bg-gray-100"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-900 hover:bg-gray-100 cursor-pointer"
                       title="Tùy chọn thành viên"
                     >
                       <MoreHorizontal className="h-5 w-5" />
@@ -1175,7 +1176,7 @@ function ChatInfoPanel({
               <button
                 type="button"
                 onClick={onOpenAddMembers}
-                className="flex w-full items-center gap-3 rounded-lg py-1 text-left hover:bg-gray-50"
+                className="flex w-full items-center gap-3 rounded-lg py-1 text-left hover:bg-gray-50 cursor-pointer"
                 title="Thêm người"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-900">
@@ -1189,7 +1190,7 @@ function ChatInfoPanel({
           <section>
             <button
               type="button"
-              className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-gray-50"
+              className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-gray-50 cursor-pointer"
               onClick={() => setIsMediaSectionOpen((prev) => !prev)}
             >
               <span className="text-[15px] font-semibold text-gray-900">Phương tiện, File, Link</span>
@@ -1197,7 +1198,7 @@ function ChatInfoPanel({
             </button>
             {isMediaSectionOpen && (
               <div className="space-y-4 px-3 pb-3 pt-2">
-                <button
+                <button className="cursor-pointer"
                   type="button"
                   onClick={() => {
                     setActiveTab('media');
@@ -1208,7 +1209,7 @@ function ChatInfoPanel({
                   <ImageIcon className="h-5 w-5 text-gray-900" />
                   <span className="text-[15px] font-semibold text-gray-900">Phương tiện</span>
                 </button>
-                <button
+                <button className="cursor-pointer"
                   type="button"
                   onClick={() => {
                     setActiveTab('files');
@@ -1219,7 +1220,7 @@ function ChatInfoPanel({
                   <FileText className="h-5 w-5 text-gray-900" />
                   <span className="text-[15px] font-semibold text-gray-900">File</span>
                 </button>
-                <button
+                <button className="cursor-pointer"
                   type="button"
                   onClick={() => {
                     setActiveTab('links');
@@ -1241,7 +1242,7 @@ function ChatInfoPanel({
           onClick={() => setMediaLightboxIndex(null)}
           role="presentation"
         >
-          <button
+          <button className="cursor-pointer"
             type="button"
             onClick={() => setMediaLightboxIndex(null)}
             className="absolute right-4 top-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
@@ -1250,7 +1251,7 @@ function ChatInfoPanel({
             <X className="h-8 w-8" />
           </button>
           {mediaItems.length > 1 && (
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
@@ -1271,7 +1272,7 @@ function ChatInfoPanel({
             />
           </div>
           {mediaItems.length > 1 && (
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
@@ -1308,13 +1309,13 @@ function ChatInfoPanel({
           </div>
 
           <div className="mt-6 flex shrink-0 items-start justify-center gap-8 text-center">
-            <button type="button" className="group flex w-16 flex-col items-center gap-2" title="Tắt thông báo">
+            <button type="button" className="group flex w-16 flex-col items-center gap-2 cursor-pointer" title="Tắt thông báo">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 transition-colors group-hover:bg-gray-300">
                 <BellOff className="h-4.5 w-4.5 text-gray-900" />
               </span>
               <span className="text-xs leading-tight text-gray-900">Tắt thông báo</span>
             </button>
-            <button type="button" className="group flex w-16 flex-col items-center gap-2" title="Tìm kiếm">
+            <button type="button" className="group flex w-16 flex-col items-center gap-2 cursor-pointer" title="Tìm kiếm">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 transition-colors group-hover:bg-gray-300">
                 <SearchIcon className="h-4.5 w-4.5 text-gray-900" />
               </span>
@@ -1325,14 +1326,14 @@ function ChatInfoPanel({
           <section className="mt-8 shrink-0">
             <button
               type="button"
-              className="flex w-full items-center justify-between py-2 text-left"
+              className="flex w-full items-center justify-between py-2 text-left cursor-pointer"
               onClick={() => setIsMediaSectionOpen((prev) => !prev)}
             >
               <span className="text-[15px] font-semibold text-gray-900">Phương tiện, File, Link</span>
               <ChevronUp className={`h-4.5 w-4.5 text-gray-900 transition-transform ${isMediaSectionOpen ? '' : 'rotate-180'}`} />
             </button>
             {isMediaSectionOpen && <div className="mt-4 space-y-4">
-              <button
+              <button className="cursor-pointer"
                 type="button"
                 onClick={() => {
                   setActiveTab('media');
@@ -1343,7 +1344,7 @@ function ChatInfoPanel({
                 <ImageIcon className="h-5 w-5 text-gray-900" />
                 <span className="text-[15px] font-semibold text-gray-900">Phương tiện</span>
               </button>
-              <button
+              <button className="cursor-pointer"
                 type="button"
                 onClick={() => {
                   setActiveTab('files');
@@ -1354,7 +1355,7 @@ function ChatInfoPanel({
                 <FileText className="h-5 w-5 text-gray-900" />
                 <span className="text-[15px] font-semibold text-gray-900">File</span>
               </button>
-              <button
+              <button className="cursor-pointer"
                 type="button"
                 onClick={() => {
                   setActiveTab('links');
@@ -1371,7 +1372,7 @@ function ChatInfoPanel({
       ) : (
         <div className="flex h-full min-h-0 flex-col px-5 py-5">
           <div className="flex shrink-0 items-center gap-3">
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={() => setInfoView('overview')}
               className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
@@ -1383,7 +1384,7 @@ function ChatInfoPanel({
           </div>
 
           <div className="mt-8 grid shrink-0 grid-cols-3 border-b border-gray-200">
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={() => setActiveTab('media')}
               className={`pb-3 text-center text-sm font-semibold transition-colors ${
@@ -1392,7 +1393,7 @@ function ChatInfoPanel({
             >
               Phương tiện
             </button>
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={() => setActiveTab('files')}
               className={`pb-3 text-center text-sm font-semibold transition-colors ${
@@ -1401,7 +1402,7 @@ function ChatInfoPanel({
             >
               File
             </button>
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={() => setActiveTab('links')}
               className={`pb-3 text-center text-sm font-semibold transition-colors ${
@@ -1424,7 +1425,7 @@ function ChatInfoPanel({
         onClick={() => setMediaLightboxIndex(null)}
         role="presentation"
       >
-        <button
+        <button className="cursor-pointer"
           type="button"
           onClick={() => setMediaLightboxIndex(null)}
           className="absolute right-4 top-4 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
@@ -1433,7 +1434,7 @@ function ChatInfoPanel({
           <X className="h-8 w-8" />
         </button>
         {mediaItems.length > 1 && (
-          <button
+          <button className="cursor-pointer"
             type="button"
             onClick={(event) => {
               event.stopPropagation();
@@ -1454,7 +1455,7 @@ function ChatInfoPanel({
           />
         </div>
         {mediaItems.length > 1 && (
-          <button
+          <button className="cursor-pointer"
             type="button"
             onClick={(event) => {
               event.stopPropagation();
@@ -3069,15 +3070,15 @@ export default function MessengerPage() {
                   <button
                     onClick={loadFriends}
                     disabled={loadingConversations}
-                    className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors disabled:opacity-50"
+                    className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors disabled:opacity-50 cursor-pointer"
                     title="Tải lại danh sách"
                   >
                     <RefreshCw className={`w-5 h-5 text-gray-600 ${loadingConversations ? 'animate-spin' : ''}`} />
                   </button>
-                  <button className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
+                  <button className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer">
                     <MoreHorizontal className="w-5 h-5 text-gray-600" />
                   </button>
-                  <button
+                  <button className="cursor-pointer"
                     onClick={() => setIsCreateGroupOpen(true)}
                     className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
                     title="Tạo nhóm chat"
@@ -3100,7 +3101,7 @@ export default function MessengerPage() {
 
               <div className="flex items-center gap-2">
                 {filters.map((filter) => (
-                  <button
+                  <button className="cursor-pointer"
                     key={filter.key}
                     onClick={() => setActiveFilter(filter.key)}
                     className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
@@ -3121,7 +3122,7 @@ export default function MessengerPage() {
               ) : friendsError ? (
                 <div className="text-center py-8 text-sm">
                   <p className="text-red-500 mb-2">Không thể tải danh sách bạn bè</p>
-                  <button onClick={loadFriends} className="text-blue-500 hover:underline text-sm">
+                  <button onClick={loadFriends} className="text-blue-500 hover:underline text-sm cursor-pointer">
                     Thử lại
                   </button>
                 </div>
@@ -3253,7 +3254,7 @@ export default function MessengerPage() {
                     ? 'Thay đổi ảnh'
                     : 'Biệt danh'}
               </h3>
-              <button
+              <button className="cursor-pointer"
                 type="button"
                 onClick={() => setGroupSettingsModal(null)}
                 disabled={isGroupSettingsBusy}
@@ -3292,7 +3293,7 @@ export default function MessengerPage() {
                 </label>
 
                 <div className="mt-4 flex items-center justify-end gap-3">
-                  <button
+                  <button className="cursor-pointer"
                     type="button"
                     onClick={() => setGroupSettingsModal(null)}
                     disabled={isGroupSettingsBusy}
@@ -3300,7 +3301,7 @@ export default function MessengerPage() {
                   >
                     Hủy
                   </button>
-                  <button
+                  <button className="cursor-pointer"
                     type="submit"
                     disabled={
                       isSavingGroupSettings ||
@@ -3381,7 +3382,7 @@ export default function MessengerPage() {
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">
-                  <button
+                  <button className="cursor-pointer"
                     type="button"
                     onClick={() => setGroupSettingsModal(null)}
                     disabled={isGroupSettingsBusy}
@@ -3393,11 +3394,11 @@ export default function MessengerPage() {
                     type="button"
                     onClick={openGroupImagePicker}
                     disabled={isGroupSettingsBusy}
-                    className="h-10 flex-1 rounded-lg border border-gray-300 bg-white text-[15px] font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-60"
+                    className="h-10 flex-1 rounded-lg border border-gray-300 bg-white text-[15px] font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-60 cursor-pointer"
                   >
                     Chọn lại
                   </button>
-                  <button
+                  <button className="cursor-pointer"
                     type="button"
                     onClick={async () => {
                       if (!groupImagePreview || isGroupSettingsBusy) return;
@@ -3448,7 +3449,7 @@ export default function MessengerPage() {
                               placeholder={realName}
                               autoFocus
                             />
-                            <button
+                            <button className="cursor-pointer"
                               type="button"
                               onClick={() => handleSaveNickname(member.id, nicknameDraft)}
                               disabled={isGroupSettingsBusy}
@@ -3460,7 +3461,7 @@ export default function MessengerPage() {
                           </>
                         ) : (
                           <>
-                            <button
+                            <button className="cursor-pointer"
                               type="button"
                               onClick={() => {
                                 setNicknameEditingUserId(member.id);
@@ -3471,7 +3472,7 @@ export default function MessengerPage() {
                               <p className="truncate text-[16px] font-semibold text-gray-900">{realName}</p>
                               <p className="truncate text-sm text-gray-600">{member.nickname || 'Đặt biệt danh'}</p>
                             </button>
-                            <button
+                            <button className="cursor-pointer"
                               type="button"
                               onClick={() => {
                                 setNicknameEditingUserId(member.id);
@@ -3506,7 +3507,7 @@ export default function MessengerPage() {
                   <h3 className="text-[18px] font-semibold text-gray-900">Tạo nhóm chat</h3>
                 </div>
               </div>
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   setIsCreateGroupOpen(false);
                   setGroupNameInput('');
@@ -3541,7 +3542,7 @@ export default function MessengerPage() {
                       {selectableFriends.map((friend) => {
                         const selected = selectedGroupMemberIds.includes(friend.id);
                         return (
-                          <button
+                          <button className="cursor-pointer"
                             key={friend.id}
                             onClick={() => toggleGroupMemberSelection(friend.id)}
                             className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50"
@@ -3565,7 +3566,7 @@ export default function MessengerPage() {
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4">
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   setIsCreateGroupOpen(false);
                   setGroupNameInput('');
@@ -3578,7 +3579,7 @@ export default function MessengerPage() {
               <button
                 onClick={handleCreateGroupChat}
                 disabled={selectedGroupMemberIds.length < 2}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300 cursor-pointer"
               >
                 Tạo nhóm
               </button>
@@ -3595,7 +3596,7 @@ export default function MessengerPage() {
               <button
                 onClick={closeAddGroupMembersModal}
                 disabled={isAddingGroupMembers}
-                className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition-colors hover:bg-gray-300 disabled:opacity-60"
+                className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition-colors hover:bg-gray-300 disabled:opacity-60 cursor-pointer"
                 title="Đóng"
               >
                 <X className="h-7 w-7" />
@@ -3633,7 +3634,7 @@ export default function MessengerPage() {
                               alt={friend.name}
                               className="h-12 w-12 rounded-full border-2 border-blue-600 object-cover"
                             />
-                            <button
+                            <button className="cursor-pointer"
                               type="button"
                               onClick={() => toggleAddGroupMemberSelection(id)}
                               className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-gray-700 shadow-sm hover:bg-gray-300"
@@ -3662,7 +3663,7 @@ export default function MessengerPage() {
                   {addableGroupMembers.map((friend) => {
                     const selected = selectedAddGroupMemberIds.includes(friend.id);
                     return (
-                      <button
+                      <button className="cursor-pointer"
                         key={friend.id}
                         type="button"
                         onClick={() => toggleAddGroupMemberSelection(friend.id)}
@@ -3692,7 +3693,7 @@ export default function MessengerPage() {
               <button
                 onClick={handleAddGroupMembers}
                 disabled={selectedAddGroupMemberIds.length === 0 || isAddingGroupMembers}
-                className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+                className="h-11 w-full rounded-lg bg-blue-600 text-[16px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400 cursor-pointer"
               >
                 {isAddingGroupMembers ? 'Đang thêm...' : 'Thêm người'}
               </button>
@@ -3706,7 +3707,7 @@ export default function MessengerPage() {
           <div className="w-full max-w-[560px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
               <h3 className="text-[18px] font-semibold text-gray-900">Chuyển tiếp tin nhắn</h3>
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   setForwardMessage(null);
                   setSelectedForwardTargetIds([]);
@@ -3729,7 +3730,7 @@ export default function MessengerPage() {
                       const targetId = conversation.user.id;
                       const selected = selectedForwardTargetIds.includes(targetId);
                       return (
-                        <button
+                        <button className="cursor-pointer"
                           key={`forward-${targetId}`}
                           onClick={() => toggleForwardTargetSelection(targetId)}
                           className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50"
@@ -3754,7 +3755,7 @@ export default function MessengerPage() {
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4">
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   setForwardMessage(null);
                   setSelectedForwardTargetIds([]);
@@ -3766,7 +3767,7 @@ export default function MessengerPage() {
               <button
                 onClick={handleSubmitForward}
                 disabled={selectedForwardTargetIds.length === 0}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300 cursor-pointer"
               >
                 Chuyển tiếp
               </button>

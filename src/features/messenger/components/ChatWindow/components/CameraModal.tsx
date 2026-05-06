@@ -16,7 +16,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({ show, videoRef, onClos
       <div className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h4 className="text-[17px] font-bold text-gray-900">Chụp ảnh</h4>
-          <button onClick={onClose} className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200">
+          <button onClick={onClose} className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200 cursor-pointer">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -26,7 +26,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({ show, videoRef, onClos
         <div className="flex justify-center bg-gray-50 py-6">
           <button
             onClick={onCapture}
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-blue-600 shadow-lg ring-4 ring-blue-600/10 hover:scale-105 active:scale-95 transition-transform"
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-blue-600 shadow-lg ring-4 ring-blue-600/10 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
           >
             <Camera className="h-8 w-8" />
           </button>

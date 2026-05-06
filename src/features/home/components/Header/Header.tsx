@@ -9,6 +9,7 @@ import { SearchSuggestions } from '../../../search/components';
 import { RecentSearchItem } from '../../../search/types/search.types';
 import { useMenu } from '../../../../contexts/MenuContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
+import { useFriendConversations } from '../../../messenger/hooks/useFriendConversations';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
@@ -59,6 +60,9 @@ export function Header() {
       window.removeEventListener('notification:refresh', fetchCount);
     };
   }, [currentUser, showNotifications]);
+
+  const { conversations } = useFriendConversations();
+  const unreadMessagesCount = conversations.filter((c) => c.isUnread).length;
 
   const navItems = [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
@@ -147,9 +151,11 @@ export function Header() {
               className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 text-gray-700" />
-              <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                3
-              </span>
+              {unreadMessagesCount > 0 && (
+                <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                </span>
+              )}
             </button>
             
             <button 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { authService, type AuthUser } from '@/services/authService';
 import { postService, type PostResponse, type ReactionType } from '@/services/postService';
 import { Header } from '../../home/components/Header';
@@ -24,6 +24,8 @@ const DEFAULT_COVER =
 
 export function ProfilePage() {
   const { userId: routeUserId } = useParams();
+  const [searchParams] = useSearchParams();
+  const highlightPostId = searchParams.get('post');
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
   
   // Sanitize userId: Avoid 'undefined' string and fallback to current user
@@ -54,7 +56,7 @@ export function ProfilePage() {
 
         const profilePostsResponse = await postService.getAllPosts(currentUser?.id, targetAuthorId);
 
-        const profilePosts = profilePostsResponse
+        const profilePosts = profilePostsResponse.content
           .sort((left, right) => {
             const leftTime = new Date(left.publishedAt || left.createdAt).getTime();
             const rightTime = new Date(right.publishedAt || right.createdAt).getTime();
@@ -116,6 +118,23 @@ export function ProfilePage() {
     return () => { isMounted = false; };
   }, [fetchProfilePosts, isOwnProfile, userId, currentUser?.id]);
 
+  React.useEffect(() => {
+    if (highlightPostId && posts.length > 0) {
+      // Delay slightly to ensure elements are rendered
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`post-${highlightPostId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'rounded-lg');
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+          }, 3000);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightPostId, posts]);
+
   const handleAvatarUpload = async (file: File) => {
     if (!currentUser) return;
     const updatedUser = await authService.uploadAvatar(currentUser.id, file);
@@ -145,31 +164,20 @@ export function ProfilePage() {
     dateOfBirth: profile?.dateOfBirth,
   };
 
+  const profilePhotos = React.useMemo(() => {
+    return posts.flatMap(post => 
+      (post.mediaList || [])
+        .filter(m => m.type === 'IMAGE')
+        .map(m => ({ id: `${post.id}-${Math.random()}`, url: m.url }))
+    );
+  }, [posts]);
+
+  const featuredPhotos = profilePhotos.slice(0, 3);
+  const photos = profilePhotos.slice(0, 9);
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
   }
-
-  const featuredPhotos = [
-    { id: '1', url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400', count: 1 },
-    { id: '2', url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400' },
-    { id: '3', url: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400' },
-  ];
-
-
-  const photos = [
-    { id: '1', url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400' },
-    { id: '2', url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=400' },
-    { id: '3', url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400' },
-    { id: '4', url: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=400' },
-    { id: '5', url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400' },
-    { id: '6', url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400' },
-    { id: '7', url: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=400' },
-    { id: '8', url: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=400' },
-    { id: '9', url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400' },
-    { id: '10', url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=400' },
-    { id: '11', url: 'https://images.unsplash.com/photo-1552581234-26160f608093?w=400' },
-    { id: '12', url: 'https://images.unsplash.com/photo-1531545514256-b1400bc00f31?w=400' },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">

@@ -14,6 +14,7 @@ export interface Notification {
   id: string;
   type: NotificationType;
   user: {
+    id?: string;
     name: string;
     avatar: string;
   };

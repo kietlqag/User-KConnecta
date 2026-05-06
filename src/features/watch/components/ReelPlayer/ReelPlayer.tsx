@@ -26,7 +26,7 @@ export const ReelPlayer = ({
   hasNext 
 }: ReelPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -54,6 +54,10 @@ export const ReelPlayer = ({
     setShareCount(reel.shares);
     setCommentCount(reel.comments);
   }, [reel]);
+
+  useEffect(() => {
+    setIsMuted(true);
+  }, [reel.id]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -234,7 +238,7 @@ export const ReelPlayer = ({
             )}
             <button
               onClick={toggleMute}
-              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center cursor-pointer"
             >
               {isMuted ? (
                 <VolumeX className="w-5 h-5 text-white" />

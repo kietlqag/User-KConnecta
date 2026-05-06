@@ -9,6 +9,7 @@ import {
   type ReactionCountMap,
 } from '@/components/reactions';
 import { CommentSection } from './CommentSection';
+import { PostMoreMenu } from '../shared/PostMoreMenu';
 
 interface Post {
   id: string;
@@ -107,7 +108,7 @@ export function PostDetailModal({
           <h2 className="text-lg font-semibold">Bài viết của {post.author.name}</h2>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 transition-colors hover:bg-gray-300"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 transition-colors hover:bg-gray-300 cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -139,9 +140,7 @@ export function PostDetailModal({
                   </div>
                 </div>
               </div>
-              <button className="rounded-full p-2 transition-colors hover:bg-gray-100">
-                <MoreHorizontal className="h-5 w-5 text-gray-600" />
-              </button>
+              <PostMoreMenu postId={post.id} />
             </div>
           </div>
 
@@ -188,18 +187,18 @@ export function PostDetailModal({
           </div>
 
           <div className="grid grid-cols-3 gap-1 border-b border-gray-200 px-4 py-1">
-            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100">
+            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 cursor-pointer">
               <ThumbsUp className="h-5 w-5 text-gray-600" />
               <span className="text-[15px] font-semibold text-gray-600">Thích</span>
             </button>
-            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100">
+            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 cursor-pointer">
               <MessageCircle className="h-5 w-5 text-gray-600" />
               <span className="text-[15px] font-semibold text-gray-600">Bình luận</span>
             </button>
             <button
               onClick={handleShare}
               disabled={isSharing}
-              className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 disabled:opacity-60"
+              className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 disabled:opacity-60 cursor-pointer"
             >
               <Share2 className="h-5 w-5 text-gray-600" />
               <span className="text-[15px] font-semibold text-gray-600">

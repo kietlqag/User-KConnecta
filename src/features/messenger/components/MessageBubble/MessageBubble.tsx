@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
 import { Message } from '../../types/message.types';
@@ -197,7 +197,7 @@ export const MessageBubble = ({
   const activeLightboxImage = lightboxIndex === null ? null : imageUrls[lightboxIndex];
   const ownBubbleStyle = message.isOwn && themeColor ? { backgroundColor: themeColor } : undefined;
   const renderImageButton = (imageUrl: string, index: number, className = '') => (
-    <button
+    <button className="cursor-pointer"
       key={`${imageUrl}-${index}`}
       type="button"
       onClick={() => setLightboxIndex(index)}
@@ -257,7 +257,7 @@ export const MessageBubble = ({
               </p>
             </div>
           </div>
-          <button
+          <button className="cursor-pointer"
             onClick={() => onCallAgain?.(isVideoCall ? 'video' : 'audio')}
             className="mt-2.5 w-full rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors py-2 text-[15px] font-semibold text-gray-900 flex items-center justify-center gap-2"
           >
@@ -309,7 +309,7 @@ export const MessageBubble = ({
               <CornerUpLeft className="h-3.5 w-3.5" />
               <span>{replyContextLabel || (message.isOwn ? 'Bạn đã trả lời' : `${senderName} đã trả lời`)}</span>
             </div>
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={() => message.replyToMessageId && onJumpToMessage?.(message.replyToMessageId)}
               disabled={!message.replyToMessageId}
@@ -361,7 +361,7 @@ export const MessageBubble = ({
                 className="flex min-w-0 w-[min(240px,68vw)] max-w-full items-center gap-2 sm:min-w-[176px]"
                 style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
               >
-                <button
+                <button className="cursor-pointer"
                   type="button"
                   onClick={toggleVoicePlayback}
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
@@ -402,9 +402,15 @@ export const MessageBubble = ({
                 />
               </div>
               ) : message.videoShareId && !message.deleted ? (
-              <button
+              <button className="cursor-pointer"
                 type="button"
-                onClick={() => navigate(`/watch?id=${message.videoShareId}`)}
+                onClick={() => {
+                  if (message.videoShareId) {
+                    navigate(`/home?post=${message.videoShareId}`);
+                  } else {
+                    navigate('/watch');
+                  }
+                }}
                 className="flex flex-col min-w-0 w-[min(260px,68vw)] max-w-full overflow-hidden rounded-xl bg-black/5 group/video-share transition-transform hover:scale-[1.02]"
                 title="Xem video"
               >
@@ -434,7 +440,7 @@ export const MessageBubble = ({
                 </div>
               </button>
               ) : message.fileUrl && !message.deleted ? (
-              <button
+              <button className="cursor-pointer"
                 type="button"
                 onClick={() => window.open(message.fileUrl, '_blank', 'noopener,noreferrer')}
                 className="flex min-w-0 w-[min(280px,68vw)] max-w-full items-center gap-3"
@@ -455,7 +461,7 @@ export const MessageBubble = ({
                     {formatFileSize(message.fileSizeBytes) || message.fileMimeType || 'File'}
                   </span>
                 </span>
-                <button
+                <button className="cursor-pointer"
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -498,7 +504,7 @@ export const MessageBubble = ({
               }`}
               style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
             >
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   if (message.deleted) return;
                   setShowReactions(!showReactions);
@@ -510,7 +516,7 @@ export const MessageBubble = ({
                 <Smile className="w-3.5 h-3.5 text-gray-600" />
               </button>
 
-              <button
+              <button className="cursor-pointer"
                 onClick={() => !message.deleted && onReply?.(message)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                 title="Trả lời"
@@ -538,7 +544,7 @@ export const MessageBubble = ({
               ref={reactionRef}
             >
               {quickReactions.map((emoji) => (
-                <button
+                <button className="cursor-pointer"
                   key={emoji}
                   onClick={() => handleReaction(emoji)}
                   className="text-2xl hover:scale-150 transition-transform duration-200 cursor-pointer"
@@ -547,7 +553,7 @@ export const MessageBubble = ({
                 </button>
               ))}
               <div className="w-px h-6 bg-gray-300 mx-1" />
-              <button
+              <button className="cursor-pointer"
                 onClick={() => setShowExtraReactions((prev) => !prev)}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
                 title="Thêm emoji khác"
@@ -564,7 +570,7 @@ export const MessageBubble = ({
               ref={reactionRef}
             >
               {extraReactions.map((emoji) => (
-                <button
+                <button className="cursor-pointer"
                   key={emoji}
                   onClick={() => handleReaction(emoji)}
                   className="text-2xl hover:scale-150 transition-transform duration-200 cursor-pointer"
@@ -586,7 +592,7 @@ export const MessageBubble = ({
               }}
             >
               {message.isOwn && (
-                <button
+                <button className="cursor-pointer"
                   onClick={() => {
                     onDelete?.(message.id);
                     setShowMenu(false);
@@ -597,7 +603,7 @@ export const MessageBubble = ({
                   Gỡ
                 </button>
               )}
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   onPinMessage?.(message);
                   setShowMenu(false);
@@ -606,7 +612,7 @@ export const MessageBubble = ({
               >
                 {isPinnedMessage ? 'Bỏ ghim tin nhắn' : 'Ghim tin nhắn'}
               </button>
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   onForward?.(message);
                   setShowMenu(false);
@@ -615,7 +621,7 @@ export const MessageBubble = ({
               >
                 Chuyển tiếp
               </button>
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   onReport?.(message);
                   setShowMenu(false);
@@ -648,7 +654,7 @@ export const MessageBubble = ({
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
           onClick={() => setLightboxIndex(null)}
         >
-          <button
+          <button className="cursor-pointer"
             type="button"
             onClick={(event) => {
               event.stopPropagation();
@@ -661,7 +667,7 @@ export const MessageBubble = ({
           </button>
 
           {imageUrls.length > 1 && (
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
@@ -682,7 +688,7 @@ export const MessageBubble = ({
           />
 
           {imageUrls.length > 1 && (
-            <button
+            <button className="cursor-pointer"
               type="button"
               onClick={(event) => {
                 event.stopPropagation();

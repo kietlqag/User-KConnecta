@@ -16,10 +16,12 @@ import {
   Moon
 } from 'lucide-react';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
+import { useManagedGroups } from '@/features/groups/hooks/useGroups';
 
 export const LeftSidebar = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+  const { data: managedGroups = [] } = useManagedGroups();
   useEffect(() => {
     const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
     window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
@@ -143,12 +145,34 @@ export const LeftSidebar = () => {
         </div>
 
         <nav className="space-y-1 mb-4">
-          <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer">
-            <div className="w-9 h-9 rounded-lg bg-gray-300 flex items-center justify-center overflow-hidden">
-              <Flag className="w-5 h-5 text-gray-600" />
-            </div>
-            <span className="font-medium text-sm text-gray-900">Nhóm React Developers</span>
-          </button>
+          {managedGroups.length > 0 ? (
+            managedGroups.slice(0, 5).map((group) => (
+              <button
+                key={group.id}
+                onClick={() => navigate(`/groups/${group.id}`)}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-lg bg-gray-300 flex items-center justify-center overflow-hidden">
+                  {group.icon ? (
+                    <img src={group.icon} alt={group.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <Flag className="w-5 h-5 text-gray-600" />
+                  )}
+                </div>
+                <span className="font-medium text-sm text-gray-900 truncate">{group.name}</span>
+              </button>
+            ))
+          ) : (
+            <button
+              onClick={() => navigate('/groups/create')}
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
+            >
+              <div className="w-9 h-9 rounded-lg bg-gray-300 flex items-center justify-center overflow-hidden">
+                <Flag className="w-5 h-5 text-gray-600" />
+              </div>
+              <span className="font-medium text-sm text-gray-900">Tạo nhóm đầu tiên của bạn</span>
+            </button>
+          )}
         </nav>
 
         {/* Footer Links */}

@@ -35,7 +35,7 @@ export const ReelInteractionPanel = ({
       {/* Like Button */}
       <button
         onClick={onLike}
-        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110"
+        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 cursor-pointer"
       >
         <div className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center transition-colors ${isLiked ? 'bg-emerald-600' : 'bg-gray-800/50 group-hover:bg-emerald-600'}`}>
           <ThumbsUp className={`w-6 h-6 text-white ${isLiked ? 'fill-white' : ''}`} />
@@ -48,7 +48,7 @@ export const ReelInteractionPanel = ({
       {/* Comment Button */}
       <button
         onClick={onComment}
-        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110"
+        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 cursor-pointer"
       >
         <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-blue-600 transition-colors">
           <MessageCircle className="w-6 h-6 text-white" />
@@ -61,7 +61,7 @@ export const ReelInteractionPanel = ({
       {/* Share Button */}
       <button
         onClick={onShare}
-        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110"
+        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 cursor-pointer"
       >
         <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-purple-600 transition-colors">
           <Share2 className="w-6 h-6 text-white" />
@@ -74,7 +74,7 @@ export const ReelInteractionPanel = ({
       {/* More Button */}
       <button
         onClick={onMore}
-        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110"
+        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 cursor-pointer"
       >
         <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-gray-600 transition-colors">
           <MoreHorizontal className="w-6 h-6 text-white" />

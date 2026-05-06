@@ -88,7 +88,7 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
         </h2>
         <button
           onClick={onClose}
-          className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
+          className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors cursor-pointer"
         >
           <X className="w-5 h-5 text-gray-200" />
         </button>
@@ -121,17 +121,17 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
 
                 {/* Comment Actions */}
                 <div className="flex items-center gap-4 mt-1 ml-2">
-                  <button className="text-gray-400 hover:text-white text-xs font-semibold transition-colors">
+                  <button className="text-gray-400 hover:text-white text-xs font-semibold transition-colors cursor-pointer">
                     Thích
                   </button>
-                  <button className="text-gray-400 hover:text-white text-xs font-semibold transition-colors">
+                  <button className="text-gray-400 hover:text-white text-xs font-semibold transition-colors cursor-pointer">
                     Trả lời
                   </button>
                 </div>
               </div>
 
               {/* More Options */}
-              <button className="w-8 h-8 rounded-full hover:bg-gray-700 flex items-center justify-center transition-colors flex-shrink-0">
+              <button className="w-8 h-8 rounded-full hover:bg-gray-700 flex items-center justify-center transition-colors flex-shrink-0 cursor-pointer">
                 <MoreHorizontal className="w-4 h-4 text-gray-400" />
               </button>
             </div>

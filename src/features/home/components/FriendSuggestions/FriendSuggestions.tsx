@@ -1,0 +1,137 @@
+import React, { useEffect, useState } from 'react';
+import { UserPlus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
+import { friendService, type FriendApiResponse } from '@/services/friendService';
+import { authService } from '@/services/authService';
+import { toast } from 'sonner';
+
+export const FriendSuggestions = () => {
+  const [suggestions, setSuggestions] = useState<FriendApiResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentUser = authService.getCurrentUser();
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    setLoading(true);
+    friendService.getSuggestions(currentUser.id)
+      .then((data) => {
+        setSuggestions(data);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch suggestions:', err);
+      })
+      .finally(() => setLoading(false));
+  }, [currentUser?.id]);
+
+  const handleAddFriend = async (targetId: string, name: string) => {
+    if (!currentUser?.id) return;
+    try {
+      await friendService.sendFriendRequest(currentUser.id, targetId);
+      toast.success(`Đã gửi lời mời kết bạn đến ${name}`);
+      setSuggestions((prev) => prev.filter((s) => s.userId !== targetId));
+    } catch (error) {
+      toast.error('Không thể gửi lời mời kết bạn. Vui lòng thử lại sau.');
+    }
+  };
+
+  const handleRemoveSuggestion = (targetId: string) => {
+    setSuggestions((prev) => prev.filter((s) => s.userId !== targetId));
+  };
+
+  const scrollLeft = () => {
+    setCurrentIndex((prev) => Math.max(0, prev - 1));
+  };
+
+  const scrollRight = () => {
+    setCurrentIndex((prev) => Math.min(suggestions.length - 1, prev + 1));
+  };
+
+  if (!loading && suggestions.length === 0) return null;
+
+  return (
+    <div className="bg-white rounded-lg shadow mb-4 p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-gray-900 font-bold text-lg">Bạn bè có thể biết</h3>
+        <button className="text-blue-600 text-sm font-medium hover:underline">Xem tất cả</button>
+      </div>
+
+      <div className="relative group">
+        <div className="flex gap-2 overflow-hidden scroll-smooth">
+          {loading ? (
+            <div className="flex gap-2 w-full">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="min-w-[180px] h-[320px] bg-gray-100 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div 
+              className="flex gap-2 transition-transform duration-300 ease-in-out" 
+              style={{ transform: `translateX(-${currentIndex * 188}px)` }}
+            >
+              {suggestions.map((user) => (
+                <div 
+                  key={user.userId}
+                  className="min-w-[180px] w-[180px] flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow relative"
+                >
+                  <button 
+                    onClick={() => handleRemoveSuggestion(user.userId)}
+                    className="absolute top-2 right-2 z-10 p-1.5 bg-black/40 hover:bg-black/60 rounded-full text-white transition-colors cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                  
+                  <div className="h-[180px] overflow-hidden">
+                    <ImageWithFallback
+                      src={user.avatarUrl || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(user.fullName)}`}
+                      alt={user.fullName}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  <div className="p-3 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-bold text-[15px] text-gray-900 line-clamp-1 hover:underline cursor-pointer">
+                        {user.fullName}
+                      </h4>
+                      <p className="text-xs text-gray-500 mb-2">
+                        {user.mutualFriends > 0 ? `${user.mutualFriends} bạn chung` : 'Gợi ý cho bạn'}
+                      </p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => handleAddFriend(user.userId, user.fullName)}
+                      className="w-full py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md flex items-center justify-center gap-2 font-semibold text-sm transition-colors cursor-pointer"
+                    >
+                      <UserPlus size={16} />
+                      Thêm bạn bè
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Scroll Buttons */}
+        {!loading && currentIndex > 0 && (
+          <button 
+            onClick={scrollLeft}
+            className="absolute left-[-12px] top-1/2 -translate-y-1/2 p-2 bg-white rounded-full shadow-lg border border-gray-100 text-gray-600 hover:bg-gray-50 z-20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+            <ChevronLeft size={24} />
+          </button>
+        )}
+        {!loading && suggestions.length > 3 && currentIndex < suggestions.length - 3 && (
+          <button 
+            onClick={scrollRight}
+            className="absolute right-[-12px] top-1/2 -translate-y-1/2 p-2 bg-white rounded-full shadow-lg border border-gray-100 text-gray-600 hover:bg-gray-50 z-20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+          >
+            <ChevronRight size={24} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};

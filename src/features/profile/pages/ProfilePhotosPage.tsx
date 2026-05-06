@@ -1,10 +1,12 @@
-﻿import * as React from 'react';
+import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { ProfileTabs } from '../components/ProfileTabs';
 import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
 import { authService } from '@/services/authService';
+import { postService } from '@/services/postService';
+import { friendService } from '@/services/friendService';
 
 export function ProfilePhotosPage() {
   const { userId: routeUserId } = useParams();
@@ -21,17 +23,41 @@ export function ProfilePhotosPage() {
   const isOwnProfile = currentUser?.id === userId;
   const [profile, setProfile] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [photos, setPhotos] = React.useState<any[]>([]);
+  const [friendsCount, setFriendsCount] = React.useState(0);
 
   React.useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await authService.getUserById(userId);
-        setProfile(response);
+        const [profileResponse, paginatedPosts, friendsResponse] = await Promise.all([
+          authService.getUserById(userId),
+          postService.getAllPosts(currentUser?.id, userId),
+          friendService.getFriends(userId)
+        ]);
+
+        setProfile(profileResponse);
+        setFriendsCount(friendsResponse.length);
+
         if (isOwnProfile) {
-          authService.saveCurrentUser(response);
+          authService.saveCurrentUser(profileResponse);
         }
+
+        // Extract all images from posts
+        const allPhotos = paginatedPosts.content.flatMap(post => 
+          post.media
+            .filter(m => m.mediaType === 'IMAGE')
+            .map(m => ({
+              id: m.id,
+              url: m.mediaUrl || m.fileUrl,
+              timestamp: new Date(post.createdAt).toLocaleDateString('vi-VN', { 
+                day: 'numeric', 
+                month: 'long' 
+              })
+            }))
+        );
+        setPhotos(allPhotos);
       } catch (error) {
-        console.error('Error fetching profile:', error);
+        console.error('Error fetching profile data:', error);
         if (isOwnProfile) {
           setProfile(currentUser);
         }
@@ -49,7 +75,7 @@ export function ProfilePhotosPage() {
     username: profile?.username || currentUser?.username || '',
     avatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
     coverPhoto: profile?.coverPhotoUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
-    friendsCount: 253,
+    friendsCount: friendsCount,
     location: profile?.location || 'Thành phố Hồ Chí Minh',
     school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
   };
@@ -58,20 +84,7 @@ export function ProfilePhotosPage() {
     return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
   }
 
-  const photos = [
-    { id: '1', url: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600', timestamp: '21 tháng 1' },
-    { id: '2', url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=600', timestamp: '18 tháng 1' },
-    { id: '3', url: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600', timestamp: '15 tháng 1' },
-    { id: '4', url: 'https://images.unsplash.com/photo-1523580494863-6f3031224c94?w=600', timestamp: '10 tháng 1' },
-    { id: '5', url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=600', timestamp: '5 tháng 1' },
-    { id: '6', url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600', timestamp: '2 tháng 1' },
-    { id: '7', url: 'https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?w=600', timestamp: '28 tháng 12' },
-    { id: '8', url: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=600', timestamp: '25 tháng 12' },
-    { id: '9', url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=600', timestamp: '20 tháng 12' },
-    { id: '10', url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600', timestamp: '15 tháng 12' },
-    { id: '11', url: 'https://images.unsplash.com/photo-1552581234-26160f608093?w=600', timestamp: '10 tháng 12' },
-    { id: '12', url: 'https://images.unsplash.com/photo-1531545514256-b1400bc00f31?w=600', timestamp: '5 tháng 12' },
-  ];
+
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">

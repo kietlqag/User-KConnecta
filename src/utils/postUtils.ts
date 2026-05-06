@@ -11,6 +11,7 @@ export interface FeedPost {
   comments: number;
   shares: number;
   isLiked: boolean;
+  isSaved: boolean;
   currentUserReactionType: PostResponse['currentUserReactionType'];
   reactionCounts?: PostReactionCountResponse[];
   group?: { id: string; name: string; icon?: string };
@@ -54,6 +55,7 @@ export function mapApiPost(item: PostResponse): FeedPost {
     comments: item.commentCount,
     shares: item.shareCount,
     isLiked: !!item.currentUserReactionType,
+    isSaved: item.savedByCurrentUser ?? false,
     currentUserReactionType: item.currentUserReactionType,
     reactionCounts: item.reactionCounts,
     group: item.groupId ? {

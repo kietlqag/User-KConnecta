@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Search, MoreHorizontal, ExternalLink, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ConversationItem } from '../ConversationItem';
@@ -54,7 +54,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
               <button className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer">
                 <MoreHorizontal className="w-5 h-5 text-gray-600" />
               </button>
-              <button
+              <button className="cursor-pointer"
                 onClick={() => {
                   navigate('/messages');
                   onClose();
@@ -80,7 +80,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
 
           <div className="flex items-center gap-2 mt-3">
             {filters.map((filter) => (
-              <button
+              <button className="cursor-pointer"
                 key={filter.key}
                 onClick={() => setActiveFilter(filter.key)}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
@@ -101,7 +101,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
           ) : error ? (
             <div className="text-center py-8 text-sm">
               <p className="text-red-500 mb-2">Không thể tải danh sách</p>
-              <button onClick={reload} className="text-blue-500 hover:underline text-sm">
+              <button onClick={reload} className="text-blue-500 hover:underline text-sm cursor-pointer">
                 Thử lại
               </button>
             </div>
@@ -123,7 +123,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
         </div>
 
         <div className="shrink-0 border-t border-gray-200 p-3">
-          <button
+          <button className="cursor-pointer"
             onClick={() => {
               navigate('/messages');
               onClose();

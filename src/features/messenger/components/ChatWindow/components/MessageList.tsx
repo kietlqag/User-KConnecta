@@ -184,13 +184,13 @@ export const MessageList = forwardRef(({
               {isGroupCreator ? 'Bạn đã tạo nhóm này' : `${groupCreatorName} đã tạo nhóm này`}
             </p>
             <div className="mt-6 flex items-center gap-7">
-              <button type="button" className="flex flex-col items-center gap-1.5 text-gray-700" title="Thêm thành viên">
+              <button type="button" className="flex flex-col items-center gap-1.5 text-gray-700 cursor-pointer" title="Thêm thành viên">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200">
                   <UserRoundPlus className="h-5.5 w-5.5" />
                 </span>
                 <span className="text-[14px]">Thêm</span>
               </button>
-              <button type="button" className="flex flex-col items-center gap-1.5 text-gray-700" title="Đổi tên nhóm">
+              <button type="button" className="flex flex-col items-center gap-1.5 text-gray-700 cursor-pointer" title="Đổi tên nhóm">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200">
                   <Pencil className="h-5 w-5" />
                 </span>
@@ -207,7 +207,7 @@ export const MessageList = forwardRef(({
       </div>
 
       {showJumpToLatest && (
-        <button
+        <button className="cursor-pointer"
           onClick={() => scrollToBottom()}
           className="absolute bottom-20 right-4 z-20 p-2 bg-white rounded-full shadow-lg border border-gray-200 text-blue-600 hover:bg-gray-50 transition-all animate-bounce"
           title="Cuộn xuống dưới cùng"

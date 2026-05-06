@@ -124,7 +124,8 @@ export const ShareModal = ({ isOpen, onClose, onShare, reel }: ShareModalProps) 
                       const shareContent = `${VIDEO_SHARE_PREFIX}${JSON.stringify({
                         id: reel.id,
                         thumbnail: reel.thumbnail,
-                        caption: reel.caption
+                        caption: reel.caption,
+                        authorId: reel.creator.id
                       })}`;
                       sendMessage(conv.user.id, shareContent);
                       toast.success(`Đã gửi cho ${conv.user.name}`);
@@ -159,7 +160,7 @@ export const ShareModal = ({ isOpen, onClose, onShare, reel }: ShareModalProps) 
               <button
                 key={index}
                 onClick={option.onClick}
-                className="flex items-center gap-4 p-3 w-full hover:bg-gray-50 rounded-xl transition-all group"
+                className="flex items-center gap-4 p-3 w-full hover:bg-gray-50 rounded-xl transition-all cursor-pointer group"
               >
                 <div className={`w-10 h-10 rounded-full ${option.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                   {option.icon}
@@ -172,13 +173,13 @@ export const ShareModal = ({ isOpen, onClose, onShare, reel }: ShareModalProps) 
 
         {/* External Social Sharing */}
         <div className="bg-gray-50 p-4 border-t flex justify-center gap-6">
-          <button className="text-blue-600 hover:scale-110 transition-transform">
+          <button className="text-blue-600 hover:scale-110 transition-transform cursor-pointer">
             <Facebook className="w-6 h-6" />
           </button>
-          <button className="text-sky-500 hover:scale-110 transition-transform">
+          <button className="text-sky-500 hover:scale-110 transition-transform cursor-pointer">
             <Twitter className="w-6 h-6" />
           </button>
-          <button className="text-emerald-500 hover:scale-110 transition-transform">
+          <button className="text-emerald-500 hover:scale-110 transition-transform cursor-pointer">
             <Share2 className="w-6 h-6" />
           </button>
         </div>

@@ -160,7 +160,7 @@ export function CallOverlayModal({
   const closeButton = (
     <button
       onClick={onMinimize}
-      className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+      className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-gray-100 cursor-pointer"
       title="Thu gọn cuộc gọi"
     >
       <X className="h-4 w-4 text-gray-600" />
@@ -192,7 +192,7 @@ export function CallOverlayModal({
 
   const groupPageControls = videoParticipants.length > videoPageSize && (
     <div className="mt-3 flex items-center justify-center gap-3">
-      <button
+      <button className="cursor-pointer"
         type="button"
         onClick={() => setVideoPage((prev) => Math.max(0, prev - 1))}
         disabled={videoPage === 0}
@@ -204,7 +204,7 @@ export function CallOverlayModal({
       <span className="text-sm font-medium text-gray-600">
         {videoPage + 1}/{videoPageCount}
       </span>
-      <button
+      <button className="cursor-pointer"
         type="button"
         onClick={() => setVideoPage((prev) => Math.min(videoPageCount - 1, prev + 1))}
         disabled={videoPage >= videoPageCount - 1}
@@ -235,10 +235,10 @@ export function CallOverlayModal({
           </div>
 
           <div className="mt-8 flex items-center justify-center gap-7">
-            <button onClick={onRejectIncoming} className={`${iconButtonClassName} bg-red-500 hover:bg-red-600`} title="Từ chối">
+            <button onClick={onRejectIncoming} className={`${`${iconButtonClassName} cursor-pointer` } bg-red-500 hover:bg-red-600`} title="Từ chối">
               <PhoneOff className="h-6 w-6 text-white" />
             </button>
-            <button onClick={onAcceptIncoming} className={`${iconButtonClassName} bg-green-500 hover:bg-green-600`} title="Nghe máy">
+            <button onClick={onAcceptIncoming} className={`${`${iconButtonClassName} cursor-pointer` } bg-green-500 hover:bg-green-600`} title="Nghe máy">
               <Phone className="h-6 w-6 text-white" />
             </button>
           </div>
@@ -264,7 +264,7 @@ export function CallOverlayModal({
           </div>
           {videoParticipants.length > videoPageSize && (
             <div className="mt-3 flex items-center justify-center gap-3">
-              <button
+              <button className="cursor-pointer"
                 type="button"
                 onClick={() => setVideoPage((prev) => Math.max(0, prev - 1))}
                 disabled={videoPage === 0}
@@ -276,7 +276,7 @@ export function CallOverlayModal({
               <span className="text-sm font-medium text-gray-600">
                 {videoPage + 1}/{videoPageCount}
               </span>
-              <button
+              <button className="cursor-pointer"
                 type="button"
                 onClick={() => setVideoPage((prev) => Math.min(videoPageCount - 1, prev + 1))}
                 disabled={videoPage >= videoPageCount - 1}
@@ -341,7 +341,7 @@ export function CallOverlayModal({
         <div className="mt-8 flex items-center justify-center gap-7">
           <button
             onClick={onToggleSpeaker}
-            className={`${iconButtonClassName} ${speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+            className={`${`${iconButtonClassName} cursor-pointer` } ${speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
             title={speakerMode === 'outer' ? 'Đang loa ngoài, bấm để chuyển loa trong' : 'Đang loa trong, bấm để chuyển loa ngoài'}
           >
             {speakerMode === 'outer' ? <Volume2 className="h-6 w-6 text-white" /> : <Volume1 className="h-6 w-6 text-gray-700" />}
@@ -350,7 +350,7 @@ export function CallOverlayModal({
           {isVideoCall && (
             <button
               onClick={onToggleCamera}
-              className={`${iconButtonClassName} ${isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+              className={`${`${iconButtonClassName} cursor-pointer` } ${isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
               title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
             >
               {isCameraEnabled ? <Video className="h-6 w-6 text-white" /> : <VideoOff className="h-6 w-6 text-gray-700" />}
@@ -360,14 +360,14 @@ export function CallOverlayModal({
           {callStatus === 'in_call' && (
             <button
               onClick={onToggleMute}
-              className={`${iconButtonClassName} ${isMuted ? 'bg-gray-100 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700'}`}
+              className={`${`${iconButtonClassName} cursor-pointer` } ${isMuted ? 'bg-gray-100 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700'}`}
               title={isMuted ? 'Bật mic' : 'Tắt mic'}
             >
               {isMuted ? <MicOff className="h-6 w-6 text-gray-700" /> : <Mic className="h-6 w-6 text-white" />}
             </button>
           )}
 
-          <button onClick={onEndCall} className={`${iconButtonClassName} bg-red-500 hover:bg-red-600`} title="Kết thúc cuộc gọi">
+          <button onClick={onEndCall} className={`${`${iconButtonClassName} cursor-pointer` } bg-red-500 hover:bg-red-600`} title="Kết thúc cuộc gọi">
             <PhoneOff className="h-6 w-6 text-white" />
           </button>
         </div>

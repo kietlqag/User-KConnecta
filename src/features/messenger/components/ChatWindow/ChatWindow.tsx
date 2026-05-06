@@ -244,7 +244,7 @@ export const ChatWindow = ({
       />
 
       {pinnedMessages.length > 0 && (
-        <button
+        <button className="cursor-pointer"
           type="button"
           onClick={() => setShowPinnedModal(true)}
           className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 text-left hover:bg-gray-100"

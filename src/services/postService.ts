@@ -1,5 +1,7 @@
 import { api } from './api';
 
+export const SAVED_POSTS_CHANGED_EVENT = 'saved-posts-changed';
+
 export interface CreatePostMediaRequest {
   mediaType: 'IMAGE' | 'VIDEO';
   fileUrl: string;
@@ -82,6 +84,7 @@ export interface PostResponse {
   reactionCount: number;
   reactionCounts?: PostReactionCountResponse[];
   currentUserReactionType?: ReactionType | null;
+  savedByCurrentUser?: boolean;
   commentCount: number;
   shareCount: number;
   media: PostMediaResponse[];
@@ -89,6 +92,14 @@ export interface PostResponse {
   taggedUserIds: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PaginatedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
 }
 
 export interface PostCommentResponse {
@@ -128,11 +139,13 @@ export interface PostReactionResponse {
 }
 
 export const postService = {
-  getAllPosts: (currentUserId?: string, authorId?: string) => {
+  getAllPosts: (currentUserId?: string, authorId?: string, page = 0, size = 10) => {
     const params = new URLSearchParams();
     if (currentUserId) params.append('currentUserId', currentUserId);
     if (authorId) params.append('authorId', authorId);
-    return api.get<PostResponse[]>(`/posts?${params.toString()}`);
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    return api.get<PaginatedResponse<PostResponse>>(`/posts?${params.toString()}`);
   },
   getGroupPosts: (groupId: string, currentUserId?: string) => {
     const params = new URLSearchParams({ groupId });
@@ -162,4 +175,15 @@ export const postService = {
     api.post<PostCommentResponse>(`/posts/${postId}/comments`, data),
   sharePost: (postId: string, data: SharePostPayload) =>
     api.post<PostShareResponse>(`/posts/${postId}/shares`, data),
+  getPostById: (postId: string, currentUserId?: string) => {
+    const params = new URLSearchParams();
+    if (currentUserId) params.append('currentUserId', currentUserId);
+    return api.get<PostResponse>(`/posts/${postId}?${params.toString()}`);
+  },
+  savePost: (userId: string, postId: string) =>
+    api.post<void>('/posts/saved', { userId, postId }),
+  getSavedPosts: (userId: string) =>
+    api.get<PostResponse[]>(`/posts/saved/${userId}`),
+  unsavePost: (userId: string, postId: string) =>
+    api.delete<void>(`/posts/saved?userId=${encodeURIComponent(userId)}&postId=${encodeURIComponent(postId)}`),
 };

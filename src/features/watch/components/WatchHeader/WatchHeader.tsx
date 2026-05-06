@@ -48,7 +48,7 @@ export function WatchHeader() {
 
           {/* Right Section - User Actions */}
           <div className="flex items-center gap-2 flex-1 justify-end max-w-[320px]">
-            <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors lg:hidden">
+            <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer lg:hidden">
               <Menu className="w-6 h-6 text-gray-700" />
             </button>
             
@@ -58,7 +58,7 @@ export function WatchHeader() {
                 setShowMessenger(false);
                 setShowNotifications(false);
               }}
-              className={`hidden sm:flex p-2 hover:bg-gray-200 rounded-full transition-colors ${
+              className={`hidden sm:flex p-2 hover:bg-gray-200 rounded-full transition-colors cursor-pointer ${
                 isMenuOpen ? 'bg-emerald-100' : 'bg-gray-100'
               }`}
               title="Menu"
@@ -75,7 +75,7 @@ export function WatchHeader() {
                 setMenuOpen(false);
                 setShowNotifications(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 text-gray-700" />
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
@@ -89,7 +89,7 @@ export function WatchHeader() {
                 setMenuOpen(false);
                 setShowMessenger(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
             >
               <Bell className="w-5 h-5 text-gray-700" />
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
@@ -97,7 +97,7 @@ export function WatchHeader() {
               </span>
             </button>
             
-            <button className="w-10 h-10 rounded-full overflow-hidden hover:opacity-90 transition-opacity">
+            <button className="w-10 h-10 rounded-full overflow-hidden hover:opacity-90 transition-opacity cursor-pointer">
               <CurrentUserAvatar className="w-10 h-10" />
             </button>
           </div>

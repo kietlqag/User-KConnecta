@@ -105,8 +105,10 @@ export const WatchPage = () => {
   useEffect(() => {
     const fetchReels = async () => {
       try {
+        setLoading(true);
         const currentUser = authService.getCurrentUser();
-        const posts = await postService.getAllPosts(currentUser?.id);
+        const response = await postService.getAllPosts(currentUser?.id);
+        const posts = response.content;
 
         // Filter posts with videos
         const videoPosts = posts.filter(post => 
@@ -155,8 +157,17 @@ export const WatchPage = () => {
       }
     };
 
+    // If reels are already loaded, just update the index
+    if (reels.length > 0 && reelId) {
+      const index = reels.findIndex(r => r.id === reelId);
+      if (index !== -1) {
+        setCurrentReelIndex(index);
+        return;
+      }
+    }
+
     void fetchReels();
-  }, []);
+  }, [reelId]);
 
   const currentReel = reels[currentReelIndex];
 

@@ -1,4 +1,4 @@
-﻿import {
+import {
   createContext,
   useCallback,
   useContext,
@@ -9,8 +9,8 @@
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { toast } from 'sonner';
-import { authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
 import { CallMinimizedBar, CallOverlayModal } from '@/features/messenger/components';
 import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
@@ -51,8 +51,17 @@ interface PeerProfile {
 const RealtimeCallContext = createContext<RealtimeCallContextValue | null>(null);
 
 export function RealtimeCallProvider({ children }: { children: ReactNode }) {
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
+
+  useEffect(() => {
+    const syncAuth = () => {
+      setCurrentUser(authService.getCurrentUser());
+    };
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
+    return () => window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
+  }, []);
+
   const navigate = useNavigate();
-  const [currentUser] = useState(() => authService.getCurrentUser());
   const listenersRef = useRef<Set<MessageListener>>(new Set());
   const statusListenersRef = useRef<Set<MessageStatusListener>>(new Set());
   const presenceListenersRef = useRef<Set<PresenceStatusListener>>(new Set());

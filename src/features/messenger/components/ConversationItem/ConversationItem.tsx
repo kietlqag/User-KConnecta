@@ -66,7 +66,7 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
       </button>
 
       <div className="absolute right-2 top-1/2 -translate-y-1/2">
-        <button
+        <button className="cursor-pointer"
           type="button"
           onClick={(e) => {
             e.stopPropagation();
@@ -84,7 +84,7 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
           ref={menuRef}
           className="absolute right-2 top-10 z-20 min-w-[150px] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl"
         >
-          <button
+          <button className="cursor-pointer"
             type="button"
             onClick={(e) => {
               e.stopPropagation();

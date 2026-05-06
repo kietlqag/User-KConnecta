@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Notification } from '../../types/notifications.types';
 
 interface NotificationItemProps {
@@ -7,22 +8,42 @@ interface NotificationItemProps {
   onRead?: (notificationId: string) => void;
 }
 
-export const NotificationItem = ({ 
-  notification, 
-  onAcceptInvite, 
+export const NotificationItem = ({
+  notification,
+  onAcceptInvite,
   onRejectInvite,
   onRead
 }: NotificationItemProps) => {
+  const navigate = useNavigate();
+
+  const handleViewProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (notification.user.id) {
+      navigate(`/profile/${notification.user.id}`);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return new Intl.RelativeTimeFormat('vi', { numeric: 'auto' }).format(
-        Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-        'day'
-      ).replace('trước', 'trước').replace('sau', 'nữa');
+      const diffMs = Date.now() - date.getTime();
+      const diffSec = Math.floor(diffMs / 1000);
+      const diffMin = Math.floor(diffSec / 60);
+      const diffHour = Math.floor(diffMin / 60);
+      const diffDay = Math.floor(diffHour / 24);
+
+      const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
+
+      if (diffSec < 60) return 'Vừa xong';
+      if (diffMin < 60) return rtf.format(-diffMin, 'minute');
+      if (diffHour < 24) return rtf.format(-diffHour, 'hour');
+      if (diffDay < 7) return rtf.format(-diffDay, 'day');
+
+      return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+      }).format(date);
     } catch {
-      return dateString; // Fallback to raw string if not a date
+      return dateString;
     }
   };
 
@@ -40,9 +61,14 @@ export const NotificationItem = ({
     }
   };
 
+  const POST_TYPES = new Set(['like', 'comment', 'share', 'mention']);
+
   const handleClick = () => {
     if (notification.isUnread && onRead) {
       onRead(notification.id);
+    }
+    if (POST_TYPES.has(notification.type) && notification.relatedId) {
+      navigate(`/home?post=${notification.relatedId}`);
     }
   };
   return (
@@ -57,14 +83,18 @@ export const NotificationItem = ({
         <img
           src={notification.user.avatar}
           alt={notification.user.name}
-          className="w-14 h-14 rounded-full object-cover"
+          onClick={handleViewProfile}
+          className={`w-14 h-14 rounded-full object-cover ${notification.user.id ? 'cursor-pointer hover:opacity-90' : ''}`}
         />
       </div>
 
       {/* Content */}
       <div className="flex-1 min-w-0 text-left">
         <p className="text-sm text-gray-900 leading-snug mb-1">
-          <span className="font-semibold">{notification.user.name}</span>{' '}
+          <span
+            onClick={handleViewProfile}
+            className={`font-semibold ${notification.user.id ? 'cursor-pointer hover:underline' : ''}`}
+          >{notification.user.name}</span>{' '}
           {notification.text}
         </p>
         <span className="text-xs text-blue-600 font-medium">{formatDate(notification.timestamp)}</span>

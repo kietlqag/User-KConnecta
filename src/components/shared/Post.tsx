@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MoreHorizontal, MessageCircle, Share2, Globe, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
-import { postService, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
+import { postService, SAVED_POSTS_CHANGED_EVENT, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { PostDetailModal } from '../posts/PostDetailModal';
 import {
@@ -18,6 +18,7 @@ import {
   type ReactionOption,
   updateReactionCounts,
 } from '../reactions';
+import { PostMoreMenu } from './PostMoreMenu';
 
 interface Author {
   id: string;
@@ -55,6 +56,7 @@ export interface PostProps {
   comments: number;
   shares: number;
   isLiked?: boolean;
+  isSaved?: boolean;
   currentUserReactionType?: ReactionType | null;
   reactionCounts?: PostReactionCountResponse[];
   group?: Group;
@@ -73,6 +75,7 @@ export function Post({
   comments,
   shares,
   isLiked: initialIsLiked = false,
+  isSaved: initialIsSaved = false,
   currentUserReactionType = null,
   reactionCounts: serverReactionCounts,
   group,
@@ -90,6 +93,7 @@ export function Post({
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReactionSummaryOpen, setIsReactionSummaryOpen] = useState(false);
+  const [isSaved, setIsSaved] = useState(initialIsSaved);
   const [isSharing, setIsSharing] = useState(false);
   const [isReacting, setIsReacting] = useState(false);
   const [reactionCounts, setReactionCounts] = useState<ReactionCountMap>(() =>
@@ -232,6 +236,29 @@ export function Post({
     }
   };
 
+  const handleToggleSave = async () => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      toast.error('Bạn cần đăng nhập để lưu bài viết');
+      return;
+    }
+
+    try {
+      if (isSaved) {
+        await postService.unsavePost(currentUser.id, id);
+        setIsSaved(false);
+        toast.success('Đã bỏ lưu bài viết.');
+      } else {
+        await postService.savePost(currentUser.id, id);
+        setIsSaved(true);
+        toast.success('Đã lưu bài viết vào danh sách mục đã lưu.');
+      }
+      window.dispatchEvent(new CustomEvent(SAVED_POSTS_CHANGED_EVENT, { detail: { postId: id, saved: !isSaved } }));
+    } catch {
+      toast.error('Không thể thực hiện thao tác. Vui lòng thử lại sau.');
+    }
+  };
+
   const handleShare = async () => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
@@ -253,7 +280,7 @@ export function Post({
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow mb-4">
+      <div id={`post-${id}`} className="bg-white rounded-lg shadow mb-4">
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">
@@ -298,9 +325,7 @@ export function Post({
                 </div>
               </div>
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
-              <MoreHorizontal className="w-5 h-5 text-gray-500" />
-            </button>
+            <PostMoreMenu postId={id} isSaved={isSaved} onToggleSave={handleToggleSave} />
           </div>
 
           <p className="text-gray-900 mb-3 whitespace-pre-wrap">{content}</p>

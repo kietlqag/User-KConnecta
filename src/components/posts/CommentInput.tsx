@@ -5,12 +5,14 @@ interface CommentInputProps {
   onSubmit: (content: string) => void;
   placeholder?: string;
   userAvatar?: string;
+  autoFocus?: boolean;
 }
 
 export function CommentInput({
   onSubmit,
   placeholder = 'Bình luận...',
   userAvatar = 'https://ui-avatars.com/api/?background=random&name=User',
+  autoFocus = false,
 }: CommentInputProps) {
   const [content, setContent] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -53,27 +55,28 @@ export function CommentInput({
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
+            autoFocus={autoFocus}
             className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-gray-500"
           />
 
           <div className="ml-2 flex items-center gap-1">
-            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Emoji">
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors cursor-pointer" title="Emoji">
               <Smile className="w-5 h-5 text-gray-600" />
             </button>
-            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Sticker">
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors cursor-pointer" title="Sticker">
               <Sticker className="w-5 h-5 text-gray-600" />
             </button>
-            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Ảnh">
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors cursor-pointer" title="Ảnh">
               <Image className="w-5 h-5 text-gray-600" />
             </button>
-            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="GIF">
+            <button type="button" className="p-1.5 hover:bg-gray-200 rounded-full transition-colors cursor-pointer" title="GIF">
               <FileImage className="w-5 h-5 text-gray-600" />
             </button>
             {content.trim() && (
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="p-1.5 hover:bg-emerald-50 rounded-full text-emerald-600 hover:text-emerald-700 transition-colors"
+                className="p-1.5 hover:bg-emerald-50 rounded-full text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
                 title="Gửi"
               >
                 <Send className="w-5 h-5 fill-current" />

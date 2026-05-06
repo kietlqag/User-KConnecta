@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { friendService } from '@/services/friendService';
-import { authService } from '@/services/authService';
+import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
+import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import type { Conversation } from '../types/messenger.types';
 
 interface UseFriendConversationsResult {
   conversations: Conversation[];
   loading: boolean;
-  error: boolean;
+  error: string | null;
   reload: () => void;
 }
 
@@ -112,6 +113,7 @@ type HistoryMessage = {
   createdAt?: string | null;
   content?: string | null;
   senderId?: string | null;
+  seen?: boolean | null;
 };
 
 function getLatestHistoryMessage(history: HistoryMessage[]) {
@@ -166,11 +168,17 @@ function formatTimestamp(iso?: string | null) {
 }
 
 export function useFriendConversations(options: UseFriendConversationsOptions = {}): UseFriendConversationsResult {
-  const currentUser = authService.getCurrentUser();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const includeGroups = Boolean(options.includeGroups);
+
+  useEffect(() => {
+    const syncAuth = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
+    return () => window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
+  }, []);
 
   const load = useCallback(() => {
     if (!currentUser?.id) {
@@ -179,7 +187,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
     }
 
     setLoading(true);
-    setError(false);
+    setError(null);
 
     Promise.all([
       friendService.getFriends(currentUser.id),
@@ -202,6 +210,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
           const isOwnLastMessage = Boolean(
             lastVisible?.senderId && currentUser.id && lastVisible.senderId === currentUser.id,
           );
+          const isUnread = lastVisible ? !lastVisible.seen && !isOwnLastMessage : false;
           const previewTimestamp = lastVisible?.createdAt || last?.createdAt || friend.createdAt;
           const sortAt = (parseBackendDate(previewTimestamp) ?? new Date(0)).getTime();
 
@@ -224,7 +233,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
                 'Hai bạn đã kết bạn. Hãy bắt đầu cuộc trò chuyện.',
               timestamp: formatTimestamp(previewTimestamp),
               lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
-              isUnread: false,
+              isUnread,
             } satisfies Conversation,
           };
         });
@@ -273,14 +282,38 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
       })
       .catch(() => {
         setConversations([]);
-        setError(true);
+        setError('Không thể tải cuộc trò chuyện');
       })
       .finally(() => setLoading(false));
   }, [currentUser?.id, includeGroups]);
 
+  const { subscribeMessages, subscribeMessageStatuses } = useRealtimeCall();
+
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const unsubMsg = subscribeMessages((msg) => {
+      if (msg.senderId !== currentUser.id) {
+        // Small delay to ensure backend has finished processing
+        setTimeout(load, 500);
+      }
+    });
+
+    const unsubStatus = subscribeMessageStatuses((status) => {
+      if (status.status === 'SEEN') {
+        setTimeout(load, 500);
+      }
+    });
+
+    return () => {
+      unsubMsg();
+      unsubStatus();
+    };
+  }, [currentUser?.id, subscribeMessages, subscribeMessageStatuses, load]);
 
   return { conversations, loading, error, reload: load };
 }

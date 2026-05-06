@@ -5,6 +5,8 @@ import { ProfileHeader } from '../components/ProfileHeader';
 import { ProfileTabs } from '../components/ProfileTabs';
 import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
 import { authService } from '@/services/authService';
+import { postService } from '@/services/postService';
+import { friendService } from '@/services/friendService';
 import { Play } from 'lucide-react';
 
 export function ProfileReelsPage() {
@@ -23,6 +25,8 @@ export function ProfileReelsPage() {
   const [profile, setProfile] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<'yours' | 'saved'>('yours');
+  const [reels, setReels] = React.useState<any[]>([]);
+  const [friendsCount, setFriendsCount] = React.useState(0);
 
   React.useEffect(() => {
     const fetchProfile = async () => {
@@ -31,8 +35,28 @@ export function ProfileReelsPage() {
         return;
       }
       try {
-        const response = await authService.getUserById(userId);
-        setProfile(response);
+        const [profileResponse, paginatedPosts, friendsResponse] = await Promise.all([
+          authService.getUserById(userId),
+          postService.getAllPosts(currentUser?.id, userId),
+          friendService.getFriends(userId)
+        ]);
+        
+        setProfile(profileResponse);
+        setFriendsCount(friendsResponse.length);
+
+        const videoPosts = paginatedPosts.content.filter(post => 
+          post.media?.some(m => m.mediaType === 'VIDEO')
+        ).map(post => {
+          const video = post.media.find(m => m.mediaType === 'VIDEO');
+          return {
+            id: post.id,
+            title: post.content || 'Thước phim',
+            views: post.reactionCount * 10, // Mocking views
+            thumbnail: video?.mediaUrl || video?.fileUrl || '',
+            duration: '0:15'
+          };
+        });
+        setReels(videoPosts);
       } catch (error) {
         console.error('Error fetching profile:', error);
       } finally {
@@ -49,34 +73,12 @@ export function ProfileReelsPage() {
     username: profile?.username || '',
     avatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
     coverPhoto: profile?.coverPhotoUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
-    friendsCount: 253,
+    friendsCount: friendsCount,
     location: profile?.location || 'Thành phố Hồ Chí Minh',
     school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
   };
 
-  const reels = [
-    {
-      id: '1',
-      title: 'trong cuộc đời mình',
-      views: 10426,
-      thumbnail: 'https://images.unsplash.com/photo-1621333100657-69537233fc9e?w=400',
-      duration: '0:15',
-    },
-    {
-      id: '2',
-      title: 'Kỷ niệm đẹp cùng bạn bè',
-      views: 5230,
-      thumbnail: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400',
-      duration: '0:30',
-    },
-    {
-      id: '3',
-      title: 'Khung cảnh chiều tà',
-      views: 1200,
-      thumbnail: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=400',
-      duration: '0:12',
-    }
-  ];
+
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;

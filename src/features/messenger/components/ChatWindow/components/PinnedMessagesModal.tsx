@@ -103,7 +103,7 @@ export function PinnedMessagesModal({
               <p className="text-xs text-gray-500">{sortedItems.length} tin nhắn</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100" title="Đóng">
+          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer" title="Đóng">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -127,7 +127,7 @@ export function PinnedMessagesModal({
                       alt={senderLabel}
                       className="h-10 w-10 shrink-0 rounded-full object-cover"
                     />
-                    <button
+                    <button className="cursor-pointer"
                       type="button"
                       onClick={() => {
                         onClose();
@@ -142,7 +142,7 @@ export function PinnedMessagesModal({
                       </div>
                       <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-gray-700 break-words">{item.text || 'Tin nhắn'}</p>
                     </button>
-                    <button
+                    <button className="cursor-pointer"
                       type="button"
                       onClick={(event) => openMenu(item.messageId, event.currentTarget)}
                       className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
@@ -165,7 +165,7 @@ export function PinnedMessagesModal({
           style={{ top: menuPosition.top, left: menuPosition.left, fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
           onMouseDown={(event) => event.stopPropagation()}
         >
-          <button
+          <button className="cursor-pointer"
             type="button"
             onClick={() => {
               const id = openMenuMessageId;
@@ -178,7 +178,7 @@ export function PinnedMessagesModal({
             <MessageSquare className="h-4 w-4" />
             Xem trong đoạn chat
           </button>
-          <button
+          <button className="cursor-pointer"
             type="button"
             onClick={() => {
               const id = openMenuMessageId;

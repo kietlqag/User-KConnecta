@@ -41,6 +41,7 @@ export interface Message {
   videoShareId?: string;
   videoShareThumbnail?: string;
   videoShareTitle?: string;
+  videoShareAuthorId?: string;
 }
 
 export interface ChatUser {

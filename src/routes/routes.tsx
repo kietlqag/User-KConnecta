@@ -12,6 +12,7 @@ import { MarketplacePage } from '../features/marketplace/pages';
 import LiveVideoPage from '../features/live/pages/LiveVideoPage';
 import SearchResultsPage from '../features/search/pages/SearchResultsPage';
 import MessengerPage from '../features/messenger/pages/MessengerPage';
+import { SavedPage } from '../features/saved/pages/SavedPage';
 import { GuestRoute, ProtectedRoute } from './RouteGuards';
 
 export const router = createBrowserRouter([
@@ -93,6 +94,10 @@ export const router = createBrowserRouter([
       {
         path: '/messages',
         Component: MessengerPage,
+      },
+      {
+        path: '/saved',
+        Component: SavedPage,
       },
       {
         path: '/stories/create',

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -24,7 +24,6 @@ function formatCommentTime(createdAt: string) {
 
 function mapComment(comment: PostCommentResponse): Comment {
   const fallbackAvatar = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(comment.userFullName || 'User')}`;
-
   return {
     id: comment.id,
     author: {
@@ -38,7 +37,7 @@ function mapComment(comment: PostCommentResponse): Comment {
   };
 }
 
-function buildCommentTree(items: PostCommentResponse[]) {
+function buildCommentTree(items: PostCommentResponse[]): Comment[] {
   const commentMap = new Map<string, Comment>();
   const rootComments: Comment[] = [];
 
@@ -48,9 +47,7 @@ function buildCommentTree(items: PostCommentResponse[]) {
 
   items.forEach((item) => {
     const mapped = commentMap.get(String(item.id));
-    if (!mapped) {
-      return;
-    }
+    if (!mapped) return;
 
     const parentId = item.parentCommentId ? String(item.parentCommentId) : null;
     if (parentId) {
@@ -65,6 +62,19 @@ function buildCommentTree(items: PostCommentResponse[]) {
   });
 
   return rootComments;
+}
+
+// DFS: find the parent node and insert the new reply
+function insertReplyDFS(comments: Comment[], parentId: string, newReply: Comment): Comment[] {
+  return comments.map((comment) => {
+    if (comment.id === parentId) {
+      return { ...comment, replies: [...(comment.replies || []), newReply] };
+    }
+    if (comment.replies && comment.replies.length > 0) {
+      return { ...comment, replies: insertReplyDFS(comment.replies, parentId, newReply) };
+    }
+    return comment;
+  });
 }
 
 export function CommentSection({
@@ -84,9 +94,7 @@ export function CommentSection({
       try {
         setIsLoading(true);
         const response = await postService.getComments(postId);
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         setComments(buildCommentTree(response));
         onCommentsLoaded?.(response.length);
@@ -95,17 +103,12 @@ export function CommentSection({
           toast.error(error instanceof Error ? error.message : 'Không thể tải bình luận');
         }
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
     void fetchComments();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [onCommentsLoaded, postId]);
 
   const handleAddComment = async (content: string) => {
@@ -117,10 +120,7 @@ export function CommentSection({
 
     try {
       setIsSubmitting(true);
-      const response = await postService.addComment(postId, {
-        userId: currentUser.id,
-        content,
-      });
+      const response = await postService.addComment(postId, { userId: currentUser.id, content });
 
       const newComment: Comment = {
         id: response.id,
@@ -146,6 +146,38 @@ export function CommentSection({
     }
   };
 
+  const handleAddReply = async (content: string, parentCommentId: string) => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      toast.error('Bạn cần đăng nhập để trả lời');
+      return;
+    }
+
+    const response = await postService.addComment(postId, {
+      userId: currentUser.id,
+      content,
+      parentCommentId,
+    });
+
+    const newReply: Comment = {
+      id: response.id,
+      author: {
+        name: response.userFullName || currentUser.fullName,
+        avatar:
+          response.userAvatarUrl ||
+          currentUser.avatarUrl ||
+          `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(response.userFullName || currentUser.fullName || 'User')}`,
+      },
+      content: response.content,
+      timestamp: 'Vừa xong',
+      likes: 0,
+      replies: [],
+    };
+
+    // DFS insert: find parent anywhere in the tree and append reply
+    setComments((prev) => insertReplyDFS(prev, parentCommentId, newReply));
+  };
+
   return (
     <div className="px-4 py-3">
       {isLoading ? (
@@ -165,7 +197,7 @@ export function CommentSection({
         <div className="mb-4 space-y-4">
           {comments.map((comment) => (
             <div key={comment.id} className="group">
-              <CommentItem comment={comment} />
+              <CommentItem comment={comment} depth={0} onReply={handleAddReply} />
             </div>
           ))}
         </div>
@@ -181,5 +213,3 @@ export function CommentSection({
     </div>
   );
 }
-
-

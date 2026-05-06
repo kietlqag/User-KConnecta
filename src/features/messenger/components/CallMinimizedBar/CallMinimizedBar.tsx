@@ -64,7 +64,7 @@ export function CallMinimizedBar({
       <div className="ml-auto flex items-center gap-2">
         {mode === 'incoming' ? (
           <>
-            <button
+            <button className="cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onRejectIncoming?.();
@@ -74,7 +74,7 @@ export function CallMinimizedBar({
             >
               <PhoneOff className="w-4 h-4 text-white" />
             </button>
-            <button
+            <button className="cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onAcceptIncoming?.();
@@ -87,7 +87,7 @@ export function CallMinimizedBar({
           </>
         ) : mode === 'in_call' ? (
           <>
-            <button
+            <button className="cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleSpeaker?.();
@@ -104,7 +104,7 @@ export function CallMinimizedBar({
               )}
             </button>
             {isVideoCall && (
-              <button
+              <button className="cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleCamera?.();
@@ -117,7 +117,7 @@ export function CallMinimizedBar({
                 {isCameraEnabled ? <Video className="w-4 h-4 text-white" /> : <VideoOff className="w-4 h-4 text-gray-700" />}
               </button>
             )}
-            <button
+            <button className="cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleMute?.();
@@ -129,7 +129,7 @@ export function CallMinimizedBar({
             >
               {isMuted ? <MicOff className="w-4 h-4 text-gray-700" /> : <Mic className="w-4 h-4 text-white" />}
             </button>
-            <button
+            <button className="cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onEndCall?.();
@@ -142,7 +142,7 @@ export function CallMinimizedBar({
           </>
         ) : (
           <>
-            <button
+            <button className="cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleSpeaker?.();
@@ -159,7 +159,7 @@ export function CallMinimizedBar({
               )}
             </button>
             {isVideoCall && (
-              <button
+              <button className="cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleCamera?.();
@@ -172,7 +172,7 @@ export function CallMinimizedBar({
                 {isCameraEnabled ? <Video className="w-4 h-4 text-white" /> : <VideoOff className="w-4 h-4 text-gray-700" />}
               </button>
             )}
-            <button
+            <button className="cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
                 onEndCall?.();

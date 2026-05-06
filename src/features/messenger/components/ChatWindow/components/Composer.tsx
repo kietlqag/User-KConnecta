@@ -1,5 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, Pause, X } from 'lucide-react';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import { Message } from '../../../types/message.types';
 
 interface ComposerProps {
@@ -62,6 +64,9 @@ export const Composer: React.FC<ComposerProps> = ({
   onPaste,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const emojiPickerRef = useRef<HTMLDivElement | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
   const canSend =
     connected &&
     (Boolean(inputText.trim()) || hasPendingImages || hasPendingFiles) &&
@@ -79,11 +84,40 @@ export const Composer: React.FC<ComposerProps> = ({
     resizeTextarea();
   }, [inputText]);
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      onSend();
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!emojiPickerRef.current) return;
+      if (emojiPickerRef.current.contains(event.target as Node)) return;
+      setShowEmojiPicker(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmojiPicker]);
+
+  const handleEmojiSelect = (emoji: { native?: string }) => {
+    const selectedEmoji = emoji.native;
+    if (!selectedEmoji) return;
+
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setInputText(`${inputText}${selectedEmoji}`);
+      return;
     }
+
+    const selectionStart = textarea.selectionStart ?? inputText.length;
+    const selectionEnd = textarea.selectionEnd ?? inputText.length;
+    const nextText = `${inputText.slice(0, selectionStart)}${selectedEmoji}${inputText.slice(selectionEnd)}`;
+
+    setInputText(nextText);
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const nextCaretPosition = selectionStart + selectedEmoji.length;
+      textarea.setSelectionRange(nextCaretPosition, nextCaretPosition);
+    });
   };
 
   return (
@@ -94,7 +128,7 @@ export const Composer: React.FC<ComposerProps> = ({
             <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Đang trả lời</p>
             <p className="text-sm text-gray-600 truncate">{replyToMessage.text}</p>
           </div>
-          <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 rounded-full">
+          <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 rounded-full cursor-pointer">
             <X className="w-4 h-4 text-gray-400" />
           </button>
         </div>
@@ -107,7 +141,7 @@ export const Composer: React.FC<ComposerProps> = ({
               type="button"
               onClick={onCancelVoice}
               disabled={isSendingVoice}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-full disabled:opacity-50"
+              className="p-2 text-blue-600 hover:bg-blue-50 rounded-full disabled:opacity-50 cursor-pointer"
               title="Hủy ghi âm"
             >
               <Trash2 className="w-5 h-5" />
@@ -117,7 +151,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onStopAndSendVoice}
                 disabled={isSendingVoice}
-                className="w-7 h-7 flex items-center justify-center rounded-full bg-white text-blue-600"
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-white text-blue-600 cursor-pointer"
               >
                 <Pause className="w-4 h-4 fill-current" />
               </button>
@@ -134,7 +168,7 @@ export const Composer: React.FC<ComposerProps> = ({
               type="button"
               onClick={onStopAndSendVoice}
               disabled={isSendingVoice}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-full disabled:opacity-50"
+              className="p-2 text-blue-600 hover:bg-blue-50 rounded-full disabled:opacity-50 cursor-pointer"
               title="Gửi ghi âm"
             >
               <Send className="w-6 h-6 fill-current" />
@@ -147,7 +181,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onStartVoice}
                 disabled={!connected || isSendingVoice}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 cursor-pointer"
                 title="Gửi tin nhắn thoại"
               >
                 <Mic className="w-5 h-5 text-blue-600" />
@@ -157,7 +191,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onImageClick}
                 disabled={!connected || isSendingImage}
-                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50"
+                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
                 title="Đính kèm ảnh"
               >
                 <ImageIcon className="w-5 h-5" />
@@ -166,7 +200,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onCameraClick}
                 disabled={!connected || isOpeningCamera}
-                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50"
+                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
                 title="Chụp ảnh"
               >
                 <Camera className="w-5 h-5" />
@@ -183,7 +217,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onFileClick}
                 disabled={!connected || isSendingFile}
-                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50"
+                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
                 title="Gửi file"
               >
                 <FileUp className="w-5 h-5" />
@@ -211,16 +245,33 @@ export const Composer: React.FC<ComposerProps> = ({
                 className="w-full pl-3 pr-11 py-2 bg-transparent outline-none transition-all text-sm disabled:opacity-50 resize-none min-h-[36px] max-h-[120px] leading-relaxed block"
                 style={{ height: 'auto' }}
               />
-              <button
-                onClick={onEmojiClick}
-                className="absolute right-2 bottom-1.5 p-1.5 hover:bg-gray-200 rounded-full text-blue-600"
-                title="Emoji"
-              >
-                <Smile className="w-5 h-5" />
-              </button>
+              <div ref={emojiPickerRef} className="absolute right-2 bottom-1.5">
+                {showEmojiPicker && (
+                  <div className="absolute bottom-10 right-0 z-50 shadow-xl rounded-lg overflow-hidden">
+                    <Picker
+                      data={data}
+                      onEmojiSelect={handleEmojiSelect}
+                      theme="light"
+                      locale="vi"
+                      previewPosition="none"
+                    />
+                  </div>
+                )}
+                <button className="cursor-pointer"
+                  type="button"
+                  onClick={() => {
+                    onEmojiClick();
+                    setShowEmojiPicker((prev) => !prev);
+                  }}
+                  className="p-1.5 hover:bg-gray-200 rounded-full text-blue-600"
+                  title="Emoji"
+                >
+                  <Smile className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            <button
+            <button className="cursor-pointer"
               onClick={onSend}
               disabled={!canSend}
               className={`p-2 rounded-full transition-all ${

@@ -13,7 +13,9 @@ function mapApiNotification(raw: any): Notification {
     relatedId: raw.relatedId ? String(raw.relatedId) : undefined,
     isActioned: raw.isActioned ?? raw.actioned ?? false,
     isUnread: raw.isUnread ?? raw.unread ?? false,
-    user: raw.user ?? { name: 'Người dùng', avatar: '' },
+    user: raw.user
+      ? { id: raw.user.id ? String(raw.user.id) : undefined, name: raw.user.name ?? 'Người dùng', avatar: raw.user.avatar ?? '' }
+      : { name: 'Người dùng', avatar: '' },
   };
 }
 

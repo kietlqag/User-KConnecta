@@ -42,7 +42,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         {fullScreen && (
           <button
             onClick={onClose}
-            className="-ml-2 rounded-full p-2 transition-colors hover:bg-gray-100"
+            className="-ml-2 rounded-full p-2 transition-colors hover:bg-gray-100 cursor-pointer"
             title="Quay lại danh sách chat"
           >
             <ArrowLeft className="h-5 w-5 text-gray-700" />
@@ -70,7 +70,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           onClick={hasActiveVoiceCall ? onEndVoiceCall : onStartVoiceCall}
           disabled={hasActiveVoiceCall ? false : !connected || !canStartVoiceCall}
-          className="rounded-full p-2.5 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full p-2.5 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
           title={voiceCallTitle}
         >
           {hasActiveVoiceCall ? (
@@ -82,13 +82,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           onClick={onStartVideoCall}
           disabled={hasActiveVoiceCall || !connected || !canStartVideoCall}
-          className="rounded-full p-2.5 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-full p-2.5 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
           title="Gọi video"
         >
           <Video className={`h-[22px] w-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-blue-600'}`} />
         </button>
         {fullScreen && (
-          <button className="rounded-full p-2.5 transition-colors hover:bg-gray-100" title="Thông tin">
+          <button className="rounded-full p-2.5 transition-colors hover:bg-gray-100 cursor-pointer" title="Thông tin">
             <Info className="h-5 w-5 text-blue-600" />
           </button>
         )}

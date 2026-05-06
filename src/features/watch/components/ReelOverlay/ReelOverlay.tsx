@@ -32,7 +32,7 @@ export const ReelOverlay = ({ creator, caption, music }: ReelOverlayProps) => {
             <CheckCircle className="w-5 h-5 text-blue-500 fill-blue-500" />
           )}
         </div>
-        <button className="ml-2 px-6 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-full transition-colors">
+        <button className="ml-2 px-6 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-full transition-colors cursor-pointer">
           Theo dõi
         </button>
       </div>
