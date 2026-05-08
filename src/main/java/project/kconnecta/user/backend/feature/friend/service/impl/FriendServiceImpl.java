@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendResponse;
+import project.kconnecta.user.backend.feature.friend.dto.response.FriendshipStatusResponse;
 import project.kconnecta.user.backend.feature.friend.entity.Friendship;
 import project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus;
 import project.kconnecta.user.backend.feature.friend.repository.FriendshipRepository;
@@ -161,6 +162,21 @@ public class FriendServiceImpl implements FriendService {
         Friendship friendship = friendshipRepository.findById(friendshipId)
                 .orElseThrow(() -> new ResourceNotFoundException("Friendship not found: " + friendshipId));
         friendshipRepository.delete(friendship);
+    }
+
+    @Override
+    public FriendshipStatusResponse getStatus(UUID meId, UUID targetId) {
+        return friendshipRepository.findBetweenUsers(meId, targetId)
+                .map(f -> FriendshipStatusResponse.builder()
+                        .friendshipId(f.getId())
+                        .status(f.getStatus())
+                        .sentByMe(f.getRequester().getId().equals(meId))
+                        .build())
+                .orElse(FriendshipStatusResponse.builder()
+                        .friendshipId(null)
+                        .status(null)
+                        .sentByMe(false)
+                        .build());
     }
 
     private FriendResponse mapToResponse(Friendship f, UUID currentUserId) {

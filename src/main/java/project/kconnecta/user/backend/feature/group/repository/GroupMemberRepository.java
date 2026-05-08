@@ -27,4 +27,12 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, UUID> 
 
     @Query("SELECT gm FROM GroupMember gm WHERE gm.group.id = :groupId AND gm.user.id = :userId")
     java.util.Optional<GroupMember> findByGroupIdAndUserId(@Param("groupId") UUID groupId, @Param("userId") UUID userId);
+
+    @Query("SELECT gm.group.id as groupId, COUNT(gm) as count FROM GroupMember gm WHERE gm.group.id IN :groupIds GROUP BY gm.group.id")
+    List<GroupCountProjection> countByGroupIdIn(@Param("groupIds") List<UUID> groupIds);
+
+    interface GroupCountProjection {
+        UUID getGroupId();
+        long getCount();
+    }
 }

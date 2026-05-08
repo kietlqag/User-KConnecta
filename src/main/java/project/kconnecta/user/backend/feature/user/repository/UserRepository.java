@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+// PostgreSQL performance tip: CREATE EXTENSION IF NOT EXISTS pg_trgm;
+// CREATE INDEX idx_users_full_name_trgm ON public.users USING GIN (full_name gin_trgm_ops);
+
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByUsername(String username);
@@ -27,4 +30,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query("SELECT u FROM User u WHERE u.id NOT IN :excludedIds")
     List<User> findSuggestionsExcluding(@Param("excludedIds") Collection<UUID> excludedIds, Pageable pageable);
+
+    @Query("SELECT u FROM User u WHERE LOWER(u.fullName) LIKE LOWER(CONCAT('%', :q, '%'))")
+    List<User> searchByFullName(@Param("q") String q, Pageable pageable);
 }

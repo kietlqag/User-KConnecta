@@ -1,0 +1,38 @@
+package project.kconnecta.user.backend.feature.search.dto.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SearchPostDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    private String id;
+    private String type; // "post"
+    private AuthorDto author;
+    private String timestamp;
+    private String content;
+    private String image;
+    private Long likes;
+    private Long comments;
+    private Long shares;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AuthorDto implements Serializable {
+        private static final long serialVersionUID = 1L;
+        private String name;
+        private String avatar;
+        private String type; // "person" | "group"
+    }
+}

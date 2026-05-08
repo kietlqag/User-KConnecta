@@ -22,6 +22,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.Map;
 
 /**
  * Activated only when spring.cache.type=redis (docker profile).
@@ -80,8 +81,14 @@ public class RedisConfig implements CachingConfigurer {
     @Override
     @ConditionalOnProperty(name = "spring.cache.type", havingValue = "redis")
     public RedisCacheManager cacheManager() {
+        // Per-cache TTL overrides — default is 600s, search suggestions expire in 60s
+        Map<String, RedisCacheConfiguration> perCacheConfig = Map.of(
+                "searchSuggest", redisCacheConfiguration().entryTtl(Duration.ofSeconds(60))
+        );
+
         return RedisCacheManager.builder(redisConnectionFactory())
                 .cacheDefaults(redisCacheConfiguration())
+                .withInitialCacheConfigurations(perCacheConfig)
                 .build();
     }
 

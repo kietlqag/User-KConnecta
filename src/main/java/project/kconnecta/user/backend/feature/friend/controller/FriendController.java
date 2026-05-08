@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import project.kconnecta.user.backend.feature.friend.dto.request.FriendRequestBody;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendResponse;
+import project.kconnecta.user.backend.feature.friend.dto.response.FriendshipStatusResponse;
 import project.kconnecta.user.backend.feature.friend.service.FriendService;
 
 import java.util.List;
@@ -32,6 +33,13 @@ public class FriendController {
     @GetMapping("/{userId}/suggestions")
     public ResponseEntity<List<FriendResponse>> getSuggestions(@PathVariable UUID userId) {
         return ResponseEntity.ok(friendService.getSuggestions(userId));
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<FriendshipStatusResponse> getStatus(
+            @RequestParam UUID me,
+            @RequestParam UUID target) {
+        return ResponseEntity.ok(friendService.getStatus(me, target));
     }
 
     @PostMapping("/request")

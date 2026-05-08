@@ -1,0 +1,22 @@
+package project.kconnecta.user.backend.feature.search.dto.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.util.List;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class SearchResultsResponse implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    private List<SearchPersonDto> people;
+    private List<SearchGroupDto> groups;
+    private List<SearchPostDto> posts;
+}
