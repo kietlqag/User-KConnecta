@@ -12,6 +12,7 @@ import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
 import { useFriendConversations } from '../../../messenger/hooks/useFriendConversations';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
+import { searchHistoryService } from '@/services/searchHistoryService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
@@ -89,17 +90,15 @@ export function Header() {
                 placeholder="Tìm kiếm trên KConnecta"
                 className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full outline-none focus:bg-gray-200 transition-colors"
                 value={searchQuery}
+                onFocus={() => setShowSearchSuggestions(true)}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  if (e.target.value) {
-                    setShowSearchSuggestions(true);
-                  } else {
-                    setShowSearchSuggestions(false);
-                  }
+                  setShowSearchSuggestions(true);
                 }}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    navigate(`/search?q=${searchQuery}`);
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    searchHistoryService.add({ type: 'keyword', text: searchQuery.trim() });
+                    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
                     setSearchQuery('');
                     setShowSearchSuggestions(false);
                   }

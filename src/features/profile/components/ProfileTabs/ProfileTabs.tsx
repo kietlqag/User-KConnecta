@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, MoreHorizontal, Lock, Settings, LogOut } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, Settings, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,7 +9,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { authService } from '@/services/authService';
-import { ChangePasswordDialog } from '@/features/auth/components';
 
 interface ProfileTabsProps {
   userId: string;
@@ -21,7 +20,6 @@ export function ProfileTabs({ userId, isOwnProfile: isOwnProfileProp }: ProfileT
   const currentPath = location.pathname;
   const currentUser = authService.getCurrentUser();
   const isOwnProfile = isOwnProfileProp ?? currentUser?.id === userId;
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = React.useState(false);
 
   const tabs = [
     { label: 'Tất cả', path: `/profile/${userId}` },
@@ -96,15 +94,6 @@ export function ProfileTabs({ userId, isOwnProfile: isOwnProfileProp }: ProfileT
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              {isOwnProfile && (
-                <>
-                  <DropdownMenuItem onClick={() => setIsPasswordDialogOpen(true)}>
-                    <Lock className="mr-2 h-4 w-4" />
-                    <span>Đổi mật khẩu</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
               <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Cài đặt</span>
@@ -119,7 +108,6 @@ export function ProfileTabs({ userId, isOwnProfile: isOwnProfileProp }: ProfileT
         </div>
       </div>
 
-      <ChangePasswordDialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen} />
     </div>
   );
 }

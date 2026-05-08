@@ -93,7 +93,10 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
         {/* Menu Items */}
         <div className="space-y-1">
           {/* Settings & Privacy */}
-          <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+          <button
+            onClick={() => { navigate('/settings'); onClose(); }}
+            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+          >
             <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
               <Settings className="w-5 h-5 text-gray-700" />
             </div>

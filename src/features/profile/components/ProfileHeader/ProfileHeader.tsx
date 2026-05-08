@@ -1,7 +1,10 @@
 import { useState, useRef } from 'react';
-import { Camera, Plus, Edit, ChevronDown, MoreHorizontal, X, Loader2 } from 'lucide-react';
+import { Camera, Plus, Edit, ChevronDown, MoreHorizontal, X, Loader2, UserPlus, UserCheck, UserX, MessageCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { toast } from 'sonner';
+import { friendService, type FriendshipStatusResponse } from '@/services/friendService';
+import { authService } from '@/services/authService';
 
 interface ProfileHeaderProps {
   coverPhoto: string;
@@ -12,6 +15,9 @@ interface ProfileHeaderProps {
   location?: string;
   school?: string;
   isOwnProfile?: boolean;
+  profileUserId?: string;
+  friendshipStatus?: FriendshipStatusResponse | null;
+  onFriendshipStatusChange?: (status: FriendshipStatusResponse | null) => void;
   onEditClick?: () => void;
   onAvatarUpload?: (file: File) => Promise<void>;
   onCoverUpload?: (file: File) => Promise<void>;
@@ -26,15 +32,67 @@ export function ProfileHeader({
   location,
   school,
   isOwnProfile = true,
+  profileUserId,
+  friendshipStatus,
+  onFriendshipStatusChange,
   onEditClick,
   onAvatarUpload,
   onCoverUpload,
 }: ProfileHeaderProps) {
+  const navigate = useNavigate();
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading] = useState(false);
+  const [friendActionLoading, setFriendActionLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSendFriendRequest = async () => {
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser || !profileUserId) return;
+    setFriendActionLoading(true);
+    try {
+      const res = await friendService.sendFriendRequest(currentUser.id, profileUserId);
+      onFriendshipStatusChange?.({
+        friendshipId: res.friendshipId,
+        status: 'PENDING',
+        sentByMe: true,
+      });
+      toast.success('Đã gửi lời mời kết bạn');
+    } catch {
+      toast.error('Không thể gửi lời mời kết bạn');
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
+
+  const handleCancelFriendRequest = async () => {
+    if (!friendshipStatus?.friendshipId) return;
+    setFriendActionLoading(true);
+    try {
+      await friendService.deleteFriendship(friendshipStatus.friendshipId);
+      onFriendshipStatusChange?.(null);
+      toast.success('Đã hủy lời mời kết bạn');
+    } catch {
+      toast.error('Không thể hủy lời mời kết bạn');
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
+
+  const handleUnfriend = async () => {
+    if (!friendshipStatus?.friendshipId) return;
+    setFriendActionLoading(true);
+    try {
+      await friendService.deleteFriendship(friendshipStatus.friendshipId);
+      onFriendshipStatusChange?.(null);
+      toast.success('Đã hủy kết bạn');
+    } catch {
+      toast.error('Không thể hủy kết bạn');
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -218,12 +276,56 @@ export function ProfileHeader({
                 </>
               ) : (
                 <>
-                  <button className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
-                    Thêm bạn bè
-                  </button>
-                  <button className="flex items-center gap-2 px-6 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium">
-                    Nhắn tin
-                  </button>
+                  {/* Friend action button — changes based on relationship */}
+                  {friendshipStatus?.status === 'ACCEPTED' ? (
+                    <button
+                      onClick={handleUnfriend}
+                      disabled={friendActionLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
+                    >
+                      {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                      Bạn bè
+                    </button>
+                  ) : friendshipStatus?.status === 'PENDING' && friendshipStatus.sentByMe ? (
+                    <button
+                      onClick={handleCancelFriendRequest}
+                      disabled={friendActionLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
+                    >
+                      {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+                      Đã gửi lời mời
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleSendFriendRequest}
+                      disabled={friendActionLoading}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-60"
+                    >
+                      {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                      Thêm bạn bè
+                    </button>
+                  )}
+
+                  {/* Message button — only active when friends */}
+                  {friendshipStatus?.status === 'ACCEPTED' ? (
+                    <button
+                      onClick={() => navigate(`/messages?with=${profileUserId}`)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Nhắn tin
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed"
+                      title="Kết bạn để nhắn tin"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Nhắn tin
+                    </button>
+                  )}
+
                   <button className="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors">
                     <MoreHorizontal className="w-5 h-5" />
                   </button>

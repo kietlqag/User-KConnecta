@@ -1,4 +1,5 @@
 export type SearchFilterType = 'all' | 'posts' | 'people' | 'reels' | 'marketplace' | 'pages' | 'groups' | 'events';
+export type SortType = 'relevance' | 'latest';
 
 export interface RecentSearchItem {
   id: string;
@@ -39,6 +40,38 @@ export interface SearchResultPost {
   timestamp: string;
   content: string;
   image?: string;
+  likes?: number;
+  comments?: number;
+  shares?: number;
 }
 
-export type SearchResult = SearchResultPerson | SearchResultGroup | SearchResultPost;
+export interface SearchResultReel {
+  id: string;
+  type: 'reel';
+  author: {
+    name: string;
+    avatar: string;
+  };
+  thumbnail: string;
+  duration: string;
+  views: number;
+  title?: string;
+}
+
+export interface SearchResultPage {
+  id: string;
+  type: 'page';
+  name: string;
+  avatar: string;
+  category: string;
+  followers: number;
+  isFollowing: boolean;
+  isVerified?: boolean;
+}
+
+export type SearchResult =
+  | SearchResultPerson
+  | SearchResultGroup
+  | SearchResultPost
+  | SearchResultReel
+  | SearchResultPage;

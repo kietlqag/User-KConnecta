@@ -62,6 +62,7 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
             </button>
           ))}
         </div>
+
       </div>
     </div>
   );

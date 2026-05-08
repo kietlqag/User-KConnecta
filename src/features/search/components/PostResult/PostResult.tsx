@@ -1,4 +1,4 @@
-import { Globe, MoreHorizontal } from 'lucide-react';
+import { Globe, MoreHorizontal, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
 import { SearchResultPost } from '../../types/search.types';
 
 interface PostResultProps {
@@ -42,12 +42,36 @@ export const PostResult = ({ post }: PostResultProps) => {
 
       {/* Image (if exists) */}
       {post.image && (
-        <div className="rounded-lg overflow-hidden bg-gray-100">
+        <div className="rounded-lg overflow-hidden bg-gray-100 mb-3">
           <img
             src={post.image}
             alt="Post content"
             className="w-full h-auto object-cover"
           />
+        </div>
+      )}
+
+      {/* Stats */}
+      {(post.likes || post.comments || post.shares) && (
+        <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
+          {post.likes != null && (
+            <span className="flex items-center gap-1">
+              <ThumbsUp className="w-3.5 h-3.5" />
+              {post.likes.toLocaleString()}
+            </span>
+          )}
+          {post.comments != null && (
+            <span className="flex items-center gap-1">
+              <MessageCircle className="w-3.5 h-3.5" />
+              {post.comments.toLocaleString()}
+            </span>
+          )}
+          {post.shares != null && (
+            <span className="flex items-center gap-1">
+              <Share2 className="w-3.5 h-3.5" />
+              {post.shares.toLocaleString()}
+            </span>
+          )}
         </div>
       )}
     </div>

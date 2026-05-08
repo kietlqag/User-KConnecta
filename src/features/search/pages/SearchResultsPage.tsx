@@ -1,170 +1,337 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { ArrowRight, SortAsc, SortDesc, Loader2 } from 'lucide-react';
 import { Header } from '../../home/components';
-import { SearchSidebar, PeopleResult, GroupResult, PostResult } from '../components';
-import { SearchFilterType, SearchResult, SearchResultPerson, SearchResultGroup, SearchResultPost } from '../types/search.types';
+import { SearchSidebar, PeopleResult, GroupResult, PostResult, ReelResult, PageResult } from '../components';
+import {
+  SearchFilterType,
+  SortType,
+  SearchResult,
+  SearchResultPerson,
+  SearchResultGroup,
+  SearchResultPost,
+  SearchResultReel,
+  SearchResultPage,
+} from '../types/search.types';
+import { searchService, SearchApiResponse } from '@/services/searchService';
 
-const mockSearchResults: SearchResult[] = [
-  {
-    id: '1',
-    type: 'person',
-    name: 'UTE',
-    avatar: 'https://images.unsplash.com/photo-1697131997056-287d3b732bf2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2aWV0bmFtZXNlJTIwd29tYW4lMjBwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdHxlbnwxfHx8fDE3Njk2NzE1NjB8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    bio: 'Nhạc sỹ - 100% về xuất, USA, San Antonio, Texas. Thơ kỹ - Luôn mơ mộng - 417K người theo dõi',
-    mutualFriends: 12,
-    isFollowing: false,
-  },
-  {
-    id: '2',
-    type: 'group',
-    name: 'UTE - THÁC MÁC HỌC TẬP 🎓 (Trường Đại học Công nghệ Kỹ thuật@TPHCM - HCMUTE)',
-    coverImage: 'https://images.unsplash.com/photo-1723474122917-f5d2ea3248c2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWNobm9sb2d5JTIwY29tbXVuaXR5JTIwZXZlbnR8ZW58MXx8fHwxNzY5NjcxNTYxfDA&ixlib=rb-4.1.0&q=80&w=1080',
-    privacy: 'public',
-    memberCount: 156000,
-    isMember: false,
-  },
-  {
-    id: '3',
-    type: 'group',
-    name: 'UTE Confessions - Đại Học Sư Phạm Kỹ Thuật TPHCM ( HCMUTE) ✅ ✅',
-    coverImage: 'https://images.unsplash.com/photo-1721701233956-ee6d7cd0ee18?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncm91cCUyMGZyaWVuZHMlMjBvdXRkb29yfGVufDF8fHx8MTc2OTY3MTU2MHww&ixlib=rb-4.1.0&q=80&w=1080',
-    privacy: 'public',
-    memberCount: 32000,
-    isMember: false,
-  },
-  {
-    id: '4',
-    type: 'group',
-    name: 'UTE Confession',
-    coverImage: 'https://images.unsplash.com/photo-1603201667141-5a2d4c673378?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMHRlYW0lMjBtZWV0aW5nfGVufDF8fHx8MTc2OTU5NTcxNXww&ixlib=rb-4.1.0&q=80&w=1080',
-    privacy: 'public',
-    memberCount: 16000,
-    isMember: true,
-  },
-  {
-    id: '5',
-    type: 'post',
-    author: {
-      name: 'Tuổi trẻ Trường ĐH Công nghệ Kỹ thuật TPHCM',
-      avatar: 'https://images.unsplash.com/photo-1725473824377-b1a507db7afc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhc2lhbiUyMHdvbWFuJTIwc3R1ZGVudCUyMGhhcHB5fGVufDF8fHx8MTc2OTY3MTU2Mnww&ixlib=rb-4.1.0&q=80&w=1080',
-      type: 'page',
-    },
-    timestamp: '16 tháng 6, 2023',
-    content: '✨UTE-er tấn độ di Youth Festival 2023 thỏi 🤘\n\n#HCMUTE2023',
-    image: 'https://images.unsplash.com/photo-1721701233956-ee6d7cd0ee18?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxncm91cCUyMGZyaWVuZHMlMjBvdXRkb29yfGVufDF8fHx8MTc2OTY3MTU2MHww&ixlib=rb-4.1.0&q=80&w=1080',
-  },
-  {
-    id: '6',
-    type: 'person',
-    name: 'Minh Đức',
-    avatar: 'https://images.unsplash.com/photo-1746105625407-5d49d69a2a47?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx2aWV0bmFtZXNlJTIwbWFuJTIwYnVzaW5lc3MlMjBwb3J0cmFpdHxlbnwxfHx8fDE3Njk2NzE1NjB8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    bio: 'Software Engineer tại UTE | Yêu thích công nghệ và sáng tạo',
-    mutualFriends: 5,
-    isFollowing: false,
-  },
-  {
-    id: '7',
-    type: 'person',
-    name: 'Hương Giang',
-    avatar: 'https://images.unsplash.com/photo-1725473824377-b1a507db7afc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhc2lhbiUyMHdvbWFuJTIwc3R1ZGVudCUyMGhhcHB5fGVufDF8fHx8MTc2OTY3MTU2Mnww&ixlib=rb-4.1.0&q=80&w=1080',
-    bio: 'Sinh viên UTE K18 | Ngành Công nghệ thông tin',
-    mutualFriends: 8,
-    isFollowing: true,
-  },
-];
+// ─── Section Header ───────────────────────────────────────────────────────────
+interface SectionHeaderProps {
+  title: string;
+  count: number;
+  onSeeAll: () => void;
+}
 
+const SectionHeader = ({ title, count, onSeeAll }: SectionHeaderProps) => (
+  <div className="flex items-center justify-between mb-3">
+    <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+    {count > 2 && (
+      <button
+        onClick={onSeeAll}
+        className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline transition-colors"
+      >
+        Xem tất cả
+        <ArrowRight className="w-4 h-4" />
+      </button>
+    )}
+  </div>
+);
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function SearchResultsPage() {
-  const [activeFilter, setActiveFilter] = useState<SearchFilterType>('all');
-  const [results, setResults] = useState(mockSearchResults);
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get('q') ?? '';
 
+  const [activeFilter, setActiveFilter] = useState<SearchFilterType>('all');
+  const [sortType, setSortType] = useState<SortType>('relevance');
+  const [dateFilter, setDateFilter] = useState('any');
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch real data whenever the search query changes
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    searchService
+      .search(query.trim())
+      .then((data: SearchApiResponse) => {
+        // Merge all result types into one flat list (the page then buckets by .type)
+        const merged: SearchResult[] = [
+          ...(data.people as SearchResultPerson[]),
+          ...(data.groups as SearchResultGroup[]),
+          ...(data.posts  as SearchResultPost[]),
+        ];
+        setResults(merged);
+      })
+      .catch(() => setError('Không thể tải kết quả tìm kiếm. Vui lòng thử lại.'))
+      .finally(() => setLoading(false));
+  }, [query]);
+
+  // Toggle handlers (optimistic UI — would be real API calls in production)
   const handleFollowToggle = (id: string) => {
-    setResults(results.map(result => {
-      if (result.id === id && result.type === 'person') {
-        return { ...result, isFollowing: !result.isFollowing };
-      }
-      return result;
-    }));
+    setResults(prev => prev.map(r =>
+      (r.id === id && (r.type === 'person' || r.type === 'page'))
+        ? { ...r, isFollowing: !r.isFollowing }
+        : r,
+    ));
   };
 
   const handleJoinToggle = (id: string) => {
-    setResults(results.map(result => {
-      if (result.id === id && result.type === 'group') {
-        return { ...result, isMember: !result.isMember };
-      }
-      return result;
-    }));
+    setResults(prev => prev.map(r =>
+      (r.id === id && r.type === 'group')
+        ? { ...r, isMember: !r.isMember }
+        : r,
+    ));
   };
 
-  // Filter results based on active filter
-  const filteredResults = results.filter(result => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'people') return result.type === 'person';
-    if (activeFilter === 'groups') return result.type === 'group';
-    if (activeFilter === 'posts') return result.type === 'post';
-    return true;
-  });
+  // Typed buckets
+  const people = results.filter((r): r is SearchResultPerson => r.type === 'person');
+  const groups = results.filter((r): r is SearchResultGroup  => r.type === 'group');
+  const reels  = results.filter((r): r is SearchResultReel   => r.type === 'reel');
+  const pages  = results.filter((r): r is SearchResultPage   => r.type === 'page');
+  const posts  = results.filter((r): r is SearchResultPost   => r.type === 'post');
+
+  const getSortedPosts = (list: SearchResultPost[]) => {
+    if (sortType === 'latest') {
+      return [...list].sort((a, b) =>
+        a.timestamp.includes('giờ') || a.timestamp.includes('phút') ? -1
+          : b.timestamp.includes('giờ') || b.timestamp.includes('phút') ? 1
+          : 0,
+      );
+    }
+    return list;
+  };
+
+  const filteredPosts = getSortedPosts(posts);
+
+  const getFilteredResults = (): SearchResult[] => {
+    switch (activeFilter) {
+      case 'people': return people;
+      case 'groups': return groups;
+      case 'posts':  return filteredPosts;
+      case 'reels':  return reels;
+      case 'pages':  return pages;
+      default:       return results;
+    }
+  };
+
+  const totalCount = activeFilter === 'all' ? results.length : getFilteredResults().length;
+
+  const renderResult = (result: SearchResult) => {
+    switch (result.type) {
+      case 'person':
+        return <PeopleResult key={result.id} person={result} onFollowToggle={handleFollowToggle} />;
+      case 'group':
+        return <GroupResult key={result.id} group={result} onJoinToggle={handleJoinToggle} />;
+      case 'post':
+        return <PostResult key={result.id} post={result} />;
+      case 'reel':
+        return <ReelResult key={result.id} reel={result} />;
+      case 'page':
+        return <PageResult key={result.id} page={result} onFollowToggle={handleFollowToggle} />;
+      default:
+        return null;
+    }
+  };
+
+  // ── Loading / Error states ────────────────────────────────────────────────
+  const LoadingSpinner = () => (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+    </div>
+  );
+
+  const EmptyState = ({ message }: { message: string }) => (
+    <div className="text-center py-16">
+      <p className="text-gray-400 text-lg">{message}</p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <Header />
 
-      {/* Main Container */}
       <div className="pt-14 flex">
         {/* Left Sidebar */}
-        <SearchSidebar 
-          activeFilter={activeFilter} 
+        <SearchSidebar
+          activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
+          sortType={sortType}
+          onSortChange={setSortType}
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
         />
 
         {/* Main Content */}
         <div className="flex-1 p-6 max-w-4xl">
-          {/* Results Count */}
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">
-              Tìm thấy {filteredResults.length} kết quả
-            </h2>
-          </div>
 
-          {/* Results List */}
-          <div className="space-y-4">
-            {filteredResults.map((result) => {
-              if (result.type === 'person') {
-                return (
-                  <PeopleResult 
-                    key={result.id}
-                    person={result as SearchResultPerson}
-                    onFollowToggle={handleFollowToggle}
-                  />
-                );
-              }
-              
-              if (result.type === 'group') {
-                return (
-                  <GroupResult 
-                    key={result.id}
-                    group={result as SearchResultGroup}
-                    onJoinToggle={handleJoinToggle}
-                  />
-                );
-              }
-              
-              if (result.type === 'post') {
-                return (
-                  <PostResult 
-                    key={result.id}
-                    post={result as SearchResultPost}
-                  />
-                );
-              }
-              
-              return null;
-            })}
-          </div>
+          {/* No query entered */}
+          {!query.trim() && (
+            <EmptyState message="Nhập từ khóa để tìm kiếm" />
+          )}
 
-          {/* No Results */}
-          {filteredResults.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Không tìm thấy kết quả nào</p>
+          {/* Loading */}
+          {query.trim() && loading && <LoadingSpinner />}
+
+          {/* Error */}
+          {!loading && error && (
+            <div className="text-center py-16">
+              <p className="text-red-500 text-base">{error}</p>
+            </div>
+          )}
+
+          {/* ── Tab: TẤT CẢ ── */}
+          {query.trim() && !loading && !error && activeFilter === 'all' && (
+            <div className="space-y-8">
+              {/* Sort bar */}
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  Tìm thấy {totalCount} kết quả{query ? ` cho "${query}"` : ''}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Sắp xếp:</span>
+                  <button
+                    onClick={() => setSortType(sortType === 'relevance' ? 'latest' : 'relevance')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                  >
+                    {sortType === 'relevance'
+                      ? <><SortAsc className="w-4 h-4" /> Liên quan nhất</>
+                      : <><SortDesc className="w-4 h-4" /> Mới nhất</>
+                    }
+                  </button>
+                </div>
+              </div>
+
+              {/* People */}
+              {people.length > 0 && (
+                <section>
+                  <SectionHeader title="Mọi người" count={people.length} onSeeAll={() => setActiveFilter('people')} />
+                  <div className="space-y-3">
+                    {people.slice(0, 2).map(p => (
+                      <PeopleResult key={p.id} person={p} onFollowToggle={handleFollowToggle} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Pages */}
+              {pages.length > 0 && (
+                <section>
+                  <SectionHeader title="Trang" count={pages.length} onSeeAll={() => setActiveFilter('pages')} />
+                  <div className="space-y-3">
+                    {pages.slice(0, 2).map(p => (
+                      <PageResult key={p.id} page={p} onFollowToggle={handleFollowToggle} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Groups */}
+              {groups.length > 0 && (
+                <section>
+                  <SectionHeader title="Nhóm" count={groups.length} onSeeAll={() => setActiveFilter('groups')} />
+                  <div className="grid grid-cols-2 gap-4">
+                    {groups.slice(0, 2).map(g => (
+                      <GroupResult key={g.id} group={g} onJoinToggle={handleJoinToggle} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Reels */}
+              {reels.length > 0 && (
+                <section>
+                  <SectionHeader title="Thước phim" count={reels.length} onSeeAll={() => setActiveFilter('reels')} />
+                  <div className="grid grid-cols-3 gap-4">
+                    {reels.slice(0, 3).map(r => (
+                      <ReelResult key={r.id} reel={r} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Posts */}
+              {filteredPosts.length > 0 && (
+                <section>
+                  <SectionHeader title="Bài viết" count={filteredPosts.length} onSeeAll={() => setActiveFilter('posts')} />
+                  <div className="space-y-3">
+                    {filteredPosts.slice(0, 2).map(p => (
+                      <PostResult key={p.id} post={p} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {totalCount === 0 && (
+                <EmptyState message={`Không tìm thấy kết quả nào cho "${query}"`} />
+              )}
+            </div>
+          )}
+
+          {/* ── Other Tabs ── */}
+          {query.trim() && !loading && !error && activeFilter !== 'all' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  {activeFilter === 'people'  && `${people.length} người`}
+                  {activeFilter === 'groups'  && `${groups.length} nhóm`}
+                  {activeFilter === 'posts'   && `${filteredPosts.length} bài viết`}
+                  {activeFilter === 'reels'   && `${reels.length} thước phim`}
+                  {activeFilter === 'pages'   && `${pages.length} trang`}
+                  {activeFilter === 'marketplace' && 'Marketplace'}
+                  {activeFilter === 'events'  && 'Sự kiện'}
+                </h2>
+
+                {activeFilter === 'posts' && (
+                  <button
+                    onClick={() => setSortType(sortType === 'relevance' ? 'latest' : 'relevance')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+                  >
+                    {sortType === 'relevance'
+                      ? <><SortAsc className="w-4 h-4" /> Liên quan nhất</>
+                      : <><SortDesc className="w-4 h-4" /> Mới nhất</>
+                    }
+                  </button>
+                )}
+              </div>
+
+              {activeFilter === 'reels' && (
+                <div className="grid grid-cols-3 gap-4">
+                  {reels.map(r => <ReelResult key={r.id} reel={r} />)}
+                </div>
+              )}
+
+              {activeFilter === 'groups' && (
+                <div className="grid grid-cols-2 gap-4">
+                  {groups.map(g => <GroupResult key={g.id} group={g} onJoinToggle={handleJoinToggle} />)}
+                </div>
+              )}
+
+              {(activeFilter === 'people' || activeFilter === 'posts' || activeFilter === 'pages') && (
+                <div className="space-y-3">
+                  {getFilteredResults().map(r => renderResult(r))}
+                </div>
+              )}
+
+              {(activeFilter === 'marketplace' || activeFilter === 'events') && (
+                <div className="text-center py-16 bg-white rounded-lg shadow-sm">
+                  <p className="text-gray-400 text-lg">Tính năng đang được phát triển</p>
+                  <p className="text-gray-400 text-sm mt-1">Vui lòng quay lại sau</p>
+                </div>
+              )}
+
+              {getFilteredResults().length === 0
+                && activeFilter !== 'marketplace'
+                && activeFilter !== 'events' && (
+                <EmptyState message={`Không tìm thấy kết quả nào cho "${query}"`} />
+              )}
             </div>
           )}
         </div>

@@ -1,4 +1,5 @@
 import { Lock, Globe, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { SearchResultGroup } from '../../types/search.types';
 
 interface GroupResultProps {
@@ -7,10 +8,13 @@ interface GroupResultProps {
 }
 
 export const GroupResult = ({ group, onJoinToggle }: GroupResultProps) => {
+  const navigate = useNavigate();
+  const goToGroup = () => navigate(`/groups/${group.id}`);
+
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       {/* Cover Image */}
-      <div className="h-32 w-full overflow-hidden bg-gray-200">
+      <div className="h-32 w-full overflow-hidden bg-gray-200 cursor-pointer" onClick={goToGroup}>
         <img
           src={group.coverImage}
           alt={group.name}
@@ -20,7 +24,10 @@ export const GroupResult = ({ group, onJoinToggle }: GroupResultProps) => {
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="font-semibold text-base mb-2 hover:underline cursor-pointer">
+        <h3
+          className="font-semibold text-base mb-2 hover:underline cursor-pointer"
+          onClick={goToGroup}
+        >
           {group.name}
         </h3>
 
@@ -38,7 +45,7 @@ export const GroupResult = ({ group, onJoinToggle }: GroupResultProps) => {
 
         {/* Join Button */}
         <button
-          onClick={() => onJoinToggle(group.id)}
+          onClick={(e) => { e.stopPropagation(); onJoinToggle(group.id); }}
           className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
             group.isMember
               ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'

@@ -3,3 +3,5 @@ export { SearchSidebar } from './SearchSidebar';
 export { PeopleResult } from './PeopleResult';
 export { GroupResult } from './GroupResult';
 export { PostResult } from './PostResult';
+export { ReelResult } from './ReelResult';
+export { PageResult } from './PageResult';

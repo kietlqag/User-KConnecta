@@ -11,6 +11,12 @@ export interface FriendApiResponse {
   createdAt: string | null;
 }
 
+export interface FriendshipStatusResponse {
+  friendshipId: string | null;
+  status: 'PENDING' | 'ACCEPTED' | null;
+  sentByMe: boolean;
+}
+
 export const friendService = {
   getFriends: (userId: string) =>
     api.get<FriendApiResponse[]>(`/friends/${userId}`),
@@ -29,4 +35,7 @@ export const friendService = {
 
   deleteFriendship: (friendshipId: string) =>
     api.delete<void>(`/friends/${friendshipId}`),
+
+  getStatus: (meId: string, targetId: string) =>
+    api.get<FriendshipStatusResponse>(`/friends/status?me=${meId}&target=${targetId}`),
 };

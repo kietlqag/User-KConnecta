@@ -13,6 +13,7 @@ import LiveVideoPage from '../features/live/pages/LiveVideoPage';
 import SearchResultsPage from '../features/search/pages/SearchResultsPage';
 import MessengerPage from '../features/messenger/pages/MessengerPage';
 import { SavedPage } from '../features/saved/pages/SavedPage';
+import SettingsPage from '../features/settings/pages/SettingsPage';
 import { GuestRoute, ProtectedRoute } from './RouteGuards';
 
 export const router = createBrowserRouter([
@@ -98,6 +99,10 @@ export const router = createBrowserRouter([
       {
         path: '/saved',
         Component: SavedPage,
+      },
+      {
+        path: '/settings',
+        Component: SettingsPage,
       },
       {
         path: '/stories/create',

@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { authService, type AuthUser } from '@/services/authService';
 import { postService, type PostResponse, type ReactionType } from '@/services/postService';
 import { Header } from '../../home/components/Header';
-import { friendService } from '@/services/friendService';
+import { friendService, type FriendshipStatusResponse } from '@/services/friendService';
 import {
   EditProfileDialog,
   FriendsPreview,
@@ -42,6 +42,7 @@ export function ProfilePage() {
   const [posts, setPosts] = React.useState<FeedPost[]>([]);
   const [friends, setFriends] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [friendshipStatus, setFriendshipStatus] = React.useState<FriendshipStatusResponse | null>(null);
 
   const fetchProfilePosts = React.useCallback(
     async (profileData?: AuthUser | null) => {
@@ -81,9 +82,14 @@ export function ProfilePage() {
         return;
       }
       try {
-        const [userResponse, friendsResponse] = await Promise.all([
+        const fetchStatusPromise = (!isOwnProfile && currentUser)
+          ? friendService.getStatus(currentUser.id, userId)
+          : Promise.resolve(null);
+
+        const [userResponse, friendsResponse, statusResponse] = await Promise.all([
           authService.getUserById(userId),
-          friendService.getFriends(userId)
+          friendService.getFriends(userId),
+          fetchStatusPromise,
         ]);
 
         if (!isMounted) return;
@@ -96,6 +102,7 @@ export function ProfilePage() {
           avatar: f.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(f.fullName)}&background=random`
         }));
         setFriends(mappedFriends);
+        setFriendshipStatus(statusResponse);
 
         await fetchProfilePosts(userResponse);
       } catch (error) {
@@ -193,6 +200,9 @@ export function ProfilePage() {
           location={userProfile.location}
           school={userProfile.school}
           isOwnProfile={isOwnProfile}
+          profileUserId={userProfile.id}
+          friendshipStatus={friendshipStatus}
+          onFriendshipStatusChange={setFriendshipStatus}
           onEditClick={() => setIsEditDialogOpen(true)}
           onAvatarUpload={isOwnProfile ? handleAvatarUpload : undefined}
           onCoverUpload={isOwnProfile ? handleCoverUpload : undefined}
