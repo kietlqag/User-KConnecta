@@ -4,13 +4,15 @@ import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, Corner
 import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface MessageBubbleProps {
   message: Message;
   onReact?: (messageId: string, emoji: string) => void;
   onReply?: (message: Message) => void;
   onJumpToMessage?: (messageId: string) => void;
-  onDelete?: (messageId: string) => void;
+  onDeleteForMe?: (messageId: string) => void;
+  onDeleteForEveryone?: (messageId: string) => void;
   onForward?: (message: Message) => void;
   onReport?: (message: Message) => void;
   onPinMessage?: (message: Message) => void;
@@ -34,7 +36,8 @@ export const MessageBubble = ({
   onReact,
   onReply,
   onJumpToMessage,
-  onDelete,
+  onDeleteForMe,
+  onDeleteForEveryone,
   onForward,
   onReport,
   onPinMessage,
@@ -591,18 +594,6 @@ export const MessageBubble = ({
                 left: `${menuPosition.left}px`,
               }}
             >
-              {message.isOwn && (
-                <button className="cursor-pointer"
-                  onClick={() => {
-                    onDelete?.(message.id);
-                    setShowMenu(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
-                  disabled={message.deleted}
-                >
-                  Gỡ
-                </button>
-              )}
               <button className="cursor-pointer"
                 onClick={() => {
                   onPinMessage?.(message);
@@ -630,6 +621,31 @@ export const MessageBubble = ({
               >
                 Báo cáo
               </button>
+              {message.isOwn && (
+                <>
+                  <div className="my-1 h-px bg-gray-200" />
+                  <button className="cursor-pointer"
+                      onClick={() => {
+                      onDeleteForMe?.(message.id);
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    disabled={message.deleted}
+                  >
+                    Gỡ ở phía tôi
+                  </button>
+                  <button className="cursor-pointer"
+                    onClick={() => {
+                      onDeleteForEveryone?.(message.id);
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    disabled={message.deleted}
+                  >
+                    Gỡ cho mọi người
+                  </button>
+                </>
+              )}
             </div>,
             document.body,
           )}

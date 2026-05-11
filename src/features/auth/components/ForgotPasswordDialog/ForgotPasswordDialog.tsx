@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { X, Mail, Lock, CheckCircle2, Loader2 } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { OTPInput } from '../OTPInput/OTPInput';
@@ -147,7 +147,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
 
         {/* Body */}
         <div className="px-6 py-6">
-          {/* ── Step: email ── */}
+          {/* -- Step: email -- */}
           {step === 'email' && (
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div className="flex flex-col items-center mb-4">
@@ -173,7 +173,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
             </form>
           )}
 
-          {/* ── Step: OTP ── */}
+          {/* -- Step: OTP -- */}
           {step === 'otp' && (
             <form onSubmit={handleOtpSubmit} className="space-y-4">
               <div className="flex flex-col items-center mb-4">
@@ -215,12 +215,12 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
                 onClick={() => setStep('email')}
                 className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
-                ← Thay đổi email
+                Quay lại đổi email
               </button>
             </form>
           )}
 
-          {/* ── Step: reset ── */}
+          {/* -- Step: reset -- */}
           {step === 'reset' && (
             <form onSubmit={handleResetSubmit} className="space-y-4">
               <div className="flex flex-col items-center mb-4">
@@ -232,7 +232,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
               <div>
                 <input
                   type="password"
-                  placeholder="Mật khẩu mới (ít nhất 8 ký tự)"
+                  placeholder="Mật khẩu mới (Ít nhất 8 ký tự)"
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: '' })); }}
                   className={inputClass}
@@ -256,7 +256,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
             </form>
           )}
 
-          {/* ── Step: success ── */}
+          {/* -- Step: success -- */}
           {step === 'success' && (
             <div className="flex flex-col items-center text-center space-y-4 py-2">
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center">
@@ -276,3 +276,6 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
     </div>
   );
 }
+
+
+

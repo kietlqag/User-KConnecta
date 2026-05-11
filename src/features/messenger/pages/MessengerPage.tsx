@@ -458,6 +458,8 @@ function ChatInfoPanel({
   onOpenRenameGroup,
   onOpenChangeGroupImage,
   onOpenNicknames,
+  onForwardMedia,
+  onJumpToMessage,
   onLoadMoreHistory,
   hasMoreHistory = false,
   isLoadingMoreHistory = false,
@@ -473,6 +475,8 @@ function ChatInfoPanel({
   onOpenRenameGroup?: () => void;
   onOpenChangeGroupImage?: () => void;
   onOpenNicknames?: () => void;
+  onForwardMedia?: (message: Message) => void;
+  onJumpToMessage?: (messageId: string) => void;
   onLoadMoreHistory?: () => Promise<void> | void;
   hasMoreHistory?: boolean;
   isLoadingMoreHistory?: boolean;
@@ -514,6 +518,9 @@ function ChatInfoPanel({
     files: false,
     links: false,
   });
+  const messagesRef = useRef<Message[]>(messages);
+  const hasMoreHistoryRef = useRef<boolean>(hasMoreHistory);
+  const isLoadingMoreHistoryRef = useRef<boolean>(isLoadingMoreHistory);
 
   useEffect(() => {
     setVisibleLimits({
@@ -621,6 +628,18 @@ function ChatInfoPanel({
     }
   }, [mediaActionMenuId]);
 
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    hasMoreHistoryRef.current = hasMoreHistory;
+  }, [hasMoreHistory]);
+
+  useEffect(() => {
+    isLoadingMoreHistoryRef.current = isLoadingMoreHistory;
+  }, [isLoadingMoreHistory]);
+
   const downloadMedia = useCallback((url: string, suggestedName?: string) => {
     const link = document.createElement('a');
     link.href = url;
@@ -659,6 +678,61 @@ function ChatInfoPanel({
       toast.error('Không thể copy ảnh.');
     }
   }, []);
+
+  const parseMessageIdFromAssetId = useCallback((assetId: string) => {
+    const match = assetId.match(/^([0-9a-fA-F-]{36})-(?:image|file|link)-\d+$/);
+    return match?.[1] || null;
+  }, []);
+
+  const findMessageIdByMedia = useCallback((assetId: string, assetUrl: string) => {
+    const fromAssetId = parseMessageIdFromAssetId(assetId);
+    if (fromAssetId) return fromAssetId;
+    const normalizedUrl = assetUrl.trim();
+    const target = messagesRef.current.find((message) => {
+      const urls = message.imageUrls && message.imageUrls.length > 0
+        ? message.imageUrls
+        : message.imageUrl
+          ? [message.imageUrl]
+          : [];
+      return urls.some((url) => (url || '').trim() === normalizedUrl);
+    });
+    return target?.id || null;
+  }, [parseMessageIdFromAssetId]);
+
+  const jumpToOriginalMessage = useCallback(async (assetId: string, assetUrl: string) => {
+    const findAndScroll = () => {
+      const messageId = findMessageIdByMedia(assetId, assetUrl);
+      if (!messageId) return false;
+      if (onJumpToMessage) {
+        onJumpToMessage(messageId);
+        return true;
+      }
+      const target = document.getElementById(`chat-message-${messageId}`);
+      if (!target) return false;
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return true;
+    };
+
+    if (findAndScroll()) {
+      return;
+    }
+
+    if (!onLoadMoreHistory) {
+      toast.info('Không tìm thấy tin nhắn gốc trong lịch sử hiện tại.');
+      return;
+    }
+
+    for (let i = 0; i < 8; i += 1) {
+      if (!hasMoreHistoryRef.current || isLoadingMoreHistoryRef.current) break;
+      await Promise.resolve(onLoadMoreHistory());
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      if (findAndScroll()) {
+        return;
+      }
+    }
+
+    toast.info('Không tìm thấy tin nhắn gốc.');
+  }, [findMessageIdByMedia, onJumpToMessage, onLoadMoreHistory]);
 
   useEffect(() => {
     const latest = messages[messages.length - 1];
@@ -877,16 +951,16 @@ function ChatInfoPanel({
                         </button>
                         <button className="cursor-pointer"
                           type="button"
-                          onClick={async () => {
-                            if (navigator.share) {
-                              try {
-                                await navigator.share({ url: item.url });
-                              } catch {
-                                // ignore cancel
-                              }
-                            } else {
-                              await copyText(item.url, 'Đã sao chép để chia sẻ.');
-                            }
+                          onClick={() => {
+                            onForwardMedia?.({
+                              id: `forward-media-${item.id}`,
+                              senderId: currentUserId || 'me',
+                              text: item.type === 'video' ? 'Video' : 'Ảnh',
+                              imageUrl: item.url,
+                              imageUrls: [item.url],
+                              timestamp: parseBackendDate(item.createdAt) ?? new Date(),
+                              isOwn: true,
+                            });
                             setMediaActionMenuId(null);
                           }}
                           className="w-full px-4 py-2 text-left text-[15px] text-gray-800 hover:bg-gray-100"
@@ -896,7 +970,7 @@ function ChatInfoPanel({
                         <button className="cursor-pointer"
                           type="button"
                           onClick={() => {
-                            toast.info('Chức năng xem tin nhắn gốc sẽ được cập nhật.');
+                            void jumpToOriginalMessage(item.id, item.url);
                             setMediaActionMenuId(null);
                           }}
                           className="w-full px-4 py-2 text-left text-[15px] text-gray-800 hover:bg-gray-100"
@@ -1305,7 +1379,9 @@ function ChatInfoPanel({
               className="w-24 h-24 rounded-full object-cover mx-auto"
             />
             <h3 className="mt-3 text-lg font-semibold text-gray-900 tracking-tight">{user.name}</h3>
-            <p className="text-xs text-gray-500">{formatLastActiveLabel(user.isOnline, user.lastActiveAt)}</p>
+            {formatLastActiveLabel(user.isOnline, user.lastActiveAt) ? (
+              <p className="text-xs text-gray-500">{formatLastActiveLabel(user.isOnline, user.lastActiveAt)}</p>
+            ) : null}
           </div>
 
           <div className="mt-6 flex shrink-0 items-start justify-center gap-8 text-center">
@@ -1523,6 +1599,7 @@ export default function MessengerPage() {
   const [selectedForwardTargetIds, setSelectedForwardTargetIds] = useState<string[]>([]);
   const [pinnedMessagesByConversation, setPinnedMessagesByConversation] = useState<Record<string, PinnedChatMessage[]>>({});
   const [openPinnedMessagesSignal, setOpenPinnedMessagesSignal] = useState(0);
+  const [jumpToMessageRequest, setJumpToMessageRequest] = useState<{ messageId: string; nonce: number } | null>(null);
   const [pinnedConversationUserIds, setPinnedConversationUserIds] = useState<string[]>([]);
   const [serverGroupConversations, setServerGroupConversations] = useState<Conversation[]>([]);
   const [groupMembersById, setGroupMembersById] = useState<Record<string, ChatUser[]>>({});
@@ -1539,6 +1616,8 @@ export default function MessengerPage() {
     remote: null,
   });
   const isUploadingRecordingRef = useRef(false);
+  const historyByUserRef = useRef<Record<string, HistoryState>>({});
+  const messagesByUserRef = useRef<Record<string, Message[]>>({});
   const initialHistoryInFlightRef = useRef<Set<string>>(new Set());
   const olderHistoryInFlightRef = useRef<Set<string>>(new Set());
   const pendingMessageStatusRef = useRef<
@@ -1552,6 +1631,14 @@ export default function MessengerPage() {
     }, 30000);
     return () => window.clearInterval(intervalId);
   }, []);
+
+  useEffect(() => {
+    historyByUserRef.current = historyByUser;
+  }, [historyByUser]);
+
+  useEffect(() => {
+    messagesByUserRef.current = messagesByUser;
+  }, [messagesByUser]);
 
   const baseConversationItems: Conversation[] = baseConversations.map((c) => ({
     ...c,
@@ -1816,7 +1903,7 @@ export default function MessengerPage() {
     async (peerUserId: string) => {
       if (!currentUser?.id) return;
       if (initialHistoryInFlightRef.current.has(peerUserId)) return;
-      const current = historyByUser[peerUserId] ?? defaultHistoryState();
+      const current = historyByUserRef.current[peerUserId] ?? defaultHistoryState();
       if (current.initialized || current.loadingInitial) return;
       initialHistoryInFlightRef.current.add(peerUserId);
 
@@ -1874,14 +1961,14 @@ export default function MessengerPage() {
         initialHistoryInFlightRef.current.delete(peerUserId);
       }
     },
-    [currentUser?.id, historyByUser],
+    [currentUser?.id],
   );
 
   const loadOlderHistory = useCallback(
     async (peerUserId: string) => {
       if (!currentUser?.id) return;
       if (olderHistoryInFlightRef.current.has(peerUserId)) return;
-      const current = historyByUser[peerUserId] ?? defaultHistoryState();
+      const current = historyByUserRef.current[peerUserId] ?? defaultHistoryState();
       if (!current.initialized || current.loadingOlder || !current.hasMore) return;
       olderHistoryInFlightRef.current.add(peerUserId);
 
@@ -1917,7 +2004,7 @@ export default function MessengerPage() {
               beforeCreatedAt,
             });
         const olderMessages = historyPage.messages.map((m) => mapIncomingToMessage(m, currentUser.id));
-        const existingMessages = messagesByUser[peerUserId] ?? [];
+        const existingMessages = messagesByUserRef.current[peerUserId] ?? [];
         const existingIds = new Set(existingMessages.map((m) => m.id));
         const dedupOlder = olderMessages.filter((m) => !existingIds.has(m.id));
         setMessagesByUser((prev) => {
@@ -1947,7 +2034,7 @@ export default function MessengerPage() {
         olderHistoryInFlightRef.current.delete(peerUserId);
       }
     },
-    [currentUser?.id, historyByUser, messagesByUser],
+    [currentUser?.id],
   );
 
   useEffect(() => {
@@ -2870,7 +2957,7 @@ export default function MessengerPage() {
     [],
   );
 
-  const handleDeleteMessage = useCallback(
+  const handleDeleteMessageForEveryone = useCallback(
     async (messageId: string) => {
       try {
         await chatService.deleteMessage(messageId);
@@ -2879,6 +2966,22 @@ export default function MessengerPage() {
       }
     },
     [],
+  );
+
+  const handleDeleteMessageForMe = useCallback(
+    (messageId: string) => {
+      if (!activeChatUserId) return;
+      setMessagesByUser((prev) => {
+        const current = prev[activeChatUserId] ?? [];
+        const nextMessages = current.filter((message) => message.id !== messageId);
+        if (nextMessages.length === current.length) return prev;
+        return {
+          ...prev,
+          [activeChatUserId]: nextMessages,
+        };
+      });
+    },
+    [activeChatUserId],
   );
 
   const handleReportMessage = useCallback(async (messageId: string) => {
@@ -3160,7 +3263,8 @@ export default function MessengerPage() {
                 onSendMessage={handleSendMessage}
                 onLoadOlder={handleLoadOlderMessages}
                 onReactMessage={handleReactMessage}
-                onDeleteMessage={handleDeleteMessage}
+                onDeleteMessageForMe={handleDeleteMessageForMe}
+                onDeleteMessageForEveryone={handleDeleteMessageForEveryone}
                 onReportMessage={handleReportMessage}
                 onForwardMessage={handleOpenForwardModal}
                 onPinMessage={handlePinMessage}
@@ -3192,6 +3296,7 @@ export default function MessengerPage() {
                 groupCreatorName={activeGroupCreatorName}
                 groupMembers={activeChatUserId ? groupMembersById[activeChatUserId] ?? [] : []}
                 themeColor={activeChatThemeColor}
+                jumpToMessageRequest={jumpToMessageRequest}
               />
             </div>
           ) : activeChatUserId && loadingConversations ? (
@@ -3223,6 +3328,8 @@ export default function MessengerPage() {
               onOpenRenameGroup={() => openGroupSettingsModal('rename')}
               onOpenChangeGroupImage={openGroupImagePicker}
               onOpenNicknames={() => openGroupSettingsModal('nicknames')}
+              onForwardMedia={handleOpenForwardModal}
+              onJumpToMessage={(messageId) => setJumpToMessageRequest({ messageId, nonce: Date.now() })}
               onLoadMoreHistory={handleLoadOlderMessages}
               hasMoreHistory={hasOlderMessages}
               isLoadingMoreHistory={loadingOlderMessages}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Mail } from 'lucide-react';
 import { authService } from '@/services/authService';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
@@ -37,7 +37,7 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
     try {
       const { exists } = await authService.checkEmailExists(email);
       if (exists) {
-        setError('Email đã được sử dụng');
+        setError('Email da duoc su dung');
         return;
       }
 
@@ -105,3 +105,5 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
     </div>
   );
 }
+
+

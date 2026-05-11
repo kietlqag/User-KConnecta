@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { KeyRound, Loader2, CheckCircle2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Header } from '../../home/components/Header';
@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 type SettingsSection = 'forgot-password' | 'change-password';
 type ForgotStep = 'email' | 'otp' | 'reset' | 'success';
 
-// ── Sidebar ───────────────────────────────────────────────────────────────────
+// -- Sidebar -------------------------------------------------------------------
 
 const navItems: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
   { id: 'change-password', label: 'Đổi mật khẩu', icon: <Lock className="w-5 h-5" /> },
@@ -50,7 +50,7 @@ function SettingsSidebar({
   );
 }
 
-// ── Change Password section ───────────────────────────────────────────────────
+// -- Change Password section ---------------------------------------------------
 
 interface ChangePasswordForm {
   oldPassword: string;
@@ -140,7 +140,7 @@ function ChangePasswordSection() {
                 <div className="relative">
                   <input
                     type={showOld ? 'text' : 'password'}
-                    placeholder="••••••••"
+                    placeholder="........"
                     className={inputClass}
                     {...register('oldPassword', { required: 'Mật khẩu hiện tại là bắt buộc' })}
                   />
@@ -195,7 +195,7 @@ function ChangePasswordSection() {
   );
 }
 
-// ── Forgot Password section ───────────────────────────────────────────────────
+// -- Forgot Password section ---------------------------------------------------
 
 function ForgotPasswordSection() {
   const [step, setStep] = useState<ForgotStep>('email');
@@ -367,7 +367,7 @@ function ForgotPasswordSection() {
             </button>
             <div className="flex items-center justify-between text-sm">
               <button type="button" onClick={() => setStep('email')} className="text-gray-500 hover:text-gray-700">
-                ← Thay đổi email
+                Quay lại đổi email
               </button>
               {countdown > 0 ? (
                 <span className="text-gray-400">Gửi lại sau {countdown}s</span>
@@ -429,7 +429,7 @@ function ForgotPasswordSection() {
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// -- Main page -----------------------------------------------------------------
 
 export default function SettingsPage() {
   const [active, setActive] = useState<SettingsSection>('change-password');
@@ -447,3 +447,6 @@ export default function SettingsPage() {
     </div>
   );
 }
+
+
+

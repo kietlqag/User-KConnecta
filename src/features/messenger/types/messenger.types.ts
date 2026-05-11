@@ -1,7 +1,7 @@
-export interface Conversation {
+﻿export interface Conversation {
   id: string;          // friendshipId
   user: {
-    id: string;        // userId (UUID) - dung lam receiverId khi gui tin
+    id: string;        // userId (UUID) - dùng làm receiverId khi gửi tin
     name: string;
     avatar: string;
     isOnline?: boolean;
@@ -16,3 +16,4 @@ export interface Conversation {
 }
 
 export type MessengerFilter = 'all' | 'unread' | 'groups';
+

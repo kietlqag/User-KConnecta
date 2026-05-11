@@ -12,7 +12,8 @@ interface MessageListProps {
   scrollToBottom: () => void;
   onJumpToMessage: (id: string) => void;
   onReactMessage?: (id: string, emoji: string) => void;
-  onDeleteMessage?: (id: string) => void;
+  onDeleteMessageForMe?: (id: string) => void;
+  onDeleteMessageForEveryone?: (id: string) => void;
   onReplyMessage: (msg: Message) => void;
   onForwardMessage: (msg: Message) => void;
   onPinMessage?: (msg: Message) => void;
@@ -40,7 +41,8 @@ export const MessageList = forwardRef(({
   scrollToBottom,
   onJumpToMessage,
   onReactMessage,
-  onDeleteMessage,
+  onDeleteMessageForMe,
+  onDeleteMessageForEveryone,
   onReplyMessage,
   onForwardMessage,
   onPinMessage,
@@ -160,7 +162,8 @@ export const MessageList = forwardRef(({
                 deliveryStatusLabel={message.id === lastOwnMessageId ? latestOwnMessageStatus : undefined}
                 onReact={onReactMessage}
                 onReply={onReplyMessage}
-                onDelete={onDeleteMessage}
+                onDeleteForMe={onDeleteMessageForMe}
+                onDeleteForEveryone={onDeleteMessageForEveryone}
                 onForward={onForwardMessage}
                 onPinMessage={onPinMessage}
                 isPinnedMessage={pinnedMessageIdSet.has(message.id)}

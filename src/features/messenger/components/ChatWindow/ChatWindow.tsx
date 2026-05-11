@@ -1,5 +1,4 @@
-﻿import { useState, useMemo } from 'react';
-import { useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Pin } from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { ChatHeader } from './components/ChatHeader';
@@ -25,7 +24,8 @@ interface ChatWindowProps {
   onSendMessage: (content: string) => void;
   onLoadOlder?: () => Promise<void> | void;
   onReactMessage?: (messageId: string, emoji: string) => void;
-  onDeleteMessage?: (messageId: string) => void;
+  onDeleteMessageForMe?: (messageId: string) => void;
+  onDeleteMessageForEveryone?: (messageId: string) => void;
   onReportMessage?: (messageId: string) => Promise<boolean> | boolean;
   onForwardMessage?: (message: Message) => void;
   onPinMessage?: (message: Message) => void;
@@ -51,6 +51,7 @@ interface ChatWindowProps {
   groupCreatorName?: string;
   groupMembers?: ChatUser[];
   themeColor?: string | null;
+  jumpToMessageRequest?: { messageId: string; nonce: number } | null;
 }
 
 function formatVoiceDuration(totalSec: number) {
@@ -70,7 +71,8 @@ export const ChatWindow = ({
   onSendMessage,
   onLoadOlder,
   onReactMessage,
-  onDeleteMessage,
+  onDeleteMessageForMe,
+  onDeleteMessageForEveryone,
   onReportMessage,
   onForwardMessage,
   onPinMessage,
@@ -91,9 +93,10 @@ export const ChatWindow = ({
   onToggleMute,
   isGroupChat = false,
   isGroupCreator = false,
-  groupCreatorName = 'Người tạo',
+  groupCreatorName = 'Ngu?i t?o',
   groupMembers = [],
   themeColor,
+  jumpToMessageRequest = null,
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
@@ -181,7 +184,7 @@ export const ChatWindow = ({
     setReplyToMessage(null);
   };
 
-  const jumpToMessage = async (messageId: string) => {
+  const jumpToMessage = useCallback(async (messageId: string) => {
     if (!messageId) return;
     const scrollToTarget = () => {
       const target = document.getElementById(`chat-message-${messageId}`);
@@ -200,7 +203,7 @@ export const ChatWindow = ({
       await new Promise(resolve => window.requestAnimationFrame(resolve));
       if (scrollToTarget() || !hasOlder) return;
     }
-  };
+  }, [hasOlder, onLoadOlder]);
 
   const handleReport = async (message: Message) => {
     const excerpt = message.text.slice(0, 40);
@@ -218,6 +221,11 @@ export const ChatWindow = ({
       setShowPinnedModal(true);
     }
   }, [openPinnedMessagesSignal]);
+
+  useEffect(() => {
+    if (!jumpToMessageRequest?.messageId) return;
+    void jumpToMessage(jumpToMessageRequest.messageId);
+  }, [jumpToMessage, jumpToMessageRequest?.nonce]);
 
   return (
     <div className={`
@@ -253,7 +261,7 @@ export const ChatWindow = ({
           <Pin className="h-4 w-4 shrink-0 text-gray-500" />
           <span className="text-sm text-gray-500">Đã ghim</span>
           <span className="truncate text-sm font-medium text-gray-900">
-            {pinnedMessages[0]?.text || 'Tin nhắn'}
+            {pinnedMessages[0]?.text || 'Tin nh?n'}
           </span>
           {pinnedMessages.length > 1 && (
             <span className="ml-auto rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700">
@@ -272,7 +280,8 @@ export const ChatWindow = ({
         scrollToBottom={scrollToBottom}
         onJumpToMessage={jumpToMessage}
         onReactMessage={onReactMessage}
-        onDeleteMessage={onDeleteMessage}
+        onDeleteMessageForMe={onDeleteMessageForMe}
+        onDeleteMessageForEveryone={onDeleteMessageForEveryone}
         onReplyMessage={setReplyToMessage}
         onForwardMessage={(msg) => {
           if (onForwardMessage) {
@@ -365,3 +374,6 @@ export const ChatWindow = ({
   );
 
 };
+
+
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { friendService } from '@/services/friendService';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
@@ -159,12 +159,13 @@ function formatTimestamp(iso?: string | null) {
   if (diffHours < 24) return `${diffHours} giờ`;
 
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} ngày`;
+  if (diffDays < 30) return `${diffDays} ngày`;
 
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-  }).format(date);
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${Math.max(1, diffMonths)} tháng`;
+
+  const diffYears = Math.floor(diffMonths / 12);
+  return `${Math.max(1, diffYears)} năm`;
 }
 
 export function useFriendConversations(options: UseFriendConversationsOptions = {}): UseFriendConversationsResult {
@@ -317,5 +318,6 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
 
   return { conversations, loading, error, reload: load };
 }
+
 
 
