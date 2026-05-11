@@ -9,6 +9,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import project.kconnecta.user.backend.exception.ValidationException;
 
 import java.util.Objects;
 
@@ -27,7 +28,7 @@ public class MailService {
 
     public void sendMail(String to, String subject, String body) {
         if (!StringUtils.hasText(fromEmail)) {
-            throw new IllegalStateException("MAIL_USERNAME chua duoc cau hinh, khong the gui email.");
+            throw new ValidationException("MAIL_USERNAME chua duoc cau hinh, khong the gui email.");
         }
         String from = Objects.requireNonNull(fromEmail);
         String recipient = Objects.requireNonNull(to);
@@ -48,13 +49,13 @@ public class MailService {
             log.info("Email sent successfully: to={}, subject={}", recipient, mailSubject);
         } catch (MailAuthenticationException ex) {
             log.error("SMTP authentication failed for sender {}", fromEmail, ex);
-            throw new RuntimeException("Dang nhap SMTP that bai. Kiem tra MAIL_USERNAME va MAIL_PASSWORD/App Password.", ex);
+            throw new ValidationException("Dang nhap SMTP that bai. Kiem tra MAIL_USERNAME va MAIL_PASSWORD/App Password.");
         } catch (MailSendException ex) {
             log.error("SMTP accepted request but failed while sending email to {}", recipient, ex);
-            throw new RuntimeException("SMTP khong gui duoc email den nguoi nhan. Kiem tra dia chi email, spam folder, hoac han muc nha cung cap.", ex);
+            throw new ValidationException("SMTP khong gui duoc email den nguoi nhan. Kiem tra dia chi email, spam folder, hoac han muc nha cung cap.");
         } catch (Exception ex) {
             log.error("Unexpected error while sending email to {}", recipient, ex);
-            throw new RuntimeException("Khong the gui email OTP qua SMTP. Kiem tra cau hinh MAIL_USERNAME, MAIL_PASSWORD, host, port va ket noi mang.", ex);
+            throw new ValidationException("Khong the gui email OTP qua SMTP. Kiem tra cau hinh MAIL_USERNAME, MAIL_PASSWORD, host, port va ket noi mang.");
         }
     }
 }

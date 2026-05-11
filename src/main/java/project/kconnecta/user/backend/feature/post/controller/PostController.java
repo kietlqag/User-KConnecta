@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
@@ -19,9 +20,11 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.service.PostService;
 
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -93,8 +96,37 @@ public class PostController {
     }
 
     @GetMapping("/{id}/comments")
-    public ResponseEntity<List<PostCommentResponse>> getComments(@PathVariable UUID id) {
-        return ResponseEntity.ok(postService.getComments(id));
+    public ResponseEntity<Page<PostCommentResponse>> getComments(
+            @PathVariable UUID id,
+            @RequestParam(required = false) UUID currentUserId,
+            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+        return ResponseEntity.ok(postService.getComments(id, currentUserId, pageable));
+    }
+
+    @GetMapping("/{id}/comments/{commentId}/replies")
+    public ResponseEntity<List<PostCommentResponse>> getReplies(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            @RequestParam(required = false) UUID currentUserId) {
+        return ResponseEntity.ok(postService.getReplies(commentId, currentUserId));
+    }
+
+    @PostMapping("/{id}/comments/{commentId}/likes")
+    public ResponseEntity<Void> likeComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            @RequestParam UUID userId) {
+        postService.likeComment(commentId, userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}/likes")
+    public ResponseEntity<Void> unlikeComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            @RequestParam UUID userId) {
+        postService.unlikeComment(commentId, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/comments")
@@ -103,6 +135,23 @@ public class PostController {
             @Valid @RequestBody CreateCommentRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(postService.addComment(id, request));
+    }
+
+    @PutMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<PostCommentResponse> updateComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            @Valid @RequestBody UpdateCommentRequest request) {
+        return ResponseEntity.ok(postService.updateComment(commentId, request));
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<Map<String, Boolean>> deleteComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            @RequestParam UUID userId) {
+        boolean softDeleted = postService.deleteComment(commentId, userId);
+        return ResponseEntity.ok(Map.of("softDeleted", softDeleted));
     }
 
     @PostMapping("/{id}/shares")

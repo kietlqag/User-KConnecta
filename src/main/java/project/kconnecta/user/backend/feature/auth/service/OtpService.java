@@ -1,6 +1,8 @@
 package project.kconnecta.user.backend.feature.auth.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +17,7 @@ import java.time.Duration;
 import java.util.Random;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 @Transactional
 public class OtpService {
@@ -40,12 +43,22 @@ public class OtpService {
                 : OtpType.ACCOUNT_ACTIVATION;
 
         String code = String.format("%06d", new Random().nextInt(1_000_000));
-        String htmlContent = getOtpEmailTemplate(code);
-        mailService.sendMail(email, "Ma xac nhan KConnecta", htmlContent);
-
         String key = buildKey(email, otpType);
         OtpSession session = new OtpSession(code, otpType, false);
-        redisTemplate.opsForValue().set(key, session, Duration.ofMinutes(OTP_EXPIRATION_MINUTES));
+        try {
+            redisTemplate.opsForValue().set(key, session, Duration.ofMinutes(OTP_EXPIRATION_MINUTES));
+        } catch (RedisConnectionFailureException ex) {
+            log.error("Redis unavailable while creating OTP for {}", email, ex);
+            throw new ValidationException("He thong OTP tam thoi gian doan (Redis). Vui long thu lai sau.");
+        }
+
+        String htmlContent = getOtpEmailTemplate(code);
+        try {
+            mailService.sendMail(email, "Ma xac nhan KConnecta", htmlContent);
+        } catch (RuntimeException ex) {
+            redisTemplate.delete(key);
+            throw ex;
+        }
     }
 
     public void verifyOtp(String email, String code) {

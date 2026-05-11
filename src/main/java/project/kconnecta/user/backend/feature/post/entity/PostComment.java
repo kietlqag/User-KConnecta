@@ -5,6 +5,8 @@ import lombok.*;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -31,6 +33,13 @@ public class PostComment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_comment_id")
     private PostComment parentComment;
+
+    @OneToMany(mappedBy = "parentComment", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<PostComment> replies = new ArrayList<>();
+
+    @Builder.Default
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean not null default false")
+    private boolean isDeleted = false;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;

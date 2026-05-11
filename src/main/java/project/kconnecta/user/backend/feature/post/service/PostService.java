@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.post.service;
 
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
@@ -28,8 +29,13 @@ public interface PostService {
     PostReactionResponse addReaction(UUID postId, AddReactionRequest request);
     void removeReaction(UUID postId, UUID userId);
     PostReactionDetailsResponse getReactionDetails(UUID postId);
-    List<PostCommentResponse> getComments(UUID postId);
+    Page<PostCommentResponse> getComments(UUID postId, UUID currentUserId, Pageable pageable);
+    List<PostCommentResponse> getReplies(UUID commentId, UUID currentUserId);
     PostCommentResponse addComment(UUID postId, CreateCommentRequest request);
+    PostCommentResponse updateComment(UUID commentId, UpdateCommentRequest request);
+    boolean deleteComment(UUID commentId, UUID userId);
+    void likeComment(UUID commentId, UUID userId);
+    void unlikeComment(UUID commentId, UUID userId);
     PostShareResponse sharePost(UUID postId, SharePostRequest request);
     void savePost(SavePostRequest request);
     List<PostResponse> getSavedPosts(UUID userId);

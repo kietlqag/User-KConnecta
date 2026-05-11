@@ -3,7 +3,9 @@ package project.kconnecta.user.backend.feature.auth.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.auth.dto.request.*;
 import project.kconnecta.user.backend.feature.auth.dto.response.AuthResponse;
 import project.kconnecta.user.backend.feature.auth.service.AuthService;
@@ -70,23 +72,14 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Doi mat khau thanh cong"));
     }
 
-    @PostMapping("/test-token")
-    public ResponseEntity<?> testToken(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        if (username == null || username.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "username is required"));
-        }
-        return ResponseEntity.ok(authService.getTestToken(username));
-    }
-
     @PostMapping("/set-password")
-    public ResponseEntity<?> setPassword(@RequestBody Map<String, String> body) {
-        String email = body.get("email");
+    public ResponseEntity<?> setPassword(@AuthenticationPrincipal UserPrincipal principal,
+                                         @RequestBody Map<String, String> body) {
         String newPassword = body.get("newPassword");
-        if (email == null || newPassword == null || newPassword.length() < 8) {
+        if (newPassword == null || newPassword.length() < 8) {
             return ResponseEntity.badRequest().body(Map.of("message", "Du lieu khong hop le"));
         }
-        authService.setPassword(email, newPassword);
+        authService.setPassword(principal.getUserId(), newPassword);
         return ResponseEntity.ok(Map.of("message", "Dat mat khau thanh cong"));
     }
 }

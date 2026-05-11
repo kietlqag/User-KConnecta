@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -62,6 +63,12 @@ public class GlobalExceptionHandler {
                 .orElse("Validation error");
 
         return buildResponse(HttpStatus.BAD_REQUEST, errorMessage);
+    }
+
+    // 503 redis unavailable
+    @ExceptionHandler(RedisConnectionFailureException.class)
+    public ResponseEntity<?> handleRedis(RedisConnectionFailureException ex) {
+        return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "Redis khong kha dung. Vui long thu lai sau.");
     }
 
     // fallback 500

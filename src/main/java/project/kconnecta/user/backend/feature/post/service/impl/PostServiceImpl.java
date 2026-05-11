@@ -9,6 +9,7 @@ import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostMediaRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
@@ -28,6 +29,7 @@ import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
 import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
 import project.kconnecta.user.backend.feature.post.entity.PostSaved;
+import project.kconnecta.user.backend.feature.post.entity.PostCommentLike;
 import project.kconnecta.user.backend.feature.post.repository.*;
 import project.kconnecta.user.backend.feature.post.service.PostService;
 import project.kconnecta.user.backend.feature.group.entity.Group;
@@ -56,6 +58,7 @@ public class PostServiceImpl implements PostService {
     private final PostRepository postRepository;
     private final PostReactionRepository postReactionRepository;
     private final PostCommentRepository postCommentRepository;
+    private final PostCommentLikeRepository postCommentLikeRepository;
     private final PostShareRepository postShareRepository;
     private final PostSavedRepository postSavedRepository;
     private final UserRepository userRepository;
@@ -273,24 +276,43 @@ public class PostServiceImpl implements PostService {
                 .build();
     }
 
+    private PostCommentResponse toCommentResponse(PostComment comment, UUID parentCommentId, UUID currentUserId) {
+        boolean deleted = comment.isDeleted();
+        return PostCommentResponse.builder()
+                .id(comment.getId())
+                .postId(comment.getPost().getId())
+                .userId(deleted ? null : comment.getUser().getId())
+                .username(deleted ? null : comment.getUser().getUsername())
+                .userFullName(deleted ? null : comment.getUser().getFullName())
+                .userAvatarUrl(deleted ? null : comment.getUser().getAvatarUrl())
+                .parentCommentId(parentCommentId)
+                .isDeleted(deleted)
+                .replyCount(postCommentRepository.countByParentCommentId(comment.getId()))
+                .likeCount(deleted ? 0 : postCommentLikeRepository.countByCommentId(comment.getId()))
+                .isLikedByCurrentUser(!deleted && currentUserId != null && postCommentLikeRepository.existsByCommentIdAndUserId(comment.getId(), currentUserId))
+                .content(deleted ? null : comment.getContent())
+                .createdAt(comment.getCreatedAt())
+                .updatedAt(comment.getUpdatedAt())
+                .build();
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<PostCommentResponse> getComments(UUID postId) {
+    public Page<PostCommentResponse> getComments(UUID postId, UUID currentUserId, Pageable pageable) {
         getPost(postId);
-        return postCommentRepository.findAllByPostIdOrderByCreatedAtAsc(postId)
+        return postCommentRepository
+                .findTopLevelVisible(postId, pageable)
+                .map(comment -> toCommentResponse(comment, null, currentUserId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PostCommentResponse> getReplies(UUID commentId, UUID currentUserId) {
+        postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        return postCommentRepository.findVisibleReplies(commentId)
                 .stream()
-                .map(comment -> PostCommentResponse.builder()
-                        .id(comment.getId())
-                        .postId(comment.getPost().getId())
-                        .userId(comment.getUser().getId())
-                        .username(comment.getUser().getUsername())
-                        .userFullName(comment.getUser().getFullName())
-                        .userAvatarUrl(comment.getUser().getAvatarUrl())
-                        .parentCommentId(comment.getParentComment() == null ? null : comment.getParentComment().getId())
-                        .content(comment.getContent())
-                        .createdAt(comment.getCreatedAt())
-                        .updatedAt(comment.getUpdatedAt())
-                        .build())
+                .map(comment -> toCommentResponse(comment, commentId, currentUserId))
                 .toList();
     }
 
@@ -324,18 +346,66 @@ public class PostServiceImpl implements PostService {
                 post.getId()
         );
 
-        return PostCommentResponse.builder()
-                .id(saved.getId())
-                .postId(saved.getPost().getId())
-                .userId(saved.getUser().getId())
-                .username(saved.getUser().getUsername())
-                .userFullName(saved.getUser().getFullName())
-                .userAvatarUrl(saved.getUser().getAvatarUrl())
-                .parentCommentId(saved.getParentComment() == null ? null : saved.getParentComment().getId())
-                .content(saved.getContent())
-                .createdAt(saved.getCreatedAt())
-                .updatedAt(saved.getUpdatedAt())
-                .build();
+        return toCommentResponse(saved, saved.getParentComment() == null ? null : saved.getParentComment().getId(), request.getUserId());
+    }
+
+    @Override
+    public PostCommentResponse updateComment(UUID commentId, UpdateCommentRequest request) {
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        if (!comment.getUser().getId().equals(request.getUserId())) {
+            throw new ValidationException("Bạn không có quyền chỉnh sửa bình luận này");
+        }
+        comment.setContent(request.getContent().trim());
+        PostComment saved = postCommentRepository.save(comment);
+        return toCommentResponse(saved, saved.getParentComment() == null ? null : saved.getParentComment().getId(), request.getUserId());
+    }
+
+    @Override
+    public boolean deleteComment(UUID commentId, UUID userId) {
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        if (!comment.getUser().getId().equals(userId)) {
+            throw new ValidationException("Bạn không có quyền xóa bình luận này");
+        }
+        PostComment parent = comment.getParentComment();
+        long childCount = postCommentRepository.countByParentCommentId(commentId);
+        if (childCount > 0) {
+            comment.setDeleted(true);
+            postCommentRepository.save(comment);
+            return true; // soft deleted — hiện placeholder
+        }
+        postCommentRepository.delete(comment);
+        cleanupSoftDeletedAncestors(parent);
+        return false; // hard deleted — xóa khỏi danh sách
+    }
+
+    private void cleanupSoftDeletedAncestors(PostComment ancestor) {
+        if (ancestor == null || !ancestor.isDeleted()) return;
+        long remaining = postCommentRepository.countByParentCommentId(ancestor.getId());
+        if (remaining == 0) {
+            PostComment grandparent = ancestor.getParentComment();
+            postCommentRepository.delete(ancestor);
+            cleanupSoftDeletedAncestors(grandparent);
+        }
+    }
+
+    @Override
+    public void likeComment(UUID commentId, UUID userId) {
+        if (postCommentLikeRepository.existsByCommentIdAndUserId(commentId, userId)) return;
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        User user = getUser(userId, "User not found");
+        postCommentLikeRepository.save(PostCommentLike.builder()
+                .comment(comment)
+                .user(user)
+                .build());
+    }
+
+    @Override
+    @Transactional
+    public void unlikeComment(UUID commentId, UUID userId) {
+        postCommentLikeRepository.deleteByCommentIdAndUserId(commentId, userId);
     }
 
     @Override

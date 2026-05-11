@@ -30,6 +30,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -224,9 +225,11 @@ public class AuthService {
         }
     }
 
-    public void setPassword(String email, String newPassword) {
-        Account account = accountRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
+    public void setPassword(UUID userId, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nguoi dung khong ton tai"));
+
+        Account account = user.getAccount();
 
         if (account.getPasswordHash() != null) {
             throw new ValidationException("Tai khoan da co mat khau, vui long dung tinh nang doi mat khau");
@@ -234,12 +237,6 @@ public class AuthService {
 
         account.setPasswordHash(passwordEncoder.encode(newPassword));
         accountRepository.save(account);
-    }
-
-    public AuthResponse getTestToken(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("Username not found: " + username));
-        return toResponse(user);
     }
 
     private AuthResponse toResponse(User user) {

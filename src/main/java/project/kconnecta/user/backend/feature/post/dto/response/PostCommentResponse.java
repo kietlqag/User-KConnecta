@@ -16,6 +16,10 @@ public class PostCommentResponse {
     private String userFullName;
     private String userAvatarUrl;
     private UUID parentCommentId;
+    private boolean isDeleted;
+    private long replyCount;
+    private long likeCount;
+    private boolean isLikedByCurrentUser;
     private String content;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
