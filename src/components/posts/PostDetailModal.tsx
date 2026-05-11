@@ -94,11 +94,6 @@ export function PostDetailModal({
     onCommentAdded?.();
   }, [onCommentAdded, onCommentCountChange]);
 
-  const handleCommentsLoaded = useCallback((count: number) => {
-    setCommentCount(count);
-    onCommentCountChange?.(count);
-  }, [onCommentCountChange]);
-
   if (!isOpen) return null;
 
   return (
@@ -210,7 +205,6 @@ export function PostDetailModal({
           <CommentSection
             postId={post.id}
             onCommentAdded={handleCommentAdded}
-            onCommentsLoaded={handleCommentsLoaded}
           />
         </div>
       </div>

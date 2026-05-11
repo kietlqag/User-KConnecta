@@ -1624,6 +1624,7 @@ export default function MessengerPage() {
     Record<string, { status: IncomingMessageStatus['status']; updatedAt?: string }>
   >({});
   const groupImageFileInputRef = useRef<HTMLInputElement | null>(null);
+  const lastActiveChatUserRef = useRef<ChatUser | null>(null);
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -1781,6 +1782,17 @@ export default function MessengerPage() {
     if (!activeChatUserId) return null;
     return conversations.find((conversation) => conversation.user.id === activeChatUserId)?.themeColor ?? null;
   }, [activeChatUserId, conversations]);
+
+  // Keep the last known chat user so we can still show the window after unfriending
+  if (activeChatUser) {
+    lastActiveChatUserRef.current = activeChatUser;
+  }
+  const isFriendChat = Boolean(activeChatUser) || isActiveGroupChat;
+  const effectiveChatUser: ChatUser | null =
+    activeChatUser ??
+    (!isActiveGroupChat && lastActiveChatUserRef.current?.id === activeChatUserId
+      ? lastActiveChatUserRef.current
+      : null);
 
   const selectableFriends = useMemo(() => baseConversationItems.map((c) => c.user), [baseConversationItems]);
 
@@ -3251,10 +3263,11 @@ export default function MessengerPage() {
         </div>
 
         <div className="flex-1 min-h-0 min-w-0 flex gap-2 relative">
-          {activeChatUser ? (
+          {effectiveChatUser ? (
             <div className="flex-1 min-h-0 min-w-0 relative">
               <ChatWindow
-                user={activeChatUser}
+                user={effectiveChatUser}
+                isFriend={isFriendChat}
                 messages={activeMessages}
                 loading={loadingMessages}
                 loadingOlder={loadingOlderMessages}
@@ -3279,13 +3292,15 @@ export default function MessengerPage() {
                 callMediaType={voiceCall.callMediaType}
                 isMuted={voiceCall.isMuted}
                 canStartVoiceCall={
-                  !voiceCall.hasActiveCall && !voiceCall.isRinging
-                    ? true
-                    : voiceCall.activePeerUserId === activeChatUser.id ||
-                      (isActiveGroupChat &&
-                        voiceCall.activeGroupConversationId === activeChatUser.id.replace('group:', ''))
+                  !isFriendChat
+                    ? false
+                    : !voiceCall.hasActiveCall && !voiceCall.isRinging
+                      ? true
+                      : voiceCall.activePeerUserId === effectiveChatUser.id ||
+                        (isActiveGroupChat &&
+                          voiceCall.activeGroupConversationId === effectiveChatUser.id.replace('group:', ''))
                 }
-                canStartVideoCall={!voiceCall.hasActiveCall && !voiceCall.isRinging}
+                canStartVideoCall={isFriendChat && !voiceCall.hasActiveCall && !voiceCall.isRinging}
                 onStartVoiceCall={handleStartVoiceCall}
                 onStartVideoCall={handleStartVideoCall}
                 onEndVoiceCall={handleEndVoiceCall}
@@ -3315,9 +3330,9 @@ export default function MessengerPage() {
             </div>
           )}
 
-          {activeChatUser && (
+          {effectiveChatUser && (
             <ChatInfoPanel
-              user={activeChatUser}
+              user={effectiveChatUser}
               messages={activeMessages}
               isGroupChat={isActiveGroupChat}
               groupMembers={activeChatUserId ? groupMembersById[activeChatUserId] ?? [] : []}

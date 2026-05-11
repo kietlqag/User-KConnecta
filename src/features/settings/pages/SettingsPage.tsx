@@ -142,6 +142,7 @@ function ChangePasswordSection() {
                     type={showOld ? 'text' : 'password'}
                     placeholder="........"
                     className={inputClass}
+                    autoComplete="current-password"
                     {...register('oldPassword', { required: 'Mật khẩu hiện tại là bắt buộc' })}
                   />
                   <EyeToggle show={showOld} onToggle={() => setShowOld(v => !v)} />
@@ -157,6 +158,7 @@ function ChangePasswordSection() {
                   type={showNew ? 'text' : 'password'}
                   placeholder="Ít nhất 8 ký tự"
                   className={inputClass}
+                  autoComplete="new-password"
                   {...register('newPassword', {
                     required: 'Mật khẩu mới là bắt buộc',
                     minLength: { value: 8, message: 'Mật khẩu phải có ít nhất 8 ký tự' },
@@ -174,6 +176,7 @@ function ChangePasswordSection() {
                   type={showConfirm ? 'text' : 'password'}
                   placeholder="Nhập lại mật khẩu mới"
                   className={inputClass}
+                  autoComplete="new-password"
                   {...register('confirmPassword', {
                     required: 'Vui lòng xác nhận mật khẩu',
                     validate: v => v === newPassword || 'Mật khẩu xác nhận không khớp',
@@ -203,6 +206,8 @@ function ForgotPasswordSection() {
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -287,13 +292,15 @@ function ForgotPasswordSection() {
 
   const inputClass = 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors';
   const btnClass = 'w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
+  const flowSteps = ['email', 'otp', 'reset'] as const;
+  const stepIndex = step === 'success' ? flowSteps.length : flowSteps.indexOf(step);
 
   const stepIndicator = (
     <div className="flex items-center gap-2 mb-6">
-      {(['email', 'otp', 'reset'] as const).map((s, i) => (
+      {flowSteps.map((s, i) => (
         <div key={s} className="flex items-center gap-2">
           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-            step === 'success' || (['email', 'otp', 'reset'] as const).indexOf(step) > i
+            stepIndex > i
               ? 'bg-blue-600 text-white'
               : step === s
               ? 'bg-blue-100 text-blue-600 border-2 border-blue-600'
@@ -301,7 +308,7 @@ function ForgotPasswordSection() {
           }`}>
             {i + 1}
           </div>
-          {i < 2 && <div className={`h-0.5 w-8 ${(['email', 'otp', 'reset'] as const).indexOf(step) > i || step === 'success' ? 'bg-blue-600' : 'bg-gray-200'}`} />}
+          {i < 2 && <div className={`h-0.5 w-8 ${stepIndex > i ? 'bg-blue-600' : 'bg-gray-200'}`} />}
         </div>
       ))}
     </div>
@@ -393,16 +400,34 @@ function ForgotPasswordSection() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
-              <input type="password" placeholder="Ít nhất 8 ký tự" value={password}
-                onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: '' })); }}
-                className={inputClass} />
+              <div className="relative">
+                <input type={showPassword ? 'text' : 'password'} placeholder="Ít nhất 8 ký tự" value={password}
+                  onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: '' })); }}
+                  className={`${inputClass} pr-11`} autoComplete="new-password" />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu</label>
-              <input type="password" placeholder="Nhập lại mật khẩu mới" value={confirmPassword}
-                onChange={(e) => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: '' })); }}
-                className={inputClass} />
+              <div className="relative">
+                <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Nhập lại mật khẩu mới" value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: '' })); }}
+                  className={`${inputClass} pr-11`} autoComplete="new-password" />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
             </div>
             <button type="submit" disabled={loading} className={btnClass}>

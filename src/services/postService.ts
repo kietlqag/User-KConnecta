@@ -110,7 +110,11 @@ export interface PostCommentResponse {
   userFullName: string;
   userAvatarUrl?: string | null;
   parentCommentId?: string | null;
-  content: string;
+  replyCount: number;
+  likeCount: number;
+  isLikedByCurrentUser: boolean;
+  isDeleted: boolean;
+  content: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -169,10 +173,27 @@ export const postService = {
     api.delete<void>(`/posts/${postId}/reactions?userId=${encodeURIComponent(userId)}`),
   getReactionDetails: (postId: string) =>
     api.get<PostReactionDetailsResponse>(`/posts/${postId}/reactions/details`),
-  getComments: (postId: string) =>
-    api.get<PostCommentResponse[]>(`/posts/${postId}/comments`),
+  getComments: (postId: string, page = 0, size = 10, currentUserId?: string) => {
+    const params = new URLSearchParams({ page: String(page), size: String(size), sort: 'createdAt,asc' });
+    if (currentUserId) params.append('currentUserId', currentUserId);
+    return api.get<PaginatedResponse<PostCommentResponse>>(`/posts/${postId}/comments?${params.toString()}`);
+  },
+  getReplies: (postId: string, commentId: string, currentUserId?: string) => {
+    const params = new URLSearchParams();
+    if (currentUserId) params.append('currentUserId', currentUserId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return api.get<PostCommentResponse[]>(`/posts/${postId}/comments/${commentId}/replies${qs}`);
+  },
   addComment: (postId: string, data: CreateCommentPayload) =>
     api.post<PostCommentResponse>(`/posts/${postId}/comments`, data),
+  updateComment: (postId: string, commentId: string, data: { userId: string; content: string }) =>
+    api.put<PostCommentResponse>(`/posts/${postId}/comments/${commentId}`, data),
+  likeComment: (postId: string, commentId: string, userId: string) =>
+    api.post<void>(`/posts/${postId}/comments/${commentId}/likes?userId=${encodeURIComponent(userId)}`, {}),
+  unlikeComment: (postId: string, commentId: string, userId: string) =>
+    api.delete<void>(`/posts/${postId}/comments/${commentId}/likes?userId=${encodeURIComponent(userId)}`),
+  deleteComment: (postId: string, commentId: string, userId: string) =>
+    api.delete<{ softDeleted: boolean }>(`/posts/${postId}/comments/${commentId}?userId=${encodeURIComponent(userId)}`),
   sharePost: (postId: string, data: SharePostPayload) =>
     api.post<PostShareResponse>(`/posts/${postId}/shares`, data),
   getPostById: (postId: string, currentUserId?: string) => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -8,10 +8,11 @@ import { CommentItem, type Comment } from './CommentItem';
 
 interface CommentSectionProps {
   postId: string;
-  initialComments?: Comment[];
   onCommentAdded?: () => void;
   onCommentsLoaded?: (count: number) => void;
 }
+
+const PAGE_SIZE = 10;
 
 function formatCommentTime(createdAt: string) {
   return new Intl.DateTimeFormat('vi-VN', {
@@ -22,94 +23,68 @@ function formatCommentTime(createdAt: string) {
   }).format(new Date(createdAt));
 }
 
-function mapComment(comment: PostCommentResponse): Comment {
-  const fallbackAvatar = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(comment.userFullName || 'User')}`;
+function mapToComment(r: PostCommentResponse): Comment {
+  const fallbackAvatar = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(r.userFullName || 'User')}`;
   return {
-    id: comment.id,
+    id: r.id,
+    postId: r.postId,
+    userId: r.userId,
     author: {
-      name: comment.userFullName,
-      avatar: comment.userAvatarUrl || fallbackAvatar,
+      name: r.userFullName,
+      avatar: r.userAvatarUrl || fallbackAvatar,
     },
-    content: comment.content,
-    timestamp: formatCommentTime(comment.createdAt),
-    likes: 0,
+    content: r.content ?? '',
+    timestamp: formatCommentTime(r.createdAt),
+    likeCount: r.likeCount,
+    isLikedByCurrentUser: r.isLikedByCurrentUser,
+    isDeleted: r.isDeleted,
+    replyCount: r.replyCount,
     replies: [],
   };
 }
 
-function buildCommentTree(items: PostCommentResponse[]): Comment[] {
-  const commentMap = new Map<string, Comment>();
-  const rootComments: Comment[] = [];
-
-  items.forEach((item) => {
-    commentMap.set(String(item.id), mapComment(item));
-  });
-
-  items.forEach((item) => {
-    const mapped = commentMap.get(String(item.id));
-    if (!mapped) return;
-
-    const parentId = item.parentCommentId ? String(item.parentCommentId) : null;
-    if (parentId) {
-      const parent = commentMap.get(parentId);
-      if (parent) {
-        parent.replies = [...(parent.replies || []), mapped];
-        return;
-      }
-    }
-
-    rootComments.push(mapped);
-  });
-
-  return rootComments;
-}
-
-// DFS: find the parent node and insert the new reply
-function insertReplyDFS(comments: Comment[], parentId: string, newReply: Comment): Comment[] {
-  return comments.map((comment) => {
-    if (comment.id === parentId) {
-      return { ...comment, replies: [...(comment.replies || []), newReply] };
-    }
-    if (comment.replies && comment.replies.length > 0) {
-      return { ...comment, replies: insertReplyDFS(comment.replies, parentId, newReply) };
-    }
-    return comment;
-  });
-}
-
-export function CommentSection({
-  postId,
-  initialComments = [],
-  onCommentAdded,
-  onCommentsLoaded,
-}: CommentSectionProps) {
-  const [comments, setComments] = useState<Comment[]>(initialComments);
+export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: CommentSectionProps) {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalElements, setTotalElements] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const fetchPage = useCallback(async (pageIndex: number, append: boolean) => {
+    try {
+      if (append) setIsLoadingMore(true);
+      else setIsLoading(true);
+
+      const currentUser = authService.getCurrentUser();
+      const res = await postService.getComments(postId, pageIndex, PAGE_SIZE, currentUser?.id);
+      const mapped = res.content.map(mapToComment);
+
+      setComments((prev) => (append ? [...prev, ...mapped] : mapped));
+      setHasMore(pageIndex + 1 < res.totalPages);
+      setTotalElements(res.totalElements);
+      if (!append) onCommentsLoaded?.(res.totalElements);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể tải bình luận');
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, [postId, onCommentsLoaded]);
+
   useEffect(() => {
-    let isMounted = true;
+    setComments([]);
+    setPage(0);
+    setHasMore(false);
+    void fetchPage(0, false);
+  }, [fetchPage]);
 
-    const fetchComments = async () => {
-      try {
-        setIsLoading(true);
-        const response = await postService.getComments(postId);
-        if (!isMounted) return;
-
-        setComments(buildCommentTree(response));
-        onCommentsLoaded?.(response.length);
-      } catch (error) {
-        if (isMounted) {
-          toast.error(error instanceof Error ? error.message : 'Không thể tải bình luận');
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    void fetchComments();
-    return () => { isMounted = false; };
-  }, [onCommentsLoaded, postId]);
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    void fetchPage(nextPage, true);
+  };
 
   const handleAddComment = async (content: string) => {
     const currentUser = authService.getCurrentUser();
@@ -124,6 +99,8 @@ export function CommentSection({
 
       const newComment: Comment = {
         id: response.id,
+        postId: response.postId,
+        userId: currentUser.id,
         author: {
           name: response.userFullName || currentUser.fullName,
           avatar:
@@ -133,17 +110,29 @@ export function CommentSection({
         },
         content: response.content,
         timestamp: 'Vừa xong',
-        likes: 0,
+        likeCount: 0,
+        isLikedByCurrentUser: false,
+        replyCount: 0,
         replies: [],
       };
 
       setComments((prev) => [...prev, newComment]);
+      setTotalElements((n) => n + 1);
       onCommentAdded?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể gửi bình luận');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+    setTotalElements((n) => n - 1);
+  };
+
+  const handleUpdateComment = (commentId: string, newContent: string) => {
+    setComments((prev) => prev.map((c) => c.id === commentId ? { ...c, content: newContent } : c));
   };
 
   const handleAddReply = async (content: string, parentCommentId: string) => {
@@ -153,29 +142,18 @@ export function CommentSection({
       return;
     }
 
-    const response = await postService.addComment(postId, {
+    await postService.addComment(postId, {
       userId: currentUser.id,
       content,
       parentCommentId,
     });
 
-    const newReply: Comment = {
-      id: response.id,
-      author: {
-        name: response.userFullName || currentUser.fullName,
-        avatar:
-          response.userAvatarUrl ||
-          currentUser.avatarUrl ||
-          `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(response.userFullName || currentUser.fullName || 'User')}`,
-      },
-      content: response.content,
-      timestamp: 'Vừa xong',
-      likes: 0,
-      replies: [],
-    };
-
-    // DFS insert: find parent anywhere in the tree and append reply
-    setComments((prev) => insertReplyDFS(prev, parentCommentId, newReply));
+    // Update replyCount on the parent comment so the button label stays correct
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === parentCommentId ? { ...c, replyCount: c.replyCount + 1 } : c,
+      ),
+    );
   };
 
   return (
@@ -197,9 +175,21 @@ export function CommentSection({
         <div className="mb-4 space-y-4">
           {comments.map((comment) => (
             <div key={comment.id} className="group">
-              <CommentItem comment={comment} depth={0} onReply={handleAddReply} />
+              <CommentItem comment={comment} depth={0} onReply={handleAddReply} onDelete={handleDeleteComment} onUpdate={handleUpdateComment} />
             </div>
           ))}
+
+          {hasMore && (
+            <button
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="text-sm font-semibold text-gray-600 hover:underline disabled:opacity-60 cursor-pointer"
+            >
+              {isLoadingMore
+                ? 'Đang tải...'
+                : `Xem thêm bình luận (${totalElements - comments.length} còn lại)`}
+            </button>
+          )}
         </div>
       )}
 

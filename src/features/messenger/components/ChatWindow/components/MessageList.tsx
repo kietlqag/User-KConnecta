@@ -210,9 +210,9 @@ export const MessageList = forwardRef(({
       </div>
 
       {showJumpToLatest && (
-        <button className="cursor-pointer"
+        <button
           onClick={() => scrollToBottom()}
-          className="absolute bottom-20 right-4 z-20 p-2 bg-white rounded-full shadow-lg border border-gray-200 text-blue-600 hover:bg-gray-50 transition-all animate-bounce"
+          className="absolute bottom-20 right-4 z-20 cursor-pointer rounded-full border border-gray-200 bg-white p-2 text-blue-600 shadow-lg transition-all hover:bg-gray-50 animate-bounce"
           title="Cuộn xuống dưới cùng"
         >
           <ChevronDown className="w-5 h-5" />

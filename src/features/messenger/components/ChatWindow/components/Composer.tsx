@@ -257,13 +257,13 @@ export const Composer: React.FC<ComposerProps> = ({
                     />
                   </div>
                 )}
-                <button className="cursor-pointer"
+                <button
                   type="button"
                   onClick={() => {
                     onEmojiClick();
                     setShowEmojiPicker((prev) => !prev);
                   }}
-                  className="p-1.5 hover:bg-gray-200 rounded-full text-blue-600"
+                  className="cursor-pointer rounded-full p-1.5 text-blue-600 hover:bg-gray-200"
                   title="Emoji"
                 >
                   <Smile className="w-5 h-5" />
@@ -271,10 +271,10 @@ export const Composer: React.FC<ComposerProps> = ({
               </div>
             </div>
 
-            <button className="cursor-pointer"
+            <button
               onClick={onSend}
               disabled={!canSend}
-              className={`p-2 rounded-full transition-all ${
+              className={`cursor-pointer rounded-full p-2 transition-all ${
                 canSend ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-blue-300'
               }`}
             >

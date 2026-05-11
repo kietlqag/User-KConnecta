@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { friendService } from '@/services/friendService';
+import { friendService, FRIENDSHIP_CHANGED_EVENT } from '@/services/friendService';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
@@ -23,6 +23,7 @@ const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
+const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
 
 function isChatActionContent(content?: string | null) {
   const raw = content?.trim();
@@ -64,6 +65,16 @@ function mapBackendContentToPreview(content?: string | null) {
       return typeof payload?.text === 'string' ? payload.text.trim() : raw;
     } catch {
       return raw;
+    }
+  }
+
+  if (raw.startsWith(STORY_REPLY_PREFIX)) {
+    try {
+      const payload = JSON.parse(raw.slice(STORY_REPLY_PREFIX.length));
+      const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
+      return text || 'Đã trả lời tin';
+    } catch {
+      return 'Đã trả lời tin';
     }
   }
 
@@ -292,6 +303,11 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    window.addEventListener(FRIENDSHIP_CHANGED_EVENT, load);
+    return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, load);
   }, [load]);
 
   useEffect(() => {

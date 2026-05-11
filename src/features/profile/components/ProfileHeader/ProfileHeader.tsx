@@ -3,7 +3,7 @@ import { Camera, Plus, Edit, ChevronDown, MoreHorizontal, X, Loader2, UserPlus, 
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { toast } from 'sonner';
-import { friendService, type FriendshipStatusResponse } from '@/services/friendService';
+import { friendService, FRIENDSHIP_CHANGED_EVENT, type FriendshipStatusResponse } from '@/services/friendService';
 import { authService } from '@/services/authService';
 
 interface ProfileHeaderProps {
@@ -86,6 +86,7 @@ export function ProfileHeader({
     try {
       await friendService.deleteFriendship(friendshipStatus.friendshipId);
       onFriendshipStatusChange?.(null);
+      window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
       toast.success('Đã hủy kết bạn');
     } catch {
       toast.error('Không thể hủy kết bạn');

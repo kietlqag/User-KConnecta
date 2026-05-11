@@ -52,6 +52,7 @@ interface ChatWindowProps {
   groupMembers?: ChatUser[];
   themeColor?: string | null;
   jumpToMessageRequest?: { messageId: string; nonce: number } | null;
+  isFriend?: boolean;
 }
 
 function formatVoiceDuration(totalSec: number) {
@@ -97,6 +98,7 @@ export const ChatWindow = ({
   groupMembers = [],
   themeColor,
   jumpToMessageRequest = null,
+  isFriend = true,
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
@@ -252,10 +254,10 @@ export const ChatWindow = ({
       />
 
       {pinnedMessages.length > 0 && (
-        <button className="cursor-pointer"
+        <button
           type="button"
           onClick={() => setShowPinnedModal(true)}
-          className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 text-left hover:bg-gray-100"
+          className="flex cursor-pointer items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 text-left hover:bg-gray-100"
           title="Tin nhắn đã ghim"
         >
           <Pin className="h-4 w-4 shrink-0 text-gray-500" />
@@ -306,48 +308,55 @@ export const ChatWindow = ({
         themeColor={themeColor}
       />
 
-      <PendingAttachments 
-        pendingImages={pendingImages}
-        pendingFiles={pendingFiles}
-        removePendingImage={removePendingImage}
-        removePendingFile={removePendingFile}
-      />
-
-      <Composer 
-        inputText={inputText}
-        setInputText={setInputText}
-        onSend={handleSend}
-        connected={connected}
-        isRecordingVoice={isRecordingVoice}
-        isSendingVoice={isSendingVoice}
-        isSendingImage={isSendingImage}
-        isSendingFile={isSendingFile}
-        isOpeningCamera={isOpeningCamera}
-        hasPendingImages={pendingImages.length > 0}
-        hasPendingFiles={pendingFiles.length > 0}
-        onStartVoice={startVoiceRecording}
-        onStopAndSendVoice={stopAndSendVoiceRecording}
-        onCancelVoice={cancelVoiceRecording}
-        onImageClick={() => imageInputRef.current?.click()}
-        onFileClick={() => fileInputRef.current?.click()}
-        onCameraClick={openCamera}
-        onEmojiClick={() => setShowEmojiPicker(!showEmojiPicker)}
-        replyToMessage={replyToMessage}
-        onCancelReply={() => setReplyToMessage(null)}
-        voiceRecordingSec={voiceRecordingSec}
-        formatVoiceDuration={formatVoiceDuration}
-        imageInputRef={imageInputRef}
-        fileInputRef={fileInputRef}
-        handleImageSelect={handleImageSelect}
-        handleFileSelect={handleFileSelect}
-        onPaste={(event) => {
-          const files = Array.from(event.clipboardData?.files ?? []);
-          const imageFiles = files.filter((file) => file.type.startsWith('image/'));
-          if (imageFiles.length === 0) return;
-          event.preventDefault();
-          handlePasteImages(imageFiles);
-        }}
-      />
+      {isFriend ? (
+        <>
+          <PendingAttachments
+            pendingImages={pendingImages}
+            pendingFiles={pendingFiles}
+            removePendingImage={removePendingImage}
+            removePendingFile={removePendingFile}
+          />
+          <Composer
+            inputText={inputText}
+            setInputText={setInputText}
+            onSend={handleSend}
+            connected={connected}
+            isRecordingVoice={isRecordingVoice}
+            isSendingVoice={isSendingVoice}
+            isSendingImage={isSendingImage}
+            isSendingFile={isSendingFile}
+            isOpeningCamera={isOpeningCamera}
+            hasPendingImages={pendingImages.length > 0}
+            hasPendingFiles={pendingFiles.length > 0}
+            onStartVoice={startVoiceRecording}
+            onStopAndSendVoice={stopAndSendVoiceRecording}
+            onCancelVoice={cancelVoiceRecording}
+            onImageClick={() => imageInputRef.current?.click()}
+            onFileClick={() => fileInputRef.current?.click()}
+            onCameraClick={openCamera}
+            onEmojiClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            replyToMessage={replyToMessage}
+            onCancelReply={() => setReplyToMessage(null)}
+            voiceRecordingSec={voiceRecordingSec}
+            formatVoiceDuration={formatVoiceDuration}
+            imageInputRef={imageInputRef}
+            fileInputRef={fileInputRef}
+            handleImageSelect={handleImageSelect}
+            handleFileSelect={handleFileSelect}
+            onPaste={(event) => {
+              const files = Array.from(event.clipboardData?.files ?? []);
+              const imageFiles = files.filter((file) => file.type.startsWith('image/'));
+              if (imageFiles.length === 0) return;
+              event.preventDefault();
+              handlePasteImages(imageFiles);
+            }}
+          />
+        </>
+      ) : (
+        <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-4 py-3 text-center text-sm text-gray-500 select-none">
+          Các bạn không còn là bạn bè để nhắn tin nữa
+        </div>
+      )}
 
       <CameraModal 
         show={showCamera}

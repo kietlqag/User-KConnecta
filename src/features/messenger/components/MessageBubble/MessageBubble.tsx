@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
 import { Message } from '../../types/message.types';
@@ -30,6 +30,24 @@ interface MessageBubbleProps {
 
 const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 const extraReactions = ['👏', '🎉', '🔥', '🥰', '😎', '🤔', '🙏', '💯'];
+
+const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
+
+interface StoryReplyContext {
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl: string;
+  slideImageUrl?: string | null;
+  slideBackgroundColor?: string | null;
+  text: string;
+}
+
+function getStoryBgStyle(imageUrl?: string | null, bgColor?: string | null): React.CSSProperties {
+  if (imageUrl) return { backgroundImage: `url(${imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' };
+  const v = bgColor ?? '#1877f2';
+  if (v.startsWith('linear-gradient') || v.startsWith('radial-gradient')) return { backgroundImage: v };
+  return { backgroundColor: v };
+}
 
 export const MessageBubble = ({
   message,
@@ -199,6 +217,16 @@ export const MessageBubble = ({
   const imageUrls = message.imageUrls?.length ? message.imageUrls : message.imageUrl ? [message.imageUrl] : [];
   const activeLightboxImage = lightboxIndex === null ? null : imageUrls[lightboxIndex];
   const ownBubbleStyle = message.isOwn && themeColor ? { backgroundColor: themeColor } : undefined;
+
+  const isStoryReply = !message.deleted && message.text.startsWith(STORY_REPLY_PREFIX);
+  let storyCtx: StoryReplyContext | null = null;
+  if (isStoryReply) {
+    try {
+      storyCtx = JSON.parse(message.text.slice(STORY_REPLY_PREFIX.length)) as StoryReplyContext;
+    } catch {
+      // ignore – fall back to raw text rendering
+    }
+  }
   const renderImageButton = (imageUrl: string, index: number, className = '') => (
     <button className="cursor-pointer"
       key={`${imageUrl}-${index}`}
@@ -328,7 +356,38 @@ export const MessageBubble = ({
           </div>
         )}
         <div className={`relative z-[3] group ${message.replyPreview ? '-mt-[22px]' : ''}`}>
-          {imageUrls.length > 0 && !message.deleted ? (
+          {isStoryReply && storyCtx ? (
+            <div className={`flex flex-col min-w-0 w-[min(220px,68vw)] max-w-full rounded-2xl overflow-hidden shadow-sm ${message.isOwn ? '' : ''}`}>
+              <button
+                type="button"
+                onClick={() => navigate(`/stories/viewer/${storyCtx!.authorId}`)}
+                className="relative w-full h-28 overflow-hidden group/story cursor-pointer"
+                title={`Xem tin của ${storyCtx.authorName}`}
+              >
+                <div className="absolute inset-0" style={getStoryBgStyle(storyCtx.slideImageUrl, storyCtx.slideBackgroundColor)} />
+                {storyCtx.slideImageUrl && (
+                  <img src={storyCtx.slideImageUrl} alt="story" className="absolute inset-0 h-full w-full object-cover" />
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover/story:bg-black/20 transition-colors duration-200" />
+                <div className="absolute top-2 left-2 rounded-full bg-black/35 px-2 py-0.5 backdrop-blur-sm">
+                  <span className="text-[10px] font-bold text-white tracking-wide">Tin</span>
+                </div>
+                <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+                  <img src={storyCtx.authorAvatarUrl} alt={storyCtx.authorName} className="h-5 w-5 rounded-full border-[1.5px] border-white object-cover" />
+                  <span className="text-white text-[11px] font-semibold drop-shadow-sm truncate max-w-[120px]">{storyCtx.authorName}</span>
+                </div>
+              </button>
+              <div
+                className={`px-3 py-2 ${message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'}`}
+                style={ownBubbleStyle}
+              >
+                {storyCtx.text && (
+                  <p className="text-sm leading-relaxed break-all [overflow-wrap:anywhere]">{storyCtx.text}</p>
+                )}
+                <p className={`text-[10px] mt-0.5 ${message.isOwn ? 'text-white/50' : 'text-gray-400'}`}>Đã trả lời tin</p>
+              </div>
+            </div>
+          ) : imageUrls.length > 0 && !message.deleted ? (
             <div className={`flex max-w-full flex-col gap-1.5 sm:max-w-[386px] ${message.isOwn ? 'items-end' : 'items-start'}`}>
               <div className={`flex flex-wrap gap-1.5 ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
                 {imageUrls.map((imageUrl, index) =>

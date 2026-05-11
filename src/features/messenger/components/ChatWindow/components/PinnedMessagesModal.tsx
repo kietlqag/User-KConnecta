@@ -127,13 +127,13 @@ export function PinnedMessagesModal({
                       alt={senderLabel}
                       className="h-10 w-10 shrink-0 rounded-full object-cover"
                     />
-                    <button className="cursor-pointer"
+                    <button
                       type="button"
                       onClick={() => {
                         onClose();
                         onJumpToMessage(item.messageId);
                       }}
-                      className="min-w-0 flex-1 text-left"
+                      className="min-w-0 flex-1 cursor-pointer text-left"
                       title="Xem trong đoạn chat"
                     >
                       <div className="flex min-w-0 items-center gap-2">
@@ -142,10 +142,10 @@ export function PinnedMessagesModal({
                       </div>
                       <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-gray-700 break-words">{item.text || 'Tin nhắn'}</p>
                     </button>
-                    <button className="cursor-pointer"
+                    <button
                       type="button"
                       onClick={(event) => openMenu(item.messageId, event.currentTarget)}
-                      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                      className="mt-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                       title="Tùy chọn"
                     >
                       <MoreHorizontal className="h-5 w-5" />
@@ -165,7 +165,7 @@ export function PinnedMessagesModal({
           style={{ top: menuPosition.top, left: menuPosition.left, fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
           onMouseDown={(event) => event.stopPropagation()}
         >
-          <button className="cursor-pointer"
+          <button
             type="button"
             onClick={() => {
               const id = openMenuMessageId;
@@ -173,19 +173,19 @@ export function PinnedMessagesModal({
               onClose();
               onJumpToMessage(id);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
+            className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
           >
             <MessageSquare className="h-4 w-4" />
             Xem trong đoạn chat
           </button>
-          <button className="cursor-pointer"
+          <button
             type="button"
             onClick={() => {
               const id = openMenuMessageId;
               setOpenMenuMessageId(null);
               onUnpinMessage(id);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
+            className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
           >
             <PinOff className="h-4 w-4" />
             Bỏ ghim

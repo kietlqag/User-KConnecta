@@ -3,7 +3,7 @@ import { FriendsLeftSidebar, FriendCard, FriendRequestCard } from '../components
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
 import { Friend, FriendRequest } from '../types/friends.types';
 import { MainLayout } from '../../../layouts';
-import { friendService } from '../../../services/friendService';
+import { friendService, FRIENDSHIP_CHANGED_EVENT } from '../../../services/friendService';
 import { authService } from '../../../services/authService';
 import { toast } from 'sonner';
 
@@ -102,6 +102,7 @@ export const FriendsPage = () => {
   const handleUnfriend = async (id: string) => {
     await friendService.deleteFriendship(id);
     setFriends((prev) => prev.filter((f) => f.id !== id));
+    window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
     toast.success('Đã hủy kết bạn');
   };
 

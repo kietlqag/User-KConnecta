@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react';
+
+const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ChevronLeft,
@@ -19,6 +21,7 @@ import {
 } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { storyService, type StoryResponse } from '@/services/storyService';
+import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -44,12 +47,12 @@ interface StoryAuthor {
 }
 
 const REACTIONS = [
-  { icon: ThumbsUp, label: 'Thích', color: 'text-blue-500' },
-  { icon: Heart, label: 'Yêu thích', color: 'text-red-500' },
-  { icon: Laugh, label: 'Haha', color: 'text-yellow-500' },
-  { icon: Zap, label: 'Wow', color: 'text-yellow-500' },
-  { icon: Meh, label: 'Buồn', color: 'text-yellow-500' },
-  { icon: Angry, label: 'Phẫn nộ', color: 'text-orange-500' },
+  { icon: ThumbsUp, label: 'Thích', emoji: '👍', color: 'text-blue-500' },
+  { icon: Heart, label: 'Yêu thích', emoji: '❤️', color: 'text-red-500' },
+  { icon: Laugh, label: 'Haha', emoji: '😂', color: 'text-yellow-500' },
+  { icon: Zap, label: 'Wow', emoji: '⚡', color: 'text-yellow-500' },
+  { icon: Meh, label: 'Buồn', emoji: '😢', color: 'text-yellow-500' },
+  { icon: Angry, label: 'Phẫn nộ', emoji: '😡', color: 'text-orange-500' },
 ];
 
 function groupStoriesByUser(stories: StoryResponse[]): StoryAuthor[] {
@@ -121,7 +124,10 @@ export function StoryViewerPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [floatingEmojis, setFloatingEmojis] = useState<Array<{ id: number; emoji: string; x: number }>>([]);
 
+  const { sendMessage } = useChatSocket(currentUser?.token ?? null, () => {});
+  const emojiIdRef = useRef(0);
   const progressIntervalRef = useRef<number | null>(null);
   const progressRef = useRef(0);
 
@@ -137,6 +143,38 @@ export function StoryViewerPage() {
   const author = authors[currentAuthorIndex];
   const slide = author?.slides[currentSlideIndex];
   const totalSlides = author?.slides.length ?? 0;
+  const isOwnStory = author?.userId === currentUser?.id;
+
+  const handleSendReply = useCallback(() => {
+    if (!replyText.trim() || !author || !slide) return;
+    const ctx = JSON.stringify({
+      authorId: author.userId,
+      authorName: author.name,
+      authorAvatarUrl: author.avatarUrl,
+      slideImageUrl: slide.imageUrl,
+      slideBackgroundColor: slide.backgroundColor,
+      text: replyText.trim(),
+    });
+    sendMessage(author.userId, `${STORY_REPLY_PREFIX}${ctx}`);
+    setReplyText('');
+  }, [replyText, author, slide, sendMessage]);
+
+  const handleSendReaction = useCallback((emoji: string) => {
+    if (!author || !slide) return;
+    const id = ++emojiIdRef.current;
+    const x = Math.floor(Math.random() * 180 - 90);
+    setFloatingEmojis((prev) => [...prev, { id, emoji, x }]);
+    setTimeout(() => setFloatingEmojis((prev) => prev.filter((e) => e.id !== id)), 1400);
+    const ctx = JSON.stringify({
+      authorId: author.userId,
+      authorName: author.name,
+      authorAvatarUrl: author.avatarUrl,
+      slideImageUrl: slide.imageUrl,
+      slideBackgroundColor: slide.backgroundColor,
+      text: emoji,
+    });
+    sendMessage(author.userId, `${STORY_REPLY_PREFIX}${ctx}`);
+  }, [author, slide, sendMessage]);
 
   const goNextSlide = useCallback(() => {
     if (currentSlideIndex < totalSlides - 1) {
@@ -427,38 +465,63 @@ export function StoryViewerPage() {
             <div className="flex-1 cursor-pointer" onClick={goPrevSlide} />
             <div className="flex-1 cursor-pointer" onClick={goNextSlide} />
           </div>
+
+          {/* Floating emoji reactions */}
+          {floatingEmojis.map(({ id, emoji, x }) => (
+            <div
+              key={id}
+              className="float-emoji"
+              style={{ bottom: '24px', left: `calc(50% + ${x}px)` }}
+            >
+              {emoji}
+            </div>
+          ))}
         </div>
 
-        {/* Reply Bar — below the story card */}
-        <div className="w-[360px] flex flex-col gap-2">
-          <div className="flex items-center gap-2 rounded-full bg-white/10 border border-white/30 px-4 py-2">
-            <img
-              src={currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14'}
-              alt="me"
-              className="h-6 w-6 rounded-full object-cover shrink-0"
-            />
-            <input
-              type="text"
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="Gửi tin nhắn..."
-              className="flex-1 bg-transparent text-sm text-white placeholder:text-white/60 outline-none"
-              onFocus={() => setIsPaused(true)}
-              onBlur={() => setIsPaused(false)}
-            />
+        {/* Reply Bar — only visible when viewing someone else's story */}
+        {!isOwnStory && (
+          <div className="w-[360px] flex flex-col gap-2">
+            <div className="flex items-center gap-2 rounded-full bg-white/10 border border-white/30 px-4 py-2">
+              <img
+                src={currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14'}
+                alt="me"
+                className="h-6 w-6 rounded-full object-cover shrink-0"
+              />
+              <input
+                type="text"
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && replyText.trim()) handleSendReply();
+                }}
+                placeholder="Gửi tin nhắn..."
+                className="flex-1 bg-transparent text-sm text-white placeholder:text-white/60 outline-none"
+                onFocus={() => setIsPaused(true)}
+                onBlur={() => setIsPaused(false)}
+              />
+              {replyText.trim() && (
+                <button
+                  onClick={handleSendReply}
+                  className="text-blue-400 hover:text-blue-300 text-sm font-semibold transition shrink-0"
+                >
+                  Gửi
+                </button>
+              )}
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              {REACTIONS.map(({ icon: Icon, label, emoji, color }) => (
+                <button
+                  key={label}
+                  title={label}
+                  onClick={() => handleSendReaction(emoji)}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/25 transition cursor-pointer ${color}`}
+                >
+                  <Icon className="h-5 w-5" />
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center justify-center gap-2">
-            {REACTIONS.map(({ icon: Icon, label, color }) => (
-              <button
-                key={label}
-                title={label}
-                className={`flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/25 transition cursor-pointer ${color}`}
-              >
-                <Icon className="h-5 w-5" />
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         </div>{/* end flex-col wrapper */}
 

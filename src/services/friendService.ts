@@ -1,5 +1,7 @@
 import { api } from './api';
 
+export const FRIENDSHIP_CHANGED_EVENT = 'friendship-changed';
+
 export interface FriendApiResponse {
   friendshipId: string | null;
   userId: string;

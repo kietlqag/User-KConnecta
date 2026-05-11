@@ -12,6 +12,7 @@ interface CommentsPanelProps {
 
 export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: CommentsPanelProps) => {
   const [comments, setComments] = useState<PostCommentResponse[]>([]);
+  const [totalElements, setTotalElements] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,9 +23,10 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
     const fetchComments = async () => {
       try {
         setIsLoading(true);
-        const response = await postService.getComments(postId);
+        const response = await postService.getComments(postId, 0, 10);
         if (isMounted) {
-          setComments(response);
+          setComments(response.content);
+          setTotalElements(response.totalElements);
         }
       } catch (error) {
         if (isMounted) {
@@ -55,6 +57,7 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
         content: newComment.trim(),
       });
       setComments(prev => [...prev, response]);
+      setTotalElements(n => n + 1);
       setNewComment('');
       onCommentCountChange?.(1);
     } catch (error) {
@@ -84,7 +87,7 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-800">
         <h2 className="text-white font-semibold text-lg">
-          Bình luận ({comments.length})
+          Bình luận ({totalElements})
         </h2>
         <button
           onClick={onClose}
