@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { X, FileText } from 'lucide-react';
 import { PendingImage, PendingFile } from '../hooks/useAttachments';
 
@@ -47,3 +47,4 @@ export const PendingAttachments: React.FC<PendingAttachmentsProps> = ({
     </div>
   );
 };
+

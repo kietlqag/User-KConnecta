@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+﻿import React, { useEffect, useRef, useState } from 'react';
 import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, Pause, X } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -286,3 +286,4 @@ export const Composer: React.FC<ComposerProps> = ({
     </div>
   );
 };
+

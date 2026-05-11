@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+﻿import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Pin } from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { ChatHeader } from './components/ChatHeader';
@@ -94,7 +94,7 @@ export const ChatWindow = ({
   onToggleMute,
   isGroupChat = false,
   isGroupCreator = false,
-  groupCreatorName = 'Ngu?i t?o',
+  groupCreatorName = 'Người tạo',
   groupMembers = [],
   themeColor,
   jumpToMessageRequest = null,
@@ -383,6 +383,7 @@ export const ChatWindow = ({
   );
 
 };
+
 
 
 

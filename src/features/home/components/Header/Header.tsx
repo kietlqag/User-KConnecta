@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Home, Users, Video, Store, Grid3x3, MessageCircle, Bell, Menu } from 'lucide-react';
+import { Search, Home, Users, UsersRound, Video, Store, Grid3x3, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
 import { MenuPanel } from '../../../menu/components';
@@ -10,6 +10,7 @@ import { RecentSearchItem } from '../../../search/types/search.types';
 import { useMenu } from '../../../../contexts/MenuContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
 import { useFriendConversations } from '../../../messenger/hooks/useFriendConversations';
+import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
 import { searchHistoryService } from '@/services/searchHistoryService';
@@ -25,6 +26,7 @@ export function Header() {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navigate = useNavigate();
+  const { subscribeNotificationEvents } = useRealtimeCall();
   const { isMenuOpen, toggleMenu, setMenuOpen } = useMenu();
   const userAvatar = currentUser?.avatarUrl || avatarImage;
 
@@ -50,8 +52,8 @@ export function Header() {
 
     fetchCount(); // initial fetch
 
-    // Poll every 15 seconds for new notifications
-    const interval = setInterval(fetchCount, 15_000);
+    // Fallback poll every 2 minutes in case websocket disconnects silently.
+    const interval = setInterval(fetchCount, 120_000);
 
     // Allow other components to trigger an immediate refresh
     window.addEventListener('notification:refresh', fetchCount);
@@ -62,6 +64,17 @@ export function Header() {
     };
   }, [currentUser, showNotifications]);
 
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    return subscribeNotificationEvents((event) => {
+      if (typeof event?.unreadCount === 'number') {
+        setUnreadNotifications(Math.max(0, event.unreadCount));
+      } else {
+        notificationService.getUnreadCount(currentUser.id).then(setUnreadNotifications).catch(console.error);
+      }
+    });
+  }, [currentUser?.id, subscribeNotificationEvents]);
+
   const { conversations } = useFriendConversations();
   const unreadMessagesCount = conversations.filter((c) => c.isUnread).length;
 
@@ -69,8 +82,8 @@ export function Header() {
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
     { icon: <Users className="w-6 h-6" />, href: '/friends', label: 'Friends' },
     { icon: <Video className="w-6 h-6" />, href: '/watch', label: 'Watch' },
-    { icon: <Store className="w-6 h-6" />, href: '/marketplace', label: 'Marketplace' },
-    { icon: <Grid3x3 className="w-6 h-6" />, href: '/groups', label: 'Groups' },
+    { icon: <UsersRound className="w-6 h-6" />, href: '/groups', label: 'Groups' },
+    { icon: <Radio className="w-6 h-6" />, href: '/live', label: 'LiveStream' },
   ];
 
   return (
@@ -203,3 +216,5 @@ export function Header() {
     </header>
   );
 }
+
+

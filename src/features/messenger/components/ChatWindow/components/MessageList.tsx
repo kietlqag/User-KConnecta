@@ -1,4 +1,4 @@
-import React, { ForwardedRef, forwardRef } from 'react';
+﻿import React, { ForwardedRef, forwardRef } from 'react';
 import { ChevronDown, Pencil, UserRoundPlus } from 'lucide-react';
 import { Message, ChatUser } from '../../../types/message.types';
 import { MessageBubble } from '../../MessageBubble';
@@ -223,3 +223,4 @@ export const MessageList = forwardRef(({
 });
 
 MessageList.displayName = 'MessageList';
+

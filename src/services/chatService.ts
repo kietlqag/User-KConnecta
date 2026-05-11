@@ -101,6 +101,15 @@ export interface ConversationPinResponse {
   pinned: boolean;
 }
 
+export interface ConversationSummaryResponse {
+  peerUserId?: string | null;
+  conversationId?: string | null;
+  lastMessageContent?: string | null;
+  lastMessageSenderId?: string | null;
+  lastMessageCreatedAt?: string | null;
+  unreadCount?: number;
+}
+
 export interface PinnedMessageResponse {
   id?: string | null;
   peerUserId?: string | null;
@@ -148,6 +157,19 @@ function normalizeChatHistoryResponse(payload: unknown): ChatHistoryPageResponse
   };
 }
 
+const pendingHistoryRequests = new Map<string, Promise<ChatHistoryPageResponse>>();
+
+function dedupHistoryRequest(key: string, request: () => Promise<ChatHistoryPageResponse>) {
+  const pending = pendingHistoryRequests.get(key);
+  if (pending) return pending;
+
+  const next = request().finally(() => {
+    pendingHistoryRequests.delete(key);
+  });
+  pendingHistoryRequests.set(key, next);
+  return next;
+}
+
 export const chatService = {
   getChatHistory: (
     userId1: string,
@@ -169,9 +191,14 @@ export const chatService = {
       params.set('limit', String(options.limit));
     }
 
-    return api
-      .get<ChatHistoryPageResponse | IncomingChatMessage[]>(`/chat/history?${params.toString()}`)
-      .then(normalizeChatHistoryResponse);
+    const query = params.toString();
+    return dedupHistoryRequest(
+      `private:${query}`,
+      () =>
+        api
+          .get<ChatHistoryPageResponse | IncomingChatMessage[]>(`/chat/history?${query}`)
+          .then(normalizeChatHistoryResponse),
+    );
   },
 
   uploadCallRecording: (callId: string, file: File, durationSec?: number, mediaType?: 'audio' | 'video') => {
@@ -247,6 +274,15 @@ export const chatService = {
     return api.get<ConversationPinResponse[]>('/chat/conversations/pin');
   },
 
+  getConversationSummaries: (options?: { peerUserIds?: string[]; conversationIds?: string[] }) => {
+    const params = new URLSearchParams();
+    options?.peerUserIds?.forEach((id) => params.append('peerUserIds', id));
+    options?.conversationIds?.forEach((id) => params.append('conversationIds', id));
+    const query = params.toString();
+    const url = query ? `/chat/conversations/summaries?${query}` : '/chat/conversations/summaries';
+    return api.get<ConversationSummaryResponse[]>(url);
+  },
+
   setPinnedMessage: (payload: {
     peerUserId?: string;
     conversationId?: string;
@@ -278,7 +314,7 @@ export const chatService = {
     const url = query
       ? `/chat/conversations/${conversationId}/history?${query}`
       : `/chat/conversations/${conversationId}/history`;
-    return api.get<ChatHistoryPageResponse>(url);
+    return dedupHistoryRequest(`group:${conversationId}:${query}`, () => api.get<ChatHistoryPageResponse>(url));
   },
 
   getPrivateAssets: (

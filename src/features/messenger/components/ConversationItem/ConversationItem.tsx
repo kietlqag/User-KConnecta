@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { MoreHorizontal, Pin, PinOff } from 'lucide-react';
 import { Conversation } from '../../types/messenger.types';
 
@@ -66,13 +66,12 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
       </button>
 
       <div className="absolute right-2 top-1/2 -translate-y-1/2">
-        <button className="cursor-pointer"
+        <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             setShowMenu((prev) => !prev);
-          }}
-          className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 opacity-0 transition hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100"
+          }} className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 opacity-0 transition hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100"
           title="Tùy chọn đoạn chat"
         >
           <MoreHorizontal className="h-4 w-4" />
@@ -84,21 +83,21 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
           ref={menuRef}
           className="absolute right-2 top-10 z-20 min-w-[150px] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl"
         >
-          <button className="cursor-pointer"
+          <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onTogglePin?.(conversation.user.id);
               setShowMenu(false);
-            }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
+            }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
           >
             {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-            {isPinned ? 'Bỏ ghim' : 'Ghim'}
+            {isPinned ? 'Bá» ghim' : 'Ghim'}
           </button>
         </div>
       )}
     </div>
   );
 };
+
 

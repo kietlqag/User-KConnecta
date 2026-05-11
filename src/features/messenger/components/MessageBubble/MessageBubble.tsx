@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
 import { Message } from '../../types/message.types';
@@ -31,8 +31,6 @@ interface MessageBubbleProps {
 const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 const extraReactions = ['👏', '🎉', '🔥', '🥰', '😎', '🤔', '🙏', '💯'];
 
-const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
-
 interface StoryReplyContext {
   authorId: string;
   authorName: string;
@@ -40,6 +38,14 @@ interface StoryReplyContext {
   slideImageUrl?: string | null;
   slideBackgroundColor?: string | null;
   text: string;
+}
+const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
+
+function hasStoryPreview(story?: StoryReplyContext | null) {
+  if (!story) return false;
+  const image = typeof story.slideImageUrl === 'string' ? story.slideImageUrl.trim() : '';
+  const bg = typeof story.slideBackgroundColor === 'string' ? story.slideBackgroundColor.trim() : '';
+  return image.length > 0 || bg.length > 0;
 }
 
 function getStoryBgStyle(imageUrl?: string | null, bgColor?: string | null): React.CSSProperties {
@@ -75,6 +81,7 @@ export const MessageBubble = ({
   const [showTimestamp, setShowTimestamp] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [isStoryPreviewHovering, setIsStoryPreviewHovering] = useState(false);
   const [showExtraReactions, setShowExtraReactions] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [isVoicePlaying, setIsVoicePlaying] = useState(false);
@@ -146,6 +153,7 @@ export const MessageBubble = ({
   const handleMouseLeave = () => {
     setShowTimestamp(false);
     setIsHovering(false);
+    setIsStoryPreviewHovering(false);
   };
 
   const openActionMenu = () => {
@@ -218,21 +226,32 @@ export const MessageBubble = ({
   const activeLightboxImage = lightboxIndex === null ? null : imageUrls[lightboxIndex];
   const ownBubbleStyle = message.isOwn && themeColor ? { backgroundColor: themeColor } : undefined;
 
-  const isStoryReply = !message.deleted && message.text.startsWith(STORY_REPLY_PREFIX);
-  let storyCtx: StoryReplyContext | null = null;
-  if (isStoryReply) {
+  let storyCtx: StoryReplyContext | null = message.storyReplyAuthorId
+    ? {
+        authorId: message.storyReplyAuthorId,
+        authorName: message.storyReplyAuthorName || senderName,
+        authorAvatarUrl:
+          message.storyReplyAuthorAvatarUrl ||
+          senderAvatar ||
+          `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName || 'User')}&background=random`,
+        slideImageUrl: message.storyReplySlideImageUrl ?? null,
+        slideBackgroundColor: message.storyReplySlideBackgroundColor ?? null,
+        text: message.text || '',
+      }
+    : null;
+  if (!storyCtx && !message.deleted && message.text.startsWith(STORY_REPLY_PREFIX)) {
     try {
       storyCtx = JSON.parse(message.text.slice(STORY_REPLY_PREFIX.length)) as StoryReplyContext;
     } catch {
-      // ignore – fall back to raw text rendering
+      storyCtx = null;
     }
   }
+  const isStoryReply = !message.deleted && Boolean(storyCtx);
   const renderImageButton = (imageUrl: string, index: number, className = '') => (
-    <button className="cursor-pointer"
+    <button
       key={`${imageUrl}-${index}`}
       type="button"
-      onClick={() => setLightboxIndex(index)}
-      className={`block overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm ${className}`}
+      onClick={() => setLightboxIndex(index)} className={`block overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm ${className}`}
       title="Mở ảnh"
     >
       <img
@@ -288,9 +307,8 @@ export const MessageBubble = ({
               </p>
             </div>
           </div>
-          <button className="cursor-pointer"
-            onClick={() => onCallAgain?.(isVideoCall ? 'video' : 'audio')}
-            className="mt-2.5 w-full rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors py-2 text-[15px] font-semibold text-gray-900 flex items-center justify-center gap-2"
+          <button
+            onClick={() => onCallAgain?.(isVideoCall ? 'video' : 'audio')} className="mt-2.5 w-full rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors py-2 text-[15px] font-semibold text-gray-900 flex items-center justify-center gap-2"
           >
             {isVideoCall ? <Video className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
             {isVideoCall ? 'Gọi video lại' : 'Gọi lại'}
@@ -340,11 +358,10 @@ export const MessageBubble = ({
               <CornerUpLeft className="h-3.5 w-3.5" />
               <span>{replyContextLabel || (message.isOwn ? 'Bạn đã trả lời' : `${senderName} đã trả lời`)}</span>
             </div>
-            <button className="cursor-pointer"
+            <button
               type="button"
               onClick={() => message.replyToMessageId && onJumpToMessage?.(message.replyToMessageId)}
-              disabled={!message.replyToMessageId}
-              className={`relative z-[1] mt-0.5 inline-flex min-h-[48px] w-auto max-w-full rounded-2xl border px-2.5 py-2 text-left text-sm leading-tight transition-colors ${
+              disabled={!message.replyToMessageId} className={`relative z-[1] mt-0.5 inline-flex min-h-[48px] w-auto max-w-full rounded-2xl border px-2.5 py-2 text-left text-sm leading-tight transition-colors ${
                 message.isOwn
                   ? 'ml-auto border-blue-200/90 bg-blue-100 text-blue-900 hover:bg-blue-200'
                   : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -357,34 +374,43 @@ export const MessageBubble = ({
         )}
         <div className={`relative z-[3] group ${message.replyPreview ? '-mt-[22px]' : ''}`}>
           {isStoryReply && storyCtx ? (
-            <div className={`flex flex-col min-w-0 w-[min(220px,68vw)] max-w-full rounded-2xl overflow-hidden shadow-sm ${message.isOwn ? '' : ''}`}>
-              <button
-                type="button"
-                onClick={() => navigate(`/stories/viewer/${storyCtx!.authorId}`)}
-                className="relative w-full h-28 overflow-hidden group/story cursor-pointer"
-                title={`Xem tin của ${storyCtx.authorName}`}
-              >
-                <div className="absolute inset-0" style={getStoryBgStyle(storyCtx.slideImageUrl, storyCtx.slideBackgroundColor)} />
-                {storyCtx.slideImageUrl && (
-                  <img src={storyCtx.slideImageUrl} alt="story" className="absolute inset-0 h-full w-full object-cover" />
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover/story:bg-black/20 transition-colors duration-200" />
-                <div className="absolute top-2 left-2 rounded-full bg-black/35 px-2 py-0.5 backdrop-blur-sm">
-                  <span className="text-[10px] font-bold text-white tracking-wide">Tin</span>
+            <div className={`flex max-w-full flex-col gap-1.5 ${message.isOwn ? 'self-end items-end' : 'self-start items-start'}`}>
+              {hasStoryPreview(storyCtx) ? (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/stories/${storyCtx.authorId}`)}
+                  onMouseEnter={() => setIsStoryPreviewHovering(true)}
+                  onMouseLeave={() => setIsStoryPreviewHovering(false)}
+                  className="group/story relative w-[min(132px,36vw)] aspect-[9/16] overflow-hidden rounded-2xl border border-black/10 bg-white/75"
+                  title={`Xem tin của ${storyCtx.authorName}`}
+                >
+                  <div className="absolute inset-0 opacity-90" style={getStoryBgStyle(storyCtx.slideImageUrl, storyCtx.slideBackgroundColor)} />
+                  {storyCtx.slideImageUrl && (
+                    <img src={storyCtx.slideImageUrl} alt="story preview" className="absolute inset-0 h-full w-full object-cover" />
+                  )}
+                  <div className="absolute inset-0 bg-black/10 group-hover/story:bg-black/20 transition-colors" />
+                  <div className="absolute left-2 right-2 bottom-2 rounded-lg bg-black/45 px-2 py-1 text-left text-[11px] text-white">
+                    <p className="truncate">Tin của {storyCtx.authorName}</p>
+                  </div>
+                </button>
+              ) : (
+                <div
+                  onMouseEnter={() => setIsStoryPreviewHovering(true)}
+                  onMouseLeave={() => setIsStoryPreviewHovering(false)}
+                  className="h-9 w-fit max-w-[min(210px,62vw)] rounded-2xl border border-black/5 bg-white/75 px-3 text-xs italic text-gray-600 flex items-center"
+                >
+                  Story unavailable
                 </div>
-                <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
-                  <img src={storyCtx.authorAvatarUrl} alt={storyCtx.authorName} className="h-5 w-5 rounded-full border-[1.5px] border-white object-cover" />
-                  <span className="text-white text-[11px] font-semibold drop-shadow-sm truncate max-w-[120px]">{storyCtx.authorName}</span>
-                </div>
-              </button>
+              )}
               <div
-                className={`px-3 py-2 ${message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'}`}
+                className={`relative z-[2] -mt-3 inline-block w-fit max-w-full overflow-hidden rounded-2xl px-3 py-2 break-all text-left [overflow-wrap:anywhere] ${
+                  message.isOwn ? 'mr-1' : 'ml-1'
+                } ${
+                  message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
+                }`}
                 style={ownBubbleStyle}
               >
-                {storyCtx.text && (
-                  <p className="text-sm leading-relaxed break-all [overflow-wrap:anywhere]">{storyCtx.text}</p>
-                )}
-                <p className={`text-[10px] mt-0.5 ${message.isOwn ? 'text-white/50' : 'text-gray-400'}`}>Đã trả lời tin</p>
+                <p className="text-sm leading-relaxed break-all [overflow-wrap:anywhere]">{storyCtx.text || message.text}</p>
               </div>
             </div>
           ) : imageUrls.length > 0 && !message.deleted ? (
@@ -423,10 +449,9 @@ export const MessageBubble = ({
                 className="flex min-w-0 w-[min(240px,68vw)] max-w-full items-center gap-2 sm:min-w-[176px]"
                 style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
               >
-                <button className="cursor-pointer"
+                <button
                   type="button"
-                  onClick={toggleVoicePlayback}
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  onClick={toggleVoicePlayback} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
                     message.isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-white hover:bg-gray-50'
                   }`}
                   title={isVoicePlaying ? 'Tạm dừng' : 'Phát tin nhắn thoại'}
@@ -464,7 +489,7 @@ export const MessageBubble = ({
                 />
               </div>
               ) : message.videoShareId && !message.deleted ? (
-              <button className="cursor-pointer"
+              <button
                 type="button"
                 onClick={() => {
                   if (message.videoShareId) {
@@ -472,8 +497,7 @@ export const MessageBubble = ({
                   } else {
                     navigate('/watch');
                   }
-                }}
-                className="flex flex-col min-w-0 w-[min(260px,68vw)] max-w-full overflow-hidden rounded-xl bg-black/5 group/video-share transition-transform hover:scale-[1.02]"
+                }} className="flex flex-col min-w-0 w-[min(260px,68vw)] max-w-full overflow-hidden rounded-xl bg-black/5 group/video-share transition-transform hover:scale-[1.02]"
                 title="Xem video"
               >
                 <div className="relative aspect-[9/16] w-full overflow-hidden">
@@ -502,10 +526,9 @@ export const MessageBubble = ({
                 </div>
               </button>
               ) : message.fileUrl && !message.deleted ? (
-              <button className="cursor-pointer"
+              <button
                 type="button"
-                onClick={() => window.open(message.fileUrl, '_blank', 'noopener,noreferrer')}
-                className="flex min-w-0 w-[min(280px,68vw)] max-w-full items-center gap-3"
+                onClick={() => window.open(message.fileUrl, '_blank', 'noopener,noreferrer')} className="flex min-w-0 w-[min(280px,68vw)] max-w-full items-center gap-3"
                 title="Mở file"
               >
                 <span
@@ -523,13 +546,12 @@ export const MessageBubble = ({
                     {formatFileSize(message.fileSizeBytes) || message.fileMimeType || 'File'}
                   </span>
                 </span>
-                <button className="cursor-pointer"
+                <button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
                     void downloadFile(message.fileUrl, message.fileName);
-                  }}
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  }} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${
                     message.isOwn ? 'hover:bg-white/20' : 'hover:bg-blue-50'
                   }`}
                   title="Tải xuống"
@@ -559,28 +581,34 @@ export const MessageBubble = ({
             </div>
           )}
 
-          {!message.deleted && isHovering && (
+          {!message.deleted && isHovering && !(isStoryReply && isStoryPreviewHovering) && (
             <div
-              className={`absolute top-0 -translate-y-1/2 flex items-center gap-0.5 bg-white rounded-full shadow-sm ring-1 ring-gray-200/70 px-1 py-1 z-20 ${
+              onMouseEnter={() => {
+                setIsHovering(true);
+              }}
+              onMouseLeave={() => {
+                setIsHovering(false);
+              }}
+              className={`absolute flex items-center gap-0.5 bg-white rounded-full shadow-sm ring-1 ring-gray-200/70 px-1 py-1 z-20 ${
+                isStoryReply ? 'top-[calc(100%-52px)]' : 'top-0 -translate-y-1/2'
+              } ${
                 message.isOwn ? 'right-[calc(100%+6px)]' : 'left-[calc(100%+6px)]'
               }`}
               style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
             >
-              <button className="cursor-pointer"
+              <button
                 onClick={() => {
                   if (message.deleted) return;
                   setShowReactions(!showReactions);
-                }}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                }} className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                 title="Thả cảm xúc"
                 disabled={message.deleted}
               >
                 <Smile className="w-3.5 h-3.5 text-gray-600" />
               </button>
 
-              <button className="cursor-pointer"
-                onClick={() => !message.deleted && onReply?.(message)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+              <button
+                onClick={() => !message.deleted && onReply?.(message)} className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
                 title="Trả lời"
                 disabled={message.deleted}
               >
@@ -606,18 +634,16 @@ export const MessageBubble = ({
               ref={reactionRef}
             >
               {quickReactions.map((emoji) => (
-                <button className="cursor-pointer"
+                <button
                   key={emoji}
-                  onClick={() => handleReaction(emoji)}
-                  className="text-2xl hover:scale-150 transition-transform duration-200 cursor-pointer"
+                  onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-150 transition-transform duration-200 cursor-pointer"
                 >
                   {emoji}
                 </button>
               ))}
               <div className="w-px h-6 bg-gray-300 mx-1" />
-              <button className="cursor-pointer"
-                onClick={() => setShowExtraReactions((prev) => !prev)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+              <button
+                onClick={() => setShowExtraReactions((prev) => !prev)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
                 title="Thêm emoji khác"
               >
                 <span className="text-xl text-gray-600">+</span>
@@ -632,10 +658,9 @@ export const MessageBubble = ({
               ref={reactionRef}
             >
               {extraReactions.map((emoji) => (
-                <button className="cursor-pointer"
+                <button
                   key={emoji}
-                  onClick={() => handleReaction(emoji)}
-                  className="text-2xl hover:scale-150 transition-transform duration-200 cursor-pointer"
+                  onClick={() => handleReaction(emoji)} className="text-2xl hover:scale-150 transition-transform duration-200 cursor-pointer"
                 >
                   {emoji}
                 </button>
@@ -653,55 +678,50 @@ export const MessageBubble = ({
                 left: `${menuPosition.left}px`,
               }}
             >
-              <button className="cursor-pointer"
+              <button
                 onClick={() => {
                   onPinMessage?.(message);
                   setShowMenu(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
+                }} className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 {isPinnedMessage ? 'Bỏ ghim tin nhắn' : 'Ghim tin nhắn'}
               </button>
-              <button className="cursor-pointer"
+              <button
                 onClick={() => {
                   onForward?.(message);
                   setShowMenu(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
+                }} className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 Chuyển tiếp
               </button>
-              <button className="cursor-pointer"
+              <button
                 onClick={() => {
                   onReport?.(message);
                   setShowMenu(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
+                }} className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 Báo cáo
               </button>
               {message.isOwn && (
                 <>
                   <div className="my-1 h-px bg-gray-200" />
-                  <button className="cursor-pointer"
+                  <button
                       onClick={() => {
                       onDeleteForMe?.(message.id);
                       setShowMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    }} className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                     disabled={message.deleted}
                   >
                     Gỡ ở phía tôi
                   </button>
-                  <button className="cursor-pointer"
+                  <button
                     onClick={() => {
                       onDeleteForEveryone?.(message.id);
                       setShowMenu(false);
-                    }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                    }} className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                     disabled={message.deleted}
                   >
-                    Gỡ cho mọi người
+                      Gỡ cho mọi người
                   </button>
                 </>
               )}
@@ -729,26 +749,24 @@ export const MessageBubble = ({
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
           onClick={() => setLightboxIndex(null)}
         >
-          <button className="cursor-pointer"
+          <button
             type="button"
             onClick={(event) => {
               event.stopPropagation();
               setLightboxIndex(null);
-            }}
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+            }} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
             title="Đóng"
           >
             <X className="h-6 w-6" />
           </button>
 
           {imageUrls.length > 1 && (
-            <button className="cursor-pointer"
+            <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
                 setLightboxIndex((prev) => (prev === null ? 0 : (prev - 1 + imageUrls.length) % imageUrls.length));
-              }}
-              className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              }} className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
               title="Ảnh trước"
             >
               <ChevronLeft className="h-7 w-7" />
@@ -763,13 +781,12 @@ export const MessageBubble = ({
           />
 
           {imageUrls.length > 1 && (
-            <button className="cursor-pointer"
+            <button
               type="button"
               onClick={(event) => {
                 event.stopPropagation();
                 setLightboxIndex((prev) => (prev === null ? 0 : (prev + 1) % imageUrls.length));
-              }}
-              className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              }} className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
               title="Ảnh sau"
             >
               <ChevronRight className="h-7 w-7" />
@@ -786,4 +803,6 @@ export const MessageBubble = ({
     </div>
   );
 };
+
+
 

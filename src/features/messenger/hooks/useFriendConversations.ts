@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { friendService, FRIENDSHIP_CHANGED_EVENT } from '@/services/friendService';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
@@ -24,11 +24,6 @@ const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
-
-function isChatActionContent(content?: string | null) {
-  const raw = content?.trim();
-  return Boolean(raw && raw.startsWith(CHAT_ACTION_PREFIX));
-}
 
 function mapBackendContentToPreview(content?: string | null) {
   const raw = content?.trim();
@@ -59,22 +54,25 @@ function mapBackendContentToPreview(content?: string | null) {
     return '';
   }
 
+  if (raw.startsWith(STORY_REPLY_PREFIX) || raw.includes('STORY_REPLY')) {
+    try {
+      const rawPayload = raw.includes(':') ? raw.slice(raw.indexOf(':') + 1) : '';
+      const payload = rawPayload ? JSON.parse(rawPayload) : null;
+      if (typeof payload?.text === 'string' && payload.text.trim()) {
+        return payload.text.trim();
+      }
+    } catch {
+      // ignore invalid payload and fallback
+    }
+    return 'Đã trả lời tin';
+  }
+
   if (raw.startsWith(REPLY_PREFIX)) {
     try {
       const payload = JSON.parse(raw.slice(REPLY_PREFIX.length));
       return typeof payload?.text === 'string' ? payload.text.trim() : raw;
     } catch {
       return raw;
-    }
-  }
-
-  if (raw.startsWith(STORY_REPLY_PREFIX)) {
-    try {
-      const payload = JSON.parse(raw.slice(STORY_REPLY_PREFIX.length));
-      const text = typeof payload?.text === 'string' ? payload.text.trim() : '';
-      return text || 'Đã trả lời tin';
-    } catch {
-      return 'Đã trả lời tin';
     }
   }
 
@@ -120,40 +118,6 @@ function parseBackendDate(value?: string | Date | null) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-type HistoryMessage = {
-  createdAt?: string | null;
-  content?: string | null;
-  senderId?: string | null;
-  seen?: boolean | null;
-};
-
-function getLatestHistoryMessage(history: HistoryMessage[]) {
-  let latest: HistoryMessage | null = null;
-  let latestAt = -Infinity;
-  for (const message of history) {
-    const at = parseBackendDate(message.createdAt)?.getTime() ?? -Infinity;
-    if (at > latestAt) {
-      latestAt = at;
-      latest = message;
-    }
-  }
-  return latest;
-}
-
-function getLatestVisibleHistoryMessage(history: HistoryMessage[]) {
-  let latest: HistoryMessage | null = null;
-  let latestAt = -Infinity;
-  for (const message of history) {
-    if (isChatActionContent(message.content)) continue;
-    const at = parseBackendDate(message.createdAt)?.getTime() ?? -Infinity;
-    if (at > latestAt) {
-      latestAt = at;
-      latest = message;
-    }
-  }
-  return latest;
-}
-
 function formatTimestamp(iso?: string | null) {
   if (!iso) return '';
 
@@ -185,6 +149,8 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const includeGroups = Boolean(options.includeGroups);
+  const loadInFlightRef = useRef<Promise<void> | null>(null);
+  const reloadTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const syncAuth = () => setCurrentUser(authService.getCurrentUser());
@@ -197,33 +163,40 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
       setLoading(false);
       return;
     }
+    if (loadInFlightRef.current) return;
 
     setLoading(true);
     setError(null);
 
-    Promise.all([
+    loadInFlightRef.current = Promise.all([
       friendService.getFriends(currentUser.id),
       includeGroups ? chatService.getMyGroupConversations() : Promise.resolve([]),
     ])
       .then(async ([friends, groups]) => {
-        const friendHistories = await Promise.allSettled(
-          friends.map((friend) => chatService.getChatHistory(currentUser.id, friend.userId, { limit: 20 })),
+        const summaries = await chatService.getConversationSummaries({
+          peerUserIds: friends.map((friend) => friend.userId),
+          conversationIds: groups.map((group) => group.id),
+        });
+        const privateSummaryByPeer = new Map(
+          summaries
+            .filter((item) => item.peerUserId)
+            .map((item) => [item.peerUserId as string, item]),
         );
-        const groupHistories = await Promise.allSettled(
-          groups.map((group) => chatService.getGroupChatHistory(group.id, { limit: 20 })),
+        const groupSummaryByConversation = new Map(
+          summaries
+            .filter((item) => item.conversationId)
+            .map((item) => [item.conversationId as string, item]),
         );
 
-        const friendItems = friends.map((friend, index) => {
-          const historyResult = friendHistories[index];
-          const history = historyResult.status === 'fulfilled' ? historyResult.value.messages : [];
-          const last = getLatestHistoryMessage(history);
-          const lastVisible = getLatestVisibleHistoryMessage(history);
-          const rawPreview = mapBackendContentToPreview(lastVisible?.content);
+        const friendItems = friends.map((friend) => {
+          const summary = privateSummaryByPeer.get(friend.userId);
+          const rawPreview = mapBackendContentToPreview(summary?.lastMessageContent);
           const isOwnLastMessage = Boolean(
-            lastVisible?.senderId && currentUser.id && lastVisible.senderId === currentUser.id,
+            summary?.lastMessageSenderId && currentUser.id && summary.lastMessageSenderId === currentUser.id,
           );
-          const isUnread = lastVisible ? !lastVisible.seen && !isOwnLastMessage : false;
-          const previewTimestamp = lastVisible?.createdAt || last?.createdAt || friend.createdAt;
+          const unreadCount = Math.max(0, summary?.unreadCount ?? 0);
+          const isUnread = unreadCount > 0;
+          const previewTimestamp = summary?.lastMessageCreatedAt || friend.createdAt;
           const sortAt = (parseBackendDate(previewTimestamp) ?? new Date(0)).getTime();
 
           return {
@@ -250,16 +223,13 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
           };
         });
 
-        const groupItems = groups.map((group, index) => {
-          const historyResult = groupHistories[index];
-          const history = historyResult.status === 'fulfilled' ? historyResult.value.messages : [];
-          const last = getLatestHistoryMessage(history);
-          const lastVisible = getLatestVisibleHistoryMessage(history);
-          const rawPreview = mapBackendContentToPreview(lastVisible?.content);
+        const groupItems = groups.map((group) => {
+          const summary = groupSummaryByConversation.get(group.id);
+          const rawPreview = mapBackendContentToPreview(summary?.lastMessageContent);
           const isOwnLastMessage = Boolean(
-            lastVisible?.senderId && currentUser.id && lastVisible.senderId === currentUser.id,
+            summary?.lastMessageSenderId && currentUser.id && summary.lastMessageSenderId === currentUser.id,
           );
-          const previewTimestamp = lastVisible?.createdAt || last?.createdAt || group.createdAt;
+          const previewTimestamp = summary?.lastMessageCreatedAt || group.createdAt;
           const sortAt = (parseBackendDate(previewTimestamp) ?? new Date(0)).getTime();
 
           return {
@@ -296,10 +266,13 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
         setConversations([]);
         setError('Không thể tải cuộc trò chuyện');
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        loadInFlightRef.current = null;
+        setLoading(false);
+      });
   }, [currentUser?.id, includeGroups]);
 
-  const { subscribeMessages, subscribeMessageStatuses } = useRealtimeCall();
+  const { subscribeMessages } = useRealtimeCall();
 
   useEffect(() => {
     load();
@@ -313,27 +286,33 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
   useEffect(() => {
     if (!currentUser?.id) return;
 
+    const scheduleReload = () => {
+      if (reloadTimerRef.current !== null) return;
+      reloadTimerRef.current = window.setTimeout(() => {
+        reloadTimerRef.current = null;
+        load();
+      }, 800);
+    };
+
     const unsubMsg = subscribeMessages((msg) => {
       if (msg.senderId !== currentUser.id) {
-        // Small delay to ensure backend has finished processing
-        setTimeout(load, 500);
-      }
-    });
-
-    const unsubStatus = subscribeMessageStatuses((status) => {
-      if (status.status === 'SEEN') {
-        setTimeout(load, 500);
+        scheduleReload();
       }
     });
 
     return () => {
+      if (reloadTimerRef.current !== null) {
+        window.clearTimeout(reloadTimerRef.current);
+        reloadTimerRef.current = null;
+      }
       unsubMsg();
-      unsubStatus();
     };
-  }, [currentUser?.id, subscribeMessages, subscribeMessageStatuses, load]);
+  }, [currentUser?.id, subscribeMessages, load]);
 
   return { conversations, loading, error, reload: load };
 }
+
+
 
 
 

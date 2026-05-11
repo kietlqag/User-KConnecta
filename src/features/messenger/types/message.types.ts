@@ -42,6 +42,11 @@ export interface Message {
   videoShareThumbnail?: string;
   videoShareTitle?: string;
   videoShareAuthorId?: string;
+  storyReplyAuthorId?: string;
+  storyReplyAuthorName?: string;
+  storyReplyAuthorAvatarUrl?: string;
+  storyReplySlideImageUrl?: string | null;
+  storyReplySlideBackgroundColor?: string | null;
 }
 
 export interface ChatUser {
@@ -98,6 +103,11 @@ export interface IncomingPinnedMessage {
   messagePreview?: string | null;
   messageCreatedAt?: string | null;
   pinned: boolean;
+}
+
+export interface IncomingNotificationEvent {
+  event?: string;
+  unreadCount?: number;
 }
 
 export type CallSignalType =

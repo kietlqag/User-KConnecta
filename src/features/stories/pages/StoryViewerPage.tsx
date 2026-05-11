@@ -342,7 +342,7 @@ export function StoryViewerPage() {
       </aside>
 
       {/* ─── Main Viewer ──────────────────────────────────────────────────── */}
-      <main className="flex-1 relative flex items-center justify-center bg-neutral-900">
+      <main className="flex-1 relative flex items-start justify-center overflow-y-auto bg-neutral-900 py-4 sm:items-center">
         {currentAuthorIndex > 0 && (
           <button
             onClick={() => handleSelectAuthor(currentAuthorIndex - 1)}
@@ -352,19 +352,26 @@ export function StoryViewerPage() {
           </button>
         )}
 
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex min-h-full flex-col items-center justify-center gap-3">
 
         {/* Story Card */}
-        <div className="relative select-none" style={{ width: '360px', height: '600px' }}>
+        <div
+          className="relative select-none"
+          style={{
+            width: 'min(360px, calc(100vw - 32px))',
+            height: 'min(600px, calc(100dvh - 190px))',
+          }}
+        >
           {/* Background layer */}
           {slide.imageUrl ? (
             <div
-              className="absolute inset-0 scale-110 rounded-2xl"
+              className="absolute inset-0 scale-100 rounded-2xl"
               style={{
                 backgroundImage: `url(${slide.imageUrl})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                filter: 'blur(20px) brightness(0.5)',
+                filter: 'blur(10px) brightness(0.7)',
+                opacity: 0.45,
               }}
             />
           ) : (
@@ -480,7 +487,7 @@ export function StoryViewerPage() {
 
         {/* Reply Bar — only visible when viewing someone else's story */}
         {!isOwnStory && (
-          <div className="w-[360px] flex flex-col gap-2">
+          <div className="flex w-[min(360px,calc(100vw-32px))] flex-col gap-2">
             <div className="flex items-center gap-2 rounded-full bg-white/10 border border-white/30 px-4 py-2">
               <img
                 src={currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14'}

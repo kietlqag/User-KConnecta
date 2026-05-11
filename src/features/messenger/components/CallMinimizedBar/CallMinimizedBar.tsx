@@ -64,22 +64,20 @@ export function CallMinimizedBar({
       <div className="ml-auto flex items-center gap-2">
         {mode === 'incoming' ? (
           <>
-            <button className="cursor-pointer"
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 onRejectIncoming?.();
-              }}
-              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
+              }} className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
               title="Từ chối"
             >
               <PhoneOff className="w-4 h-4 text-white" />
             </button>
-            <button className="cursor-pointer"
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 onAcceptIncoming?.();
-              }}
-              className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center"
+              }} className="w-8 h-8 rounded-full bg-green-500 hover:bg-green-600 transition-colors flex items-center justify-center"
               title="Nghe máy"
             >
               <Phone className="w-4 h-4 text-white" />
@@ -87,12 +85,11 @@ export function CallMinimizedBar({
           </>
         ) : mode === 'in_call' ? (
           <>
-            <button className="cursor-pointer"
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleSpeaker?.();
-              }}
-              className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
+              }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                 speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
               }`}
               title={speakerMode === 'outer' ? 'Đang loa ngoài' : 'Đang loa trong'}
@@ -104,12 +101,11 @@ export function CallMinimizedBar({
               )}
             </button>
             {isVideoCall && (
-              <button className="cursor-pointer"
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleCamera?.();
-                }}
-                className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
+                }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                   isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
                 title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
@@ -117,24 +113,22 @@ export function CallMinimizedBar({
                 {isCameraEnabled ? <Video className="w-4 h-4 text-white" /> : <VideoOff className="w-4 h-4 text-gray-700" />}
               </button>
             )}
-            <button className="cursor-pointer"
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleMute?.();
-              }}
-              className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
+              }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                 isMuted ? 'bg-gray-100 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700'
               }`}
               title={isMuted ? 'Bật mic' : 'Tắt mic'}
             >
               {isMuted ? <MicOff className="w-4 h-4 text-gray-700" /> : <Mic className="w-4 h-4 text-white" />}
             </button>
-            <button className="cursor-pointer"
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 onEndCall?.();
-              }}
-              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
+              }} className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
               title="Kết thúc cuộc gọi"
             >
               <PhoneOff className="w-4 h-4 text-white" />
@@ -142,12 +136,11 @@ export function CallMinimizedBar({
           </>
         ) : (
           <>
-            <button className="cursor-pointer"
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleSpeaker?.();
-              }}
-              className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
+              }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                 speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
               }`}
               title={speakerMode === 'outer' ? 'Đang loa ngoài' : 'Đang loa trong'}
@@ -159,12 +152,11 @@ export function CallMinimizedBar({
               )}
             </button>
             {isVideoCall && (
-              <button className="cursor-pointer"
+              <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleCamera?.();
-                }}
-                className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
+                }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
                   isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'
                 }`}
                 title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
@@ -172,12 +164,11 @@ export function CallMinimizedBar({
                 {isCameraEnabled ? <Video className="w-4 h-4 text-white" /> : <VideoOff className="w-4 h-4 text-gray-700" />}
               </button>
             )}
-            <button className="cursor-pointer"
+            <button
               onClick={(e) => {
                 e.stopPropagation();
                 onEndCall?.();
-              }}
-              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
+              }} className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center"
               title="Kết thúc cuộc gọi"
             >
               <PhoneOff className="w-4 h-4 text-white" />
@@ -188,4 +179,5 @@ export function CallMinimizedBar({
     </div>
   );
 }
+
 

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Home, Users, Video, Store, Grid3x3, MessageCircle, Bell, Menu } from 'lucide-react';
+import { Search, Home, Users, UsersRound, Video, Store, Grid3x3, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
 import { MenuPanel } from '../../../menu/components';
@@ -17,8 +17,8 @@ export function WatchHeader() {
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
     { icon: <Users className="w-6 h-6" />, href: '/friends', label: 'Friends' },
     { icon: <Video className="w-6 h-6" />, href: '/watch', label: 'Watch' },
-    { icon: <Store className="w-6 h-6" />, href: '/marketplace', label: 'Marketplace' },
-    { icon: <Grid3x3 className="w-6 h-6" />, href: '/groups', label: 'Groups' },
+    { icon: <UsersRound className="w-6 h-6" />, href: '/groups', label: 'Groups' },
+    { icon: <Radio className="w-6 h-6" />, href: '/live', label: 'LiveStream' },
   ];
 
   return (
@@ -113,3 +113,5 @@ export function WatchHeader() {
     </header>
   );
 }
+
+
