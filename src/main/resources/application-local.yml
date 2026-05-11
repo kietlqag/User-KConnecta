@@ -1,4 +1,7 @@
 spring:
+  jpa:
+    show-sql: true
+
   data:
     redis:
       host: localhost
@@ -9,3 +12,8 @@ spring:
   # @Cacheable / @CachePut / @CacheEvict become no-ops — logic still executes correctly.
   cache:
     type: none
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace

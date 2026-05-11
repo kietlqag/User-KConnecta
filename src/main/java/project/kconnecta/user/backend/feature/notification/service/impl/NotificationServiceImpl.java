@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.feature.notification.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
@@ -13,6 +14,7 @@ import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -23,6 +25,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     public NotificationResponse createNotification(UUID recipientId, UUID senderId, NotificationType type, String content, UUID relatedId) {
@@ -46,6 +49,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
 
         notification = notificationRepository.save(notification);
+        pushUnreadCountUpdate(recipient);
         return toResponse(notification);
     }
 
@@ -69,6 +73,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + notificationId));
         notification.setRead(true);
         notificationRepository.save(notification);
+        pushUnreadCountUpdate(notification.getRecipient());
     }
 
     @Override
@@ -79,6 +84,7 @@ public class NotificationServiceImpl implements NotificationService {
         
         unreadList.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(unreadList);
+        userRepository.findById(userId).ifPresent(this::pushUnreadCountUpdate);
     }
 
     @Override
@@ -88,6 +94,22 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setActioned(true);
         notification.setRead(true);
         notificationRepository.save(notification);
+        pushUnreadCountUpdate(notification.getRecipient());
+    }
+
+    private void pushUnreadCountUpdate(User recipient) {
+        if (recipient == null || recipient.getUsername() == null || recipient.getUsername().isBlank()) {
+            return;
+        }
+        int unreadCount = notificationRepository.countUnreadByRecipientId(recipient.getId());
+        messagingTemplate.convertAndSendToUser(
+                recipient.getUsername(),
+                "/queue/notifications",
+                Map.of(
+                        "event", "UNREAD_COUNT_UPDATED",
+                        "unreadCount", unreadCount
+                )
+        );
     }
 
     private NotificationResponse toResponse(Notification notification) {

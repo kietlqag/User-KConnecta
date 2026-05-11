@@ -14,6 +14,25 @@ import java.util.UUID;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
 
+    interface PrivateSummaryRow {
+        UUID getPeerUserId();
+        String getLastMessageContent();
+        UUID getLastMessageSenderId();
+        LocalDateTime getLastMessageCreatedAt();
+    }
+
+    interface GroupSummaryRow {
+        UUID getConversationId();
+        String getLastMessageContent();
+        UUID getLastMessageSenderId();
+        LocalDateTime getLastMessageCreatedAt();
+    }
+
+    interface PrivateUnreadCountRow {
+        UUID getPeerUserId();
+        Integer getUnreadCount();
+    }
+
     @Query("""
             SELECT m FROM ChatMessage m
             JOIN FETCH m.sender
@@ -137,5 +156,67 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             @Param("conversationId") UUID conversationId,
             @Param("beforeCreatedAt") LocalDateTime beforeCreatedAt,
             Pageable pageable
+    );
+
+    @Query(value = """
+            SELECT DISTINCT ON (peer_user_id)
+                   peer_user_id AS peerUserId,
+                   last_message_content AS lastMessageContent,
+                   last_message_sender_id AS lastMessageSenderId,
+                   last_message_created_at AS lastMessageCreatedAt
+            FROM (
+                SELECT
+                    CASE
+                        WHEN m.sender_id = :currentUserId THEN m.receiver_id
+                        ELSE m.sender_id
+                    END AS peer_user_id,
+                    m.content AS last_message_content,
+                    m.sender_id AS last_message_sender_id,
+                    m.created_at AS last_message_created_at
+                FROM chat_messages m
+                WHERE m.conversation_id IS NULL
+                  AND (m.sender_id = :currentUserId OR m.receiver_id = :currentUserId)
+                  AND (
+                    CASE
+                        WHEN m.sender_id = :currentUserId THEN m.receiver_id
+                        ELSE m.sender_id
+                    END
+                  ) IN (:peerUserIds)
+            ) x
+            ORDER BY peer_user_id, last_message_created_at DESC
+            """, nativeQuery = true)
+    List<PrivateSummaryRow> findLatestPrivateSummaries(
+            @Param("currentUserId") UUID currentUserId,
+            @Param("peerUserIds") List<UUID> peerUserIds
+    );
+
+    @Query(value = """
+            SELECT DISTINCT ON (m.conversation_id)
+                   m.conversation_id AS conversationId,
+                   m.content AS lastMessageContent,
+                   m.sender_id AS lastMessageSenderId,
+                   m.created_at AS lastMessageCreatedAt
+            FROM chat_messages m
+            WHERE m.conversation_id IN (:conversationIds)
+            ORDER BY m.conversation_id, m.created_at DESC
+            """, nativeQuery = true)
+    List<GroupSummaryRow> findLatestGroupSummaries(
+            @Param("conversationIds") List<UUID> conversationIds
+    );
+
+    @Query(value = """
+            SELECT
+                m.sender_id AS peerUserId,
+                COUNT(*) AS unreadCount
+            FROM chat_messages m
+            WHERE m.conversation_id IS NULL
+              AND m.receiver_id = :currentUserId
+              AND m.seen = false
+              AND m.sender_id IN (:peerUserIds)
+            GROUP BY m.sender_id
+            """, nativeQuery = true)
+    List<PrivateUnreadCountRow> countUnreadPrivateByPeer(
+            @Param("currentUserId") UUID currentUserId,
+            @Param("peerUserIds") List<UUID> peerUserIds
     );
 }

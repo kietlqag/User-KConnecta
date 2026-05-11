@@ -15,7 +15,7 @@ spring:
       hibernate:
         jdbc:
           time_zone: ${APP_TIMEZONE:Asia/Ho_Chi_Minh}
-    show-sql: false
+    show-sql: true
     open-in-view: false
 
   jackson:
@@ -70,4 +70,5 @@ logging:
     org.springframework.mail: debug
     org.eclipse.angus.mail: debug
     org.springframework: warn
-    org.hibernate.SQL: warn
+    org.hibernate.SQL: debug
+    org.hibernate.orm.jdbc.bind: trace

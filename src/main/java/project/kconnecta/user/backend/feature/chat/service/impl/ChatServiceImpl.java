@@ -27,6 +27,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.ChatAssetItemRes
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatAssetPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.ConversationSummaryResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationMemberResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
@@ -1013,6 +1014,71 @@ public class ChatServiceImpl implements ChatService {
         for (ChatPinnedMessage row : rows) {
             result.add(toPinnedMessageResponse(row, null, null, null, null, null, true));
         }
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ConversationSummaryResponse> getConversationSummaries(
+            String currentUsername,
+            List<UUID> peerUserIds,
+            List<UUID> conversationIds
+    ) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        List<ConversationSummaryResponse> result = new ArrayList<>();
+        UUID currentUserId = currentUser.getId();
+
+        List<UUID> safePeerIds = peerUserIds == null ? Collections.emptyList() : peerUserIds.stream()
+                .filter(id -> id != null && !id.equals(currentUserId))
+                .distinct()
+                .toList();
+        if (!safePeerIds.isEmpty()) {
+            Map<UUID, Integer> unreadByPeer = new HashMap<>();
+            for (ChatMessageRepository.PrivateUnreadCountRow row : chatMessageRepository.countUnreadPrivateByPeer(currentUserId, safePeerIds)) {
+                unreadByPeer.put(row.getPeerUserId(), row.getUnreadCount() == null ? 0 : row.getUnreadCount());
+            }
+
+            for (ChatMessageRepository.PrivateSummaryRow row : chatMessageRepository.findLatestPrivateSummaries(currentUserId, safePeerIds)) {
+                result.add(new ConversationSummaryResponse(
+                        row.getPeerUserId(),
+                        null,
+                        row.getLastMessageContent(),
+                        row.getLastMessageSenderId(),
+                        row.getLastMessageCreatedAt(),
+                        unreadByPeer.getOrDefault(row.getPeerUserId(), 0)
+                ));
+            }
+        }
+
+        List<UUID> safeConversationIds = conversationIds == null ? Collections.emptyList() : conversationIds.stream()
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (!safeConversationIds.isEmpty()) {
+            Set<UUID> allowedConversationIds = chatConversationMemberRepository.findByUserIdWithConversation(currentUserId)
+                    .stream()
+                    .map(member -> member.getConversation().getId())
+                    .collect(Collectors.toSet());
+
+            List<UUID> filteredConversationIds = safeConversationIds.stream()
+                    .filter(allowedConversationIds::contains)
+                    .toList();
+            if (!filteredConversationIds.isEmpty()) {
+                for (ChatMessageRepository.GroupSummaryRow row : chatMessageRepository.findLatestGroupSummaries(filteredConversationIds)) {
+                    result.add(new ConversationSummaryResponse(
+                            null,
+                            row.getConversationId(),
+                            row.getLastMessageContent(),
+                            row.getLastMessageSenderId(),
+                            row.getLastMessageCreatedAt(),
+                            0
+                    ));
+                }
+            }
+        }
+
         return result;
     }
 
