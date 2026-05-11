@@ -27,7 +27,6 @@ public class PresenceServiceImpl implements PresenceService {
 
     private final ConcurrentMap<String, UUID> sessionOwners = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, AtomicInteger> onlineCounters = new ConcurrentHashMap<>();
-    private final ConcurrentMap<UUID, LocalDateTime> lastActiveAt = new ConcurrentHashMap<>();
 
     @Override
     public void handleSessionConnected(String sessionId, String username) {
@@ -43,6 +42,9 @@ public class PresenceServiceImpl implements PresenceService {
         UUID userId = user.getId();
         sessionOwners.put(sessionId, userId);
         int activeSessions = onlineCounters.computeIfAbsent(userId, ignored -> new AtomicInteger(0)).incrementAndGet();
+        LocalDateTime now = LocalDateTime.now();
+        user.setLastActiveAt(now);
+        userRepository.save(user);
 
         if (activeSessions == 1) {
             publishPresenceToFriends(userId, true, null);
@@ -72,7 +74,10 @@ public class PresenceServiceImpl implements PresenceService {
 
         onlineCounters.remove(userId);
         LocalDateTime now = LocalDateTime.now();
-        lastActiveAt.put(userId, now);
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setLastActiveAt(now);
+            userRepository.save(user);
+        });
         publishPresenceToFriends(userId, false, now);
     }
 
@@ -89,12 +94,12 @@ public class PresenceServiceImpl implements PresenceService {
 
         UUID userId = user.getId();
         List<UUID> friendIds = friendshipRepository.findFriendIdsByUserIdAndStatus(userId, FriendshipStatus.ACCEPTED);
-
-        for (UUID friendId : friendIds) {
+        List<User> friends = userRepository.findAllById(friendIds);
+        for (User friend : friends) {
             PresenceStatusResponse status = new PresenceStatusResponse(
-                    friendId,
-                    isOnline(friendId),
-                    lastActiveAt.get(friendId)
+                    friend.getId(),
+                    isOnline(friend.getId()),
+                    friend.getLastActiveAt()
             );
             messagingTemplate.convertAndSendToUser(username, "/queue/presence", status);
         }
@@ -118,4 +123,3 @@ public class PresenceServiceImpl implements PresenceService {
         }
     }
 }
-
