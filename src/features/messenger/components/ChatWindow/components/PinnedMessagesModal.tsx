@@ -99,11 +99,11 @@ export function PinnedMessagesModal({
               <Pin className="h-4.5 w-4.5" />
             </span>
             <div>
-              <h3 className="text-[17px] font-semibold text-gray-900">Tin nháº¯n Ä‘Ã£ ghim</h3>
-              <p className="text-xs text-gray-500">{sortedItems.length} tin nháº¯n</p>
+              <h3 className="text-[17px] font-semibold text-gray-900">Tin nhắn đã ghim</h3>
+              <p className="text-xs text-gray-500">{sortedItems.length} tin nhắn</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer" title="ÄÃ³ng">
+          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer" title="Đóng">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -114,12 +114,12 @@ export function PinnedMessagesModal({
               <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
                 <Pin className="h-5 w-5" />
               </span>
-              <p className="text-sm font-medium text-gray-700">ChÆ°a cÃ³ tin nháº¯n ghim</p>
+              <p className="text-sm font-medium text-gray-700">Chưa có tin nhắn ghim</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
               {sortedItems.map((item) => {
-                const senderLabel = item.senderId === currentUserId ? 'Báº¡n' : item.senderName;
+                const senderLabel = item.senderId === currentUserId ? 'Bạn' : item.senderName;
                 return (
                   <div key={item.messageId} className="flex gap-3 px-4 py-3 hover:bg-gray-50">
                     <img
@@ -140,7 +140,7 @@ export function PinnedMessagesModal({
                         <p className="truncate text-sm font-semibold text-gray-900">{senderLabel}</p>
                         <span className="shrink-0 text-xs text-gray-500">{formatPinnedTime(item.messageCreatedAt || item.pinnedAt)}</span>
                       </div>
-                      <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-gray-700 break-words">{item.text || 'Tin nháº¯n'}</p>
+                      <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-gray-700 break-words">{item.text || 'Tin nhắn'}</p>
                     </button>
                     <button
                       type="button"
@@ -176,7 +176,7 @@ export function PinnedMessagesModal({
             className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
           >
             <MessageSquare className="h-4 w-4" />
-            Xem trong Ä‘oáº¡n chat
+            Xem trong đoạn chat
           </button>
           <button
             type="button"
@@ -188,7 +188,7 @@ export function PinnedMessagesModal({
             className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
           >
             <PinOff className="h-4 w-4" />
-            Bá» ghim
+            Bỏ ghim
           </button>
         </div>
       )}

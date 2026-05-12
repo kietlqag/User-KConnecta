@@ -24,18 +24,18 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
   const isOwnProfile = isOwnProfileProp ?? currentUser?.id === resolvedProfileKey;
 
   const tabs = [
-    { label: 'Táº¥t cáº£', path: `/profile/${resolvedProfileKey}` },
-    { label: 'Giá»›i thiá»‡u', path: `/profile/${resolvedProfileKey}/about` },
-    { label: 'Báº¡n bÃ¨', path: `/profile/${resolvedProfileKey}/friends` },
-    { label: 'áº¢nh', path: `/profile/${resolvedProfileKey}/photos` },
+    { label: 'Tất cả', path: `/profile/${resolvedProfileKey}` },
+    { label: 'Giới thiệu', path: `/profile/${resolvedProfileKey}/about` },
+    { label: 'Bạn bè', path: `/profile/${resolvedProfileKey}/friends` },
+    { label: 'Ảnh', path: `/profile/${resolvedProfileKey}/photos` },
     { label: 'Reels', path: `/profile/${resolvedProfileKey}/reels` },
   ];
 
   const moreTabs = [
-    { label: 'ThÃ­ch', path: `/profile/${resolvedProfileKey}/likes` },
+    { label: 'Thích', path: `/profile/${resolvedProfileKey}/likes` },
     { label: 'Clip', path: `/profile/${resolvedProfileKey}/clips` },
-    { label: 'Sá»± kiá»‡n', path: `/profile/${resolvedProfileKey}/events` },
-    { label: 'CÃ¢u há»i', path: `/profile/${resolvedProfileKey}/questions` },
+    { label: 'Sự kiện', path: `/profile/${resolvedProfileKey}/events` },
+    { label: 'Câu hỏi', path: `/profile/${resolvedProfileKey}/questions` },
   ];
 
   const isActive = (path: string) => {
@@ -73,7 +73,7 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
                       : 'rounded-t-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                   }`}
                 >
-                  Xem thÃªm
+                  Xem thêm
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -98,12 +98,12 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
-                <span>CÃ i Ä‘áº·t</span>
+                <span>Cài đặt</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-red-600 dark:text-red-400">
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>ÄÄƒng xuáº¥t</span>
+                <span>Đăng xuất</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

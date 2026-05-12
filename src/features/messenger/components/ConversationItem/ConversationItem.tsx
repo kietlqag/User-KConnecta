@@ -92,7 +92,7 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
             }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
           >
             {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-            {isPinned ? 'Bá» ghim' : 'Ghim'}
+            {isPinned ? 'Bỏ ghim' : 'Ghim'}
           </button>
         </div>
       )}

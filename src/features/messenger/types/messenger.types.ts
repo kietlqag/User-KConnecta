@@ -10,10 +10,11 @@
   lastMessage: string;
   timestamp: string;
   lastActivityAt?: number;
-  isUnread: boolean;
+  isUnread: boolean;`r`n  unreadCount?: number;
   isGroup?: boolean;
   themeColor?: string | null;
 }
 
 export type MessengerFilter = 'all' | 'unread' | 'groups';
+
 

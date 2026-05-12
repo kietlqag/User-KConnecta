@@ -56,7 +56,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
   };
 
   const profileLink = currentUser ? `/profile/${currentUser.username || currentUser.id}` : '/auth/login';
-  const fullName = currentUser?.fullName || 'NgÆ°á»i dÃ¹ng';
+  const fullName = currentUser?.fullName || 'Người dùng';
   const avatarUrl = currentUser?.avatarUrl || avatarImage;
 
   return (
@@ -85,7 +85,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
           <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          <span className="font-medium text-gray-900">Xem táº¥t cáº£ trang cÃ¡ nhÃ¢n</span>
+          <span className="font-medium text-gray-900">Xem tất cả trang cá nhân</span>
         </button>
 
         <div className="border-t border-gray-200 my-2" />
@@ -100,7 +100,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
             <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
               <Settings className="w-5 h-5 text-gray-700" />
             </div>
-            <span className="flex-1 text-left font-medium text-gray-900">CÃ i Ä‘áº·t vÃ  quyá»n riÃªng tÆ°</span>
+            <span className="flex-1 text-left font-medium text-gray-900">Cài đặt và quyền riêng tư</span>
             <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
           </button>
 
@@ -109,7 +109,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
             <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
               <HelpCircle className="w-5 h-5 text-gray-700" />
             </div>
-            <span className="flex-1 text-left font-medium text-gray-900">Trá»£ giÃºp vÃ  há»— trá»£</span>
+            <span className="flex-1 text-left font-medium text-gray-900">Trợ giúp và hỗ trợ</span>
             <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
           </button>
 
@@ -129,7 +129,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
             <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
               <Moon className="w-5 h-5 text-gray-700" />
             </div>
-            <span className="flex-1 text-left font-medium text-gray-900">MÃ n hÃ¬nh vÃ  trá»£ nÄƒng</span>
+            <span className="flex-1 text-left font-medium text-gray-900">Màn hình và trợ năng</span>
             <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
           </button>
 
@@ -141,7 +141,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
             <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
               <LogOut className="w-5 h-5 text-gray-700" />
             </div>
-            <span className="flex-1 text-left font-medium text-gray-900">ÄÄƒng xuáº¥t</span>
+            <span className="flex-1 text-left font-medium text-gray-900">Đăng xuất</span>
           </button>
         </div>
       </div>
@@ -149,13 +149,13 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
       {/* Footer Links */}
       <div className="px-4 py-3 bg-white border-t border-gray-200">
         <div className="text-xs text-gray-500 leading-relaxed">
-          <a href="#" className="hover:underline cursor-pointer">Quyá»n riÃªng tÆ°</a>
+          <a href="#" className="hover:underline cursor-pointer">Quyền riêng tư</a>
           {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Äiá»u khoáº£n</a>
+          <a href="#" className="hover:underline cursor-pointer">Điều khoản</a>
           {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Quáº£ng cÃ¡o</a>
+          <a href="#" className="hover:underline cursor-pointer">Quảng cáo</a>
           {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Lá»±a chá»n quáº£ng cÃ¡o</a>
+          <a href="#" className="hover:underline cursor-pointer">Lựa chọn quảng cáo</a>
           {' '}
           <svg className="inline w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14.5A6.5 6.5 0 1114.5 8 6.508 6.508 0 018 14.5z"/>
@@ -163,7 +163,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
           {' Â· '}
           <a href="#" className="hover:underline cursor-pointer">Cookie</a>
           {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Xem thÃªm</a>
+          <a href="#" className="hover:underline cursor-pointer">Xem thêm</a>
           {' '}
           <svg className="inline w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
             <path d="M12.5 8l-5-5v10z"/>

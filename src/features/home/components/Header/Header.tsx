@@ -76,7 +76,10 @@ export function Header() {
   }, [currentUser?.id, subscribeNotificationEvents]);
 
   const { conversations } = useFriendConversations();
-  const unreadMessagesCount = conversations.filter((c) => c.isUnread).length;
+  const unreadMessagesCount = conversations.reduce(
+    (total, conversation) => total + Math.max(0, conversation.unreadCount ?? (conversation.isUnread ? 1 : 0)),
+    0,
+  );
 
   const navItems = [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
@@ -164,7 +167,7 @@ export function Header() {
               <MessageCircle className="w-5 h-5 text-gray-700" />
               {unreadMessagesCount > 0 && (
                 <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                  {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
                 </span>
               )}
             </button>

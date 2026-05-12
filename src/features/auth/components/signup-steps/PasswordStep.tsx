@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { ArrowLeft, Lock } from 'lucide-react';
 import { AuthInput } from '../AuthInput';
 
@@ -43,17 +43,17 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
     const newErrors: { password?: string; confirmPassword?: string } = {};
 
     if (!password) {
-      newErrors.password = 'Mật khẩu là bắt buộc';
+      newErrors.password = 'Máº­t kháº©u lÃ  báº¯t buá»™c';
     } else if (password.length < 8) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 8 ký tự';
+      newErrors.password = 'Máº­t kháº©u pháº£i cÃ³ Ã­t nháº¥t 8 kÃ½ tá»±';
     } else if (passwordStrength < 2) {
-      newErrors.password = 'Mật khẩu quá yếu. Hãy thêm chữ hoa, số hoặc ký tự đặc biệt';
+      newErrors.password = 'Máº­t kháº©u quÃ¡ yáº¿u. HÃ£y thÃªm chá»¯ hoa, sá»‘ hoáº·c kÃ½ tá»± Ä‘áº·c biá»‡t';
     }
 
     if (!confirmPassword) {
-      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
+      newErrors.confirmPassword = 'Vui lÃ²ng xÃ¡c nháº­n máº­t kháº©u';
     } else if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Mật khẩu không khớp';
+      newErrors.confirmPassword = 'Máº­t kháº©u khÃ´ng khá»›p';
     }
 
     setErrors(newErrors);
@@ -74,6 +74,12 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
 
   const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
   const strengthLabels = ['Yếu', 'Trung bình', 'Tốt', 'Mạnh'];
+  const hasMinLength = password.length >= 8;
+  const hasUpperAndLower = /[a-z]/.test(password) && /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasAllRequiredChecks = hasMinLength && hasUpperAndLower && hasNumber;
+  const isConfirmMatched = confirmPassword.length > 0 && password === confirmPassword;
+  const canContinue = hasAllRequiredChecks && isConfirmMatched && !isLoading;
 
   return (
     <div>
@@ -82,21 +88,21 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
         className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span className="text-sm font-medium">Quay lại</span>
+        <span className="text-sm font-medium">Quay láº¡i</span>
       </button>
 
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Tạo mật khẩu</h2>
-        <p className="text-gray-600">Tạo mật khẩu mạnh để bảo vệ tài khoản của bạn</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Táº¡o máº­t kháº©u</h2>
+        <p className="text-gray-600">Táº¡o máº­t kháº©u máº¡nh Ä‘á»ƒ báº£o vá»‡ tÃ i khoáº£n cá»§a báº¡n</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <AuthInput
-            label="Mật khẩu"
+            label="Máº­t kháº©u"
             name="password"
             type="password"
-            placeholder="••••••••"
+            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
             icon={<Lock size={20} />}
             value={password}
             onChange={handlePasswordChange}
@@ -118,7 +124,7 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
               </div>
               {passwordStrength > 0 && (
                 <p className="text-sm text-gray-600">
-                  Độ mạnh:{' '}
+                  Äá»™ máº¡nh:{' '}
                   <span
                     className={`font-semibold ${
                       passwordStrength >= 3
@@ -137,10 +143,10 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
         </div>
 
         <AuthInput
-          label="Xác nhận mật khẩu"
+          label="XÃ¡c nháº­n máº­t kháº©u"
           name="confirmPassword"
           type="password"
-          placeholder="••••••••"
+          placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
           icon={<Lock size={20} />}
           value={confirmPassword}
           onChange={handleConfirmPasswordChange}
@@ -148,44 +154,44 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
         />
 
         <div className="bg-gray-50 rounded-xl p-4 space-y-2">
-          <p className="text-sm font-medium text-gray-700 mb-2">Mật khẩu phải có:</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">Máº­t kháº©u pháº£i cÃ³:</p>
           <ul className="space-y-1.5 text-sm text-gray-600">
             <li className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${password.length >= 8 ? 'bg-green-500' : 'bg-gray-300'}`}>
-                {password.length >= 8 && (
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasMinLength ? 'bg-green-500' : 'bg-gray-300'}`}>
+                {hasMinLength && (
                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </div>
-              Ít nhất 8 ký tự
+              Ãt nháº¥t 8 kÃ½ tá»±
             </li>
             <li className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${/[a-z]/.test(password) && /[A-Z]/.test(password) ? 'bg-green-500' : 'bg-gray-300'}`}>
-                {/[a-z]/.test(password) && /[A-Z]/.test(password) && (
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasUpperAndLower ? 'bg-green-500' : 'bg-gray-300'}`}>
+                {hasUpperAndLower && (
                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </div>
-              Chữ hoa và chữ thường
+              Chá»¯ hoa vÃ  chá»¯ thÆ°á»ng
             </li>
             <li className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${/\d/.test(password) ? 'bg-green-500' : 'bg-gray-300'}`}>
-                {/\d/.test(password) && (
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}>
+                {hasNumber && (
                   <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </div>
-              Ít nhất một số
+              Ãt nháº¥t má»™t sá»‘
             </li>
           </ul>
         </div>
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={!canContinue}
           className="w-full py-3.5 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
@@ -194,13 +200,14 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
-              Đang xử lý...
+              Äang xá»­ lÃ½...
             </span>
           ) : (
-            'Tiếp tục'
+            'Tiáº¿p tá»¥c'
           )}
         </button>
       </form>
     </div>
   );
 }
+

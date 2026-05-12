@@ -42,17 +42,17 @@ interface CallOverlayModalProps {
 function statusLabel(status: GroupCallParticipant['status']) {
   switch (status) {
     case 'joined':
-      return 'Äang trong cuá»™c gá»i';
+      return 'Đang trong cuộc gọi';
     case 'left':
-      return 'ÄÃ£ rá»i khá»i';
+      return 'Đã rời khỏi';
     case 'rejected':
-      return 'ÄÃ£ tá»« chá»‘i';
+      return 'Đã từ chối';
     case 'missed':
-      return 'ChÆ°a tham gia';
+      return 'Chưa tham gia';
     case 'ringing':
-      return 'Äang gá»i...';
+      return 'Đang gọi...';
     default:
-      return 'ÄÆ°á»£c má»i';
+      return 'Được mời';
   }
 }
 
@@ -83,7 +83,7 @@ function GroupVideoTile({
       ) : (
         <div className="flex h-full min-h-[150px] flex-col items-center justify-center gap-2 bg-gray-100">
           <img src={participant.avatar} alt={participant.name} className="h-16 w-16 rounded-full object-cover" />
-          <span className="text-xs font-medium text-gray-500">{joined ? 'Äang chá» video' : statusLabel(participant.status)}</span>
+          <span className="text-xs font-medium text-gray-500">{joined ? 'Đang chờ video' : statusLabel(participant.status)}</span>
         </div>
       )}
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 px-3 py-2 text-white">
@@ -161,7 +161,7 @@ export function CallOverlayModal({
     <button
       onClick={onMinimize}
       className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-gray-100 cursor-pointer"
-      title="Thu gá»n cuá»™c gá»i"
+      title="Thu gọn cuộc gọi"
     >
       <X className="h-4 w-4 text-gray-600" />
     </button>
@@ -169,7 +169,7 @@ export function CallOverlayModal({
 
   const groupParticipantList = (
     <div className="mt-5 max-h-52 overflow-y-auto pr-1">
-      <p className="mb-2 text-left text-sm font-semibold text-gray-700">ThÃ nh viÃªn cuá»™c gá»i</p>
+      <p className="mb-2 text-left text-sm font-semibold text-gray-700">Thành viên cuộc gọi</p>
       <div className="space-y-2">
         {groupCallParticipants.map((participant) => (
           <div key={participant.userId} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2">
@@ -178,9 +178,9 @@ export function CallOverlayModal({
               <div className="min-w-0 text-left">
                 <p className="truncate text-sm font-semibold text-gray-900">
                   {participant.name}
-                  {participant.userId === currentUserId ? ' (Báº¡n)' : ''}
+                  {participant.userId === currentUserId ? ' (Bạn)' : ''}
                 </p>
-                <p className="text-xs text-gray-500">{participant.userId === callerUserId ? 'NgÆ°á»i báº¯t Ä‘áº§u cuá»™c gá»i' : statusLabel(participant.status)}</p>
+                <p className="text-xs text-gray-500">{participant.userId === callerUserId ? 'Người bắt đầu cuộc gọi' : statusLabel(participant.status)}</p>
               </div>
             </div>
             <span className={`h-2.5 w-2.5 rounded-full ${participant.status === 'joined' ? 'bg-green-500' : participant.status === 'ringing' ? 'bg-blue-500' : 'bg-gray-300'}`} />
@@ -196,7 +196,7 @@ export function CallOverlayModal({
         type="button"
         onClick={() => setVideoPage((prev) => Math.max(0, prev - 1))}
         disabled={videoPage === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
-        title="Trang trÆ°á»›c"
+        title="Trang trước"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
@@ -225,18 +225,18 @@ export function CallOverlayModal({
             <p className="mt-5 text-[22px] font-semibold leading-tight text-gray-900">{user.name}</p>
             <p className="mt-2 text-[16px] text-gray-500">
               {isGroupCall
-                ? `${caller?.name || user.name} Ä‘ang gá»i nhÃ³m`
+                ? `${caller?.name || user.name} đang gọi nhóm`
                 : incomingMediaType === 'video'
-                  ? 'Äang gá»i video cho báº¡n'
-                  : 'Äang gá»i thoáº¡i cho báº¡n'}
+                  ? 'Đang gọi video cho bạn'
+                  : 'Đang gọi thoại cho bạn'}
             </p>
           </div>
 
           <div className="mt-8 flex items-center justify-center gap-7">
-            <button onClick={onRejectIncoming} className={`${`${iconButtonClassName} cursor-pointer` } bg-red-500 hover:bg-red-600`} title="Tá»« chá»‘i">
+            <button onClick={onRejectIncoming} className={`${`${iconButtonClassName} cursor-pointer` } bg-red-500 hover:bg-red-600`} title="Từ chối">
               <PhoneOff className="h-6 w-6 text-white" />
             </button>
-            <button onClick={onAcceptIncoming} className={`${`${iconButtonClassName} cursor-pointer` } bg-green-500 hover:bg-green-600`} title="Nghe mÃ¡y">
+            <button onClick={onAcceptIncoming} className={`${`${iconButtonClassName} cursor-pointer` } bg-green-500 hover:bg-green-600`} title="Nghe máy">
               <Phone className="h-6 w-6 text-white" />
             </button>
           </div>
@@ -266,7 +266,7 @@ export function CallOverlayModal({
                 type="button"
                 onClick={() => setVideoPage((prev) => Math.max(0, prev - 1))}
                 disabled={videoPage === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
-                title="Trang trÆ°á»›c"
+                title="Trang trước"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -284,7 +284,7 @@ export function CallOverlayModal({
             </div>
           )}
           <div className="mt-3 text-center">
-            <p className="text-lg font-semibold text-gray-900">{videoParticipants.length} ngÆ°á»i Ä‘ang trong cuá»™c gá»i</p>
+            <p className="text-lg font-semibold text-gray-900">{videoParticipants.length} người đang trong cuộc gọi</p>
             <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
           </div>
         </>
@@ -297,7 +297,7 @@ export function CallOverlayModal({
             <div key={participant.userId} className="rounded-xl bg-gray-50 px-2 py-3">
               <img src={participant.avatar} alt={participant.name} className="mx-auto h-16 w-16 rounded-full object-cover" />
               <p className="mt-2 truncate text-sm font-semibold text-gray-900">{participant.name}</p>
-              <p className="text-xs text-green-600">ÄÃ£ tham gia</p>
+              <p className="text-xs text-green-600">Đã tham gia</p>
             </div>
           ))}
         </div>
@@ -319,7 +319,7 @@ export function CallOverlayModal({
             <div className="mt-7 relative overflow-hidden rounded-xl bg-black h-[360px]">
               <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover bg-black" />
               <video ref={localVideoRef} autoPlay muted playsInline className="absolute bottom-3 right-3 w-40 h-28 object-cover rounded-lg border border-white/40 bg-gray-900" />
-              {!hasRemoteStream && <div className="absolute inset-0 flex items-center justify-center text-sm text-white/80">Äang chá» video...</div>}
+              {!hasRemoteStream && <div className="absolute inset-0 flex items-center justify-center text-sm text-white/80">Đang chờ video...</div>}
             </div>
             <div className="mt-3 text-center">
               <p className="text-lg font-semibold text-gray-900">{user.name}</p>
@@ -338,7 +338,7 @@ export function CallOverlayModal({
           <button
             onClick={onToggleSpeaker}
             className={`${`${iconButtonClassName} cursor-pointer` } ${speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
-            title={speakerMode === 'outer' ? 'Äang loa ngoÃ i, báº¥m Ä‘á»ƒ chuyá»ƒn loa trong' : 'Äang loa trong, báº¥m Ä‘á»ƒ chuyá»ƒn loa ngoÃ i'}
+            title={speakerMode === 'outer' ? 'Đang loa ngoài, bấm để chuyển loa trong' : 'Đang loa trong, bấm để chuyển loa ngoài'}
           >
             {speakerMode === 'outer' ? <Volume2 className="h-6 w-6 text-white" /> : <Volume1 className="h-6 w-6 text-gray-700" />}
           </button>
@@ -347,7 +347,7 @@ export function CallOverlayModal({
             <button
               onClick={onToggleCamera}
               className={`${`${iconButtonClassName} cursor-pointer` } ${isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
-              title={isCameraEnabled ? 'Táº¯t camera' : 'Báº­t camera'}
+              title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
             >
               {isCameraEnabled ? <Video className="h-6 w-6 text-white" /> : <VideoOff className="h-6 w-6 text-gray-700" />}
             </button>
@@ -357,13 +357,13 @@ export function CallOverlayModal({
             <button
               onClick={onToggleMute}
               className={`${`${iconButtonClassName} cursor-pointer` } ${isMuted ? 'bg-gray-100 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700'}`}
-              title={isMuted ? 'Báº­t mic' : 'Táº¯t mic'}
+              title={isMuted ? 'Bật mic' : 'Tắt mic'}
             >
               {isMuted ? <MicOff className="h-6 w-6 text-gray-700" /> : <Mic className="h-6 w-6 text-white" />}
             </button>
           )}
 
-          <button onClick={onEndCall} className={`${`${iconButtonClassName} cursor-pointer` } bg-red-500 hover:bg-red-600`} title="Káº¿t thÃºc cuá»™c gá»i">
+          <button onClick={onEndCall} className={`${`${iconButtonClassName} cursor-pointer` } bg-red-500 hover:bg-red-600`} title="Kết thúc cuộc gọi">
             <PhoneOff className="h-6 w-6 text-white" />
           </button>
         </div>

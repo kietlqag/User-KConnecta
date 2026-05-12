@@ -219,6 +219,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
               timestamp: formatTimestamp(previewTimestamp),
               lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
               isUnread,
+              unreadCount,
             } satisfies Conversation,
           };
         });
@@ -229,6 +230,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
           const isOwnLastMessage = Boolean(
             summary?.lastMessageSenderId && currentUser.id && summary.lastMessageSenderId === currentUser.id,
           );
+          const unreadCount = Math.max(0, summary?.unreadCount ?? 0);
           const previewTimestamp = summary?.lastMessageCreatedAt || group.createdAt;
           const sortAt = (parseBackendDate(previewTimestamp) ?? new Date(0)).getTime();
 
@@ -249,7 +251,8 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
               lastMessage: formatConversationPreview(rawPreview, isOwnLastMessage) || 'Nhóm chat đã được tạo.',
               timestamp: formatTimestamp(previewTimestamp),
               lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
-              isUnread: false,
+              isUnread: unreadCount > 0,
+              unreadCount,
               isGroup: true,
               themeColor: group.themeColor,
             } satisfies Conversation,

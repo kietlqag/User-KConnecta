@@ -183,16 +183,16 @@ export function ProfilePage() {
 
   const userProfile = {
     id: profile?.id || resolvedProfileId || userId,
-    fullName: profile?.fullName || 'Quá»‘c Kiá»‡t',
+    fullName: profile?.fullName || 'Quốc Kiệt',
     username: profile?.username || currentUser?.username || '',
     avatar: profile?.avatarUrl || (isRouteCurrentUser ? currentUser?.avatarUrl : undefined) || DEFAULT_AVATAR,
     coverPhoto: profile?.coverPhotoUrl || (isRouteCurrentUser ? currentUser?.coverPhotoUrl : undefined) || DEFAULT_COVER,
     friendsCount: friends.length,
-    location: profile?.location || 'ThÃ nh phá»‘ Há»“ ChÃ­ Minh',
-    school: profile?.school || 'TrÆ°á»ng Äáº¡i há»c CÃ´ng nghá»‡ Ká»¹ thuáº­t TP HCM',
-    hometown: profile?.hometown || 'Tá»‹nh An, An Giang, Vietnam',
-    relationship: profile?.relationshipStatus || 'Äá»™c thÃ¢n',
-    bio: profile?.bio || 'MÃ´ táº£ ngáº¯n vá» báº£n thÃ¢n báº¡n',
+    location: profile?.location || 'Thành phố Hồ Chí Minh',
+    school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
+    hometown: profile?.hometown || 'Tịnh An, An Giang, Vietnam',
+    relationship: profile?.relationshipStatus || 'Độc thân',
+    bio: profile?.bio || 'Mô tả ngắn về bản thân bạn',
     dateOfBirth: profile?.dateOfBirth,
   };
 
@@ -208,7 +208,7 @@ export function ProfilePage() {
   const photos = profilePhotos.slice(0, 9);
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Äang táº£i...</div>;
+    return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
   }
 
   return (
