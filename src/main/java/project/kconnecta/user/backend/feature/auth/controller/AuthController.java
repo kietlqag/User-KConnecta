@@ -55,9 +55,19 @@ public class AuthController {
         return ResponseEntity.ok(authService.googleLogin(request.getIdToken()));
     }
 
+    @PostMapping("/google-complete-register")
+    public ResponseEntity<AuthResponse> googleCompleteRegister(@Valid @RequestBody GoogleCompleteRegisterRequest request) {
+        return ResponseEntity.ok(authService.googleCompleteRegister(request));
+    }
+
     @GetMapping("/check-email")
     public ResponseEntity<?> checkEmail(@RequestParam String email) {
         return ResponseEntity.ok(Map.of("exists", authService.emailExists(email)));
+    }
+
+    @GetMapping("/check-username")
+    public ResponseEntity<?> checkUsername(@RequestParam String username) {
+        return ResponseEntity.ok(Map.of("exists", authService.usernameExists(username)));
     }
 
     @PostMapping("/reset-password")

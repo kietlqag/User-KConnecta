@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.auth.dto.request.ChangePasswordRequest;
+import project.kconnecta.user.backend.feature.auth.dto.request.GoogleCompleteRegisterRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.LoginRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.RegisterRequest;
 import project.kconnecta.user.backend.feature.auth.dto.response.AuthResponse;
@@ -122,22 +123,17 @@ public class AuthService {
     }
 
     public AuthResponse googleLogin(String idToken) {
-        if (googleClientId == null || googleClientId.isBlank()) {
-            throw new ValidationException("GOOGLE_CLIENT_ID chua duoc cau hinh o backend");
-        }
+        GoogleTokenInfo tokenInfo = verifyGoogleTokenAndAudience(idToken);
 
-        GoogleTokenInfo tokenInfo = verifyGoogleIdToken(idToken);
-
-        if (!googleClientId.equals(tokenInfo.audience())) {
-            throw new ValidationException("Google token khong hop le cho ung dung nay");
+        User user = userRepository.findByAccountEmail(tokenInfo.email()).orElse(null);
+        if (user == null) {
+            ensureGoogleAccountExists(tokenInfo);
+            return AuthResponse.builder()
+                    .email(tokenInfo.email())
+                    .hasPassword(false)
+                    .requiresProfileSetup(true)
+                    .build();
         }
-        if (!Boolean.TRUE.equals(tokenInfo.emailVerified())) {
-            throw new ValidationException("Email Google chua duoc xac minh");
-        }
-
-        // Auto-register if not exist
-        User user = userRepository.findByAccountEmail(tokenInfo.email())
-                .orElseGet(() -> registerGoogleUser(tokenInfo));
 
         Account account = user.getAccount();
         if (account.getStatus() != AccountStatus.ACTIVE) {
@@ -147,42 +143,47 @@ public class AuthService {
         return toResponse(user);
     }
 
-    private User registerGoogleUser(GoogleTokenInfo tokenInfo) {
-        Account account = accountRepository.findByEmail(tokenInfo.email())
-                .orElseGet(() -> {
-                    Account newAccount = Account.builder()
-                            .email(tokenInfo.email())
-                            .passwordHash(null)
-                            .status(AccountStatus.ACTIVE)
-                            .build();
-                    return accountRepository.save(newAccount);
-                });
+    public AuthResponse googleCompleteRegister(GoogleCompleteRegisterRequest request) {
+        GoogleTokenInfo tokenInfo = verifyGoogleTokenAndAudience(request.getIdToken());
 
-        String baseUsername = tokenInfo.email().split("@")[0]
-                .replaceAll("[^a-zA-Z0-9_]", "")
-                .toLowerCase();
-        String username = baseUsername;
-        int suffix = 1;
-        while (userRepository.existsByUsername(username)) {
-            username = baseUsername + suffix++;
+        if (userRepository.findByAccountEmail(tokenInfo.email()).isPresent()) {
+            throw new DuplicateResourceException("Email da duoc su dung");
+        }
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new DuplicateResourceException("Ten nguoi dung da ton tai");
         }
 
-        String fullName = (tokenInfo.name() != null && !tokenInfo.name().isBlank())
-                ? tokenInfo.name()
-                : username;
+        Account account = ensureGoogleAccountExists(tokenInfo);
 
         User user = User.builder()
                 .account(account)
-                .username(username)
-                .fullName(fullName)
+                .username(request.getUsername())
+                .fullName(request.getFullName())
+                .gender(request.getGender() == null ? null : request.getGender().trim())
+                .dateOfBirth(request.getDateOfBirth())
+                .location(request.getLocation())
+                .bio(request.getBio())
                 .avatarUrl(tokenInfo.picture())
                 .build();
 
-        return userRepository.save(user);
+        return toResponse(userRepository.save(user));
+    }
+
+    private Account ensureGoogleAccountExists(GoogleTokenInfo tokenInfo) {
+        return accountRepository.findByEmail(tokenInfo.email())
+                .orElseGet(() -> accountRepository.save(Account.builder()
+                        .email(tokenInfo.email())
+                        .passwordHash(null)
+                        .status(AccountStatus.ACTIVE)
+                        .build()));
     }
 
     public boolean emailExists(String email) {
         return userRepository.findByAccountEmail(email).isPresent();
+    }
+
+    public boolean usernameExists(String username) {
+        return userRepository.existsByUsername(username);
     }
 
     public void resetPassword(ResetPasswordRequest request) {
@@ -225,6 +226,23 @@ public class AuthService {
         }
     }
 
+    private GoogleTokenInfo verifyGoogleTokenAndAudience(String idToken) {
+        if (googleClientId == null || googleClientId.isBlank()) {
+            throw new ValidationException("GOOGLE_CLIENT_ID chua duoc cau hinh o backend");
+        }
+
+        GoogleTokenInfo tokenInfo = verifyGoogleIdToken(idToken);
+
+        if (!googleClientId.equals(tokenInfo.audience())) {
+            throw new ValidationException("Google token khong hop le cho ung dung nay");
+        }
+        if (!Boolean.TRUE.equals(tokenInfo.emailVerified())) {
+            throw new ValidationException("Email Google chua duoc xac minh");
+        }
+
+        return tokenInfo;
+    }
+
     public void setPassword(UUID userId, String newPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Nguoi dung khong ton tai"));
@@ -247,6 +265,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .username(user.getUsername())
                 .hasPassword(user.getAccount().getPasswordHash() != null)
+                .requiresProfileSetup(false)
                 .token(token)
                 .build();
     }
