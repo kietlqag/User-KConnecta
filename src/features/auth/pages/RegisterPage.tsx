@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { Link } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
 import { EmailStep, OTPVerificationStep, PasswordStep, ProfileSetupStep } from "../components/signup-steps";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
@@ -12,8 +13,15 @@ interface SignupData {
 }
 
 export function RegisterPage() {
+  const location = useLocation();
+  const googleSignupState = (location.state as { googleSignup?: boolean; googleIdToken?: string; email?: string } | null);
+  const isGoogleSignup = googleSignupState?.googleSignup === true && !!googleSignupState.googleIdToken && !!googleSignupState.email;
+
   const [currentStep, setCurrentStep] = useState<SignupStep>("email");
-  const [signupData, setSignupData] = useState<SignupData>({ email: "", password: "" });
+  const [signupData, setSignupData] = useState<SignupData>({
+    email: googleSignupState?.email ?? "",
+    password: "",
+  });
 
   const [mouseX, setMouseX] = useState<number>(0);
   const [mouseY, setMouseY] = useState<number>(0);
@@ -86,6 +94,11 @@ export function RegisterPage() {
     setSignupData((prev) => ({ ...prev, password }));
     setCurrentStep("profile");
   };
+
+  useEffect(() => {
+    if (!isGoogleSignup) return;
+    setCurrentStep("profile");
+  }, [isGoogleSignup]);
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -245,7 +258,9 @@ export function RegisterPage() {
             <ProfileSetupStep
               email={signupData.email}
               password={signupData.password}
-              onBack={() => setCurrentStep("password")}
+              isGoogleSignup={isGoogleSignup}
+              googleIdToken={googleSignupState?.googleIdToken}
+              onBack={() => setCurrentStep(isGoogleSignup ? "email" : "password")}
             />
           )}
 

@@ -5,6 +5,7 @@ import { authService } from "@/services/authService";
 import { AuthInput } from "../components/AuthInput";
 import { OTPInput } from "../components/OTPInput";
 import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
+import { getPasswordChecks } from "@/features/auth/utils/passwordValidation";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
 
 type Step = "email" | "otp" | "reset" | "success";
@@ -134,8 +135,10 @@ export function ForgotPasswordPage() {
   const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
+    const { hasAllRequiredChecks } = getPasswordChecks(password);
     if (!password) newErrors.password = "Mật khẩu là bắt buộc";
     else if (password.length < 8) newErrors.password = "Mật khẩu phải có ít nhất 8 ký tự";
+    else if (!hasAllRequiredChecks) newErrors.password = "Mật khẩu phải có chữ hoa, chữ thường và ít nhất một số";
     if (!confirmPassword) newErrors.confirmPassword = "Vui lòng xác nhận mật khẩu";
     else if (password !== confirmPassword) newErrors.confirmPassword = "Mật khẩu không khớp";
     if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
@@ -168,6 +171,10 @@ export function ForgotPasswordPage() {
   };
 
   const formattedOtpExpiresIn = `${String(Math.floor(otpExpiresIn / 60)).padStart(2, "0")}:${String(otpExpiresIn % 60).padStart(2, "0")}`;
+  const { hasMinLength, hasUpperAndLower, hasNumber, hasAllRequiredChecks } = getPasswordChecks(password);
+  const isResetConfirmMatched = confirmPassword.length > 0 && password === confirmPassword;
+  const isResetConfirmMismatched = confirmPassword.length > 0 && password !== confirmPassword;
+  const canSubmitReset = hasAllRequiredChecks && isResetConfirmMatched && !isLoading;
 
   const spinnerSvg = (
     <span className="flex items-center justify-center gap-2">
@@ -265,8 +272,59 @@ export function ForgotPasswordPage() {
               <p className="text-gray-600 text-sm">Tạo mật khẩu mới cho tài khoản của bạn</p>
             </div>
             <AuthInput label="Mật khẩu mới" name="password" type="password" placeholder="........" icon={<Lock size={20} />} value={password} onChange={(e) => { setPassword(e.target.value); setErrors((prev) => ({ ...prev, password: "" })); }} error={errors.password} />
-            <AuthInput label="Xác nhận mật khẩu" name="confirmPassword" type="password" placeholder="........" icon={<Lock size={20} />} value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setErrors((prev) => ({ ...prev, confirmPassword: "" })); }} error={errors.confirmPassword} />
-            <button type="submit" disabled={isLoading} className={submitBtnClass}>
+            <AuthInput
+              label="Xác nhận mật khẩu"
+              name="confirmPassword"
+              type="password"
+              placeholder="........"
+              icon={<Lock size={20} />}
+              value={confirmPassword}
+              onChange={(e) => { setConfirmPassword(e.target.value); setErrors((prev) => ({ ...prev, confirmPassword: "" })); }}
+              error={errors.confirmPassword || (isResetConfirmMismatched ? "Mật khẩu không khớp" : undefined)}
+              className={
+                isResetConfirmMatched
+                  ? "border-green-500 focus:border-green-500 focus:ring-green-200"
+                  : isResetConfirmMismatched
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+                    : ""
+              }
+            />
+            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-medium text-gray-700 mb-2">Mật khẩu phải có:</p>
+              <ul className="space-y-1.5 text-sm text-gray-600">
+                <li className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasMinLength ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    {hasMinLength && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  Ít nhất 8 ký tự
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasUpperAndLower ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    {hasUpperAndLower && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  Chữ hoa và chữ thường
+                </li>
+                <li className="flex items-center gap-2">
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasNumber ? 'bg-green-500' : 'bg-gray-300'}`}>
+                    {hasNumber && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  Ít nhất một số
+                </li>
+              </ul>
+            </div>
+            <button type="submit" disabled={!canSubmitReset} className={submitBtnClass}>
               {isLoading ? spinnerSvg : "Đặt lại mật khẩu"}
             </button>
           </form>

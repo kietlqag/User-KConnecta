@@ -76,6 +76,17 @@ export function LoginPage() {
           setIsGoogleLoading(true);
           try {
             const user = await authService.googleLogin(credential);
+            if (user.requiresProfileSetup) {
+              navigate("/auth/register", {
+                replace: true,
+                state: {
+                  googleSignup: true,
+                  googleIdToken: credential,
+                  email: user.email,
+                },
+              });
+              return;
+            }
             await persistAndHydrateUser(user);
             navigate(redirectTo, { replace: true });
           } catch (err) {

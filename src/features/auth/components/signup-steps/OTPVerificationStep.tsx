@@ -12,23 +12,9 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
   const [expiresIn, setExpiresIn] = useState(60);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  const startCooldown = () => {
-    setResendCooldown(60);
-    setExpiresIn(60);
-    const timer = window.setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) {
-          window.clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
 
   const handleChange = (index: number, value: string) => {
     if (value && !/^\d$/.test(value)) return;
@@ -40,13 +26,6 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
 
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
-    }
-
-    if (index === 5 && value) {
-      const fullOtp = newOtp.join('');
-      if (fullOtp.length === 6) {
-        void handleVerify(fullOtp);
-      }
     }
   };
 
@@ -84,7 +63,6 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
       const newOtp = pastedData.split('');
       setOtp(newOtp);
       inputRefs.current[5]?.focus();
-      void handleVerify(pastedData);
     }
   };
 
@@ -115,15 +93,20 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
   };
 
   const handleResend = async () => {
-    if (resendCooldown > 0) return;
+    if (expiresIn > 0 || isResending) return;
 
     setError('');
+    setIsResending(true);
 
     try {
       await authService.sendOtp(email);
-      startCooldown();
+      setExpiresIn(60);
+      setOtp(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không gửi lại được mã OTP');
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -202,15 +185,16 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
         <div className="text-center">
           <p className="text-sm text-gray-600">
             Không nhận được mã?{' '}
-            {resendCooldown > 0 ? (
-              <span className="text-gray-400">Gửi lại sau {resendCooldown}s</span>
+            {expiresIn > 0 ? (
+              <span className="text-gray-400">Gửi lại sau {expiresIn}s</span>
             ) : (
               <button
                 type="button"
                 onClick={handleResend}
-                className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
+                disabled={isResending}
+                className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:text-gray-400 disabled:cursor-not-allowed"
               >
-                Gửi lại
+                {isResending ? 'Đang gửi lại...' : 'Gửi lại'}
               </button>
             )}
           </p>

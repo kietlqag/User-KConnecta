@@ -2,6 +2,7 @@
 import { X, Mail, Lock, CheckCircle2, Loader2 } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { OTPInput } from '../OTPInput/OTPInput';
+import { getPasswordChecks } from '@/features/auth/utils/passwordValidation';
 
 type Step = 'email' | 'otp' | 'reset' | 'success';
 
@@ -105,8 +106,10 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
   const handleResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: Record<string, string> = {};
+    const { hasAllRequiredChecks } = getPasswordChecks(password);
     if (!password) errs.password = 'Mật khẩu là bắt buộc';
     else if (password.length < 8) errs.password = 'Mật khẩu phải có ít nhất 8 ký tự';
+    else if (!hasAllRequiredChecks) errs.password = 'Mật khẩu phải có chữ hoa, chữ thường và ít nhất một số';
     if (!confirmPassword) errs.confirmPassword = 'Vui lòng xác nhận mật khẩu';
     else if (password !== confirmPassword) errs.confirmPassword = 'Mật khẩu không khớp';
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
@@ -123,6 +126,10 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
   };
 
   const formattedExpiry = `${String(Math.floor(otpExpiresIn / 60)).padStart(2, '0')}:${String(otpExpiresIn % 60).padStart(2, '0')}`;
+  const { hasMinLength, hasUpperAndLower, hasNumber, hasAllRequiredChecks } = getPasswordChecks(password);
+  const isResetConfirmMatched = confirmPassword.length > 0 && password === confirmPassword;
+  const isResetConfirmMismatched = confirmPassword.length > 0 && password !== confirmPassword;
+  const canSubmitReset = hasAllRequiredChecks && isResetConfirmMatched && !loading;
 
   const inputClass = 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm';
   const btnClass = 'w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
@@ -245,11 +252,25 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
                   placeholder="Xác nhận mật khẩu"
                   value={confirmPassword}
                   onChange={(e) => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: '' })); }}
-                  className={inputClass}
+                  className={`${inputClass} ${
+                    isResetConfirmMatched
+                      ? 'border-green-500 focus:ring-green-500'
+                      : isResetConfirmMismatched
+                        ? 'border-red-500 focus:ring-red-500'
+                        : ''
+                  }`}
                 />
-                {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
+                {(errors.confirmPassword || isResetConfirmMismatched) && (
+                  <p className="text-red-500 text-xs mt-1">{errors.confirmPassword || 'Mật khẩu không khớp'}</p>
+                )}
               </div>
-              <button type="submit" disabled={loading} className={btnClass}>
+              <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
+                <p className="text-xs font-medium text-gray-700">Mật khẩu phải có:</p>
+                <p className="text-xs text-gray-600">{hasMinLength ? '✓' : '•'} Ít nhất 8 ký tự</p>
+                <p className="text-xs text-gray-600">{hasUpperAndLower ? '✓' : '•'} Chữ hoa và chữ thường</p>
+                <p className="text-xs text-gray-600">{hasNumber ? '✓' : '•'} Ít nhất một số</p>
+              </div>
+              <button type="submit" disabled={!canSubmitReset} className={btnClass}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Đặt lại mật khẩu
               </button>

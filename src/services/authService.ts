@@ -36,6 +36,7 @@ export interface AuthUser {
   dateOfBirth?: string;
   avatarUrl?: string;
   coverPhotoUrl?: string;
+  requiresProfileSetup?: boolean;
 }
 
 export interface RegisterData {
@@ -50,6 +51,16 @@ export interface RegisterData {
   hometown?: string;
   relationshipStatus?: string;
   school?: string;
+}
+
+export interface GoogleCompleteRegisterData {
+  idToken: string;
+  fullName: string;
+  username: string;
+  dateOfBirth: string;
+  gender: string;
+  location?: string;
+  bio?: string;
 }
 
 export const authService = {
@@ -81,6 +92,8 @@ export const authService = {
   },
   checkEmailExists: (email: string) =>
     api.get<{ exists: boolean }>(`/auth/check-email?email=${encodeURIComponent(email)}`),
+  checkUsernameExists: (username: string) =>
+    api.get<{ exists: boolean }>(`/auth/check-username?username=${encodeURIComponent(username)}`),
 
   sendOtp: (email: string) =>
     api.post<{ message: string }>('/auth/send-otp', { email }),
@@ -105,6 +118,9 @@ export const authService = {
 
   googleLogin: (idToken: string) =>
     api.post<AuthUser>('/auth/google-login', { idToken }),
+
+  googleCompleteRegister: (data: GoogleCompleteRegisterData) =>
+    api.post<AuthUser>('/auth/google-complete-register', data),
 
   saveCurrentUser: (user: AuthUser, rememberMe?: boolean) => {
     const readCurrentState = (): CurrentAuthState => {

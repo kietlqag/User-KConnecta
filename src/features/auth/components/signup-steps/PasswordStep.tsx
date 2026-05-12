@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
 import { ArrowLeft, Lock } from 'lucide-react';
 import { AuthInput } from '../AuthInput';
+import { calculatePasswordStrength, getPasswordChecks } from '@/features/auth/utils/passwordValidation';
 
 interface PasswordStepProps {
   onNext: (password: string) => void;
@@ -13,15 +14,6 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
-
-  const calculatePasswordStrength = (value: string): number => {
-    let strength = 0;
-    if (value.length >= 8) strength++;
-    if (/[a-z]/.test(value) && /[A-Z]/.test(value)) strength++;
-    if (/\d/.test(value)) strength++;
-    if (/[^a-zA-Z\d]/.test(value)) strength++;
-    return strength;
-  };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -74,11 +66,9 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
 
   const strengthColors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500'];
   const strengthLabels = ['Yếu', 'Trung bình', 'Tốt', 'Mạnh'];
-  const hasMinLength = password.length >= 8;
-  const hasUpperAndLower = /[a-z]/.test(password) && /[A-Z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  const hasAllRequiredChecks = hasMinLength && hasUpperAndLower && hasNumber;
+  const { hasMinLength, hasUpperAndLower, hasNumber, hasAllRequiredChecks } = getPasswordChecks(password);
   const isConfirmMatched = confirmPassword.length > 0 && password === confirmPassword;
+  const isConfirmMismatched = confirmPassword.length > 0 && password !== confirmPassword;
   const canContinue = hasAllRequiredChecks && isConfirmMatched && !isLoading;
 
   return (
@@ -150,7 +140,14 @@ export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
           icon={<Lock size={20} />}
           value={confirmPassword}
           onChange={handleConfirmPasswordChange}
-          error={errors.confirmPassword}
+          error={errors.confirmPassword || (isConfirmMismatched ? 'Mật khẩu không khớp' : undefined)}
+          className={
+            isConfirmMatched
+              ? 'border-green-500 focus:border-green-500 focus:ring-green-200'
+              : isConfirmMismatched
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-200'
+                : ''
+          }
         />
 
         <div className="bg-gray-50 rounded-xl p-4 space-y-2">
