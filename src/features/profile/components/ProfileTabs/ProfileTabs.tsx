@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, MoreHorizontal, Settings, LogOut } from 'lucide-react';
 import {
@@ -11,33 +11,35 @@ import {
 import { authService } from '@/services/authService';
 
 interface ProfileTabsProps {
-  userId: string;
+  userId?: string;
+  profileKey?: string;
   isOwnProfile?: boolean;
 }
 
-export function ProfileTabs({ userId, isOwnProfile: isOwnProfileProp }: ProfileTabsProps) {
+export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp }: ProfileTabsProps) {
   const location = useLocation();
   const currentPath = location.pathname;
   const currentUser = authService.getCurrentUser();
-  const isOwnProfile = isOwnProfileProp ?? currentUser?.id === userId;
+  const resolvedProfileKey = profileKey || userId || '';
+  const isOwnProfile = isOwnProfileProp ?? currentUser?.id === resolvedProfileKey;
 
   const tabs = [
-    { label: 'Tất cả', path: `/profile/${userId}` },
-    { label: 'Giới thiệu', path: `/profile/${userId}/about` },
-    { label: 'Bạn bè', path: `/profile/${userId}/friends` },
-    { label: 'Ảnh', path: `/profile/${userId}/photos` },
-    { label: 'Reels', path: `/profile/${userId}/reels` },
+    { label: 'Táº¥t cáº£', path: `/profile/${resolvedProfileKey}` },
+    { label: 'Giá»›i thiá»‡u', path: `/profile/${resolvedProfileKey}/about` },
+    { label: 'Báº¡n bÃ¨', path: `/profile/${resolvedProfileKey}/friends` },
+    { label: 'áº¢nh', path: `/profile/${resolvedProfileKey}/photos` },
+    { label: 'Reels', path: `/profile/${resolvedProfileKey}/reels` },
   ];
 
   const moreTabs = [
-    { label: 'Thích', path: `/profile/${userId}/likes` },
-    { label: 'Clip', path: `/profile/${userId}/clips` },
-    { label: 'Sự kiện', path: `/profile/${userId}/events` },
-    { label: 'Câu hỏi', path: `/profile/${userId}/questions` },
+    { label: 'ThÃ­ch', path: `/profile/${resolvedProfileKey}/likes` },
+    { label: 'Clip', path: `/profile/${resolvedProfileKey}/clips` },
+    { label: 'Sá»± kiá»‡n', path: `/profile/${resolvedProfileKey}/events` },
+    { label: 'CÃ¢u há»i', path: `/profile/${resolvedProfileKey}/questions` },
   ];
 
   const isActive = (path: string) => {
-    if (path === `/profile/${userId}`) {
+    if (path === `/profile/${resolvedProfileKey}`) {
       return currentPath === path;
     }
     return currentPath.startsWith(path);
@@ -71,7 +73,7 @@ export function ProfileTabs({ userId, isOwnProfile: isOwnProfileProp }: ProfileT
                       : 'rounded-t-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                   }`}
                 >
-                  Xem thêm
+                  Xem thÃªm
                   <ChevronDown className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -96,12 +98,12 @@ export function ProfileTabs({ userId, isOwnProfile: isOwnProfileProp }: ProfileT
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem>
                 <Settings className="mr-2 h-4 w-4" />
-                <span>Cài đặt</span>
+                <span>CÃ i Ä‘áº·t</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-red-600 dark:text-red-400">
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Đăng xuất</span>
+                <span>ÄÄƒng xuáº¥t</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -111,3 +113,4 @@ export function ProfileTabs({ userId, isOwnProfile: isOwnProfileProp }: ProfileT
     </div>
   );
 }
+

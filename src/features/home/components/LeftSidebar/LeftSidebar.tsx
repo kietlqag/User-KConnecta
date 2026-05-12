@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -31,8 +31,9 @@ export const LeftSidebar = () => {
       window.removeEventListener('storage', syncAuthUser);
     };
   }, []);
-  const fullName = currentUser?.fullName || 'Người dùng';
+  const fullName = currentUser?.fullName || 'NgÆ°á»i dÃ¹ng';
   const userId = currentUser?.id;
+  const userUsername = currentUser?.username;
   const avatarUrl = currentUser?.avatarUrl;
   const initials = fullName
     .split(' ')
@@ -54,30 +55,30 @@ export const LeftSidebar = () => {
         </div>
       ),
       label: fullName,
-      href: `/profile/${userId}`,
+      href: `/profile/${userUsername || userId}`,
     },
     {
       id: 'friends',
       icon: <Users className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
-      label: 'Bạn bè',
+      label: 'Báº¡n bÃ¨',
       href: '/friends',
     },
     {
       id: 'memories',
       icon: <Clock className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
-      label: 'Kỷ niệm',
+      label: 'Ká»· niá»‡m',
       href: '/memories',
     },
     {
       id: 'saved',
       icon: <Bookmark className="w-9 h-9 p-2 rounded-full bg-purple-100 text-purple-600" />,
-      label: 'Đã lưu',
+      label: 'ÄÃ£ lÆ°u',
       href: '/saved',
     },
     {
       id: 'groups',
       icon: <UsersRound className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
-      label: 'Nhóm',
+      label: 'NhÃ³m',
       href: '/groups',
     },
     {
@@ -95,13 +96,13 @@ export const LeftSidebar = () => {
     {
       id: 'feeds',
       icon: <Rss className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
-      label: 'Bảng feed',
+      label: 'Báº£ng feed',
       href: '/feeds',
     },
     {
       id: 'events',
       icon: <Calendar className="w-9 h-9 p-2 rounded-full bg-red-100 text-red-600" />,
-      label: 'Sự kiện',
+      label: 'Sá»± kiá»‡n',
       href: '/events',
     },
   ];
@@ -132,7 +133,7 @@ export const LeftSidebar = () => {
             <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center">
               <ChevronDown className="w-5 h-5 text-gray-700" />
             </div>
-            <span className="font-medium text-sm text-gray-900">Xem thêm</span>
+            <span className="font-medium text-sm text-gray-900">Xem thÃªm</span>
           </button>
         </nav>
 
@@ -141,7 +142,7 @@ export const LeftSidebar = () => {
 
         {/* Your Shortcuts */}
         <div className="px-2 mb-2">
-          <h3 className="text-sm font-semibold text-gray-600">Lối tắt của bạn</h3>
+          <h3 className="text-sm font-semibold text-gray-600">Lá»‘i táº¯t cá»§a báº¡n</h3>
         </div>
 
         <nav className="space-y-1 mb-4">
@@ -170,7 +171,7 @@ export const LeftSidebar = () => {
               <div className="w-9 h-9 rounded-lg bg-gray-300 flex items-center justify-center overflow-hidden">
                 <Flag className="w-5 h-5 text-gray-600" />
               </div>
-              <span className="font-medium text-sm text-gray-900">Tạo nhóm đầu tiên của bạn</span>
+              <span className="font-medium text-sm text-gray-900">Táº¡o nhÃ³m Ä‘áº§u tiÃªn cá»§a báº¡n</span>
             </button>
           )}
         </nav>
@@ -178,20 +179,20 @@ export const LeftSidebar = () => {
         {/* Footer Links */}
         <div className="px-2 pt-4 pb-6 text-xs text-gray-500 space-y-2">
           <div className="flex flex-wrap gap-1">
-            <a href="#" className="hover:underline cursor-pointer">Quyền riêng tư</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Điều khoản</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Quảng cáo</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Lựa chọn quảng cáo</a>
-            <span>·</span>
+            <a href="#" className="hover:underline cursor-pointer">Quyá»n riÃªng tÆ°</a>
+            <span>Â·</span>
+            <a href="#" className="hover:underline cursor-pointer">Äiá»u khoáº£n</a>
+            <span>Â·</span>
+            <a href="#" className="hover:underline cursor-pointer">Quáº£ng cÃ¡o</a>
+            <span>Â·</span>
+            <a href="#" className="hover:underline cursor-pointer">Lá»±a chá»n quáº£ng cÃ¡o</a>
+            <span>Â·</span>
             <a href="#" className="hover:underline cursor-pointer">Cookie</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Xem thêm</a>
+            <span>Â·</span>
+            <a href="#" className="hover:underline cursor-pointer">Xem thÃªm</a>
           </div>
           <div className="text-gray-500">
-            KConnecta © 2025
+            KConnecta Â© 2025
           </div>
         </div>
       </div>

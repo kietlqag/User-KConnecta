@@ -4,7 +4,6 @@ interface LiveOptionCardProps {
   icon: ReactNode;
   title: string;
   description: string;
-  features: string[];
   buttonText: string;
   buttonVariant: 'primary' | 'secondary';
   onClick: () => void;
@@ -14,7 +13,6 @@ export const LiveOptionCard = ({
   icon,
   title,
   description,
-  features,
   buttonText,
   buttonVariant,
   onClick,
@@ -33,18 +31,6 @@ export const LiveOptionCard = ({
 
       {/* Description */}
       <p className="text-gray-600 text-sm mb-6">{description}</p>
-
-      {/* Features */}
-      <ul className="space-y-3 mb-8 w-full">
-        {features.map((feature, index) => (
-          <li key={index} className="flex items-start gap-3 text-left">
-            <div className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${
-              buttonVariant === 'primary' ? 'bg-blue-600' : 'bg-gray-600'
-            }`} />
-            <span className="text-sm text-gray-700">{feature}</span>
-          </li>
-        ))}
-      </ul>
 
       {/* Button */}
       <button

@@ -7,6 +7,17 @@
   html, body, #root { min-height: 100vh; height: 100%; margin: 0; }
 }
 
+/* Hide browser built-in password reveal icons (keep only app icon) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @keyframes float-emoji {
   0%   { transform: translateX(-50%) translateY(0)      scale(1.8); opacity: 1; }
   60%  { transform: translateX(-50%) translateY(-120px) scale(1.2); opacity: 0.9; }

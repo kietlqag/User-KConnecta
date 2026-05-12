@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+﻿import { createBrowserRouter } from 'react-router-dom';
 import { AuthLayout } from '../layouts';
 import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth/pages';
 import { WelcomePage } from '../pages';
@@ -10,6 +10,9 @@ import { GroupsPage, CreateGroupPage, GroupDetailPage, JoinedGroupsPage, Discove
 import { WatchPage } from '../features/watch/pages';
 import { MarketplacePage } from '../features/marketplace/pages';
 import LiveVideoPage from '../features/live/pages/LiveVideoPage';
+import LiveSetupPage from '../features/live/pages/LiveSetupPage';
+import LiveProducerPage from '../features/live/pages/LiveProducerPage';
+import LiveViewerPage from '../features/live/pages/LiveViewerPage';
 import SearchResultsPage from '../features/search/pages/SearchResultsPage';
 import MessengerPage from '../features/messenger/pages/MessengerPage';
 import { SavedPage } from '../features/saved/pages/SavedPage';
@@ -89,6 +92,18 @@ export const router = createBrowserRouter([
         Component: LiveVideoPage,
       },
       {
+        path: '/live/setup',
+        Component: LiveSetupPage,
+      },
+      {
+        path: '/live/producer',
+        Component: LiveProducerPage,
+      },
+      {
+        path: '/live/viewer',
+        Component: LiveViewerPage,
+      },
+      {
         path: '/search',
         Component: SearchResultsPage,
       },
@@ -145,3 +160,4 @@ export const router = createBrowserRouter([
     },
   },
 ]);
+

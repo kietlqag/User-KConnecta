@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+﻿import * as React from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { authService, type AuthUser } from '@/services/authService';
 import { postService, type PostResponse, type ReactionType } from '@/services/postService';
 import { Header } from '../../home/components/Header';
@@ -25,6 +25,8 @@ const DEFAULT_COVER =
 export function ProfilePage() {
   const { userId: routeUserId } = useParams();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const highlightPostId = searchParams.get('post');
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
   
@@ -36,7 +38,10 @@ export function ProfilePage() {
     return routeUserId;
   }, [routeUserId, currentUser?.id]);
 
-  const isOwnProfile = currentUser?.id === userId;
+  const [resolvedProfileId, setResolvedProfileId] = React.useState('');
+  const isRouteCurrentUser =
+    !!currentUser && (userId === currentUser.id || userId === currentUser.username);
+  const isOwnProfile = isRouteCurrentUser || (!!currentUser?.id && currentUser.id === resolvedProfileId);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [profile, setProfile] = React.useState<AuthUser | null>(null);
   const [posts, setPosts] = React.useState<FeedPost[]>([]);
@@ -82,19 +87,36 @@ export function ProfilePage() {
         return;
       }
       try {
-        const fetchStatusPromise = (!isOwnProfile && currentUser)
-          ? friendService.getStatus(currentUser.id, userId)
-          : Promise.resolve(null);
+        let userResponse: AuthUser;
+        try {
+          userResponse = await authService.getUserById(userId);
+        } catch {
+          userResponse = await authService.getUserByUsername(userId);
+        }
 
-        const [userResponse, friendsResponse, statusResponse] = await Promise.all([
-          authService.getUserById(userId),
-          friendService.getFriends(userId),
+        const targetProfileId = userResponse.id;
+        const fetchStatusPromise = (!currentUser || currentUser.id === targetProfileId)
+          ? Promise.resolve(null)
+          : friendService.getStatus(currentUser.id, targetProfileId);
+
+        const [friendsResponse, statusResponse] = await Promise.all([
+          friendService.getFriends(targetProfileId),
           fetchStatusPromise,
         ]);
 
         if (!isMounted) return;
         
+        setResolvedProfileId(targetProfileId);
         setProfile(userResponse);
+        if (userResponse.username && userId !== userResponse.username) {
+          navigate(
+            {
+              pathname: `/profile/${userResponse.username}`,
+              search: location.search,
+            },
+            { replace: true },
+          );
+        }
         
         const mappedFriends = friendsResponse.map(f => ({
           id: f.userId,
@@ -109,7 +131,8 @@ export function ProfilePage() {
         console.error('Error fetching profile data:', error);
         if (!isMounted) return;
 
-        if (isOwnProfile && currentUser) {
+        if (currentUser && (userId === currentUser.id || userId === currentUser.username)) {
+          setResolvedProfileId(currentUser.id);
           setProfile(currentUser);
           await fetchProfilePosts(currentUser);
         } else {
@@ -123,7 +146,7 @@ export function ProfilePage() {
 
     fetchProfile();
     return () => { isMounted = false; };
-  }, [fetchProfilePosts, isOwnProfile, userId, currentUser?.id]);
+  }, [fetchProfilePosts, userId, currentUser?.id, navigate, location.search]);
 
   React.useEffect(() => {
     if (highlightPostId && posts.length > 0) {
@@ -156,18 +179,20 @@ export function ProfilePage() {
     setProfile(updatedUser);
   };
 
+  const profilePathKey = profile?.username || resolvedProfileId || userId;
+
   const userProfile = {
-    id: profile?.id || userId,
-    fullName: profile?.fullName || 'Quốc Kiệt',
+    id: profile?.id || resolvedProfileId || userId,
+    fullName: profile?.fullName || 'Quá»‘c Kiá»‡t',
     username: profile?.username || currentUser?.username || '',
-    avatar: profile?.avatarUrl || DEFAULT_AVATAR,
-    coverPhoto: profile?.coverPhotoUrl || DEFAULT_COVER,
+    avatar: profile?.avatarUrl || (isRouteCurrentUser ? currentUser?.avatarUrl : undefined) || DEFAULT_AVATAR,
+    coverPhoto: profile?.coverPhotoUrl || (isRouteCurrentUser ? currentUser?.coverPhotoUrl : undefined) || DEFAULT_COVER,
     friendsCount: friends.length,
-    location: profile?.location || 'Thành phố Hồ Chí Minh',
-    school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
-    hometown: profile?.hometown || 'Tịnh An, An Giang, Vietnam',
-    relationship: profile?.relationshipStatus || 'Độc thân',
-    bio: profile?.bio || 'Mô tả ngắn về bản thân bạn',
+    location: profile?.location || 'ThÃ nh phá»‘ Há»“ ChÃ­ Minh',
+    school: profile?.school || 'TrÆ°á»ng Äáº¡i há»c CÃ´ng nghá»‡ Ká»¹ thuáº­t TP HCM',
+    hometown: profile?.hometown || 'Tá»‹nh An, An Giang, Vietnam',
+    relationship: profile?.relationshipStatus || 'Äá»™c thÃ¢n',
+    bio: profile?.bio || 'MÃ´ táº£ ngáº¯n vá» báº£n thÃ¢n báº¡n',
     dateOfBirth: profile?.dateOfBirth,
   };
 
@@ -183,7 +208,7 @@ export function ProfilePage() {
   const photos = profilePhotos.slice(0, 9);
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
+    return <div className="flex items-center justify-center min-h-screen">Äang táº£i...</div>;
   }
 
   return (
@@ -208,7 +233,7 @@ export function ProfilePage() {
           onCoverUpload={isOwnProfile ? handleCoverUpload : undefined}
         />
 
-        <ProfileTabs userId={userProfile.id} isOwnProfile={isOwnProfile} />
+        <ProfileTabs profileKey={profilePathKey} isOwnProfile={isOwnProfile} />
 
         <div className="max-w-[1320px] mx-auto px-4 py-4 lg:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.55fr)] gap-4 lg:gap-6 items-start">
@@ -224,13 +249,12 @@ export function ProfilePage() {
                 onEditClick={() => setIsEditDialogOpen(true)}
               />
 
-              <FriendsPreview
-                userId={userProfile.id}
+              <FriendsPreview userId={profilePathKey}
                 friendsCount={userProfile.friendsCount}
                 friends={friends}
               />
 
-              <PhotosPreview userId={userProfile.id} photos={photos} />
+              <PhotosPreview userId={profilePathKey} photos={photos} />
             </div>
 
             <div className="space-y-4 order-1 lg:order-2">
@@ -262,3 +286,4 @@ export function ProfilePage() {
     </div>
   );
 }
+
