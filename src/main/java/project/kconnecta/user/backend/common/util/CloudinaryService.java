@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -70,7 +71,7 @@ public class CloudinaryService {
                     ObjectUtils.asMap(
                             "folder", "kconnecta/chat-images",
                             "resource_type", "image",
-                            "public_id", "chat-image-" + System.currentTimeMillis()
+                            "public_id", "chat-image-" + UUID.randomUUID()
                     )
             );
             return result.get("secure_url").toString();
@@ -86,7 +87,7 @@ public class CloudinaryService {
                     ObjectUtils.asMap(
                             "folder", "kconnecta/post-images",
                             "resource_type", "auto",
-                            "public_id", "post-media-" + System.currentTimeMillis()
+                            "public_id", "post-media-" + UUID.randomUUID()
                     )
             );
             return result.get("secure_url").toString();

@@ -123,6 +123,11 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public void deleteMedia(String url) {
+        cloudinaryService.deleteImageByUrl(url);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable) {
         Page<Post> postPage = postRepository.findHomeFeedPostsWithScoring(currentUserId, pageable);
@@ -451,6 +456,16 @@ public class PostServiceImpl implements PostService {
     @Override
     public void unsavePost(UUID userId, UUID postId) {
         postSavedRepository.deleteByPostIdAndUserId(postId, userId);
+    }
+
+    @Override
+    public void deletePost(UUID postId, UUID userId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+        if (!post.getAuthor().getId().equals(userId)) {
+            throw new ValidationException("Bạn không có quyền xóa bài viết này");
+        }
+        postRepository.delete(post);
     }
 
     private void attachMedia(Post post, List<CreatePostMediaRequest> mediaRequests) {

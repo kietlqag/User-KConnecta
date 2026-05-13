@@ -45,6 +45,12 @@ public class PostController {
         return ResponseEntity.ok(java.util.Collections.singletonMap("url", url));
     }
 
+    @DeleteMapping("/media")
+    public ResponseEntity<Void> deleteMedia(@RequestParam String url) {
+        postService.deleteMedia(url);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<?> getPosts(
             @RequestParam(required = false) UUID authorId,
@@ -160,6 +166,14 @@ public class PostController {
             @Valid @RequestBody SharePostRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(postService.sharePost(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePost(
+            @PathVariable UUID id,
+            @RequestParam UUID userId) {
+        postService.deletePost(id, userId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/saved")

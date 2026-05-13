@@ -21,6 +21,7 @@ import java.util.UUID;
 public interface PostService {
     PostResponse createPost(CreatePostRequest request);
     String uploadPostImage(MultipartFile file);
+    void deleteMedia(String url);
     Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable);
     List<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId);
     List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId);
@@ -37,6 +38,7 @@ public interface PostService {
     void likeComment(UUID commentId, UUID userId);
     void unlikeComment(UUID commentId, UUID userId);
     PostShareResponse sharePost(UUID postId, SharePostRequest request);
+    void deletePost(UUID postId, UUID userId);
     void savePost(SavePostRequest request);
     List<PostResponse> getSavedPosts(UUID userId);
     void unsavePost(UUID userId, UUID postId);

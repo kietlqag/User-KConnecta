@@ -15,13 +15,36 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     @org.springframework.data.jpa.repository.Query(value =
         "SELECT p.* FROM posts p " +
         "LEFT JOIN user_groups g ON p.group_id = g.id " +
-        "WHERE p.group_id IS NULL " +
+        "WHERE p.status = 'PUBLISHED' " +
+        "  AND (p.group_id IS NULL " +
         "   OR g.privacy = 'PUBLIC' " +
-        "   OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId)) " +
+        "   OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (" +
+        "    p.privacy = 'PUBLIC' " +
+        "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
+        "    OR (" +
+        "      :currentUserId IS NOT NULL " +
+        "      AND p.privacy IN ('FRIENDS', 'FRIENDS_EXCEPT') " +
+        "      AND EXISTS (" +
+        "        SELECT 1 FROM friendships f " +
+        "        WHERE f.status = 'ACCEPTED' " +
+        "          AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) " +
+        "            OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id)) " +
+        "      ) " +
+        "      AND NOT (" +
+        "        p.privacy = 'FRIENDS_EXCEPT' " +
+        "        AND EXISTS (" +
+        "          SELECT 1 FROM post_audience_exclusions pae " +
+        "          WHERE pae.post_id = p.id " +
+        "            AND pae.excluded_user_id = CAST(:currentUserId AS uuid) " +
+        "        ) " +
+        "      ) " +
+        "    ) " +
+        "  ) " +
         "ORDER BY (" +
-        // w1=0.4 · độ thân thiết: own post → 1.0, friend → 0.7, stranger → 0.0
-        "  0.4 * CASE " +
-        "    WHEN :currentUserId IS NULL THEN 0.0 " +
+        // w1=0.12 · affinity (reduced so one author does not dominate the whole page)
+        "  0.12 * CASE " +
+        "    WHEN :currentUserId IS NULL THEN 0.5 " +
         "    WHEN p.author_id = CAST(:currentUserId AS uuid) THEN 1.0 " +
         "    WHEN EXISTS (" +
         "      SELECT 1 FROM friendships f " +
@@ -29,7 +52,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "        AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) " +
         "          OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id)) " +
         "    ) THEN 0.7 " +
-        "    ELSE 0.0 " +
+        "    ELSE 0.5 " +
         "  END + " +
         // w2=0.3 · số tương tác: reactions + comments*2 + shares*3, normalized to [0,1]
         "  0.3 * LEAST((" +
@@ -40,7 +63,21 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         // w3=0.3 · độ mới: exponential decay, half-life ≈ 6 hours
         "  0.3 * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (NOW() - COALESCE(p.published_at, p.created_at)))) / 21600.0)))" +
         ") DESC, p.created_at DESC",
-        countQuery = "SELECT count(*) FROM posts p LEFT JOIN user_groups g ON p.group_id = g.id WHERE p.group_id IS NULL OR g.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))",
+        countQuery =
+        "SELECT count(*) FROM posts p " +
+        "LEFT JOIN user_groups g ON p.group_id = g.id " +
+        "WHERE p.status = 'PUBLISHED' " +
+        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (" +
+        "    p.privacy = 'PUBLIC' " +
+        "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
+        "    OR (" +
+        "      :currentUserId IS NOT NULL " +
+        "      AND p.privacy IN ('FRIENDS', 'FRIENDS_EXCEPT') " +
+        "      AND EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'ACCEPTED' AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id))) " +
+        "      AND NOT (p.privacy = 'FRIENDS_EXCEPT' AND EXISTS (SELECT 1 FROM post_audience_exclusions pae WHERE pae.post_id = p.id AND pae.excluded_user_id = CAST(:currentUserId AS uuid))) " +
+        "    ) " +
+        "  )",
         nativeQuery = true
     )
     org.springframework.data.domain.Page<Post> findHomeFeedPostsWithScoring(
