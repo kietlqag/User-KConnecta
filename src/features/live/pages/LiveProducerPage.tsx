@@ -1,25 +1,42 @@
 ﻿import {
   Activity,
   Bell,
+  Camera,
   ChartNoAxesColumn,
   ChevronDown,
   Clapperboard,
   Eye,
+  Globe,
   MessageCircle,
+  Mic,
   Monitor,
   MoreHorizontal,
+  Pencil,
   Settings,
   Share2,
   Sparkles,
   ThumbsUp,
   UserRound,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Header } from '../../home/components';
+import { authService } from '@/services/authService';
 
 type MainSection = 'dashboard' | 'details' | 'settings';
 type SettingsSub = 'video' | 'viewer' | 'tab-live';
+interface ProducerLocationState {
+  selectedCameraId?: string;
+  selectedMicId?: string;
+}
+
+const rankCamera = (device: MediaDeviceInfo) => {
+  const name = (device.label || '').toLowerCase();
+  if (name.includes('integrated') || name.includes('built-in') || name.includes('webcam')) return 0;
+  if (name.includes('droidcam') || name.includes('iriun') || name.includes('camo') || name.includes('obs')) return 1;
+  if (name.includes('virtual')) return 2;
+  return 3;
+};
 
 function LiveTimer() {
   const [seconds, setSeconds] = useState(0);
@@ -40,8 +57,114 @@ function LiveTimer() {
 
 export default function LiveProducerPage() {
   const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+  const currentUserName = currentUser?.fullName?.trim() || currentUser?.username || 'Người dùng';
+  const currentUserAvatar = currentUser?.avatarUrl || '';
+  const location = useLocation();
+  const routeState = (location.state as ProducerLocationState | null) ?? null;
+  const preferredCameraId = routeState?.selectedCameraId?.trim() || '';
+  const preferredMicId = routeState?.selectedMicId?.trim() || '';
   const [mainSection, setMainSection] = useState<MainSection>('dashboard');
   const [settingsSub, setSettingsSub] = useState<SettingsSub>('video');
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState(preferredCameraId);
+  const [selectedMicId, setSelectedMicId] = useState(preferredMicId);
+  const [isMediaReady, setIsMediaReady] = useState(false);
+  const [mediaError, setMediaError] = useState('');
+  const mainVideoRef = useRef<HTMLVideoElement | null>(null);
+  const miniVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+
+  const bindStreamToPreview = useCallback(async (stream: MediaStream) => {
+    const bind = async (el: HTMLVideoElement | null) => {
+      if (!el) return;
+      el.srcObject = stream;
+      try {
+        await el.play();
+      } catch {
+        setMediaError('Không thể phát preview video.');
+      }
+    };
+    await Promise.all([bind(mainVideoRef.current), bind(miniVideoRef.current)]);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    let permissionStream: MediaStream | null = null;
+    const init = async () => {
+      if (!navigator.mediaDevices?.getUserMedia || !navigator.mediaDevices?.enumerateDevices) {
+        if (mounted) setMediaError('Trình duyệt không hỗ trợ camera/microphone.');
+        return;
+      }
+      try {
+        permissionStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoInputs = devices
+          .filter((d) => d.kind === 'videoinput')
+          .sort((a, b) => rankCamera(a) - rankCamera(b));
+        const audioInputs = devices.filter((d) => d.kind === 'audioinput');
+        if (!mounted) return;
+        setCameras(videoInputs);
+        setMicrophones(audioInputs);
+        setSelectedCameraId((prev) => {
+          const preferred = prev || preferredCameraId;
+          if (preferred && videoInputs.some((d) => d.deviceId === preferred)) return preferred;
+          return videoInputs[0]?.deviceId || '';
+        });
+        setSelectedMicId((prev) => {
+          const preferred = prev || preferredMicId;
+          if (preferred && audioInputs.some((d) => d.deviceId === preferred)) return preferred;
+          return audioInputs[0]?.deviceId || '';
+        });
+      } catch {
+        if (mounted) setMediaError('Không truy cập được camera/microphone. Vui lòng cấp quyền cho trình duyệt.');
+      } finally {
+        permissionStream?.getTracks().forEach((t) => t.stop());
+      }
+    };
+    void init();
+    return () => {
+      mounted = false;
+      permissionStream?.getTracks().forEach((t) => t.stop());
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, [preferredCameraId, preferredMicId]);
+
+  useEffect(() => {
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    if (!selectedCameraId && !selectedMicId) return;
+    let cancelled = false;
+    const applyStream = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
+          audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        localStreamRef.current?.getTracks().forEach((t) => t.stop());
+        localStreamRef.current = stream;
+        setIsMediaReady(true);
+        setMediaError('');
+        await bindStreamToPreview(stream);
+      } catch {
+        setIsMediaReady(false);
+        setMediaError('Không thể mở camera/microphone đã chọn.');
+      }
+    };
+    void applyStream();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCameraId, selectedMicId, bindStreamToPreview]);
+
+  useEffect(() => {
+    if (!localStreamRef.current) return;
+    void bindStreamToPreview(localStreamRef.current);
+  }, [mainSection, bindStreamToPreview]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -56,11 +179,15 @@ export default function LiveProducerPage() {
             </p>
 
             <div className="mt-4 flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center">
-                <UserRound className="w-7 h-7 text-gray-600" />
+              <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+                {currentUserAvatar ? (
+                  <img src={currentUserAvatar} alt="avatar" className="h-full w-full object-cover" />
+                ) : (
+                  <UserRound className="w-7 h-7 text-gray-600" />
+                )}
               </div>
               <div>
-                <p className="text-sm"><span className="font-semibold text-gray-900">Quốc Kiệt</span> đang phát trực tiếp.</p>
+                <p className="text-sm"><span className="font-semibold text-gray-900">{currentUserName}</span> đang phát trực tiếp.</p>
                 <p className="text-xs text-gray-500">Vừa xong</p>
               </div>
             </div>
@@ -127,8 +254,14 @@ export default function LiveProducerPage() {
             <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-4 items-start">
               <div className="space-y-4">
                 <section className="rounded-2xl border border-gray-200 bg-white p-3">
-                  <div className="relative h-[520px] rounded-xl bg-black">
+                  <div className="relative h-[520px] rounded-xl bg-black overflow-hidden">
+                    <video ref={mainVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
                     <span className="absolute top-4 left-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</span>
+                    {!isMediaReady && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 px-4 text-center text-sm text-white/80">
+                        {mediaError || 'Đang chờ camera/microphone...'}
+                      </div>
+                    )}
                   </div>
                   <div className="mt-3 text-xl font-semibold flex items-center gap-2"><MessageCircle className="w-6 h-6 text-gray-700" /> Nhật ký sự kiện</div>
                 </section>
@@ -249,12 +382,39 @@ export default function LiveProducerPage() {
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <h3 className="text-2xl font-bold mb-4">Chi tiết bài viết</h3>
-                  <p className="font-semibold text-gray-900">Quốc Kiệt</p>
-                  <p className="text-sm text-gray-600 mb-2">Chỉ mình tôi</p>
-                  <p className="text-gray-900">hhhh</p>
-                  <p className="text-gray-900 mb-4">hhh</p>
-                  <button className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Chỉnh sửa chi tiết bài viết</button>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Chi tiết bài viết</h3>
+
+                  <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-slate-50 to-white p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-11 w-11 rounded-full bg-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
+                        {currentUserAvatar ? (
+                          <img src={currentUserAvatar} alt="avatar" className="h-full w-full object-cover" />
+                        ) : (
+                          <UserRound className="h-6 w-6 text-gray-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-base font-semibold text-gray-900 leading-tight">{currentUserName}</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                            <Globe className="mr-1.5 h-3.5 w-3.5 text-gray-500" />
+                            Công khai
+                          </div>
+                          <p className="text-xs text-gray-500">Đang phát trực tiếp</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="text-xl font-semibold text-gray-900 leading-tight">hhhh</p>
+                      <p className="mt-1.5 text-lg text-gray-700 leading-tight">hhh</p>
+                    </div>
+                  </div>
+
+                  <button className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                    <Pencil className="h-4 w-4" />
+                    Chỉnh sửa bài viết
+                  </button>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -338,9 +498,37 @@ export default function LiveProducerPage() {
                 <h3 className="text-2xl font-bold mb-4">Kiểm soát camera</h3>
                 <p className="text-gray-600 mb-4">Trước khi phát trực tiếp, hãy kiểm tra xem đầu vào camera và micrô đã hoạt động đúng cách chưa.</p>
                 <div className="space-y-3">
-                  <button className="w-full rounded-xl bg-gray-100 py-3 px-4 text-left font-semibold">Redmi Note 11 Pro 5G (Windows Virtual Camera)</button>
-                  <button className="w-full rounded-xl bg-gray-100 py-3 px-4 text-left font-semibold">Default - Microphone Array</button>
-                  <button className="w-full rounded-xl bg-gray-200 py-3 px-4 font-semibold">Chia sẻ màn hình</button>
+                  <label className="block text-sm font-semibold text-gray-700">Camera</label>
+                  <div className="relative">
+                    <Camera className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <select
+                      value={selectedCameraId}
+                      onChange={(e) => setSelectedCameraId(e.target.value)}
+                      className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-3 text-sm"
+                    >
+                      {cameras.map((camera) => (
+                        <option key={camera.deviceId} value={camera.deviceId}>
+                          {camera.label || 'Camera mặc định'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <label className="block text-sm font-semibold text-gray-700">Microphone</label>
+                  <div className="relative">
+                    <Mic className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <select
+                      value={selectedMicId}
+                      onChange={(e) => setSelectedMicId(e.target.value)}
+                      className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-3 text-sm"
+                    >
+                      {microphones.map((mic) => (
+                        <option key={mic.deviceId} value={mic.deviceId}>
+                          {mic.label || 'Microphone mặc định'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {!!mediaError && <p className="text-sm text-red-600">{mediaError}</p>}
                 </div>
               </section>
             </div>
@@ -369,9 +557,12 @@ export default function LiveProducerPage() {
             </section>
           )}
 
-          <div className="fixed right-6 bottom-6 w-[280px] h-[150px] rounded-2xl bg-black shadow-xl">
-            <span className="absolute top-3 left-3 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</span>
-          </div>
+          {mainSection !== 'dashboard' && (
+            <div className="fixed right-6 bottom-6 w-[280px] h-[150px] rounded-2xl bg-black shadow-xl overflow-hidden">
+              <video ref={miniVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+              <span className="absolute top-3 left-3 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</span>
+            </div>
+          )}
         </main>
       </div>
     </div>

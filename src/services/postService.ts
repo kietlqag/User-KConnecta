@@ -17,6 +17,10 @@ export interface CreatePostPayload {
   media?: CreatePostMediaRequest[];
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT';
+  scheduledAt?: string;
+  locationText?: string | null;
+  excludedUserIds?: string[];
+  taggedUserIds?: string[];
   promoted?: boolean;
 }
 
@@ -128,6 +132,11 @@ export interface PostShareResponse {
   createdAt: string;
 }
 
+export interface CheckInSuggestionResponse {
+  locationText: string;
+  usageCount: number;
+}
+
 export interface AddReactionPayload {
   userId: string;
   reactionType: ReactionType;
@@ -200,6 +209,13 @@ export const postService = {
     const params = new URLSearchParams();
     if (currentUserId) params.append('currentUserId', currentUserId);
     return api.get<PostResponse>(`/posts/${postId}?${params.toString()}`);
+  },
+  getCheckInSuggestions: (params: { currentUserId?: string; province?: string; ward?: string }) => {
+    const query = new URLSearchParams();
+    if (params.currentUserId) query.append('currentUserId', params.currentUserId);
+    if (params.province) query.append('province', params.province);
+    if (params.ward) query.append('ward', params.ward);
+    return api.get<CheckInSuggestionResponse[]>(`/posts/checkin-suggestions?${query.toString()}`);
   },
   savePost: (userId: string, postId: string) =>
     api.post<void>('/posts/saved', { userId, postId }),

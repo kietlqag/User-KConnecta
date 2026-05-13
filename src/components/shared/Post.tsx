@@ -62,6 +62,7 @@ export interface PostProps {
   group?: Group;
   commentsData?: Comment[];
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+  isLivePost?: boolean;
 }
 
 export function Post({
@@ -80,6 +81,7 @@ export function Post({
   reactionCounts: serverReactionCounts,
   group,
   mediaList = [],
+  isLivePost = false,
 }: PostProps) {
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(initialIsLiked || !!currentUserReactionType);
@@ -170,6 +172,11 @@ export function Post({
 
   const mediaUrl = media?.url || image;
   const mediaType = media?.type || 'image';
+  const currentUser = authService.getCurrentUser();
+  const liveContentParts = useMemo(() => content.split('\n\n'), [content]);
+  const liveTitle = useMemo(() => (liveContentParts[0] || '').trim(), [liveContentParts]);
+  const liveDescription = useMemo(() => liveContentParts.slice(1).join('\n\n').trim(), [liveContentParts]);
+  const isLiveReplay = isLivePost && mediaType === 'video' && !!mediaUrl;
   const activeReactions = getActiveReactions(reactionCounts);
   const totalReactionCount = getTotalReactionCount(reactionCounts);
 
@@ -305,7 +312,11 @@ export function Post({
                   className="font-bold text-[15px] text-gray-900 cursor-pointer hover:underline leading-tight"
                   onClick={() => group ? navigate(`/groups/${group.id}`) : navigate(`/profile/${author.id}`)}
                 >
-                  {group?.name || author.name}
+                  {group?.name || (isLivePost ? (
+                    <>
+                      {author.name} <span className="font-normal text-gray-600">đang phát trực tiếp.</span>
+                    </>
+                  ) : author.name)}
                 </h3>
                 <div className="flex items-center gap-1 text-[13px] text-gray-500 leading-tight">
                   {group ? (
@@ -328,10 +339,17 @@ export function Post({
             <PostMoreMenu postId={id} isSaved={isSaved} onToggleSave={handleToggleSave} />
           </div>
 
-          <p className="text-gray-900 mb-3 whitespace-pre-wrap">{content}</p>
+          {isLivePost ? (
+            <div className="mb-3">
+              {liveTitle && <p className="text-lg text-gray-900 font-semibold whitespace-pre-wrap">{liveTitle}</p>}
+              {liveDescription && <p className="mt-0 text-gray-900 whitespace-pre-wrap">{liveDescription}</p>}
+            </div>
+          ) : (
+            <p className="text-gray-900 mb-3 whitespace-pre-wrap">{content}</p>
+          )}
         </div>
 
-        {mediaUrl && (
+        {mediaUrl && !isLivePost && (
           <div className="relative bg-black cursor-pointer" onClick={() => openLightbox(0)}>
             {mediaType === 'image' ? (
               <ImageWithFallback
@@ -347,6 +365,30 @@ export function Post({
                 onClick={(e) => e.stopPropagation()}
               />
             )}
+          </div>
+        )}
+
+        {isLivePost && (
+          <div className="relative h-[420px] bg-black">
+            {isLiveReplay ? (
+              <video
+                src={mediaUrl}
+                controls
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate(`/live/viewer?postId=${encodeURIComponent(id)}`)}
+                className="h-full w-full flex items-center justify-center"
+              />
+            )}
+          </div>
+        )}
+
+        {isLivePost && (
+          <div className="px-4 py-2 text-base font-semibold text-blue-700 border-b border-gray-200">
+            Xem thông tin chi tiết
           </div>
         )}
 
@@ -405,6 +447,7 @@ export function Post({
             <span className="font-medium">{isSharing ? 'Đang chia sẻ...' : 'Chia sẻ'}</span>
           </button>
         </div>
+
       </div>
 
       <PostDetailModal

@@ -16,6 +16,7 @@ export interface FeedPost {
   reactionCounts?: PostReactionCountResponse[];
   group?: { id: string; name: string; icon?: string };
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+  isLivePost?: boolean;
 }
 
 export function formatPostTimestamp(dateString?: string | null): string {
@@ -34,6 +35,8 @@ export function formatPostTimestamp(dateString?: string | null): string {
 export function mapApiPost(item: PostResponse): FeedPost {
   const firstMedia = (item.media ?? [])[0];
   const firstImage = (item.media ?? []).find((m) => m.mediaType === 'IMAGE');
+  const isLikelyLiveByContent = (item.content || '').includes('\n\n') && (item.media ?? []).length === 0;
+  const isLivePost = item.backgroundStyle === 'LIVE_POST' || isLikelyLiveByContent;
   
   return {
     id: item.id,
@@ -66,6 +69,7 @@ export function mapApiPost(item: PostResponse): FeedPost {
     mediaList: (item.media ?? []).map(m => ({
       type: m.mediaType,
       url: m.mediaUrl || m.fileUrl || ''
-    }))
+    })),
+    isLivePost,
   };
 }
