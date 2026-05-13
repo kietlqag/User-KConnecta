@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { ArrowLeft, Globe, Users, UserMinus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Globe, Users, UserMinus, Search, Check } from 'lucide-react';
+import { friendService, type FriendApiResponse } from '@/services/friendService';
+import { authService } from '@/services/authService';
 
 interface ProfilePostAudienceModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedAudience: string;
-  onSelect: (audience: string) => void;
+  excludedUserIds: string[];
+  onSelect: (audience: string, excludedUserIds: string[]) => void;
 }
 
 const audienceOptions = [
@@ -13,19 +16,19 @@ const audienceOptions = [
     id: 'public',
     icon: Globe,
     title: 'Công khai',
-    description: 'Bất kỳ ai ở trên hoặc ngoài Facebook',
+    description: 'Bất kỳ ai đều có thể xem bài viết này',
   },
   {
     id: 'friends',
     icon: Users,
     title: 'Bạn bè',
-    description: 'Bạn bè của bạn trên Facebook',
+    description: 'Chỉ bạn bè của bạn mới có thể xem',
   },
   {
     id: 'friends-except',
     icon: UserMinus,
     title: 'Bạn bè ngoại trừ...',
-    description: 'Bạn bè; Ngoại trừ: Ngô Nhựt Phát',
+    description: 'Bạn bè của bạn, ngoại trừ những người bạn chọn',
   },
 ];
 
@@ -33,17 +36,148 @@ export function ProfilePostAudienceModal({
   isOpen,
   onClose,
   selectedAudience,
+  excludedUserIds,
   onSelect,
 }: ProfilePostAudienceModalProps) {
+  const [step, setStep] = useState<1 | 2>(1);
   const [tempSelected, setTempSelected] = useState(selectedAudience);
-  const [setAsDefault, setSetAsDefault] = useState(false);
+  const [tempExcluded, setTempExcluded] = useState<string[]>(excludedUserIds);
+  const [friends, setFriends] = useState<FriendApiResponse[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) {
+      setStep(1);
+      setTempSelected(selectedAudience);
+      setTempExcluded(excludedUserIds);
+      setSearchQuery('');
+    }
+  }, [isOpen, selectedAudience, excludedUserIds]);
+
+  useEffect(() => {
+    if (step === 2 && friends.length === 0) {
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        friendService.getFriends(currentUser.id).then(setFriends).catch(() => {});
+      }
+    }
+  }, [step]);
 
   if (!isOpen) return null;
 
-  const handleDone = () => {
-    onSelect(tempSelected);
+  const handleStep1Done = () => {
+    if (tempSelected === 'friends-except') {
+      setStep(2);
+    } else {
+      onSelect(tempSelected, []);
+      onClose();
+    }
+  };
+
+  const handleStep2Done = () => {
+    onSelect('friends-except', tempExcluded);
     onClose();
   };
+
+  const toggleExclude = (userId: string) => {
+    setTempExcluded(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId],
+    );
+  };
+
+  const filteredFriends = friends.filter(f =>
+    f.fullName.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  if (step === 2) {
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+        <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
+          <div className="relative flex shrink-0 items-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <button
+              onClick={() => setStep(1)}
+              className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            >
+              <ArrowLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+            </button>
+            <h2 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold text-gray-900 dark:text-white">
+              Bạn bè ngoại trừ
+            </h2>
+          </div>
+
+          <div className="shrink-0 border-b border-gray-200 p-4 dark:border-gray-700">
+            <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+              Chọn bạn bè bạn muốn ẩn bài viết này
+            </p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm bạn bè"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-full bg-gray-100 py-2 pl-9 pr-4 text-sm outline-none dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400"
+              />
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            {filteredFriends.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                {friends.length === 0 ? 'Đang tải...' : 'Không tìm thấy bạn bè'}
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {filteredFriends.map(friend => {
+                  const isExcluded = tempExcluded.includes(friend.userId);
+                  return (
+                    <button
+                      key={friend.userId}
+                      onClick={() => toggleExclude(friend.userId)}
+                      className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <img
+                        src={friend.avatarUrl ?? '/default-avatar.png'}
+                        alt={friend.fullName}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                      <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">
+                        {friend.fullName}
+                      </span>
+                      <div
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                          isExcluded
+                            ? 'border-emerald-600 bg-emerald-600 dark:border-emerald-400 dark:bg-emerald-400'
+                            : 'border-gray-400 dark:border-gray-500'
+                        }`}
+                      >
+                        {isExcluded && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <button
+              onClick={() => setStep(1)}
+              className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:text-emerald-400 dark:hover:bg-gray-700"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleStep2Done}
+              className="rounded-lg bg-emerald-500 px-6 py-2 font-semibold text-white transition-colors hover:bg-emerald-600"
+            >
+              Xong{tempExcluded.length > 0 ? ` (${tempExcluded.length})` : ''}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
@@ -109,18 +243,6 @@ export function ProfilePostAudienceModal({
               );
             })}
           </div>
-
-          <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={setAsDefault}
-                onChange={(e) => setSetAsDefault(e.target.checked)}
-                className="h-5 w-5 cursor-pointer rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 dark:border-gray-600 dark:bg-gray-700"
-              />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Đặt làm đối tượng mặc định</span>
-            </label>
-          </div>
         </div>
 
         <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
@@ -131,7 +253,7 @@ export function ProfilePostAudienceModal({
             Hủy
           </button>
           <button
-            onClick={handleDone}
+            onClick={handleStep1Done}
             className="rounded-lg bg-emerald-500 px-6 py-2 font-semibold text-white transition-colors hover:bg-emerald-600"
           >
             Xong
