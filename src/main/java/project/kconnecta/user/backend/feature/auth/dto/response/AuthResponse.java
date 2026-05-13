@@ -13,5 +13,6 @@ public class AuthResponse {
     private String fullName;
     private String username;
     private boolean hasPassword;
+    private boolean requiresProfileSetup;
     private String token;
 }

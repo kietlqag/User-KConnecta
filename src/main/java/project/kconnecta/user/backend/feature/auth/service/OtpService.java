@@ -2,10 +2,12 @@ package project.kconnecta.user.backend.feature.auth.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
 import project.kconnecta.user.backend.common.enums.OtpType;
 import project.kconnecta.user.backend.common.util.MailService;
@@ -13,6 +15,8 @@ import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Random;
 
@@ -28,6 +32,8 @@ public class OtpService {
     private final MailService mailService;
     private final AccountRepository accountRepository;
     private final RedisTemplate<String, Object> redisTemplate;
+    @Value("classpath:templates/otp-email.html")
+    private Resource otpEmailTemplateResource;
 
     public void sendOtp(String email) {
         Account account = accountRepository.findByEmail(email)
@@ -54,7 +60,7 @@ public class OtpService {
 
         String htmlContent = getOtpEmailTemplate(code);
         try {
-            mailService.sendMail(email, "Ma xac nhan KConnecta", htmlContent);
+            mailService.sendMail(email, "Mã xác nhận KConnecta", htmlContent);
         } catch (RuntimeException ex) {
             redisTemplate.delete(key);
             throw ex;
@@ -110,41 +116,13 @@ public class OtpService {
     }
 
     private String getOtpEmailTemplate(String code) {
-        return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f6f9fc; }
-                    .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-                    .header { background-color: #2563eb; color: #ffffff; padding: 40px 20px; text-align: center; }
-                    .content { padding: 40px; color: #334155; line-height: 1.6; }
-                    .otp-container { background: #f1f5f9; border-radius: 8px; padding: 30px; text-align: center; margin: 30px 0; border: 2px dashed #cbd5e1; }
-                    .otp-code { font-size: 42px; font-weight: 800; color: #1e40af; letter-spacing: 8px; margin: 0; }
-                    .footer { background-color: #f8fafc; color: #64748b; padding: 20px; text-align: center; font-size: 14px; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header"><h1>KConnecta</h1></div>
-                    <div class="content">
-                        <p>Xin chao,</p>
-                        <p>Ban vua yeu cau ma xac thuc (OTP) de truy cap hoac cap nhat tai khoan KConnecta. Vui long su dung ma duoi day:</p>
-                        <div class="otp-container">
-                            <p style="margin-bottom: 10px; color: #64748b; font-size: 14px;">MA XAC THUC CUA BAN</p>
-                            <div class="otp-code">""" + code + """
-                            </div>
-                        </div>
-                        <p>Ma nay co hieu luc trong vong <strong>1 phut</strong>. Tuyet doi khong chia se ma nay voi bat ky ai.</p>
-                        <p style="color: #ef4444; font-size: 13px; margin-top: 20px; text-align: center;">Neu ban khong thuc hien yeu cau nay, vui long bo qua email nay.</p>
-                    </div>
-                    <div class="footer"><p>&copy; 2026 KConnecta. All rights reserved.</p></div>
-                </div>
-            </body>
-            </html>
-            """;
+        try {
+            String template = new String(otpEmailTemplateResource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            return template.replace("{{OTP_CODE}}", code);
+        } catch (IOException ex) {
+            log.error("Cannot load OTP email template", ex);
+            throw new ValidationException("Không thể tải mẫu email OTP.");
+        }
     }
 
     private record OtpSession(

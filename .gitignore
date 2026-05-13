@@ -33,3 +33,5 @@ build/
 .vscode/
 .env
 node_modules
+.vite/
+.run/
