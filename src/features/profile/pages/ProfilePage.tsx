@@ -48,36 +48,57 @@ export function ProfilePage() {
   const [friends, setFriends] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [friendshipStatus, setFriendshipStatus] = React.useState<FriendshipStatusResponse | null>(null);
+  const [postsPage, setPostsPage] = React.useState(0);
+  const [hasMorePosts, setHasMorePosts] = React.useState(false);
+  const [loadingMorePosts, setLoadingMorePosts] = React.useState(false);
+
+  const PAGE_SIZE = 10;
 
   const fetchProfilePosts = React.useCallback(
     async (profileData?: AuthUser | null) => {
       try {
         const targetAuthorId = profileData?.id || userId;
-        
-        // Safety check: Don't fetch if ID is invalid or 'undefined'
         if (!targetAuthorId || targetAuthorId === 'undefined' || targetAuthorId === '') {
           console.warn('Invalid authorId detected, skipping fetchProfilePosts');
           return;
         }
 
-        const profilePostsResponse = await postService.getAllPosts(currentUser?.id, targetAuthorId);
+        const res = await postService.getAllPosts(currentUser?.id, targetAuthorId, 0, PAGE_SIZE);
+        const mapped = res.content
+          .sort((a, b) => new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime())
+          .map(mapApiPost);
 
-        const profilePosts = profilePostsResponse.content
-          .sort((left, right) => {
-            const leftTime = new Date(left.publishedAt || left.createdAt).getTime();
-            const rightTime = new Date(right.publishedAt || right.createdAt).getTime();
-            return rightTime - leftTime;
-          })
-          .map((post) => mapApiPost(post));
-
-        setPosts(profilePosts);
+        setPosts(mapped);
+        setPostsPage(0);
+        setHasMorePosts(res.number + 1 < res.totalPages);
       } catch (error) {
         console.error('Error fetching profile posts:', error);
         setPosts([]);
+        setHasMorePosts(false);
       }
     },
     [userId, currentUser?.id],
   );
+
+  const handleLoadMorePosts = React.useCallback(async () => {
+    const targetAuthorId = profile?.id || userId;
+    if (!targetAuthorId || loadingMorePosts) return;
+    setLoadingMorePosts(true);
+    try {
+      const nextPage = postsPage + 1;
+      const res = await postService.getAllPosts(currentUser?.id, targetAuthorId, nextPage, PAGE_SIZE);
+      const mapped = res.content
+        .sort((a, b) => new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime())
+        .map(mapApiPost);
+      setPosts(prev => [...prev, ...mapped]);
+      setPostsPage(nextPage);
+      setHasMorePosts(res.number + 1 < res.totalPages);
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMorePosts(false);
+    }
+  }, [profile?.id, userId, postsPage, loadingMorePosts, currentUser?.id]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -258,11 +279,19 @@ export function ProfilePage() {
             </div>
 
             <div className="space-y-4 order-1 lg:order-2">
-              <ProfileCreatePost
-                username={userProfile.fullName}
-                onPostCreated={() => fetchProfilePosts(profile || currentUser)}
+              {isOwnProfile && (
+                <ProfileCreatePost
+                  username={userProfile.fullName}
+                  onPostCreated={() => fetchProfilePosts(profile || currentUser)}
+                />
+              )}
+              <ProfilePosts
+                posts={posts}
+                loading={loading}
+                hasMore={hasMorePosts}
+                loadingMore={loadingMorePosts}
+                onLoadMore={handleLoadMorePosts}
               />
-              <ProfilePosts posts={posts} />
             </div>
           </div>
         </div>

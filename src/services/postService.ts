@@ -16,6 +16,7 @@ export interface CreatePostPayload {
   imageUrl?: string;
   media?: CreatePostMediaRequest[];
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
+  excludedUserIds?: string[];
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT';
   scheduledAt?: string;
   locationText?: string | null;
@@ -171,11 +172,13 @@ export const postService = {
     return api.get<PostResponse[]>(`/posts?${params.toString()}`);
   },
   createPost: (data: CreatePostPayload) => api.post<PostResponse>('/posts', data),
-  uploadPostImage: (file: File) => {
+  uploadPostImage: (file: File, signal?: AbortSignal) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.postMultipart<{ url: string }>('/posts/upload', formData);
+    return api.postMultipart<{ url: string }>('/posts/upload', formData, signal);
   },
+  deletePostMedia: (url: string) =>
+    api.delete<void>(`/posts/media?url=${encodeURIComponent(url)}`),
   addReaction: (postId: string, data: AddReactionPayload) =>
     api.post<PostReactionResponse>(`/posts/${postId}/reactions`, data),
   removeReaction: (postId: string, userId: string) =>
@@ -223,4 +226,6 @@ export const postService = {
     api.get<PostResponse[]>(`/posts/saved/${userId}`),
   unsavePost: (userId: string, postId: string) =>
     api.delete<void>(`/posts/saved?userId=${encodeURIComponent(userId)}&postId=${encodeURIComponent(postId)}`),
+  deletePost: (postId: string, userId: string) =>
+    api.delete<void>(`/posts/${postId}?userId=${encodeURIComponent(userId)}`),
 };

@@ -10,6 +10,8 @@ import {
 } from '@/components/reactions';
 import { CommentSection } from './CommentSection';
 import { PostMoreMenu } from '../shared/PostMoreMenu';
+import { PostMediaGallery } from '../shared/PostMediaGallery';
+import type { PostGalleryItem } from '../shared/PostMediaGallery';
 
 interface Post {
   id: string;
@@ -25,6 +27,7 @@ interface Post {
   shares?: number;
   image?: string;
   media?: { type: 'image' | 'video'; url: string };
+  mediaList?: PostGalleryItem[];
   reactionCounts?: ReactionCountMap;
 }
 
@@ -143,17 +146,21 @@ export function PostDetailModal({
             <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{post.content}</p>
           </div>
 
-          {post.media ? (
-            <div className="mb-3 bg-black flex justify-center">
+          {post.mediaList && post.mediaList.length >= 2 ? (
+            <div className="mb-3 px-4">
+              <PostMediaGallery items={post.mediaList} className="max-h-[min(560px,75vh)]" />
+            </div>
+          ) : post.media ? (
+            <div className="mb-3 flex justify-center bg-black">
               {post.media.type === 'video' ? (
-                <video src={post.media.url} controls className="w-full max-h-[500px] object-contain" />
+                <video src={post.media.url} controls className="max-h-[500px] w-full object-contain" />
               ) : (
-                <img src={post.media.url} alt="Post content" className="w-full max-h-[500px] object-contain" />
+                <img src={post.media.url} alt="Post content" className="max-h-[500px] w-full object-contain" />
               )}
             </div>
           ) : post.image ? (
-            <div className="mb-3 bg-black flex justify-center">
-              <img src={post.image} alt="Post content" className="w-full max-h-[500px] object-contain" />
+            <div className="mb-3 flex justify-center bg-black">
+              <img src={post.image} alt="Post content" className="max-h-[500px] w-full object-contain" />
             </div>
           ) : null}
 

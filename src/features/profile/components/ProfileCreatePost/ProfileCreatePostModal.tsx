@@ -1,22 +1,37 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import {
   X,
   Globe,
   Image,
   Users,
+  UsersRound,
   Smile,
-  MapPin,
-  Phone,
-  MoreHorizontal,
   UserMinus,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type CreatePostMediaRequest } from '@/services/postService';
+import { compressImage } from '@/utils/imageUtils';
 import { CurrentUserAvatar } from '@/components/shared';
 import { ProfilePostAudienceModal } from './ProfilePostAudienceModal';
+import { ProfilePostGroupModal } from './ProfilePostGroupModal';
+import {
+  ProfilePostScheduleModal,
+  defaultScheduledDatetimeLocal,
+  type PostScheduleMode,
+} from './ProfilePostScheduleModal';
 import { ProfilePostSettingsModal } from './ProfilePostSettingsModal';
+
+function toApiScheduledAt(datetimeLocal: string): string {
+  const t = datetimeLocal.trim();
+  if (!t) return '';
+  return t.length >= 19 ? t : `${t}:00`;
+}
 
 interface ProfileCreatePostModalProps {
   isOpen: boolean;
@@ -37,17 +52,73 @@ export function ProfileCreatePostModal({
 }: ProfileCreatePostModalProps) {
   const [postContent, setPostContent] = useState('');
   const [privacy, setPrivacy] = useState('public');
+  const [excludedUserIds, setExcludedUserIds] = useState<string[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [reopenSettingsAfterGroup, setReopenSettingsAfterGroup] = useState(false);
   const [showAudienceModal, setShowAudienceModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [reopenSettingsAfterAudience, setReopenSettingsAfterAudience] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [reopenSettingsAfterSchedule, setReopenSettingsAfterSchedule] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState<PostScheduleMode>('now');
+  const [scheduledAtLocal, setScheduledAtLocal] = useState(defaultScheduledDatetimeLocal);
   const [isPosting, setIsPosting] = useState(false);
   const [showImagePicker, setShowImagePicker] = useState(initialShowImagePicker);
-  const [selectedImages, setSelectedImages] = useState<{ id: string; file: File; previewUrl: string; type: 'image' | 'video' }[]>([]);
+  const [selectedImages, setSelectedImages] = useState<{
+    id: string;
+    file: File;
+    previewUrl: string;
+    type: 'image' | 'video';
+    uploadedUrl?: string;
+    uploading: boolean;
+    uploadFailed?: boolean;
+  }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadPromisesRef = useRef<Map<string, Promise<string>>>(new Map());
+  const uploadControllersRef = useRef<Map<string, AbortController>>(new Map());
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiPickerPos, setEmojiPickerPos] = useState({ top: 0, right: 0 });
 
   // Sync state when initialShowImagePicker changes
   useEffect(() => {
     setShowImagePicker(initialShowImagePicker);
   }, [initialShowImagePicker]);
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const insidePicker = emojiPickerRef.current?.contains(target);
+      const insideButton = emojiButtonRef.current?.contains(target);
+      if (!insidePicker && !insideButton) setShowEmojiPicker(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmojiPicker]);
+
+  const handleEmojiSelect = useCallback((emoji: { native?: string }) => {
+    const selected = emoji.native;
+    if (!selected) return;
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setPostContent(prev => prev + selected);
+      return;
+    }
+    const start = textarea.selectionStart ?? postContent.length;
+    const end = textarea.selectionEnd ?? postContent.length;
+    const next = postContent.slice(0, start) + selected + postContent.slice(end);
+    setPostContent(next);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const pos = start + selected.length;
+      textarea.setSelectionRange(pos, pos);
+    });
+  }, [postContent]);
 
   if (!isOpen) return null;
 
@@ -66,19 +137,74 @@ export function ProfileCreatePostModal({
       file,
       previewUrl: URL.createObjectURL(file),
       type: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
+      uploading: true,
     }));
 
     setSelectedImages(prev => [...prev, ...newImages]);
     if (e.target) e.target.value = '';
+
+    // Eager upload: compress image first, then upload in background
+    newImages.forEach(img => {
+      const controller = new AbortController();
+      uploadControllersRef.current.set(img.id, controller);
+
+      const promise = compressImage(img.file)
+        .then(compressed => postService.uploadPostImage(compressed, controller.signal))
+        .then(res => {
+          uploadControllersRef.current.delete(img.id);
+          setSelectedImages(prev =>
+            prev.map(i => i.id === img.id ? { ...i, uploadedUrl: res.url, uploading: false } : i),
+          );
+          return res.url;
+        })
+        .catch(err => {
+          uploadControllersRef.current.delete(img.id);
+          if (err instanceof Error && err.name === 'AbortError') return '';
+          setSelectedImages(prev =>
+            prev.map(i => i.id === img.id ? { ...i, uploading: false, uploadFailed: true } : i),
+          );
+          return '';
+        });
+      uploadPromisesRef.current.set(img.id, promise);
+    });
   };
 
   const removeImage = (id: string) => {
+    // Abort in-flight upload
+    uploadControllersRef.current.get(id)?.abort();
+    uploadControllersRef.current.delete(id);
+    uploadPromisesRef.current.delete(id);
+
     setSelectedImages(prev => {
-      const filtered = prev.filter(img => img.id !== id);
       const removed = prev.find(img => img.id === id);
-      if (removed) URL.revokeObjectURL(removed.previewUrl);
-      return filtered;
+      if (removed) {
+        URL.revokeObjectURL(removed.previewUrl);
+        // Delete from Cloudinary if already uploaded (fire-and-forget)
+        if (removed.uploadedUrl) {
+          postService.deletePostMedia(removed.uploadedUrl).catch(() => {});
+        }
+      }
+      return prev.filter(img => img.id !== id);
     });
+  };
+
+  const handleCancel = () => {
+    // Abort all in-flight uploads
+    uploadControllersRef.current.forEach(controller => controller.abort());
+    uploadControllersRef.current.clear();
+    uploadPromisesRef.current.clear();
+
+    // Delete already-uploaded files from Cloudinary (fire-and-forget)
+    selectedImages.forEach(img => {
+      if (img.uploadedUrl) {
+        postService.deletePostMedia(img.uploadedUrl).catch(() => {});
+      }
+      URL.revokeObjectURL(img.previewUrl);
+    });
+
+    setSelectedImages([]);
+    setShowImagePicker(false);
+    onClose();
   };
 
   const mapPrivacyToApi = () => {
@@ -94,44 +220,93 @@ export function ProfileCreatePostModal({
     }
   };
 
+  const scheduleSubtitle =
+    scheduleMode === 'scheduled' && scheduledAtLocal
+      ? `Đặt lịch: ${new Date(scheduledAtLocal).toLocaleString('vi-VN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`
+      : 'Đăng ngay';
+
   const handlePost = async () => {
     if (!postContent.trim() && selectedImages.length === 0) return;
+
+    if (scheduleMode === 'scheduled') {
+      if (!scheduledAtLocal.trim()) {
+        toast.error('Vui lòng chọn thời gian đăng bài');
+        return;
+      }
+      const scheduledDate = new Date(scheduledAtLocal);
+      if (Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
+        toast.error('Vui lòng chọn thời gian đăng trong tương lai');
+        return;
+      }
+    }
+
+    // Block post if any upload failed
+    const failedImages = selectedImages.filter(img => img.uploadFailed);
+    if (failedImages.length > 0) {
+      toast.error('Một số ảnh tải lên thất bại. Vui lòng xóa và chọn lại.');
+      return;
+    }
+
     setIsPosting(true);
     try {
-      // 1. Upload images first
+      // 1. Collect media — use cached URLs, wait only for still-uploading ones
       const uploadedMedia: CreatePostMediaRequest[] = [];
       if (selectedImages.length > 0) {
-        const uploadPromises = selectedImages.map(async (img, index) => {
-          const response = await postService.uploadPostImage(img.file);
-          return {
-            mediaType: img.type === 'video' ? 'VIDEO' as const : 'IMAGE' as const,
-            fileUrl: response.url,
-            sortOrder: index,
-          };
-        });
-        const results = await Promise.all(uploadPromises);
-        uploadedMedia.push(...results);
+        const mediaResults = await Promise.all(
+          selectedImages.map(async (img, index) => {
+            let url = img.uploadedUrl;
+            if (!url) {
+              // Still uploading — wait for the in-progress promise
+              const pending = uploadPromisesRef.current.get(img.id);
+              url = pending ? await pending : (await postService.uploadPostImage(img.file)).url;
+            }
+            return {
+              mediaType: img.type === 'video' ? 'VIDEO' as const : 'IMAGE' as const,
+              fileUrl: url,
+              sortOrder: index,
+            };
+          }),
+        );
+        uploadedMedia.push(...mediaResults);
       }
 
       // 2. Create post
       const user = authService.getCurrentUser();
+      const isScheduled = scheduleMode === 'scheduled';
+      const scheduledAtApi = isScheduled ? toApiScheduledAt(scheduledAtLocal) : undefined;
+
+      const effectiveGroupId = groupId ?? selectedGroupId ?? undefined;
       await postService.createPost({
         authorId: user?.id || '',
-        ...(groupId && { groupId }),
+        ...(effectiveGroupId && { groupId: effectiveGroupId }),
         content: postContent.trim(),
         imageUrl: uploadedMedia.length > 0 ? uploadedMedia[0].fileUrl : undefined,
         media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
         privacy: mapPrivacyToApi(),
-        status: 'PUBLISHED',
+        ...(excludedUserIds.length > 0 && { excludedUserIds }),
+        status: isScheduled ? 'SCHEDULED' : 'PUBLISHED',
+        ...(isScheduled && scheduledAtApi ? { scheduledAt: scheduledAtApi } : {}),
       });
-      
-      toast.success('Đăng bài thành công');
+
+      toast.success(isScheduled ? 'Đã lên lịch đăng bài' : 'Đăng bài thành công');
       onPostCreated?.();
       onClose();
       setPostContent('');
       setSelectedImages([]);
+      uploadPromisesRef.current.clear();
       setShowImagePicker(false);
       setShowSettingsModal(false);
+      setScheduleMode('now');
+      setScheduledAtLocal(defaultScheduledDatetimeLocal());
+      setExcludedUserIds([]);
+      setSelectedGroupId(null);
+      setSelectedGroupName(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể đăng bài');
     } finally {
@@ -146,7 +321,12 @@ export function ProfileCreatePostModal({
       case 'friends':
         return { icon: Users, label: 'Bạn bè' };
       case 'friends-except':
-        return { icon: UserMinus, label: 'Bạn bè ngoại trừ...' };
+        return {
+          icon: UserMinus,
+          label: excludedUserIds.length > 0
+            ? `Bạn bè ngoại trừ (${excludedUserIds.length})`
+            : 'Bạn bè ngoại trừ...',
+        };
       default:
         return { icon: Globe, label: 'Công khai' };
     }
@@ -158,36 +338,84 @@ export function ProfileCreatePostModal({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="max-h-[90vh] w-full max-w-[500px] overflow-y-auto rounded-lg bg-white shadow-xl dark:bg-gray-800">
-          <div className="sticky top-0 relative flex items-center justify-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
+          <div className="relative flex shrink-0 items-center justify-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tạo bài viết</h2>
             <button
-              onClick={onClose}
+              onClick={handleCancel}
               className="absolute right-4 rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
             >
               <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
 
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div className="p-4">
             <div className="mb-4 flex items-center gap-3">
               <CurrentUserAvatar />
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white">{username}</h3>
-                <button
-                  onClick={() => setShowAudienceModal(true)}
-                  className="flex items-center gap-1 rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                >
-                  <PrivacyIcon className="h-3 w-3" />
-                  <span>{privacyInfo.label}</span>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                <div className="mt-1 flex flex-wrap items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReopenSettingsAfterAudience(false);
+                      setShowAudienceModal(true);
+                    }}
+                    className="flex items-center gap-1 rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  >
+                    <PrivacyIcon className="h-3 w-3" />
+                    <span>{privacyInfo.label}</span>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {!groupId && privacy === 'public' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowGroupModal(true)}
+                      className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
+                        selectedGroupId
+                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <UsersRound className="h-3 w-3" />
+                      <span>{selectedGroupName ?? 'Chọn nhóm'}</span>
+                      {selectedGroupId ? (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedGroupId(null);
+                            setSelectedGroupName(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.stopPropagation();
+                              setSelectedGroupId(null);
+                              setSelectedGroupName(null);
+                            }
+                          }}
+                          className="ml-0.5 rounded-full hover:text-red-500"
+                        >
+                          <X className="h-3 w-3" />
+                        </span>
+                      ) : (
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
             <textarea
+              ref={textareaRef}
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               placeholder="Bạn đang nghĩ gì?"
@@ -225,25 +453,52 @@ export function ProfileCreatePostModal({
                     <p className="text-[13px] text-gray-500 dark:text-gray-400">hoặc kéo và thả</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-2 mt-12 pb-2">
+                  <div className="mt-12 max-h-[min(340px,45vh)] overflow-y-auto overscroll-contain pr-0.5">
+                  <div className="grid grid-cols-2 gap-2 pb-2">
                     {selectedImages.map((img) => (
-                      <div key={img.id} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-500 bg-black flex items-center justify-center">
+                      <div
+                        key={img.id}
+                        className="relative aspect-square min-h-0 w-full overflow-hidden rounded-lg border border-gray-200 bg-black dark:border-gray-500"
+                      >
                         {img.type === 'video' ? (
-                          <video src={img.previewUrl} className="max-h-full max-w-full" controls />
+                          <video
+                            src={img.previewUrl}
+                            className="absolute inset-0 m-auto h-full max-h-full w-full max-w-full object-contain"
+                            controls
+                            playsInline
+                          />
                         ) : (
-                          <img src={img.previewUrl} alt="Preview" className="h-full w-full object-cover" />
+                          <img
+                            src={img.previewUrl}
+                            alt="Preview"
+                            className="absolute inset-0 h-full w-full object-cover"
+                            loading="lazy"
+                          />
                         )}
-                        <button 
+                        {/* Upload state overlay */}
+                        {img.uploading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <Loader2 className="h-7 w-7 animate-spin text-white" />
+                          </div>
+                        )}
+                        {img.uploadFailed && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50">
+                            <AlertCircle className="h-6 w-6 text-red-400" />
+                            <span className="text-xs text-red-300">Lỗi tải lên</span>
+                          </div>
+                        )}
+                        <button
                           onClick={() => removeImage(img.id)}
-                          className="absolute right-1 top-1 rounded-full bg-white p-1 text-gray-500 shadow-sm hover:bg-gray-50 border border-gray-200 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 dark:border-gray-500 z-10"
+                          className="absolute right-1 top-1 z-10 rounded-full border border-gray-200 bg-white p-1 text-gray-500 shadow-sm hover:bg-gray-50 dark:border-gray-500 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
                         >
                           <X className="h-4 w-4" />
                         </button>
                       </div>
                     ))}
                     <button 
+                      type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed border-gray-300 hover:bg-gray-100 transition-colors dark:border-gray-500 dark:hover:bg-gray-600"
+                      className="flex aspect-square min-h-0 w-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-100 dark:border-gray-500 dark:hover:bg-gray-600"
                     >
                       <div className="flex flex-col items-center">
                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 mb-1">
@@ -252,6 +507,7 @@ export function ProfileCreatePostModal({
                          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Thêm ảnh</span>
                       </div>
                     </button>
+                  </div>
                   </div>
                 )}
                 <input 
@@ -265,19 +521,30 @@ export function ProfileCreatePostModal({
               </div>
             )}
 
-            <div className="mt-2 flex items-center justify-between">
-              <button className="rounded-lg p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-emerald-400 to-teal-600">
-                  <span className="text-sm font-bold text-white">Aa</span>
-                </div>
-              </button>
-              <button className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-                <Smile className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-              </button>
+            <div className="mt-2 flex items-center justify-end">
+              <div className="relative">
+                <button
+                  ref={emojiButtonRef}
+                  type="button"
+                  onClick={() => {
+                    if (!showEmojiPicker && emojiButtonRef.current) {
+                      const rect = emojiButtonRef.current.getBoundingClientRect();
+                      setEmojiPickerPos({
+                        top: rect.top - 8,
+                        right: window.innerWidth - rect.right,
+                      });
+                    }
+                    setShowEmojiPicker(prev => !prev);
+                  }}
+                  className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <Smile className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="px-4 pb-4">
+          <div className="px-4 pb-3">
             <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-600">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
@@ -293,44 +560,104 @@ export function ProfileCreatePostModal({
                   <button className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
                     <Users className="h-6 w-6 text-emerald-500" />
                   </button>
-                  <button className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Smile className="h-6 w-6 text-yellow-500" />
-                  </button>
-                  <button className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <MapPin className="h-6 w-6 text-red-500" />
-                  </button>
-                  <button className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <Phone className="h-6 w-6 text-emerald-500" />
-                  </button>
-                  <button className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <MoreHorizontal className="h-6 w-6 text-gray-500 dark:text-gray-400" />
-                  </button>
                 </div>
               </div>
             </div>
           </div>
+          </div>
 
-          <div className="px-4 pb-4">
-            <button
-              onClick={handleNext}
-              disabled={!postContent.trim() && selectedImages.length === 0}
-              className={`w-full rounded-lg py-2.5 font-semibold transition-colors ${
-                postContent.trim() || selectedImages.length > 0
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-              }`}
-            >
-              Tiếp
-            </button>
+          <div className="shrink-0 border-t border-gray-200 bg-white px-4 pb-4 pt-3 dark:border-gray-700 dark:bg-gray-800">
+            {(() => {
+              const hasContent = postContent.trim() || selectedImages.length > 0;
+              const isUploading = selectedImages.some(img => img.uploading);
+              const disabled = !hasContent || isUploading;
+              return (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={disabled}
+                  className={`w-full rounded-lg py-2.5 font-semibold transition-colors ${
+                    !disabled
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                  }`}
+                >
+                  {isUploading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang tải ảnh lên...
+                    </span>
+                  ) : 'Tiếp'}
+                </button>
+              );
+            })()}
           </div>
         </div>
       </div>
 
+      <ProfilePostGroupModal
+        isOpen={showGroupModal}
+        onClose={() => {
+          setShowGroupModal(false);
+          if (reopenSettingsAfterGroup) {
+            setReopenSettingsAfterGroup(false);
+            setShowSettingsModal(true);
+          }
+        }}
+        selectedGroupId={selectedGroupId}
+        onSelect={(gId, gName) => {
+          setSelectedGroupId(gId);
+          setSelectedGroupName(gName);
+          setShowGroupModal(false);
+          if (reopenSettingsAfterGroup) {
+            setReopenSettingsAfterGroup(false);
+            setShowSettingsModal(true);
+          }
+        }}
+      />
+
       <ProfilePostAudienceModal
         isOpen={showAudienceModal}
-        onClose={() => setShowAudienceModal(false)}
+        onClose={() => {
+          setShowAudienceModal(false);
+          setReopenSettingsAfterAudience(false);
+        }}
         selectedAudience={privacy}
-        onSelect={setPrivacy}
+        excludedUserIds={excludedUserIds}
+        onSelect={(audience, excluded) => {
+          setPrivacy(audience);
+          setExcludedUserIds(excluded);
+          if (audience !== 'public') {
+            setSelectedGroupId(null);
+            setSelectedGroupName(null);
+          }
+          setShowAudienceModal(false);
+          if (reopenSettingsAfterAudience) {
+            setReopenSettingsAfterAudience(false);
+            setShowSettingsModal(true);
+          }
+        }}
+      />
+
+      <ProfilePostScheduleModal
+        isOpen={showScheduleModal}
+        mode={scheduleMode}
+        scheduledAtLocal={scheduledAtLocal}
+        onConfirm={({ mode, scheduledAtLocal: nextLocal }) => {
+          setScheduleMode(mode);
+          if (mode === 'scheduled') {
+            setScheduledAtLocal(nextLocal);
+          } else {
+            setScheduledAtLocal(defaultScheduledDatetimeLocal());
+          }
+        }}
+        onClose={() => {
+          setShowScheduleModal(false);
+          if (reopenSettingsAfterSchedule) {
+            setReopenSettingsAfterSchedule(false);
+            setShowSettingsModal(true);
+          }
+        }}
       />
 
       <ProfilePostSettingsModal
@@ -339,8 +666,44 @@ export function ProfileCreatePostModal({
         onPost={handlePost}
         postContent={postContent}
         privacy={privacy}
+        excludedCount={excludedUserIds.length}
         isPosting={isPosting}
+        scheduleSubtitle={scheduleSubtitle}
+        postActionLabel={scheduleMode === 'scheduled' ? 'Lên lịch' : 'Đăng'}
+        onOpenAudienceSelection={() => {
+          setReopenSettingsAfterAudience(true);
+          setShowSettingsModal(false);
+          setShowAudienceModal(true);
+        }}
+        onOpenScheduleSelection={() => {
+          setReopenSettingsAfterSchedule(true);
+          setShowSettingsModal(false);
+          setShowScheduleModal(true);
+        }}
+        onOpenGroupSelection={() => {
+          setReopenSettingsAfterGroup(true);
+          setShowSettingsModal(false);
+          setShowGroupModal(true);
+        }}
+        selectedGroupName={groupId ? undefined : selectedGroupName}
       />
+
+      {showEmojiPicker && createPortal(
+        <div
+          ref={emojiPickerRef}
+          className="fixed z-[200]"
+          style={{ bottom: window.innerHeight - emojiPickerPos.top, right: emojiPickerPos.right }}
+        >
+          <Picker
+            data={data}
+            onEmojiSelect={handleEmojiSelect}
+            theme="light"
+            locale="vi"
+            previewPosition="none"
+          />
+        </div>,
+        document.body,
+      )}
     </>
   );
 }

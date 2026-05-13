@@ -54,7 +54,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return data as T;
 }
 
-async function requestMultipart<T>(path: string, formData: FormData, method = 'POST'): Promise<T> {
+async function requestMultipart<T>(path: string, formData: FormData, method = 'POST', signal?: AbortSignal): Promise<T> {
   const token = getToken();
 
   const headers: Record<string, string> = {};
@@ -66,6 +66,7 @@ async function requestMultipart<T>(path: string, formData: FormData, method = 'P
     method,
     body: formData,
     headers,
+    signal,
     // No Content-Type — browser sets multipart boundary automatically
   });
 
@@ -91,9 +92,9 @@ export const api = {
   delete: <T>(path: string) =>
     request<T>(path, { method: 'DELETE' }),
 
-  postMultipart: <T>(path: string, formData: FormData) =>
-    requestMultipart<T>(path, formData, 'POST'),
+  postMultipart: <T>(path: string, formData: FormData, signal?: AbortSignal) =>
+    requestMultipart<T>(path, formData, 'POST', signal),
 
-  putMultipart: <T>(path: string, formData: FormData) =>
-    requestMultipart<T>(path, formData, 'PUT'),
+  putMultipart: <T>(path: string, formData: FormData, signal?: AbortSignal) =>
+    requestMultipart<T>(path, formData, 'PUT', signal),
 };

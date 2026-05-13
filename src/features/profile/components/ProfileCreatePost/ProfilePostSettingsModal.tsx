@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { ArrowLeft, Lock, Clock, Users, DollarSign, Bookmark, Megaphone, Loader2 } from 'lucide-react';
+import { ArrowLeft, Lock, Clock, Users, Bookmark, Loader2 } from 'lucide-react';
 
 interface ProfilePostSettingsModalProps {
   isOpen: boolean;
@@ -7,7 +6,14 @@ interface ProfilePostSettingsModalProps {
   onPost: () => void | Promise<void>;
   postContent: string;
   privacy: string;
+  excludedCount?: number;
   isPosting?: boolean;
+  onOpenAudienceSelection?: () => void;
+  scheduleSubtitle: string;
+  onOpenScheduleSelection?: () => void;
+  onOpenGroupSelection?: () => void;
+  selectedGroupName?: string | null;
+  postActionLabel?: string;
 }
 
 export function ProfilePostSettingsModal({
@@ -16,10 +22,15 @@ export function ProfilePostSettingsModal({
   onPost,
   postContent,
   privacy,
+  excludedCount = 0,
   isPosting = false,
+  onOpenAudienceSelection,
+  scheduleSubtitle,
+  onOpenScheduleSelection,
+  onOpenGroupSelection,
+  selectedGroupName,
+  postActionLabel = 'Đăng',
 }: ProfilePostSettingsModalProps) {
-  const [promotePost, setPromotePost] = useState(false);
-
   if (!isOpen) return null;
 
   const getPrivacyLabel = () => {
@@ -29,7 +40,7 @@ export function ProfilePostSettingsModal({
       case 'friends':
         return 'Bạn bè';
       case 'friends-except':
-        return 'Bạn bè ngoại trừ...';
+        return excludedCount > 0 ? `Bạn bè ngoại trừ (${excludedCount} người)` : 'Bạn bè ngoại trừ...';
       default:
         return 'Chỉ mình tôi';
     }
@@ -58,7 +69,12 @@ export function ProfilePostSettingsModal({
           </div>
 
           <div className="space-y-1">
-            <button className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
+            <button
+              type="button"
+              disabled={isPosting}
+              onClick={() => onOpenAudienceSelection?.()}
+              className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700"
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
                 <Lock className="h-5 w-5 text-gray-700 dark:text-gray-300" />
               </div>
@@ -71,46 +87,50 @@ export function ProfilePostSettingsModal({
               </svg>
             </button>
 
-            <button className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
+            <button
+              type="button"
+              disabled={isPosting}
+              onClick={() => onOpenScheduleSelection?.()}
+              className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700"
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
                 <Clock className="h-5 w-5 text-gray-700 dark:text-gray-300" />
               </div>
               <div className="flex-1 text-left">
                 <h4 className="font-semibold text-gray-900 dark:text-white">Lựa chọn lịch đăng</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Đăng ngay</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{scheduleSubtitle}</p>
               </div>
               <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
 
-            <div className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg p-3 opacity-50">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
-                <Users className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-              </div>
-              <div className="flex-1 text-left">
-                <h4 className="font-semibold text-gray-500 dark:text-gray-400">Chia sẻ lên nhóm</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-500">
-                  Đặt bài viết ở chế độ công khai để chia sẻ
-                </p>
-              </div>
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-
-            <button className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
-                <DollarSign className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-              </div>
-              <div className="flex-1 text-left">
-                <h4 className="font-semibold text-gray-900 dark:text-white">Kiếm tiền</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Kiếm tiền từ nội dung của bạn</p>
-              </div>
-              <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            {(() => {
+              const canShareToGroup = privacy === 'public';
+              return (
+                <button
+                  type="button"
+                  disabled={isPosting || !canShareToGroup}
+                  onClick={() => onOpenGroupSelection?.()}
+                  className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-700"
+                >
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full ${selectedGroupName ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                    <Users className={`h-5 w-5 ${selectedGroupName ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`} />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <h4 className="font-semibold text-gray-900 dark:text-white">Chia sẻ lên nhóm</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {canShareToGroup
+                        ? (selectedGroupName ?? 'Chọn nhóm để đăng bài')
+                        : 'Chỉ dùng được khi bài viết ở chế độ Công khai'}
+                    </p>
+                  </div>
+                  <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              );
+            })()}
 
             <div className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg p-3 opacity-50">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
@@ -123,33 +143,6 @@ export function ProfilePostSettingsModal({
               <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </div>
-
-            <div className="flex w-full items-center gap-3 rounded-lg p-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
-                <Megaphone className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-              </div>
-              <div className="flex-1 text-left">
-                <h4 className="font-semibold text-gray-900 dark:text-white">Quảng bá bài viết</h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Bạn sẽ chọn phần cài đặt sau khi nhấp vào nút Đăng. Bạn chỉ có thể quảng cáo bài viết công khai.
-                </p>
-              </div>
-              <label className="relative inline-block h-6 w-12 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={promotePost}
-                  onChange={(e) => setPromotePost(e.target.checked)}
-                  className="peer sr-only"
-                />
-                <div className="h-6 w-12 rounded-full bg-gray-300 transition-colors peer-checked:bg-emerald-500 dark:bg-gray-600">
-                  <div
-                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      promotePost ? 'translate-x-6' : ''
-                    }`}
-                  />
-                </div>
-              </label>
             </div>
           </div>
         </div>
@@ -173,7 +166,7 @@ export function ProfilePostSettingsModal({
                 Đang đăng...
               </span>
             ) : (
-              'Đăng'
+              postActionLabel
             )}
           </button>
         </div>

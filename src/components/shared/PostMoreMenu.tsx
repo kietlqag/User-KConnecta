@@ -3,7 +3,8 @@ import {
   MoreHorizontal,
   Bookmark,
   Plus,
-  Minus
+  Minus,
+  Trash2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -16,11 +17,13 @@ import { toast } from 'sonner';
 interface PostMoreMenuProps {
   postId: string;
   isSaved?: boolean;
+  isOwner?: boolean;
   onToggleSave?: () => void;
+  onDelete?: () => void;
   className?: string;
 }
 
-export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({ postId, isSaved = false, onToggleSave, className }) => {
+export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({ postId, isSaved = false, isOwner = false, onToggleSave, onDelete, className }) => {
   const handleAction = (action: string) => {
     switch (action) {
       case 'interested':
@@ -84,6 +87,24 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({ postId, isSaved = fa
             </span>
           </div>
         </DropdownMenuItem>
+
+        {isOwner && (
+          <>
+            <div className="my-1 border-t border-gray-100" />
+            <DropdownMenuItem
+              className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+              onClick={onDelete}
+            >
+              <div className="mt-1">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-[15px]">Xóa bài viết</span>
+                <span className="text-[13px] text-red-400">Xóa vĩnh viễn bài viết này.</span>
+              </div>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

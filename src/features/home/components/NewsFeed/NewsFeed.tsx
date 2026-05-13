@@ -3,7 +3,7 @@ import { Stories } from '../Stories';
 import { CreatePost } from '../CreatePost';
 import { Post } from '../../../../components/shared';
 import { useSearchParams } from 'react-router-dom';
-import { authService } from '@/services/authService';
+import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { postService, type PostResponse } from '@/services/postService';
 import { mapApiPost, type FeedPost } from '@/utils/postUtils';
 
@@ -16,9 +16,16 @@ export function NewsFeed() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [authEpoch, setAuthEpoch] = useState(0);
 
   const [searchParams] = useSearchParams();
   const highlightedPostId = searchParams.get('post');
+
+  useEffect(() => {
+    const bump = () => setAuthEpoch((n) => n + 1);
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, bump);
+    return () => window.removeEventListener(AUTH_USER_CHANGED_EVENT, bump);
+  }, []);
   
   const observer = useRef<IntersectionObserver | null>(null);
   const lastPostElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -83,7 +90,7 @@ export function NewsFeed() {
     return () => {
       isMounted = false;
     };
-  }, [highlightedPostId]);
+  }, [highlightedPostId, authEpoch]);
 
   // Load more pages
   useEffect(() => {
@@ -98,11 +105,12 @@ export function NewsFeed() {
 
         if (!isMounted) return;
 
-        const newPosts = response.content
-          .map(mapApiPost)
-          .filter(newPost => !posts.some(existing => existing.id === newPost.id)); // Avoid duplicates
-        
-        setPosts(prev => [...prev, ...newPosts]);
+        setPosts((prev) => {
+          const newPosts = response.content
+            .map(mapApiPost)
+            .filter((newPost) => !prev.some((existing) => existing.id === newPost.id));
+          return [...prev, ...newPosts];
+        });
         setHasMore(response.number < response.totalPages - 1);
       } catch (e) {
         console.error('Failed to load more posts:', e);
@@ -151,15 +159,16 @@ export function NewsFeed() {
       {posts.map((post, index) => {
         const isLast = posts.length === index + 1;
         const showSuggestions = index === 2; // Show after the 3rd post
+        const handleDelete = (postId: string) => setPosts((prev) => prev.filter((p) => p.id !== postId));
 
         return (
           <React.Fragment key={post.id}>
             {isLast ? (
               <div ref={lastPostElementRef}>
-                <Post {...post} />
+                <Post {...post} onDelete={handleDelete} />
               </div>
             ) : (
-              <Post {...post} />
+              <Post {...post} onDelete={handleDelete} />
             )}
             {showSuggestions && <FriendSuggestions />}
           </React.Fragment>

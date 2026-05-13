@@ -201,8 +201,9 @@ function ChangePasswordSection() {
 // -- Forgot Password section ---------------------------------------------------
 
 function ForgotPasswordSection() {
+  const currentUser = authService.getCurrentUser();
+  const email = currentUser?.email ?? '';
   const [step, setStep] = useState<ForgotStep>('email');
-  const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -228,19 +229,16 @@ function ForgotPasswordSection() {
   }, [otpExpiresIn]);
 
   const reset = () => {
-    setStep('email'); setEmail(''); setOtp('');
+    setStep('email'); setOtp('');
     setPassword(''); setConfirmPassword('');
     setErrors({}); setCountdown(0); setOtpExpiresIn(0);
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) { setErrors({ email: 'Email là bắt buộc' }); return; }
-    if (!/\S+@\S+\.\S+/.test(email)) { setErrors({ email: 'Email không hợp lệ' }); return; }
+    if (!email) { setErrors({ email: 'Không xác định được email người dùng' }); return; }
     setLoading(true);
     try {
-      const { exists } = await authService.checkEmailExists(email);
-      if (!exists) { setErrors({ email: 'Email chưa có tài khoản' }); return; }
       await authService.sendOtp(email);
       setStep('otp'); setCountdown(60); setOtpExpiresIn(60); setErrors({});
     } catch (err) {
@@ -337,8 +335,10 @@ function ForgotPasswordSection() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" placeholder="you@example.com" value={email}
-                onChange={(e) => { setEmail(e.target.value); setErrors({}); }} className={inputClass} />
+              <div className="flex items-center gap-2 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700">
+                <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                <span>{email}</span>
+              </div>
               {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
             </div>
             <button type="submit" disabled={loading} className={btnClass}>
@@ -372,10 +372,7 @@ function ForgotPasswordSection() {
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Xác thực
             </button>
-            <div className="flex items-center justify-between text-sm">
-              <button type="button" onClick={() => setStep('email')} className="text-gray-500 hover:text-gray-700">
-                Quay lại đổi email
-              </button>
+            <div className="flex items-center justify-end text-sm">
               {countdown > 0 ? (
                 <span className="text-gray-400">Gửi lại sau {countdown}s</span>
               ) : (

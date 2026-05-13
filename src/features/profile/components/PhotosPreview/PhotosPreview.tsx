@@ -21,7 +21,7 @@ export function PhotosPreview({ userId, photos }: PhotosPreviewProps) {
         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Ảnh</h2>
         <Link
           to={`/profile/${userId}/photos`}
-          className="font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+          className="cursor-pointer font-medium text-emerald-600 hover:underline dark:text-emerald-400"
         >
           Xem tất cả ảnh
         </Link>
