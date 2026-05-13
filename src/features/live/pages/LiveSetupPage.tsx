@@ -425,7 +425,9 @@ export default function LiveSetupPage() {
     const loadSchedule = async () => {
       try {
         const data = await liveService.getSchedule(currentUserId);
-        setStartMode(data.startMode);
+        // Keep default as "Bây giờ" for setup flow.
+        // We still load scheduledAt only for optional reference/edit later.
+        setStartMode('NOW');
         setScheduledAt(data.scheduledAt ? data.scheduledAt.slice(0, 16) : '');
       } catch {
         setStartMode('NOW');
@@ -1054,6 +1056,10 @@ export default function LiveSetupPage() {
 
   const handleGoLive = async () => {
     if (!canGoLive || isCreatingLivePost || !currentUserId) return;
+    if (selectedDestination === 'page') {
+      setCreateLiveError('Hiện chưa hỗ trợ phát trực tiếp lên Trang. Vui lòng chọn Trang cá nhân hoặc Nhóm.');
+      return;
+    }
     setCreateLiveError('');
     setIsCreatingLivePost(true);
     try {
@@ -1095,7 +1101,7 @@ export default function LiveSetupPage() {
     }
   };
 
-  const isSourceConnected = isMediaReady;
+  const isSourceConnected = isMediaReady && hasVideoFrame;
   const isPostDetailsCompleted = postTitle.trim().length >= 5 && postDescription.trim().length >= 10;
   const isDestinationSelectionValid =
     selectedDestination === 'profile' ||
