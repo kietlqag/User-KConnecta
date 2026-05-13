@@ -9,6 +9,35 @@ import java.util.UUID;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, UUID> {
+    interface CheckInSuggestionProjection {
+        String getLocationText();
+        Long getUsageCount();
+    }
+
+    @org.springframework.data.jpa.repository.Query(
+        value = "SELECT p.location_text AS locationText, COUNT(*) AS usageCount " +
+                "FROM posts p " +
+                "WHERE p.location_text IS NOT NULL " +
+                "  AND btrim(p.location_text) <> '' " +
+                "  AND p.status = 'PUBLISHED' " +
+                "  AND ( " +
+                "       (:currentUserId IS NULL AND p.privacy = 'PUBLIC') " +
+                "       OR (:currentUserId IS NOT NULL AND (p.privacy = 'PUBLIC' OR p.author_id = CAST(:currentUserId AS uuid))) " +
+                "  ) " +
+                "GROUP BY p.location_text " +
+                "ORDER BY " +
+                "  MAX(CASE WHEN :ward IS NOT NULL AND p.location_text ILIKE CONCAT('%', :ward, '%') THEN 1 ELSE 0 END) DESC, " +
+                "  MAX(CASE WHEN :province IS NOT NULL AND p.location_text ILIKE CONCAT('%', :province, '%') THEN 1 ELSE 0 END) DESC, " +
+                "  COUNT(*) DESC, " +
+                "  MAX(COALESCE(p.published_at, p.created_at)) DESC",
+        nativeQuery = true
+    )
+    List<CheckInSuggestionProjection> findCheckInSuggestions(
+        @org.springframework.data.repository.query.Param("currentUserId") UUID currentUserId,
+        @org.springframework.data.repository.query.Param("province") String province,
+        @org.springframework.data.repository.query.Param("ward") String ward
+    );
+
     // Explicit JOIN FETCH instead of @EntityGraph to avoid the known Spring Data JPA
     // issue where @EntityGraph + @Query can cause the JPQL WHERE clause to be
     // partially ignored or generate conflicting implicit/explicit joins.

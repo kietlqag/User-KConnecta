@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
@@ -77,6 +78,15 @@ public class PostController {
             @RequestParam(required = false) UUID currentUserId
     ) {
         return ResponseEntity.ok(postService.getPostById(id, currentUserId));
+    }
+
+    @GetMapping("/checkin-suggestions")
+    public ResponseEntity<List<CheckInSuggestionResponse>> getCheckInSuggestions(
+            @RequestParam(required = false) UUID currentUserId,
+            @RequestParam(required = false) String province,
+            @RequestParam(required = false) String ward
+    ) {
+        return ResponseEntity.ok(postService.getCheckInSuggestions(currentUserId, province, ward));
     }
 
     @PostMapping("/{id}/reactions")

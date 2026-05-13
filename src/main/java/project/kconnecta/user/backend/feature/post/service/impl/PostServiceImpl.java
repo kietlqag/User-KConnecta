@@ -15,6 +15,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostMediaResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionCountResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
@@ -451,6 +452,21 @@ public class PostServiceImpl implements PostService {
         if (postIds.isEmpty()) return Collections.emptyList();
         List<Post> posts = postRepository.findAllById(postIds);
         return processPostsBulk(posts, userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CheckInSuggestionResponse> getCheckInSuggestions(UUID currentUserId, String province, String ward) {
+        String normalizedProvince = trimToNull(province);
+        String normalizedWard = trimToNull(ward);
+
+        return postRepository.findCheckInSuggestions(currentUserId, normalizedProvince, normalizedWard)
+                .stream()
+                .map(item -> CheckInSuggestionResponse.builder()
+                        .locationText(item.getLocationText())
+                        .usageCount(item.getUsageCount() == null ? 0L : item.getUsageCount())
+                        .build())
+                .toList();
     }
 
     @Override

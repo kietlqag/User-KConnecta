@@ -7,6 +7,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
@@ -42,4 +43,5 @@ public interface PostService {
     void savePost(SavePostRequest request);
     List<PostResponse> getSavedPosts(UUID userId);
     void unsavePost(UUID userId, UUID postId);
+    List<CheckInSuggestionResponse> getCheckInSuggestions(UUID currentUserId, String province, String ward);
 }
