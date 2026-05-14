@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import { X, ThumbsUp, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { X, MessageCircle, Share2, Newspaper } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
 import {
   getActiveReactions,
   getTotalReactionCount,
+  ReactionButton,
   type ReactionCountMap,
+  type ReactionOption,
 } from '@/components/reactions';
 import { CommentSection } from './CommentSection';
 import { PostMoreMenu } from '../shared/PostMoreMenu';
@@ -38,6 +40,10 @@ interface PostDetailModalProps {
   onCommentAdded?: () => void;
   onCommentCountChange?: (count: number) => void;
   onShareAdded?: () => void;
+  selectedReaction?: ReactionOption | null;
+  onReactionChange?: (reaction: ReactionOption | null) => void;
+  isReacting?: boolean;
+  onShareToStory?: () => void;
 }
 
 export function PostDetailModal({
@@ -47,10 +53,16 @@ export function PostDetailModal({
   onCommentAdded,
   onCommentCountChange,
   onShareAdded,
+  selectedReaction = null,
+  onReactionChange,
+  isReacting = false,
+  onShareToStory,
 }: PostDetailModalProps) {
   const [commentCount, setCommentCount] = useState(post.comments || 0);
   const [shareCount, setShareCount] = useState(post.shares || 0);
   const [isSharing, setIsSharing] = useState(false);
+  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
 
   const reactionCounts = post.reactionCounts || {
     LIKE: post.likes || 0,
@@ -68,7 +80,7 @@ export function PostDetailModal({
     setShareCount(post.shares || 0);
   }, [post.comments, post.shares, post.id]);
 
-  const handleShare = async () => {
+  const handleShareToFeed = async () => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để chia sẻ');
@@ -77,6 +89,7 @@ export function PostDetailModal({
 
     try {
       setIsSharing(true);
+      setIsShareMenuOpen(false);
       await postService.sharePost(post.id, { userId: currentUser.id });
       setShareCount((prev) => prev + 1);
       onShareAdded?.();
@@ -189,24 +202,55 @@ export function PostDetailModal({
           </div>
 
           <div className="grid grid-cols-3 gap-1 border-b border-gray-200 px-4 py-1">
-            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 cursor-pointer">
-              <ThumbsUp className="h-5 w-5 text-gray-600" />
-              <span className="text-[15px] font-semibold text-gray-600">Thích</span>
-            </button>
+            <ReactionButton
+              initialReaction={selectedReaction}
+              onReactionChange={onReactionChange}
+              disabled={isReacting}
+              buttonClassName="cursor-pointer disabled:cursor-not-allowed"
+            />
+
             <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 cursor-pointer">
               <MessageCircle className="h-5 w-5 text-gray-600" />
               <span className="text-[15px] font-semibold text-gray-600">Bình luận</span>
             </button>
-            <button
-              onClick={handleShare}
-              disabled={isSharing}
-              className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 disabled:opacity-60 cursor-pointer"
-            >
-              <Share2 className="h-5 w-5 text-gray-600" />
-              <span className="text-[15px] font-semibold text-gray-600">
-                {isSharing ? 'Đang chia sẻ...' : 'Chia sẻ'}
-              </span>
-            </button>
+
+            <div className="relative" ref={shareMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsShareMenuOpen((prev) => !prev)}
+                disabled={isSharing}
+                className="flex w-full items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+              >
+                <Share2 className="h-5 w-5 text-gray-600" />
+                <span className="text-[15px] font-semibold text-gray-600">
+                  {isSharing ? 'Đang chia sẻ...' : 'Chia sẻ'}
+                </span>
+              </button>
+
+              {isShareMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setIsShareMenuOpen(false)} />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 bg-white rounded-xl shadow-lg border border-gray-200 py-1 w-52 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={handleShareToFeed}
+                      className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+                    >
+                      <Share2 className="w-4 h-4 shrink-0" />
+                      <span>Chia sẻ ngay</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setIsShareMenuOpen(false); onShareToStory?.(); }}
+                      className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-100"
+                    >
+                      <Newspaper className="w-4 h-4 shrink-0" />
+                      <span>Chia sẻ lên tin</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           <CommentSection

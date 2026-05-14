@@ -1,6 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Video, Image } from 'lucide-react';
+import { Image, Video, Smile } from 'lucide-react';
 import { ProfileCreatePostModal } from '../../../profile/components/ProfileCreatePost/ProfileCreatePostModal';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { CurrentUserAvatar } from '@/components/shared';
@@ -67,6 +67,11 @@ export function CreatePost() {
             <span className="text-gray-600 font-medium sm:hidden">Ảnh</span>
           </button>
 
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex-1 justify-center cursor-pointer">
+            <Smile className="w-6 h-6 text-yellow-500" />
+            <span className="text-gray-600 font-medium hidden sm:inline">Cảm xúc/hoạt động</span>
+            <span className="text-gray-600 font-medium sm:hidden">Cảm xúc</span>
+          </button>
         </div>
       </div>
 

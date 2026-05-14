@@ -514,6 +514,9 @@ export function Post({
         onCommentAdded={() => setCommentCount((prev) => prev + 1)}
         onCommentCountChange={setCommentCount}
         onShareAdded={() => setShareCount((prev) => prev + 1)}
+        selectedReaction={selectedReaction}
+        onReactionChange={handleReactionChange}
+        isReacting={isReacting}
       />
 
       <ReactionSummaryDialog
