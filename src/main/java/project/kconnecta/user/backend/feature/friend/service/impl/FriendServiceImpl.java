@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
+import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
+import project.kconnecta.user.backend.feature.activity.service.ActivityLogService;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendResponse;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendshipStatusResponse;
 import project.kconnecta.user.backend.feature.friend.entity.Friendship;
@@ -31,6 +33,7 @@ public class FriendServiceImpl implements FriendService {
 
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
+    private final ActivityLogService activityLogService;
 
     @Override
     public List<FriendResponse> getFriends(UUID userId) {
@@ -145,7 +148,10 @@ public class FriendServiceImpl implements FriendService {
                 .status(FriendshipStatus.PENDING)
                 .build();
 
-        return mapToResponse(friendshipRepository.save(friendship), requesterId);
+        FriendResponse result = mapToResponse(friendshipRepository.save(friendship), requesterId);
+        activityLogService.log(requester.getId(), requester.getUsername(), ActivityLogType.FRIEND_REQUEST_SENT,
+                "{\"targetUserId\":\"" + addresseeId + "\"}");
+        return result;
     }
 
     @Override
@@ -154,7 +160,11 @@ public class FriendServiceImpl implements FriendService {
                 .orElseThrow(() -> new ResourceNotFoundException("Friendship not found: " + friendshipId));
 
         friendship.setStatus(FriendshipStatus.ACCEPTED);
-        return mapToResponse(friendshipRepository.save(friendship), friendship.getAddressee().getId());
+        FriendResponse result = mapToResponse(friendshipRepository.save(friendship), friendship.getAddressee().getId());
+        User addressee = friendship.getAddressee();
+        activityLogService.log(addressee.getId(), addressee.getUsername(), ActivityLogType.FRIEND_ACCEPTED,
+                "{\"requesterId\":\"" + friendship.getRequester().getId() + "\"}");
+        return result;
     }
 
     @Override

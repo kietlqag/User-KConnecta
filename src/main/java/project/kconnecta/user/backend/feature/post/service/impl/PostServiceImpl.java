@@ -27,6 +27,8 @@ import project.kconnecta.user.backend.feature.post.entity.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
+import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
+import project.kconnecta.user.backend.feature.activity.service.ActivityLogService;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
 import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
 import project.kconnecta.user.backend.feature.post.entity.PostSaved;
@@ -66,6 +68,7 @@ public class PostServiceImpl implements PostService {
     private final GroupRepository groupRepository;
     private final CloudinaryService cloudinaryService;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final ActivityLogService activityLogService;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -112,7 +115,10 @@ public class PostServiceImpl implements PostService {
         attachExcludedUsers(post, request.getExcludedUserIds());
         attachTaggedUsers(post, request.getTaggedUserIds());
 
-        return mapToResponse(postRepository.save(post), request.getAuthorId());
+        PostResponse response = mapToResponse(postRepository.save(post), request.getAuthorId());
+        activityLogService.log(author.getId(), author.getUsername(), ActivityLogType.POST_CREATED,
+                "{\"postId\":\"" + response.getId() + "\"}");
+        return response;
     }
 
     @Override
@@ -220,6 +226,8 @@ public class PostServiceImpl implements PostService {
         reaction.setReactionType(request.getReactionType());
 
         PostReaction saved = postReactionRepository.save(reaction);
+        activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.REACTION_ADDED,
+                "{\"postId\":\"" + postId + "\",\"type\":\"" + request.getReactionType() + "\"}");
 
         // Push LIKE event → Queue → Listener creates notification FIFO
         notificationEventPublisher.publish(
@@ -343,6 +351,9 @@ public class PostServiceImpl implements PostService {
                 .content(request.getContent().trim())
                 .build());
 
+        activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.COMMENT_ADDED,
+                "{\"postId\":\"" + postId + "\"}");
+
         // Push COMMENT event → Queue → Listener creates notification FIFO
         notificationEventPublisher.publish(
                 user.getId(),
@@ -425,6 +436,9 @@ public class PostServiceImpl implements PostService {
                 .sharedContent(trimToNull(request.getSharedContent()))
                 .build());
 
+        activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.POST_SHARED,
+                "{\"postId\":\"" + postId + "\"}");
+
         return PostShareResponse.builder()
                 .id(saved.getId())
                 .postId(saved.getPost().getId())
@@ -481,7 +495,10 @@ public class PostServiceImpl implements PostService {
         if (!post.getAuthor().getId().equals(userId)) {
             throw new ValidationException("Bạn không có quyền xóa bài viết này");
         }
+        String username = post.getAuthor().getUsername();
         postRepository.delete(post);
+        activityLogService.log(userId, username, ActivityLogType.POST_DELETED,
+                "{\"postId\":\"" + postId + "\"}");
     }
 
     private void attachMedia(Post post, List<CreatePostMediaRequest> mediaRequests) {

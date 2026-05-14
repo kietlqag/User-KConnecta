@@ -13,6 +13,8 @@ import project.kconnecta.user.backend.config.security.TokenBlacklistService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
+import project.kconnecta.user.backend.feature.activity.service.ActivityLogService;
 import project.kconnecta.user.backend.feature.auth.dto.request.ChangePasswordRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.GoogleCompleteRegisterRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.LoginRequest;
@@ -45,6 +47,7 @@ public class AuthService {
     private final ObjectMapper objectMapper;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
+    private final ActivityLogService activityLogService;
 
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
@@ -59,6 +62,8 @@ public class AuthService {
 
         account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         accountRepository.save(account);
+        userRepository.findByAccountEmail(request.getEmail())
+                .ifPresent(u -> activityLogService.log(u.getId(), u.getUsername(), ActivityLogType.PASSWORD_CHANGED));
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -90,6 +95,7 @@ public class AuthService {
                 .build();
 
         User saved = userRepository.save(user);
+        activityLogService.log(saved.getId(), saved.getUsername(), ActivityLogType.REGISTER);
         return toResponse(saved);
     }
 
@@ -112,6 +118,7 @@ public class AuthService {
         User user = userRepository.findByAccountId(account.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
 
+        activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.LOGIN);
         return toResponse(user);
     }
 
@@ -166,7 +173,9 @@ public class AuthService {
                 .avatarUrl(tokenInfo.picture())
                 .build();
 
-        return toResponse(userRepository.save(user));
+        User saved = userRepository.save(user);
+        activityLogService.log(saved.getId(), saved.getUsername(), ActivityLogType.GOOGLE_LOGIN);
+        return toResponse(saved);
     }
 
     private Account ensureGoogleAccountExists(GoogleTokenInfo tokenInfo) {
@@ -200,7 +209,8 @@ public class AuthService {
 
         account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         accountRepository.save(account);
-
+        userRepository.findByAccountId(account.getId())
+                .ifPresent(u -> activityLogService.log(u.getId(), u.getUsername(), ActivityLogType.RESET_PASSWORD));
         otpService.clear(request.getEmail());
     }
 
