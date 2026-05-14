@@ -25,6 +25,7 @@
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
@@ -897,14 +898,7 @@ export default function LiveSetupPage() {
       navigator.geolocation.getCurrentPosition(
         async ({ coords }) => {
           try {
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&accept-language=vi`,
-            );
-            if (!response.ok) {
-              throw new Error('Không lấy được vị trí hiện tại');
-            }
-
-            const data = (await response.json()) as {
+            const { data } = await axios.get<{
               address?: {
                 city?: string;
                 state?: string;
@@ -915,7 +909,7 @@ export default function LiveSetupPage() {
                 road?: string;
                 house_number?: string;
               };
-            };
+            }>(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&accept-language=vi`);
 
             const provinceName = data.address?.state || data.address?.city || data.address?.town || '';
             const wardCandidates = [data.address?.suburb || '', data.address?.quarter || '', data.address?.village || ''].filter(Boolean);

@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { createPortal } from 'react-dom';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
 import { Message } from '../../types/message.types';
@@ -187,10 +188,8 @@ export const MessageBubble = ({
 
   const downloadFile = async (url: string, filename?: string) => {
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Download failed');
-
-      const blob = await response.blob();
+      const response = await axios.get<Blob>(url, { responseType: 'blob' });
+      const blob = response.data;
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = objectUrl;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import {
   ArrowLeft,
   AtSign,
@@ -319,14 +320,7 @@ export function ProfileSetupStep({
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
         try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&accept-language=vi`,
-          );
-          if (!response.ok) {
-            throw new Error('Không lấy được vị trí hiện tại');
-          }
-
-          const data = (await response.json()) as {
+          const { data } = await axios.get<{
             address?: {
               city?: string;
               state?: string;
@@ -335,7 +329,7 @@ export function ProfileSetupStep({
               suburb?: string;
               quarter?: string;
             };
-          };
+          }>(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${coords.latitude}&lon=${coords.longitude}&accept-language=vi`);
 
           const provinceName = data.address?.state || data.address?.city || data.address?.town || '';
           const wardCandidates = [data.address?.suburb || '', data.address?.quarter || '', data.address?.village || ''].filter(Boolean);

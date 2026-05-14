@@ -10,7 +10,8 @@
   lastMessage: string;
   timestamp: string;
   lastActivityAt?: number;
-  isUnread: boolean;`r`n  unreadCount?: number;
+  isUnread: boolean;
+  unreadCount?: number;
   isGroup?: boolean;
   themeColor?: string | null;
 }

@@ -1,4 +1,5 @@
 ﻿import { useState, useCallback, useEffect, useMemo, useRef, type ChangeEvent, type ReactNode } from 'react';
+import axios from 'axios';
 import { useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -681,8 +682,8 @@ function ChatInfoPanel({
 
   const copyImageToClipboard = useCallback(async (url: string) => {
     try {
-      const response = await fetch(url, { mode: 'cors' });
-      const blob = await response.blob();
+      const response = await axios.get<Blob>(url, { responseType: 'blob' });
+      const blob = response.data;
       if (!blob.type.startsWith('image/')) {
         toast.error('Nội dung này không phải ảnh để copy.');
         return;

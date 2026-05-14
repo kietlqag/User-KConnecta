@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 export interface District {
   code: string;
   name: string;
@@ -22,17 +24,13 @@ interface CasCommunesResponse {
   communes: Ward[];
 }
 
-const BASE_URL = 'https://production.cas.so/address-kit';
-const EFFECTIVE_DATE = '2025-07-01';
+const locationAxios = axios.create({
+  baseURL: `https://production.cas.so/address-kit/2025-07-01`,
+});
 
 export const locationService = {
   async getProvinces(): Promise<Province[]> {
-    const response = await fetch(`${BASE_URL}/${EFFECTIVE_DATE}/provinces`);
-    if (!response.ok) {
-      throw new Error('Không tải được danh sách tỉnh/thành phố');
-    }
-
-    const data = (await response.json()) as CasProvinceResponse;
+    const { data } = await locationAxios.get<CasProvinceResponse>('/provinces');
     const provinces = data.provinces ?? [];
     return provinces.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   },
@@ -43,16 +41,10 @@ export const locationService = {
   },
 
   async getWardsByProvinceCode(provinceCode: string): Promise<Ward[]> {
-    const response = await fetch(`${BASE_URL}/${EFFECTIVE_DATE}/provinces/${provinceCode}/communes`);
-    if (!response.ok) {
-      throw new Error('Không tải được danh sách xã/phường');
-    }
-
-    const data = (await response.json()) as CasCommunesResponse;
+    const { data } = await locationAxios.get<CasCommunesResponse>(`/provinces/${provinceCode}/communes`);
     const wards = (data.communes ?? []).filter(
       (ward) => ward.name && ward.name.trim().length > 1 && ward.name.trim() !== '.',
     );
-
     return wards.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   },
 };

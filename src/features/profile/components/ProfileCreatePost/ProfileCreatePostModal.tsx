@@ -426,14 +426,14 @@ export function ProfileCreatePostModal({
             {showImagePicker && (
               <div className="relative mb-4 rounded-lg bg-gray-50 border border-gray-200 p-2 group dark:bg-gray-700 dark:border-gray-600">
                 <div className="absolute right-2 top-2 z-10 flex gap-2">
-                  <button 
+                  <button
                     onClick={() => fileInputRef.current?.click()}
                     className="flex items-center gap-2 rounded bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
                   >
                     <Image className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     Thêm ảnh/video
                   </button>
-                  <button 
+                  <button
                     onClick={() => setShowImagePicker(false)}
                     className="rounded-full bg-white p-1.5 text-gray-500 shadow-sm hover:bg-gray-50 border border-gray-200 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 dark:border-gray-500"
                   >
@@ -442,7 +442,7 @@ export function ProfileCreatePostModal({
                 </div>
 
                 {selectedImages.length === 0 ? (
-                  <div 
+                  <div
                     onClick={() => fileInputRef.current?.click()}
                     className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-md border-2 border-transparent hover:bg-gray-100 transition-colors dark:hover:bg-gray-600"
                   >
@@ -495,7 +495,7 @@ export function ProfileCreatePostModal({
                         </button>
                       </div>
                     ))}
-                    <button 
+                    <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       className="flex aspect-square min-h-0 w-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-100 dark:border-gray-500 dark:hover:bg-gray-600"
@@ -510,13 +510,13 @@ export function ProfileCreatePostModal({
                   </div>
                   </div>
                 )}
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileChange} 
-                  multiple 
-                  accept="image/*,video/*" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  multiple
+                  accept="image/*,video/*"
+                  className="hidden"
                 />
               </div>
             )}
@@ -551,7 +551,7 @@ export function ProfileCreatePostModal({
                   Thêm vào bài viết của bạn
                 </span>
                 <div className="flex items-center gap-1">
-                  <button 
+                  <button
                     onClick={() => setShowImagePicker(true)}
                     className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                   >
@@ -634,6 +634,27 @@ export function ProfileCreatePostModal({
           setShowAudienceModal(false);
           if (reopenSettingsAfterAudience) {
             setReopenSettingsAfterAudience(false);
+            setShowSettingsModal(true);
+          }
+        }}
+      />
+
+      <ProfilePostScheduleModal
+        isOpen={showScheduleModal}
+        mode={scheduleMode}
+        scheduledAtLocal={scheduledAtLocal}
+        onConfirm={({ mode, scheduledAtLocal: nextLocal }) => {
+          setScheduleMode(mode);
+          if (mode === 'scheduled') {
+            setScheduledAtLocal(nextLocal);
+          } else {
+            setScheduledAtLocal(defaultScheduledDatetimeLocal());
+          }
+        }}
+        onClose={() => {
+          setShowScheduleModal(false);
+          if (reopenSettingsAfterSchedule) {
+            setReopenSettingsAfterSchedule(false);
             setShowSettingsModal(true);
           }
         }}

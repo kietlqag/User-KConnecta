@@ -1,8 +1,6 @@
+import axios from 'axios';
 import { getApiBaseUrl } from '@/utils/apiBaseUrl';
 
-const BASE_URL = getApiBaseUrl();
-
-/** Đọc JWT trực tiếp từ storage để tránh circular dependency với authService */
 function getToken(): string | null {
   try {
     const AUTH_KEY = 'authUser';
@@ -10,7 +8,6 @@ function getToken(): string | null {
       const raw = storage.getItem(AUTH_KEY);
       if (!raw) continue;
       const parsed = JSON.parse(raw);
-      // StoredAuthUser shape: { user: AuthUser, expiresAt: number }
       const token = parsed?.user?.token ?? parsed?.token ?? null;
       if (token) return token;
     }
@@ -18,83 +15,61 @@ function getToken(): string | null {
   return null;
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+const axiosInstance = axios.create({
+  baseURL: getApiBaseUrl(),
+  headers: { 'Content-Type': 'application/json' },
+});
+
+axiosInstance.interceptors.request.use(config => {
   const token = getToken();
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options?.headers as Record<string, string>),
-  };
-
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    config.headers['Authorization'] = `Bearer ${token}`;
   }
+  return config;
+});
 
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+axiosInstance.interceptors.response.use(
+  response => response,
+  error => {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const url = error.config?.url ?? '';
+      const isAuthEndpoint = url.startsWith('/auth/');
 
-  // Handle 401/403: token hết hạn hoặc không hợp lệ → về trang login
-  if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem('authUser');
-    sessionStorage.removeItem('authUser');
-    window.location.href = '/auth/login';
-    throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
-  }
+      if ((status === 401 || status === 403) && !isAuthEndpoint) {
+        localStorage.removeItem('authUser');
+        sessionStorage.removeItem('authUser');
+        window.location.href = '/auth/login';
+        return Promise.reject(new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.'));
+      }
 
-  // Parse JSON an toàn — Spring có thể trả body rỗng
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-
-  if (!res.ok) {
-    throw new Error((data as { message?: string })?.message || 'Có lỗi xảy ra');
-  }
-
-  return data as T;
-}
-
-async function requestMultipart<T>(path: string, formData: FormData, method = 'POST', signal?: AbortSignal): Promise<T> {
-  const token = getToken();
-
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    body: formData,
-    headers,
-    signal,
-    // No Content-Type — browser sets multipart boundary automatically
-  });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || 'Có lỗi xảy ra');
-  }
-
-  return data as T;
-}
+      const data = error.response?.data;
+      const message =
+        (typeof data === 'object' && data !== null && 'message' in data ? (data as { message?: string }).message : null)
+        || error.message
+        || 'Có lỗi xảy ra';
+      return Promise.reject(new Error(message));
+    }
+    return Promise.reject(error);
+  },
+);
 
 export const api = {
   get: <T>(path: string) =>
-    request<T>(path, { method: 'GET' }),
+    axiosInstance.get<T>(path).then(r => r.data),
 
   post: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+    axiosInstance.post<T>(path, body).then(r => r.data),
 
   put: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+    axiosInstance.put<T>(path, body).then(r => r.data),
 
   delete: <T>(path: string) =>
-    request<T>(path, { method: 'DELETE' }),
+    axiosInstance.delete<T>(path).then(r => r.data),
 
   postMultipart: <T>(path: string, formData: FormData, signal?: AbortSignal) =>
-    requestMultipart<T>(path, formData, 'POST', signal),
+    axiosInstance.post<T>(path, formData, { signal }).then(r => r.data),
 
   putMultipart: <T>(path: string, formData: FormData, signal?: AbortSignal) =>
-    requestMultipart<T>(path, formData, 'PUT', signal),
+    axiosInstance.put<T>(path, formData, { signal }).then(r => r.data),
 };
