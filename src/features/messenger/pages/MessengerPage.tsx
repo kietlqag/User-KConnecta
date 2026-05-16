@@ -45,6 +45,7 @@ const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
+const POST_SHARE_PREFIX = '__POST_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
 const HISTORY_PAGE_SIZE = 15;
@@ -119,7 +120,7 @@ function dataUrlToFile(dataUrl: string, fileName: string): File {
 
 function mapBackendContentToMessageFields(
   content: string,
-): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'systemActionType' | 'systemActionActorName' | 'systemActionTargetName' | 'systemActionValue' | 'callLogKind' | 'callDurationSec' | 'callMediaType' | 'storyReplyAuthorId' | 'storyReplyAuthorName' | 'storyReplyAuthorAvatarUrl' | 'storyReplySlideImageUrl' | 'storyReplySlideBackgroundColor'> {
+): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'systemActionType' | 'systemActionActorName' | 'systemActionTargetName' | 'systemActionValue' | 'callLogKind' | 'callDurationSec' | 'callMediaType' | 'storyReplyAuthorId' | 'storyReplyAuthorName' | 'storyReplyAuthorAvatarUrl' | 'storyReplySlideImageUrl' | 'storyReplySlideBackgroundColor' | 'sharedPostId' | 'sharedPostContent' | 'sharedPostImage'> {
   if (!content?.startsWith(CALL_LOG_PREFIX)) {
     if (content?.startsWith(CHAT_ACTION_PREFIX)) {
       try {
@@ -254,6 +255,19 @@ function mapBackendContentToMessageFields(
         };
       } catch {
         return { text: 'Video' };
+      }
+    }
+    if (content?.startsWith(POST_SHARE_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(POST_SHARE_PREFIX.length));
+        return {
+          text: 'Đã chia sẻ một bài viết',
+          sharedPostId: typeof payload?.id === 'string' ? payload.id : undefined,
+          sharedPostContent: typeof payload?.content === 'string' ? payload.content : undefined,
+          sharedPostImage: typeof payload?.image === 'string' ? payload.image : undefined,
+        };
+      } catch {
+        return { text: 'Đã chia sẻ một bài viết' };
       }
     }
     return { text: content };

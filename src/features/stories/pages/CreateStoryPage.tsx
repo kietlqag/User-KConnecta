@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, type ChangeEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { Camera, Check, ChevronRight, Crop, Globe, Music, Search, Settings, Sparkles, Type, UserPlus, Users, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authService, AuthUser } from '@/services/authService';
 import { useCreateStoryMutation } from '@/features/stories/hooks/useStories';
@@ -72,10 +72,15 @@ function getBgStyle(bg: BgState): React.CSSProperties {
 
 export function CreateStoryPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const createStory = useCreateStoryMutation();
   const [currentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
   const userAvatar = currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14';
   const userFullName = currentUser?.fullName || 'Khang Nguyen';
+
+  // State from share-to-story: a remote image URL or plain text pre-filled from a post
+  const sharedImageUrl = (location.state as { sharedImageUrl?: string | null; sharedText?: string | null } | null)?.sharedImageUrl ?? null;
+  const sharedText = (location.state as { sharedImageUrl?: string | null; sharedText?: string | null } | null)?.sharedText ?? null;
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
@@ -109,6 +114,23 @@ export function CreateStoryPage() {
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
   const [selectedBg, setSelectedBg] = useState<BgState>(DEFAULT_BG);
 
+  // Pre-load from "Share to Story" navigation state (runs once on mount)
+  useEffect(() => {
+    if (sharedImageUrl) {
+      setSelectedImageUrl(sharedImageUrl);
+      // selectedImageFile stays null — we'll pass sharedImageUrl to the API
+      setActiveTool('text');
+      setStoryText('');
+    } else if (sharedText) {
+      setIsTextStoryMode(true);
+      setActiveTool('background');
+      setStoryText(sharedText);
+      setTextPosition({ x: 50, y: 50 });
+      setSelectedBg(DEFAULT_BG);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleOpenImagePicker = () => {
     imageInputRef.current?.click();
   };
@@ -118,7 +140,7 @@ export function CreateStoryPage() {
     if (!selectedImage) return;
     const nextImageUrl = URL.createObjectURL(selectedImage);
     setSelectedImageUrl((previousImageUrl) => {
-      if (previousImageUrl) URL.revokeObjectURL(previousImageUrl);
+      if (previousImageUrl?.startsWith('blob:')) URL.revokeObjectURL(previousImageUrl);
       return nextImageUrl;
     });
     setSelectedImageFile(selectedImage);
@@ -131,7 +153,7 @@ export function CreateStoryPage() {
 
   const handleRemoveSelectedImage = () => {
     setSelectedImageUrl((previousImageUrl) => {
-      if (previousImageUrl) URL.revokeObjectURL(previousImageUrl);
+      if (previousImageUrl?.startsWith('blob:')) URL.revokeObjectURL(previousImageUrl);
       return null;
     });
     setSelectedImageFile(null);
@@ -156,16 +178,21 @@ export function CreateStoryPage() {
       toast.error('Bạn cần đăng nhập để đăng tin');
       return;
     }
-    if (!selectedImageFile && !isTextStoryMode) {
+    if (!selectedImageFile && !selectedImageUrl && !isTextStoryMode) {
       toast.error('Tin cần có ảnh hoặc văn bản');
       return;
     }
 
     const hasText = storyText.trim().length > 0;
 
+    const remoteImageUrl = !selectedImageFile && selectedImageUrl && !selectedImageUrl.startsWith('blob:')
+      ? selectedImageUrl
+      : undefined;
+
     createStory.mutate({
       userId: currentUser.id,
       image: selectedImageFile ?? undefined,
+      sharedImageUrl: remoteImageUrl,
       textContent: hasText ? storyText.trim() : undefined,
       textColor: hasText ? textColor : undefined,
       textSize: hasText ? textSize : undefined,
@@ -181,7 +208,7 @@ export function CreateStoryPage() {
 
   useEffect(() => {
     return () => {
-      if (selectedImageUrl) URL.revokeObjectURL(selectedImageUrl);
+      if (selectedImageUrl?.startsWith('blob:')) URL.revokeObjectURL(selectedImageUrl);
     };
   }, [selectedImageUrl]);
 
@@ -662,8 +689,8 @@ export function CreateStoryPage() {
               <p className="mb-3 text-sm text-gray-700">Xem trước</p>
               <div className="relative flex h-[660px] items-center justify-center rounded-lg bg-[#18191a] overflow-hidden">
                 <div
-                  className="relative overflow-hidden rounded-md shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-transparent"
-                  style={{ width: '360px', height: '640px' }}
+                  className="relative rounded-md shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-transparent"
+                  style={{ width: '360px', height: '640px', overflow: 'clip' }}
                   ref={previewFrameRef}
                 >
                   <div className="absolute inset-0 touch-none">
@@ -734,7 +761,7 @@ export function CreateStoryPage() {
                       onPointerCancel={handleTextPointerUp}
                       onMouseEnter={() => setIsHoveringTextBox(true)}
                       onMouseLeave={() => setIsHoveringTextBox(false)}
-                      style={{ left: `${textPosition.x}%`, top: `${textPosition.y}%` }}
+                      style={{ left: `${textPosition.x}%`, top: `${textPosition.y}%`, maxWidth: '324px' }}
                     >
                       <div
                         ref={editableTextRef}
@@ -743,13 +770,15 @@ export function CreateStoryPage() {
                         onFocus={() => setIsEditingText(true)}
                         onBlur={() => setIsEditingText(false)}
                         onInput={handleStoryTextInput}
-                        className="relative min-w-[32px] px-2 text-center font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] outline-none"
+                        className="relative min-w-[32px] w-full px-2 text-center font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] outline-none"
                         style={{
                           fontSize: `${textSize}px`,
                           color: textColor,
                           lineHeight: 1.05,
                           minHeight: '1.2em',
                           minWidth: '1ch',
+                          wordBreak: 'break-word',
+                          overflowWrap: 'break-word',
                         }}
                       >
                       </div>

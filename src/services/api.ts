@@ -68,8 +68,8 @@ export const api = {
     axiosInstance.delete<T>(path).then(r => r.data),
 
   postMultipart: <T>(path: string, formData: FormData, signal?: AbortSignal) =>
-    axiosInstance.post<T>(path, formData, { signal }).then(r => r.data),
+    axiosInstance.post<T>(path, formData, { signal, headers: { 'Content-Type': undefined } }).then(r => r.data),
 
   putMultipart: <T>(path: string, formData: FormData, signal?: AbortSignal) =>
-    axiosInstance.put<T>(path, formData, { signal }).then(r => r.data),
+    axiosInstance.put<T>(path, formData, { signal, headers: { 'Content-Type': undefined } }).then(r => r.data),
 };

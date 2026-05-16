@@ -49,10 +49,13 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
     };
   }, []);
 
-  const handleLogout = () => {
-    authService.logout();
-    onClose();
-    navigate('/auth/login');
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } finally {
+      onClose();
+      navigate('/auth/login');
+    }
   };
 
   const profileLink = currentUser ? `/profile/${currentUser.username || currentUser.id}` : '/auth/login';

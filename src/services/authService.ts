@@ -239,9 +239,15 @@ export const authService = {
     }
   },
 
-  logout: () => {
-    localStorage.removeItem(AUTH_USER_KEY);
-    sessionStorage.removeItem(AUTH_USER_KEY);
-    notifyAuthUserChanged();
+  logout: async () => {
+    try {
+      await api.post<{ message?: string }>('/auth/logout', {});
+    } catch {
+      // Vẫn đăng xuất cục bộ nếu token hết hạn hoặc mạng lỗi
+    } finally {
+      localStorage.removeItem(AUTH_USER_KEY);
+      sessionStorage.removeItem(AUTH_USER_KEY);
+      notifyAuthUserChanged();
+    }
   },
 };

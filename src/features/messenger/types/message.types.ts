@@ -42,6 +42,9 @@ export interface Message {
   videoShareThumbnail?: string;
   videoShareTitle?: string;
   videoShareAuthorId?: string;
+  sharedPostId?: string;
+  sharedPostContent?: string;
+  sharedPostImage?: string;
   storyReplyAuthorId?: string;
   storyReplyAuthorName?: string;
   storyReplyAuthorAvatarUrl?: string;

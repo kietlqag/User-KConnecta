@@ -125,12 +125,10 @@ export interface PostCommentResponse {
 }
 
 export interface PostShareResponse {
-  id: string;
   postId: string;
   userId: string;
   userFullName: string;
-  sharedContent?: string | null;
-  createdAt: string;
+  shareCount: number;
 }
 
 export interface CheckInSuggestionResponse {

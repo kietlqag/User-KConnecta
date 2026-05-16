@@ -524,6 +524,34 @@ export const MessageBubble = ({
                   </p>
                 </div>
               </button>
+              ) : message.sharedPostId && !message.deleted ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/home?post=${message.sharedPostId}`)}
+                className="flex flex-col min-w-0 w-[min(280px,68vw)] max-w-full overflow-hidden rounded-xl group/post-share transition-transform hover:scale-[1.02]"
+                title="Xem bài viết"
+              >
+                {message.sharedPostImage && (
+                  <div className="relative w-full overflow-hidden" style={{ maxHeight: '200px' }}>
+                    <img
+                      src={message.sharedPostImage}
+                      alt="Ảnh bài viết"
+                      className="h-full w-full object-cover transition-transform group-hover/post-share:scale-105"
+                      style={{ maxHeight: '200px' }}
+                    />
+                  </div>
+                )}
+                <div className={`p-3 text-left ${message.isOwn ? 'bg-blue-700' : 'bg-gray-100'}`}>
+                  {message.sharedPostContent && (
+                    <p className={`text-sm line-clamp-3 ${message.isOwn ? 'text-white' : 'text-gray-900'}`}>
+                      {message.sharedPostContent}
+                    </p>
+                  )}
+                  <p className={`mt-1 text-[11px] font-medium uppercase tracking-wider ${message.isOwn ? 'text-blue-100/70' : 'text-gray-500'}`}>
+                    Nhấn để xem bài viết
+                  </p>
+                </div>
+              </button>
               ) : message.fileUrl && !message.deleted ? (
               <button
                 type="button"

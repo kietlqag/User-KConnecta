@@ -1,12 +1,12 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreHorizontal, MessageCircle, Share2, Newspaper, X, Trash2 } from 'lucide-react';
+import { MoreHorizontal, MessageCircle, Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
-import { storyService } from '@/services/storyService';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { PostDetailModal } from '../../../../components/posts/PostDetailModal';
+import { PostShareModal } from '../../../../components/posts/PostShareModal';
 import {
   buildInitialReactionCounts,
   getActiveReactions,
@@ -75,11 +75,7 @@ export function Post({
       ? reactions.find((item) => item.type === currentUserReactionType) ?? null
       : null,
   );
-  const [isSharing, setIsSharing] = useState(false);
-  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
-  const [isShareToStoryModalOpen, setIsShareToStoryModalOpen] = useState(false);
-  const [isSharingToStory, setIsSharingToStory] = useState(false);
-  const shareMenuRef = useRef<HTMLDivElement>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isReacting, setIsReacting] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -154,56 +150,6 @@ export function Post({
       toast.error(error instanceof Error ? error.message : 'Không thể thả cảm xúc');
     } finally {
       setIsReacting(false);
-    }
-  };
-
-  const handleShare = async () => {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-      toast.error('Bạn cần đăng nhập để chia sẻ');
-      return;
-    }
-
-    try {
-      setIsSharing(true);
-      setIsShareMenuOpen(false);
-      await postService.sharePost(id, { userId: currentUser.id });
-      setShareCount((prev) => prev + 1);
-      toast.success('Đã chia sẻ bài viết');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể chia sẻ bài viết');
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
-  const handleShareToStory = async () => {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-      toast.error('Bạn cần đăng nhập để chia sẻ lên tin');
-      return;
-    }
-
-    if (!image && !content) {
-      toast.error('Bài viết không có nội dung để chia sẻ lên tin');
-      return;
-    }
-
-    try {
-      setIsSharingToStory(true);
-      await storyService.createStory({
-        userId: currentUser.id,
-        sharedImageUrl: image || undefined,
-        textContent: image ? undefined : content,
-        backgroundColor: image ? undefined : '#1877f2',
-        textColor: image ? undefined : '#ffffff',
-      });
-      setIsShareToStoryModalOpen(false);
-      toast.success('Đã chia sẻ lên tin thành công');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể chia sẻ lên tin');
-    } finally {
-      setIsSharingToStory(false);
     }
   };
 
@@ -336,41 +282,14 @@ export function Post({
             <span className="font-medium">Bình luận</span>
           </button>
 
-          <div className="relative" ref={shareMenuRef}>
-            <button
-              type="button"
-              onClick={() => setIsShareMenuOpen((prev) => !prev)}
-              disabled={isSharing}
-              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Share2 className="w-5 h-5" />
-              <span className="font-medium">{isSharing ? 'Đang chia sẻ...' : 'Chia sẻ'}</span>
-            </button>
-
-            {isShareMenuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setIsShareMenuOpen(false)} />
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 bg-white rounded-xl shadow-lg border border-gray-200 py-1 w-52 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={handleShare}
-                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-100"
-                  >
-                    <Share2 className="w-4 h-4 shrink-0" />
-                    <span>Chia sẻ ngay</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setIsShareMenuOpen(false); setIsShareToStoryModalOpen(true); }}
-                    className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-100"
-                  >
-                    <Newspaper className="w-4 h-4 shrink-0" />
-                    <span>Chia sẻ lên tin</span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsShareModalOpen(true)}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100"
+          >
+            <Share2 className="w-5 h-5" />
+            <span className="font-medium">Chia sẻ</span>
+          </button>
         </div>
       </div>
 
@@ -380,11 +299,10 @@ export function Post({
         onClose={() => setIsModalOpen(false)}
         onCommentAdded={() => setCommentCount((prev) => prev + 1)}
         onCommentCountChange={setCommentCount}
-        onShareAdded={() => setShareCount((prev) => prev + 1)}
+        onShareAdded={(count) => setShareCount(count)}
         selectedReaction={selectedReaction}
         onReactionChange={handleReactionChange}
         isReacting={isReacting}
-        onShareToStory={() => { setIsModalOpen(false); setIsShareToStoryModalOpen(true); }}
       />
 
       <ReactionSummaryDialog
@@ -394,55 +312,14 @@ export function Post({
         reactionCounts={reactionCounts}
       />
 
-      {isShareToStoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-            <div className="relative border-b border-gray-200 px-4 py-4 text-center">
-              <h2 className="text-lg font-bold text-gray-900">Chia sẻ lên tin</h2>
-              <button
-                type="button"
-                onClick={() => setIsShareToStoryModalOpen(false)}
-                className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-600 transition-colors hover:bg-gray-200"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="p-4 space-y-3">
-              {image ? (
-                <div className="rounded-lg overflow-hidden bg-black max-h-48 flex items-center justify-center">
-                  <img src={image} alt="Nội dung bài viết" className="max-h-48 w-full object-contain" />
-                </div>
-              ) : (
-                <div className="rounded-lg bg-blue-600 p-4 min-h-[80px] flex items-center justify-center">
-                  <p className="text-white text-sm font-medium text-center line-clamp-4">{content}</p>
-                </div>
-              )}
-              <p className="text-sm text-gray-500 text-center">
-                Tin sẽ hiển thị trong 24 giờ và xóa tự động.
-              </p>
-            </div>
-
-            <div className="flex gap-2 px-4 pb-4">
-              <button
-                type="button"
-                onClick={() => setIsShareToStoryModalOpen(false)}
-                className="flex-1 cursor-pointer rounded-lg bg-gray-100 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={handleShareToStory}
-                disabled={isSharingToStory}
-                className="flex-1 cursor-pointer rounded-lg bg-blue-600 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isSharingToStory ? 'Đang đăng...' : 'Đăng tin'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <PostShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        postId={id}
+        postContent={content}
+        postImage={image}
+        onShareComplete={(count) => setShareCount(count)}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800">

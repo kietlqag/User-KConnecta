@@ -17,6 +17,7 @@ import { authService } from '@/services/authService';
 import { postService, SAVED_POSTS_CHANGED_EVENT, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { PostDetailModal } from '../posts/PostDetailModal';
+import { PostShareModal } from '../posts/PostShareModal';
 import {
   buildInitialReactionCounts,
   getActiveReactions,
@@ -118,7 +119,7 @@ export function Post({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isReactionSummaryOpen, setIsReactionSummaryOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(initialIsSaved);
-  const [isSharing, setIsSharing] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isReacting, setIsReacting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -321,25 +322,6 @@ export function Post({
     }
   };
 
-  const handleShare = async () => {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-      toast.error('Bạn cần đăng nhập để chia sẻ');
-      return;
-    }
-
-    try {
-      setIsSharing(true);
-      await postService.sharePost(id, { userId: currentUser.id });
-      setShareCount((prev) => prev + 1);
-      toast.success('Đã chia sẻ bài viết');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể chia sẻ bài viết');
-    } finally {
-      setIsSharing(false);
-    }
-  };
-
   const performDelete = async () => {
     const user = authService.getCurrentUser();
     if (!user) return;
@@ -497,12 +479,11 @@ export function Post({
 
           <button
             type="button"
-            onClick={handleShare}
-            disabled={isSharing}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={() => setIsShareModalOpen(true)}
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100"
           >
             <Share2 className="w-5 h-5" />
-            <span className="font-medium">{isSharing ? 'Đang chia sẻ...' : 'Chia sẻ'}</span>
+            <span className="font-medium">Chia sẻ</span>
           </button>
         </div>
       </div>
@@ -513,7 +494,7 @@ export function Post({
         onClose={() => setIsModalOpen(false)}
         onCommentAdded={() => setCommentCount((prev) => prev + 1)}
         onCommentCountChange={setCommentCount}
-        onShareAdded={() => setShareCount((prev) => prev + 1)}
+        onShareAdded={(count) => setShareCount(count)}
         selectedReaction={selectedReaction}
         onReactionChange={handleReactionChange}
         isReacting={isReacting}
@@ -667,6 +648,15 @@ export function Post({
           </div>
         </div>
       )}
+
+      <PostShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        postId={id}
+        postContent={content}
+        postImage={image || (media?.type === 'image' ? media.url : undefined)}
+        onShareComplete={(count) => setShareCount(count)}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800">
