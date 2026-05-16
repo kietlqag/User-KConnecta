@@ -15,4 +15,5 @@ public class PostShareResponse {
     private String userFullName;
     private String sharedContent;
     private LocalDateTime createdAt;
+    private long shareCount;
 }

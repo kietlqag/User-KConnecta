@@ -9,6 +9,8 @@ import java.util.UUID;
 
 @Repository
 public interface PostShareRepository extends JpaRepository<PostShare, UUID> {
+    boolean existsByPostIdAndUserId(UUID postId, UUID userId);
+
     long countByPostId(UUID postId);
 
     @org.springframework.data.jpa.repository.Query("select s.post.id as postId, count(s) as count from PostShare s where s.post.id in :postIds group by s.post.id")

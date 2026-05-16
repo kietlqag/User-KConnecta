@@ -123,10 +123,20 @@ public class AuthService {
     }
 
     public void logout(String authHeader) {
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            tokenBlacklistService.blacklistToken(token);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return;
         }
+        String token = authHeader.substring(7);
+        try {
+            if (jwtUtil.isTokenValid(token)) {
+                UUID userId = jwtUtil.extractUserId(token);
+                String username = jwtUtil.extractUsername(token);
+                activityLogService.log(userId, username, ActivityLogType.LOGOUT);
+            }
+        } catch (Exception ignored) {
+            // malformed or expired JWT — still blacklist
+        }
+        tokenBlacklistService.blacklistToken(token);
     }
 
     public AuthResponse googleLogin(String idToken) {

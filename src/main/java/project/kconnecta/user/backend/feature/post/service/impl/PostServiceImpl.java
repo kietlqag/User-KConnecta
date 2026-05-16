@@ -430,22 +430,23 @@ public class PostServiceImpl implements PostService {
         Post post = getPost(postId);
         User user = getUser(request.getUserId(), "Share user not found");
 
-        PostShare saved = postShareRepository.save(PostShare.builder()
-                .post(post)
-                .user(user)
-                .sharedContent(trimToNull(request.getSharedContent()))
-                .build());
+        if (!postShareRepository.existsByPostIdAndUserId(postId, request.getUserId())) {
+            postShareRepository.save(PostShare.builder()
+                    .post(post)
+                    .user(user)
+                    .sharedContent(trimToNull(request.getSharedContent()))
+                    .build());
 
-        activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.POST_SHARED,
-                "{\"postId\":\"" + postId + "\"}");
+            activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.POST_SHARED,
+                    "{\"postId\":\"" + postId + "\"}");
+        }
 
+        long shareCount = postShareRepository.countByPostId(postId);
         return PostShareResponse.builder()
-                .id(saved.getId())
-                .postId(saved.getPost().getId())
-                .userId(saved.getUser().getId())
-                .userFullName(saved.getUser().getFullName())
-                .sharedContent(saved.getSharedContent())
-                .createdAt(saved.getCreatedAt())
+                .postId(postId)
+                .userId(user.getId())
+                .userFullName(user.getFullName())
+                .shareCount(shareCount)
                 .build();
     }
 
