@@ -1,143 +1,105 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { Stories } from '../Stories';
 import { CreatePost } from '../CreatePost';
 import { Post } from '../../../../components/shared';
-import { useSearchParams } from 'react-router-dom';
-import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
-import { postService, type PostResponse } from '@/services/postService';
-import { mapApiPost, type FeedPost } from '@/utils/postUtils';
-
 import { FriendSuggestions } from '../FriendSuggestions';
+import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
+import { type PaginatedResponse, type PostResponse } from '@/services/postService';
+import { mapApiPost } from '@/utils/postUtils';
+import { POSTS_FEED_KEY, useHighlightedPost, usePostsFeed } from '../../hooks/usePosts';
 
 export function NewsFeed() {
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [authEpoch, setAuthEpoch] = useState(0);
-
+  const currentUser = authService.getCurrentUser();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const highlightedPostId = searchParams.get('post');
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
+  // Re-fetch feed when the logged-in user changes
   useEffect(() => {
-    const bump = () => setAuthEpoch((n) => n + 1);
+    const bump = () => queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
     window.addEventListener(AUTH_USER_CHANGED_EVENT, bump);
     return () => window.removeEventListener(AUTH_USER_CHANGED_EVENT, bump);
-  }, []);
-  
-  const observer = useRef<IntersectionObserver | null>(null);
-  const lastPostElementRef = useCallback((node: HTMLDivElement | null) => {
-    if (isLoading || isLoadingMore) return;
-    if (observer.current) observer.current.disconnect();
-    
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
-        setPage(prevPage => prevPage + 1);
+  }, [queryClient]);
+
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error } =
+    usePostsFeed(currentUser?.id);
+
+  // Determine whether the highlighted post is already present in the loaded pages
+  const feedPostIds = useMemo(
+    () => new Set(data?.pages.flatMap((p) => p.content.map((c) => c.id)) ?? []),
+    [data]
+  );
+
+  // Only fetch the highlighted post separately when it isn't in the feed yet
+  const { data: highlightedPostData } = useHighlightedPost(
+    highlightedPostId && !feedPostIds.has(highlightedPostId) ? highlightedPostId : null,
+    currentUser?.id
+  );
+
+  // Flatten all pages and move/prepend the highlighted post to the top
+  const posts = useMemo(() => {
+    const flat = data?.pages.flatMap((p) => p.content.map(mapApiPost)) ?? [];
+    if (!highlightedPostId) return flat;
+
+    const withoutHighlight = flat.filter((p) => p.id !== highlightedPostId);
+    const highlight =
+      flat.find((p) => p.id === highlightedPostId) ??
+      (highlightedPostData ? mapApiPost(highlightedPostData) : null);
+    return highlight ? [highlight, ...withoutHighlight] : withoutHighlight;
+  }, [data, highlightedPostId, highlightedPostData]);
+
+  // Sentinel-based infinite scroll: fetch next page when the bottom div enters the viewport
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        void fetchNextPage();
       }
     });
-    
-    if (node) observer.current.observe(node);
-  }, [isLoading, isLoadingMore, hasMore]);
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Initial load or highlighted post change
+  // Scroll to and highlight the target post after the feed finishes loading
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchInitialFeed = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        setPage(0);
-        const currentUser = authService.getCurrentUser();
-        const response = await postService.getAllPosts(currentUser?.id, undefined, 0, 10);
-
-        if (!isMounted) return;
-
-        let mappedPosts = response.content.map(mapApiPost);
-        setHasMore(response.number < response.totalPages - 1);
-
-        // If there's a highlighted post, make sure it's at the top
-        if (highlightedPostId) {
-          const isPostInFeed = mappedPosts.some((p) => p.id === highlightedPostId);
-          if (!isPostInFeed) {
-            try {
-              const specificPost = await postService.getPostById(highlightedPostId, currentUser?.id);
-              mappedPosts = [mapApiPost(specificPost), ...mappedPosts];
-            } catch (e) {
-              console.error('Failed to fetch highlighted post:', e);
-            }
-          } else {
-            const postIndex = mappedPosts.findIndex((p) => p.id === highlightedPostId);
-            const post = mappedPosts[postIndex];
-            mappedPosts.splice(postIndex, 1);
-            mappedPosts = [post, ...mappedPosts];
-          }
-        }
-
-        setPosts(mappedPosts);
-      } catch (fetchError) {
-        if (!isMounted) return;
-        setError(fetchError instanceof Error ? fetchError.message : 'Không thể tải bảng tin');
-      } finally {
-        if (isMounted) setIsLoading(false);
+    if (isLoading || !highlightedPostId || posts.length === 0) return;
+    const timer = setTimeout(() => {
+      const element = document.getElementById(`post-${highlightedPostId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('ring-4', 'ring-blue-500', 'ring-opacity-50', 'transition-all', 'duration-1000');
+        setTimeout(() => {
+          element.classList.remove('ring-4', 'ring-blue-500', 'ring-opacity-50');
+        }, 3000);
       }
-    };
-
-    void fetchInitialFeed();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [highlightedPostId, authEpoch]);
-
-  // Load more pages
-  useEffect(() => {
-    if (page === 0) return; // Skip initial load as it's handled above
-
-    let isMounted = true;
-    const fetchMore = async () => {
-      try {
-        setIsLoadingMore(true);
-        const currentUser = authService.getCurrentUser();
-        const response = await postService.getAllPosts(currentUser?.id, undefined, page, 10);
-
-        if (!isMounted) return;
-
-        setPosts((prev) => {
-          const newPosts = response.content
-            .map(mapApiPost)
-            .filter((newPost) => !prev.some((existing) => existing.id === newPost.id));
-          return [...prev, ...newPosts];
-        });
-        setHasMore(response.number < response.totalPages - 1);
-      } catch (e) {
-        console.error('Failed to load more posts:', e);
-      } finally {
-        if (isMounted) setIsLoadingMore(false);
-      }
-    };
-
-    void fetchMore();
-    return () => { isMounted = false; };
-  }, [page]);
-
-  useEffect(() => {
-    if (!isLoading && highlightedPostId && posts.length > 0) {
-      const timer = setTimeout(() => {
-        const element = document.getElementById(`post-${highlightedPostId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          element.classList.add('ring-4', 'ring-blue-500', 'ring-opacity-50', 'transition-all', 'duration-1000');
-          setTimeout(() => {
-            element.classList.remove('ring-4', 'ring-blue-500', 'ring-opacity-50');
-          }, 3000);
-        }
-      }, 500);
-      return () => clearTimeout(timer);
-    }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [isLoading, highlightedPostId, posts]);
+
+  // Remove a post from the cache without triggering a refetch
+  const handleDelete = useCallback(
+    (postId: string) => {
+      queryClient.setQueryData<InfiniteData<PaginatedResponse<PostResponse>>>(
+        [...POSTS_FEED_KEY, currentUser?.id],
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              content: page.content.filter((p) => p.id !== postId),
+            })),
+          };
+        }
+      );
+    },
+    [queryClient, currentUser?.id]
+  );
 
   return (
     <div className="space-y-0">
@@ -152,37 +114,28 @@ export function NewsFeed() {
 
       {!isLoading && error && (
         <div className="rounded-lg bg-white p-6 text-center text-sm text-red-500 shadow">
-          {error}
+          Không thể tải bảng tin
         </div>
       )}
 
-      {posts.map((post, index) => {
-        const isLast = posts.length === index + 1;
-        const showSuggestions = index === 2; // Show after the 3rd post
-        const handleDelete = (postId: string) => setPosts((prev) => prev.filter((p) => p.id !== postId));
+      {posts.map((post, index) => (
+        <React.Fragment key={post.id}>
+          <Post {...post} onDelete={handleDelete} />
+          {index === 2 && <FriendSuggestions />}
+        </React.Fragment>
+      ))}
 
-        return (
-          <React.Fragment key={post.id}>
-            {isLast ? (
-              <div ref={lastPostElementRef}>
-                <Post {...post} onDelete={handleDelete} />
-              </div>
-            ) : (
-              <Post {...post} onDelete={handleDelete} />
-            )}
-            {showSuggestions && <FriendSuggestions />}
-          </React.Fragment>
-        );
-      })}
+      {/* Sentinel: IntersectionObserver watches this to trigger fetchNextPage */}
+      <div ref={sentinelRef} />
 
-      {isLoadingMore && (
+      {isFetchingNextPage && (
         <div className="p-4 text-center">
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
           <span className="ml-2 text-sm text-gray-500">Đang tải thêm...</span>
         </div>
       )}
 
-      {!isLoading && !error && !hasMore && posts.length > 0 && (
+      {!isLoading && !error && !hasNextPage && posts.length > 0 && (
         <div className="p-8 text-center text-sm text-gray-500">
           Bạn đã xem hết tất cả bài viết.
         </div>
@@ -196,5 +149,3 @@ export function NewsFeed() {
     </div>
   );
 }
-
-
