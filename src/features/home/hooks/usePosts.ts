@@ -9,9 +9,13 @@ export function usePostsFeed(currentUserId: string | undefined) {
     queryFn: ({ pageParam }) =>
       postService.getAllPosts(currentUserId, undefined, pageParam, 10),
     initialPageParam: 0,
-    getNextPageParam: (lastPage) =>
-      lastPage.number < lastPage.totalPages - 1 ? lastPage.number + 1 : undefined,
-    maxPages: 3,
+    getNextPageParam: (lastPage) => {
+      const nextPage = lastPage.number + 1;
+      if (nextPage < lastPage.totalPages) return nextPage;
+      // Fallback when metadata is missing but page is full
+      if (lastPage.content.length >= 10) return nextPage;
+      return undefined;
+    },
     enabled: !!currentUserId,
     staleTime: 30_000,
   });

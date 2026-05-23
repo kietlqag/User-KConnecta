@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Grid3x3, List, FileText, Loader2 } from 'lucide-react';
+import { Grid3x3, List, FileText, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { FeedPost } from '@/utils/postUtils';
 import { Post } from '../../../../components/shared/Post';
 
@@ -38,8 +38,31 @@ function PostSkeleton() {
 
 export function ProfilePosts({ posts, loading = false, hasMore = false, loadingMore = false, onLoadMore }: ProfilePostsProps) {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [lightboxImages, setLightboxImages] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const gridPosts = posts.filter(p => p.mediaList && p.mediaList.length > 0 || p.image || p.media?.url);
+
+  const openLightbox = (images: string[], index: number) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeLightbox = () => {
+    setLightboxImages([]);
+    document.body.style.overflow = '';
+  };
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLightboxIndex(i => (i === 0 ? lightboxImages.length - 1 : i - 1));
+  };
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLightboxIndex(i => (i === lightboxImages.length - 1 ? 0 : i + 1));
+  };
 
   if (loading) {
     return (
@@ -130,14 +153,18 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
           ) : (
             <div className="grid grid-cols-3 gap-0.5 bg-gray-200 dark:bg-gray-700">
               {gridPosts.map((post) => {
-                const thumbUrl =
-                  post.mediaList?.find(m => m.type === 'IMAGE')?.url ||
-                  post.image ||
-                  post.media?.url ||
-                  '';
+                const allImages = [
+                  ...(post.mediaList?.filter(m => m.type === 'IMAGE').map(m => m.url) || []),
+                  ...(post.image && !post.mediaList?.length ? [post.image] : []),
+                ].filter(Boolean) as string[];
+                const thumbUrl = allImages[0] || post.media?.url || '';
                 const isVideo = !thumbUrl && post.mediaList?.find(m => m.type === 'VIDEO');
                 return (
-                  <div key={post.id} className="relative aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden group cursor-pointer">
+                  <div
+                    key={post.id}
+                    className="relative aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden group cursor-pointer"
+                    onClick={() => allImages.length > 0 ? openLightbox(allImages, 0) : undefined}
+                  >
                     {thumbUrl ? (
                       <img
                         src={thumbUrl}
@@ -152,11 +179,57 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
                       />
                     ) : null}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                    {allImages.length > 1 && (
+                      <span className="absolute bottom-2 right-2 bg-black/60 text-white text-xs font-semibold px-1.5 py-0.5 rounded">
+                        +{allImages.length - 1}
+                      </span>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {lightboxImages.length > 0 && (
+        <div
+          className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90"
+          onClick={closeLightbox}
+        >
+          <button
+            className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+            onClick={closeLightbox}
+          >
+            <X className="w-7 h-7" />
+          </button>
+
+          {lightboxImages.length > 1 && (
+            <>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                onClick={prevImage}
+              >
+                <ChevronLeft className="w-8 h-8" />
+              </button>
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors"
+                onClick={nextImage}
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+              <span className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-sm font-medium px-3 py-1 rounded-full">
+                {lightboxIndex + 1} / {lightboxImages.length}
+              </span>
+            </>
+          )}
+
+          <img
+            src={lightboxImages[lightboxIndex]}
+            alt=""
+            className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
         </div>
       )}
     </div>

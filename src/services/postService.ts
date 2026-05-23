@@ -107,6 +107,40 @@ export interface PaginatedResponse<T> {
   number: number;
 }
 
+/** Spring Data VIA_DTO wraps metadata in `page`; older responses use flat fields. */
+type SpringPaginatedRaw<T> = {
+  content: T[];
+  page?: {
+    number: number;
+    size: number;
+    totalElements: number;
+    totalPages: number;
+  };
+  number?: number;
+  size?: number;
+  totalElements?: number;
+  totalPages?: number;
+};
+
+export function normalizePaginatedResponse<T>(raw: SpringPaginatedRaw<T>): PaginatedResponse<T> {
+  if (raw.page) {
+    return {
+      content: raw.content ?? [],
+      number: raw.page.number,
+      size: raw.page.size,
+      totalElements: raw.page.totalElements,
+      totalPages: raw.page.totalPages,
+    };
+  }
+  return {
+    content: raw.content ?? [],
+    number: raw.number ?? 0,
+    size: raw.size ?? raw.content?.length ?? 0,
+    totalElements: raw.totalElements ?? raw.content?.length ?? 0,
+    totalPages: raw.totalPages ?? 1,
+  };
+}
+
 export interface PostCommentResponse {
   id: string;
   postId: string;
@@ -151,13 +185,16 @@ export interface PostReactionResponse {
 }
 
 export const postService = {
-  getAllPosts: (currentUserId?: string, authorId?: string, page = 0, size = 10) => {
+  getAllPosts: (currentUserId?: string, authorId?: string, page = 0, size = 10, status?: string) => {
     const params = new URLSearchParams();
     if (currentUserId) params.append('currentUserId', currentUserId);
     if (authorId) params.append('authorId', authorId);
     params.append('page', page.toString());
     params.append('size', size.toString());
-    return api.get<PaginatedResponse<PostResponse>>(`/posts?${params.toString()}`);
+    if (status) params.append('status', status);
+    return api
+      .get<SpringPaginatedRaw<PostResponse>>(`/posts?${params.toString()}`)
+      .then(normalizePaginatedResponse);
   },
   getGroupPosts: (groupId: string, currentUserId?: string) => {
     const params = new URLSearchParams({ groupId });
@@ -186,7 +223,9 @@ export const postService = {
   getComments: (postId: string, page = 0, size = 10, currentUserId?: string) => {
     const params = new URLSearchParams({ page: String(page), size: String(size), sort: 'createdAt,asc' });
     if (currentUserId) params.append('currentUserId', currentUserId);
-    return api.get<PaginatedResponse<PostCommentResponse>>(`/posts/${postId}/comments?${params.toString()}`);
+    return api
+      .get<SpringPaginatedRaw<PostCommentResponse>>(`/posts/${postId}/comments?${params.toString()}`)
+      .then(normalizePaginatedResponse);
   },
   getReplies: (postId: string, commentId: string, currentUserId?: string) => {
     const params = new URLSearchParams();
@@ -226,4 +265,8 @@ export const postService = {
     api.delete<void>(`/posts/saved?userId=${encodeURIComponent(userId)}&postId=${encodeURIComponent(postId)}`),
   deletePost: (postId: string, userId: string) =>
     api.delete<void>(`/posts/${postId}?userId=${encodeURIComponent(userId)}`),
+  updatePrivacy: (postId: string, userId: string, privacy: PostResponse['privacy']) => {
+    const params = new URLSearchParams({ userId, privacy });
+    return api.patch<PostResponse>(`/posts/${postId}/privacy?${params.toString()}`);
+  },
 };

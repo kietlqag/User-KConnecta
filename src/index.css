@@ -5,6 +5,10 @@
 
 @layer base {
   html, body, #root { min-height: 100vh; height: 100%; margin: 0; }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 /* Hide browser built-in password reveal icons (keep only app icon) */

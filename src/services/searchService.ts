@@ -32,9 +32,12 @@ export interface SearchGroupDto {
 }
 
 export interface SearchPostAuthorDto {
+  id?: string;
   name: string;
   avatar: string;
   type: 'person' | 'page' | 'group';
+  groupName?: string;
+  groupIconUrl?: string;
 }
 
 export interface SearchPostDto {
@@ -44,9 +47,14 @@ export interface SearchPostDto {
   timestamp: string;
   content: string;
   image?: string;
+  video?: string;
   likes?: number;
   comments?: number;
   shares?: number;
+  userReactionType?: string | null;
+  savedByCurrentUser?: boolean;
+  groupId?: string;
+  mediaItems?: { type: string; url: string }[];
 }
 
 export interface SearchApiResponse {

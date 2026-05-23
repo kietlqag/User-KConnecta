@@ -1,9 +1,9 @@
-export type SearchFilterType = 'all' | 'posts' | 'people' | 'reels' | 'marketplace' | 'pages' | 'groups' | 'events';
+export type SearchFilterType = 'all' | 'posts' | 'people' | 'reels' | 'groups';
 export type SortType = 'relevance' | 'latest';
 
 export interface RecentSearchItem {
   id: string;
-  type: 'person' | 'group' | 'page' | 'keyword';
+  type: 'person' | 'group' | 'keyword';
   text: string;
   avatar?: string;
   badge?: string;
@@ -33,16 +33,24 @@ export interface SearchResultPost {
   id: string;
   type: 'post';
   author: {
+    id?: string;
     name: string;
     avatar: string;
     type: 'person' | 'page' | 'group';
+    groupName?: string;
+    groupIconUrl?: string;
   };
   timestamp: string;
   content: string;
   image?: string;
+  video?: string;
   likes?: number;
   comments?: number;
   shares?: number;
+  userReactionType?: string | null;
+  savedByCurrentUser?: boolean;
+  groupId?: string;
+  mediaItems?: { type: string; url: string }[];
 }
 
 export interface SearchResultReel {
@@ -53,25 +61,16 @@ export interface SearchResultReel {
     avatar: string;
   };
   thumbnail: string;
+  videoUrl?: string;
   duration: string;
   views: number;
   title?: string;
-}
-
-export interface SearchResultPage {
-  id: string;
-  type: 'page';
-  name: string;
-  avatar: string;
-  category: string;
-  followers: number;
-  isFollowing: boolean;
-  isVerified?: boolean;
+  userReactionType?: string | null;
+  timestamp?: string;
 }
 
 export type SearchResult =
   | SearchResultPerson
   | SearchResultGroup
   | SearchResultPost
-  | SearchResultReel
-  | SearchResultPage;
+  | SearchResultReel;

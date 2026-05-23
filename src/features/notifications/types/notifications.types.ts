@@ -8,7 +8,8 @@ export type NotificationType =
   | 'mention' 
   | 'birthday'
   | 'event'
-  | 'memory';
+  | 'memory'
+  | 'system';
 
 export interface Notification {
   id: string;

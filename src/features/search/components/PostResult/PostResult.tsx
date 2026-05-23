@@ -1,79 +1,45 @@
-import { Globe, MoreHorizontal, ThumbsUp, MessageCircle, Share2 } from 'lucide-react';
+import { Post } from '@/components/shared';
+import type { ReactionType } from '@/services/postService';
 import { SearchResultPost } from '../../types/search.types';
 
 interface PostResultProps {
   post: SearchResultPost;
+  onReactionChange?: (postId: string, reactionType: ReactionType | null) => void;
 }
 
-export const PostResult = ({ post }: PostResultProps) => {
+const isVideoUrl = (url?: string) =>
+  !!url && (/\.(mp4|mov|webm|ogg)(\?|$)/i.test(url) || url.includes('/video/'));
+
+export const PostResult = ({ post, onReactionChange }: PostResultProps) => {
+  const videoSrc = post.video ?? (isVideoUrl(post.image) ? post.image : undefined);
+  const imageSrc = videoSrc ? undefined : post.image;
+
+  const group = post.groupId
+    ? { id: post.groupId, name: post.author.groupName ?? 'Nhóm', icon: post.author.groupIconUrl ?? undefined }
+    : undefined;
+
+  const mediaList = (post.mediaItems ?? []).map(m => ({
+    type: m.type as 'IMAGE' | 'VIDEO',
+    url: m.url,
+  }));
+
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-3">
-        {/* Author Avatar */}
-        <img
-          src={post.author.avatar}
-          alt={post.author.name}
-          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-        />
-
-        {/* Author Info */}
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-sm hover:underline cursor-pointer">
-            {post.author.name}
-          </h4>
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <span>{post.timestamp}</span>
-            <span>•</span>
-            <Globe className="w-3 h-3" />
-          </div>
-        </div>
-
-        {/* More Options */}
-        <button className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center flex-shrink-0">
-          <MoreHorizontal className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
-
-      {/* Content */}
-      <p className="text-sm text-gray-800 mb-3 line-clamp-3">
-        {post.content}
-      </p>
-
-      {/* Image (if exists) */}
-      {post.image && (
-        <div className="rounded-lg overflow-hidden bg-gray-100 mb-3">
-          <img
-            src={post.image}
-            alt="Post content"
-            className="w-full h-auto object-cover"
-          />
-        </div>
-      )}
-
-      {/* Stats */}
-      {(post.likes || post.comments || post.shares) && (
-        <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
-          {post.likes != null && (
-            <span className="flex items-center gap-1">
-              <ThumbsUp className="w-3.5 h-3.5" />
-              {post.likes.toLocaleString()}
-            </span>
-          )}
-          {post.comments != null && (
-            <span className="flex items-center gap-1">
-              <MessageCircle className="w-3.5 h-3.5" />
-              {post.comments.toLocaleString()}
-            </span>
-          )}
-          {post.shares != null && (
-            <span className="flex items-center gap-1">
-              <Share2 className="w-3.5 h-3.5" />
-              {post.shares.toLocaleString()}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
+    <Post
+      id={post.id}
+      author={{ id: post.author.id ?? '', name: post.author.name, avatar: post.author.avatar }}
+      timestamp={post.timestamp}
+      content={post.content}
+      image={imageSrc}
+      media={videoSrc ? { type: 'video' as const, url: videoSrc } : undefined}
+      likes={post.likes ?? 0}
+      comments={post.comments ?? 0}
+      shares={post.shares ?? 0}
+      isLiked={!!post.userReactionType}
+      isSaved={post.savedByCurrentUser ?? false}
+      currentUserReactionType={(post.userReactionType as ReactionType) ?? null}
+      group={group}
+      mediaList={mediaList}
+      onReactionChange={onReactionChange}
+    />
   );
 };

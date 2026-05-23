@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { UserPlus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { friendService, type FriendApiResponse } from '@/services/friendService';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
 
 export const FriendSuggestions = () => {
+  const navigate = useNavigate();
   const [suggestions, setSuggestions] = useState<FriendApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -82,7 +84,7 @@ export const FriendSuggestions = () => {
                     <X size={16} />
                   </button>
                   
-                  <div className="h-[180px] overflow-hidden">
+                  <div className="h-[180px] overflow-hidden cursor-pointer" onClick={() => navigate(`/profile/${user.userId}`)}>
                     <ImageWithFallback
                       src={user.avatarUrl || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(user.fullName)}`}
                       alt={user.fullName}
@@ -92,7 +94,10 @@ export const FriendSuggestions = () => {
 
                   <div className="p-3 flex-1 flex flex-col justify-between">
                     <div>
-                      <h4 className="font-bold text-[15px] text-gray-900 line-clamp-1 hover:underline cursor-pointer">
+                      <h4
+                        className="font-bold text-[15px] text-gray-900 line-clamp-1 hover:underline cursor-pointer"
+                        onClick={() => navigate(`/profile/${user.userId}`)}
+                      >
                         {user.fullName}
                       </h4>
                       <p className="text-xs text-gray-500 mb-2">

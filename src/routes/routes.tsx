@@ -4,7 +4,7 @@ import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth/pa
 import { WelcomePage } from '../pages';
 import { CreateStoryPage, StoryViewerPage } from '../features/stories/pages';
 import { HomePage } from '../features/home/pages';
-import { ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage, ProfileReelsPage, ProfileLikesPage } from '../features/profile/pages';
+import { ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage, ProfileReelsPage, ProfileLikesPage, ProfileScheduledPage } from '../features/profile/pages';
 import { FriendsPage } from '../features/friends/pages';
 import { GroupsPage, CreateGroupPage, GroupDetailPage, JoinedGroupsPage, DiscoverGroupsPage } from '../features/groups/pages';
 import { WatchPage } from '../features/watch/pages';
@@ -54,6 +54,10 @@ export const router = createBrowserRouter([
       {
         path: '/profile/:userId/likes',
         Component: ProfileLikesPage,
+      },
+      {
+        path: '/profile/:userId/scheduled',
+        Component: ProfileScheduledPage,
       },
       {
         path: '/friends',

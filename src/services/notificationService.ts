@@ -1,21 +1,32 @@
 import { api } from './api';
 import { Notification, NotificationType } from '../features/notifications/types/notifications.types';
+import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
 const API_URL = '/notifications';
 const GROUP_API_URL = '/groups';
 
 /** Backend sends Java enum names (UPPER_SNAKE_CASE). Frontend expects lower_snake_case. */
 function mapApiNotification(raw: any): Notification {
+  const type = (typeof raw.type === 'string' ? raw.type.toLowerCase() : raw.type) as NotificationType;
+  const isSystem = type === 'system';
+
   return {
     ...raw,
     id: String(raw.id),
-    type: (typeof raw.type === 'string' ? raw.type.toLowerCase() : raw.type) as NotificationType,
+    type,
     relatedId: raw.relatedId ? String(raw.relatedId) : undefined,
     isActioned: raw.isActioned ?? raw.actioned ?? false,
     isUnread: raw.isUnread ?? raw.unread ?? false,
     user: raw.user
-      ? { id: raw.user.id ? String(raw.user.id) : undefined, name: raw.user.name ?? 'Người dùng', avatar: raw.user.avatar ?? '' }
-      : { name: 'Người dùng', avatar: '' },
+      ? { 
+          id: raw.user.id ? String(raw.user.id) : undefined, 
+          name: isSystem ? 'từ Admin' : (raw.user.name ?? 'Người dùng'), 
+          avatar: isSystem ? logoV2 : (raw.user.avatar ?? '') 
+        }
+      : { 
+          name: isSystem ? 'từ Admin' : 'Người dùng', 
+          avatar: isSystem ? logoV2 : '' 
+        },
   };
 }
 

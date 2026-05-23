@@ -4,3 +4,4 @@ export { ProfilePhotosPage } from './ProfilePhotosPage';
 export { ProfileAboutPage } from './ProfileAboutPage';
 export { ProfileReelsPage } from './ProfileReelsPage';
 export { ProfileLikesPage } from './ProfileLikesPage';
+export { ProfileScheduledPage } from './ProfileScheduledPage';

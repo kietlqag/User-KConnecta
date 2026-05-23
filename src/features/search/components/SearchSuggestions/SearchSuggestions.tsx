@@ -100,7 +100,7 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
           {showRecent && history.length > 0 && (
             <button
               onClick={handleClearAll}
-              className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm font-medium transition-colors"
+              className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer"
             >
               Xóa tất cả
             </button>
@@ -121,7 +121,7 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
             <button
               key={item.id}
               onClick={() => handleSuggestionClick(item)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 transition-colors cursor-pointer"
             >
               {item.avatarUrl ? (
                 <img
@@ -161,10 +161,10 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
           )}
 
           {showRecent && history.map((item) => (
-            <button
+            <div
               key={item.id}
               onClick={() => handleHistoryClick(item)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 transition-colors group"
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 transition-colors group cursor-pointer"
             >
               <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
                 {item.type === 'person'
@@ -184,12 +184,12 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
               </div>
               <button
                 onClick={(e) => handleRemoveHistory(e, item.id)}
-                className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer"
                 title="Xóa"
               >
                 <X className="w-4 h-4 text-gray-600" />
               </button>
-            </button>
+            </div>
           ))}
 
           {/* ── Tip when typing ── */}

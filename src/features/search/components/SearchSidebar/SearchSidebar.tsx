@@ -1,4 +1,4 @@
-import { Globe, FileText, Users, Video, Store, Flag, Calendar, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Globe, FileText, Users, Video, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import { SearchFilterType, SortType } from '../../types/search.types';
 
@@ -16,10 +16,7 @@ const filterOptions = [
   { id: 'posts' as SearchFilterType, label: 'Bài viết', icon: FileText },
   { id: 'people' as SearchFilterType, label: 'Mọi người', icon: Users },
   { id: 'reels' as SearchFilterType, label: 'Thước phim', icon: Video },
-  { id: 'marketplace' as SearchFilterType, label: 'Marketplace', icon: Store },
-  { id: 'pages' as SearchFilterType, label: 'Trang', icon: Flag },
   { id: 'groups' as SearchFilterType, label: 'Nhóm', icon: Users },
-  { id: 'events' as SearchFilterType, label: 'Sự kiện', icon: Calendar },
 ];
 
 const dateOptions = [
@@ -58,7 +55,7 @@ export const SearchSidebar = ({
             <button
               key={filter.id}
               onClick={() => onFilterChange(filter.id)}
-              className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors ${
+              className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer ${
                 isActive
                   ? 'bg-blue-50 text-blue-600'
                   : 'hover:bg-gray-100 text-gray-700'
@@ -80,7 +77,7 @@ export const SearchSidebar = ({
         <div className="border-t border-gray-100 pt-4">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
           >
             <div className="flex items-center gap-2 text-gray-700">
               <SlidersHorizontal className="w-4 h-4" />

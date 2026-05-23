@@ -1,12 +1,12 @@
 ﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  Clock, 
-  Bookmark, 
-  UsersRound, 
-  Video, 
-  Store, 
+import {
+  Users,
+  Clock,
+  Bookmark,
+  UsersRound,
+  Video,
+  Store,
   Rss,
   Calendar,
   Flag,
@@ -63,12 +63,7 @@ export const LeftSidebar = () => {
       label: 'Bạn bè',
       href: '/friends',
     },
-    {
-      id: 'memories',
-      icon: <Clock className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
-      label: 'Kỷ niệm',
-      href: '/memories',
-    },
+
     {
       id: 'saved',
       icon: <Bookmark className="w-9 h-9 p-2 rounded-full bg-purple-100 text-purple-600" />,
@@ -87,24 +82,9 @@ export const LeftSidebar = () => {
       label: 'Video',
       href: '/watch',
     },
-    {
-      id: 'marketplace',
-      icon: <Store className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
-      label: 'Marketplace',
-      href: '/marketplace',
-    },
-    {
-      id: 'feeds',
-      icon: <Rss className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
-      label: 'Bảng feed',
-      href: '/feeds',
-    },
-    {
-      id: 'events',
-      icon: <Calendar className="w-9 h-9 p-2 rounded-full bg-red-100 text-red-600" />,
-      label: 'Sự kiện',
-      href: '/events',
-    },
+
+
+
   ];
 
   return (
@@ -128,13 +108,7 @@ export const LeftSidebar = () => {
             </button>
           ))}
 
-          {/* See More */}
-          <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer">
-            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center">
-              <ChevronDown className="w-5 h-5 text-gray-700" />
-            </div>
-            <span className="font-medium text-sm text-gray-900">Xem thêm</span>
-          </button>
+
         </nav>
 
         {/* Divider */}
@@ -180,19 +154,19 @@ export const LeftSidebar = () => {
         <div className="px-2 pt-4 pb-6 text-xs text-gray-500 space-y-2">
           <div className="flex flex-wrap gap-1">
             <a href="#" className="hover:underline cursor-pointer">Quyền riêng tư</a>
-            <span>Â·</span>
+            <span>·</span>
             <a href="#" className="hover:underline cursor-pointer">Điều khoản</a>
-            <span>Â·</span>
+            <span>·</span>
             <a href="#" className="hover:underline cursor-pointer">Quảng cáo</a>
-            <span>Â·</span>
+            <span>·</span>
             <a href="#" className="hover:underline cursor-pointer">Lựa chọn quảng cáo</a>
-            <span>Â·</span>
+            <span>·</span>
             <a href="#" className="hover:underline cursor-pointer">Cookie</a>
-            <span>Â·</span>
+            <span>·</span>
             <a href="#" className="hover:underline cursor-pointer">Xem thêm</a>
           </div>
           <div className="text-gray-500">
-            KConnecta Â© 2025
+            KConnecta © 2025
           </div>
         </div>
       </div>

@@ -1,11 +1,14 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Image, Video, Smile } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { ProfileCreatePostModal } from '../../../profile/components/ProfileCreatePost/ProfileCreatePostModal';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { CurrentUserAvatar } from '@/components/shared';
+import { POSTS_FEED_KEY } from '../../hooks/usePosts';
 
 export function CreatePost() {
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [openWithImagePicker, setOpenWithImagePicker] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
@@ -67,11 +70,7 @@ export function CreatePost() {
             <span className="text-gray-600 font-medium sm:hidden">Ảnh</span>
           </button>
 
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex-1 justify-center cursor-pointer">
-            <Smile className="w-6 h-6 text-yellow-500" />
-            <span className="text-gray-600 font-medium hidden sm:inline">Cảm xúc/hoạt động</span>
-            <span className="text-gray-600 font-medium sm:hidden">Cảm xúc</span>
-          </button>
+
         </div>
       </div>
 
@@ -80,6 +79,7 @@ export function CreatePost() {
         onClose={closeCreateModal}
         username={currentUser?.fullName || 'Người dùng'}
         initialShowImagePicker={openWithImagePicker}
+        onPostCreated={() => queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY })}
       />
     </>
   );

@@ -1,128 +1,203 @@
 import * as React from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Users, Search, Loader2 } from 'lucide-react';
 import { Header } from '../../home/components/Header';
 import { ProfileHeader } from '../components/ProfileHeader';
 import { ProfileTabs } from '../components/ProfileTabs';
 import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
 import { authService } from '@/services/authService';
 import { friendService } from '@/services/friendService';
-import { FriendCard } from '../../friends/components/FriendCard/FriendCard';
+
+interface FriendItem {
+  friendshipId: string | null;
+  userId: string;
+  username: string;
+  fullName: string;
+  avatarUrl: string | null;
+  mutualFriends: number;
+}
+
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300';
+const DEFAULT_COVER  = 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200';
+
+function FriendSkeleton() {
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-100 dark:bg-gray-700 animate-pulse">
+      <div className="w-16 h-16 rounded-lg bg-gray-200 dark:bg-gray-600 flex-shrink-0" />
+      <div className="flex-1 space-y-2">
+        <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-600" />
+        <div className="h-3 w-20 rounded bg-gray-200 dark:bg-gray-600" />
+      </div>
+    </div>
+  );
+}
 
 export function ProfileFriendsPage() {
   const { userId: routeUserId } = useParams();
-  const currentUser = authService.getCurrentUser();
-  const userId = routeUserId || currentUser?.id || '';
-  const isOwnProfile = currentUser?.id === userId;
-  const [profile, setProfile] = React.useState<any>(null);
-  const [friends, setFriends] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [friendsLoading, setFriendsLoading] = React.useState(true);
+  const navigate = useNavigate();
+  const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
 
+  const userId = React.useMemo(() => {
+    if (!routeUserId || routeUserId === 'undefined') return currentUser?.id || '';
+    return routeUserId;
+  }, [routeUserId, currentUser?.id]);
+
+  const [profile, setProfile]     = React.useState<any>(null);
+  const [friends, setFriends]     = React.useState<FriendItem[]>([]);
+  const [loading, setLoading]     = React.useState(true);
+  const [search, setSearch]       = React.useState('');
+
+  const isOwnProfile = !!currentUser && (
+    userId === currentUser.id || userId === currentUser.username
+  );
+
+  /* ---------- fetch ---------- */
   React.useEffect(() => {
-    const fetchData = async () => {
+    if (!userId || userId === 'undefined') { setLoading(false); return; }
+    let cancelled = false;
+
+    const run = async () => {
       try {
-        setLoading(true);
-        const [profileRes, friendsRes] = await Promise.all([
-          authService.getUserById(userId),
-          friendService.getFriends(userId)
-        ]);
-        
-        setProfile(profileRes);
-        
-        // Map API response to FriendCard format
-        const mappedFriends = friendsRes.map(f => ({
-          id: f.userId,
-          name: f.fullName,
-          avatar: f.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
-          mutualFriends: f.mutualFriends,
-          isFriend: true, // They are friends with the profile owner
-        }));
-        
-        setFriends(mappedFriends);
-      } catch (error) {
-        console.error('Error fetching data:', error);
+        let profileData: any;
+        try { profileData = await authService.getUserById(userId); }
+        catch { profileData = await authService.getUserByUsername(userId); }
+
+        const resolvedId: string = profileData.id;
+        const friendsRes = await friendService.getFriends(resolvedId);
+
+        if (cancelled) return;
+        setProfile(profileData);
+        setFriends(friendsRes);
+      } catch (err) {
+        console.error('Error fetching friends:', err);
       } finally {
-        setLoading(false);
-        setFriendsLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    fetchData();
+    run();
+    return () => { cancelled = true; };
   }, [userId]);
 
+  /* ---------- client-side search ---------- */
+  const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return friends;
+    return friends.filter(f =>
+      f.fullName.toLowerCase().includes(q) ||
+      f.username.toLowerCase().includes(q)
+    );
+  }, [friends, search]);
+
+  /* ---------- derived ---------- */
+  const profilePathKey = profile?.username || userId;
+
   const userProfile = {
-    id: profile?.id || userId,
-    fullName: profile?.fullName || 'Quốc Kiệt',
-    username: profile?.username || currentUser?.username || '',
-    avatar: profile?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300',
-    coverPhoto: profile?.coverPhotoUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
-    friendsCount: profile?.friendsCount || friends.length,
-    location: profile?.location || 'Thành phố Hồ Chí Minh',
-    school: profile?.school || 'Trường Đại học Công nghệ Kỹ thuật TP HCM',
+    fullName:   profile?.fullName    || 'Người dùng',
+    username:   profile?.username    || '',
+    avatar:     profile?.avatarUrl   || DEFAULT_AVATAR,
+    coverPhoto: profile?.coverPhotoUrl || DEFAULT_COVER,
+    location:   profile?.location    || '',
+    school:     profile?.school      || '',
   };
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 font-sans">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Header />
 
       <div className="pt-14">
         <ProfileHeader
-          coverPhoto={userProfile.coverPhoto}
-          avatar={userProfile.avatar}
+          coverPhoto={loading ? undefined : userProfile.coverPhoto}
+          avatar={loading ? undefined : userProfile.avatar}
           fullName={userProfile.fullName}
           username={userProfile.username}
-          friendsCount={userProfile.friendsCount}
+          friendsCount={friends.length}
           location={userProfile.location}
           school={userProfile.school}
           isOwnProfile={isOwnProfile}
+          loading={loading}
         />
 
-        <ProfileTabs userId={userProfile.id} isOwnProfile={isOwnProfile} />
+        <ProfileTabs profileKey={profilePathKey} isOwnProfile={isOwnProfile} />
 
         <div className="max-w-[1100px] mx-auto px-4 py-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b dark:border-gray-700">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Bạn bè
-                <span className="ml-2 text-lg font-normal text-gray-500">
-                  {friends.length} người bạn
-                </span>
-              </h2>
-              <div className="relative w-full sm:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm bạn bè"
-                  className="w-full pl-9 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition-all"
-                />
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+              <div className="flex items-center gap-3">
+                <Users className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Bạn bè
+                  {!loading && (
+                    <span className="ml-2 text-base font-normal text-gray-500 dark:text-gray-400">
+                      · {friends.length}
+                    </span>
+                  )}
+                </h2>
               </div>
+
+              {!loading && friends.length > 0 && (
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm bạn bè"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 dark:text-white transition-all"
+                  />
+                </div>
+              )}
             </div>
 
-            {friendsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
-                ))}
+            {/* Content */}
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {Array.from({ length: 9 }).map((_, i) => <FriendSkeleton key={i} />)}
               </div>
-            ) : friends.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {friends.map((friend) => (
-                  <FriendCard
-                    key={friend.id}
-                    friend={friend}
-                    onMessage={(id) => console.log('Message', id)}
-                    onUnfriend={isOwnProfile ? (id) => console.log('Unfriend', id) : undefined}
-                  />
-                ))}
+            ) : friends.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="relative mb-4 h-20 w-20">
+                  <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <Users className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">Chưa có bạn bè nào</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Danh sách bạn bè sẽ xuất hiện ở đây.</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">
+                Không tìm thấy bạn bè nào phù hợp với "{search}".
               </div>
             ) : (
-              <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
-                <p className="text-gray-500 dark:text-gray-400">Không tìm thấy bạn bè nào.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {filtered.map(friend => (
+                  <div
+                    key={friend.userId}
+                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:shadow-md transition-all cursor-pointer group"
+                    onClick={() => navigate(`/profile/${friend.username || friend.userId}`)}
+                  >
+                    <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 dark:border-gray-700">
+                      <ImageWithFallback
+                        src={friend.avatarUrl || DEFAULT_AVATAR}
+                        alt={friend.fullName}
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                        {friend.fullName}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        {friend.mutualFriends > 0
+                          ? `${friend.mutualFriends} bạn chung`
+                          : 'Chưa có bạn chung'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

@@ -32,12 +32,22 @@ export function formatPostTimestamp(dateString?: string | null): string {
   }).format(date);
 }
 
+function isVideoUrl(url?: string | null): boolean {
+  if (!url) return false;
+  return url.includes('/video/') || /\.(mp4|mov|webm|ogg)(\?.*)?$/i.test(url);
+}
+
 export function mapApiPost(item: PostResponse): FeedPost {
-  const firstMedia = (item.media ?? [])[0];
+  const firstVideo = (item.media ?? []).find((m) => m.mediaType === 'VIDEO');
   const firstImage = (item.media ?? []).find((m) => m.mediaType === 'IMAGE');
+  const legacyVideoUrl = !firstVideo && isVideoUrl(item.imageUrl) ? item.imageUrl : null;
+  const legacyImageUrl = item.imageUrl && !isVideoUrl(item.imageUrl) ? item.imageUrl : null;
   const isLikelyLiveByContent = (item.content || '').includes('\n\n') && (item.media ?? []).length === 0;
   const isLivePost = item.backgroundStyle === 'LIVE_POST' || isLikelyLiveByContent;
-  
+
+  const videoUrl = firstVideo?.mediaUrl || firstVideo?.fileUrl || legacyVideoUrl || undefined;
+  const imageUrl = firstImage?.mediaUrl || firstImage?.fileUrl || legacyImageUrl || undefined;
+
   return {
     id: item.id,
     author: {
@@ -49,11 +59,12 @@ export function mapApiPost(item: PostResponse): FeedPost {
     },
     timestamp: formatPostTimestamp(item.publishedAt || item.createdAt),
     content: item.content || '',
-    image: firstImage?.mediaUrl || firstImage?.fileUrl,
-    media: firstMedia ? {
-      type: firstMedia.mediaType === 'VIDEO' ? 'video' : 'image',
-      url: firstMedia.mediaUrl || firstMedia.fileUrl || ''
-    } : undefined,
+    image: imageUrl,
+    media: videoUrl
+      ? { type: 'video', url: videoUrl }
+      : imageUrl
+        ? { type: 'image', url: imageUrl }
+        : undefined,
     likes: item.reactionCount,
     comments: item.commentCount,
     shares: item.shareCount,

@@ -29,6 +29,7 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
     { label: 'Bạn bè', path: `/profile/${resolvedProfileKey}/friends` },
     { label: 'Ảnh', path: `/profile/${resolvedProfileKey}/photos` },
     { label: 'Reels', path: `/profile/${resolvedProfileKey}/reels` },
+    ...(isOwnProfile ? [{ label: 'Bài đã lên lịch', path: `/profile/${resolvedProfileKey}/scheduled` }] : []),
   ];
 
   const moreTabs = [

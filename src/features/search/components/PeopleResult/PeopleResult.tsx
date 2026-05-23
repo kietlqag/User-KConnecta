@@ -43,7 +43,7 @@ export const PeopleResult = ({ person, onFollowToggle }: PeopleResultProps) => {
         {/* Follow Button */}
         <button
           onClick={(e) => { e.stopPropagation(); onFollowToggle(person.id); }}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 flex-shrink-0 ${
+          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 flex-shrink-0 cursor-pointer ${
             person.isFollowing
               ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               : 'bg-blue-600 text-white hover:bg-blue-700'

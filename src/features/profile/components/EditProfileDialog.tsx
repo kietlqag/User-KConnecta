@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { User, MapPin, Heart, Loader2, Camera } from 'lucide-react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -132,6 +133,7 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
             </div>
             <div>
               <DialogTitle className="text-xl font-bold">Chỉnh sửa trang cá nhân</DialogTitle>
+              <DialogDescription className="sr-only">Chỉnh sửa thông tin trang cá nhân của bạn</DialogDescription>
               <p className="text-xs text-gray-500 dark:text-gray-400">Cập nhật hình ảnh và thông tin của bạn</p>
             </div>
           </div>

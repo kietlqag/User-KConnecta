@@ -1072,7 +1072,7 @@ export function CreateStoryPage() {
               <button
                 onClick={() => {
                   handleRemoveSelectedImage();
-                  navigate('/home');
+                  navigate(-1);
                 }}
                 className="rounded-lg bg-blue-600 px-10 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md"
               >

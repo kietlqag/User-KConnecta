@@ -86,6 +86,7 @@ export interface PostProps {
   commentsData?: Comment[];
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
   onDelete?: (postId: string) => void;
+  onReactionChange?: (postId: string, reactionType: ReactionType | null) => void;
 }
 
 export function Post({
@@ -105,6 +106,7 @@ export function Post({
   group,
   mediaList = [],
   onDelete,
+  onReactionChange,
 }: PostProps) {
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(initialIsLiked || !!currentUserReactionType);
@@ -277,6 +279,7 @@ export function Post({
         setSelectedReaction(null);
         setIsLiked(false);
         setLikeCount((prev) => Math.max(0, prev - 1));
+        onReactionChange?.(id, null);
       } else {
         await postService.addReaction(id, {
           userId: currentUser.id,
@@ -291,6 +294,7 @@ export function Post({
           setIsLiked(true);
         }
         setLikeCount((prev) => (selectedReaction?.type ? prev : prev + 1));
+        onReactionChange?.(id, reaction.type as ReactionType);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể thả cảm xúc');
@@ -389,6 +393,7 @@ export function Post({
               postId={id}
               isSaved={isSaved}
               isOwner={isOwner}
+              currentUserId={currentUser?.id}
               onToggleSave={handleToggleSave}
               onDelete={() => setDeleteDialogOpen(true)}
             />

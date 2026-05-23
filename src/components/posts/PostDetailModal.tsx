@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { X, MessageCircle, Share2 } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { X, MessageCircle, Share2, Globe, Users, Lock } from 'lucide-react';
 import { PostShareModal } from './PostShareModal';
 import {
   getActiveReactions,
@@ -13,9 +13,26 @@ import { PostMoreMenu } from '../shared/PostMoreMenu';
 import { PostMediaGallery } from '../shared/PostMediaGallery';
 import type { PostGalleryItem } from '../shared/PostMediaGallery';
 
+type Privacy = 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
+
+const PRIVACY_ICON: Record<Privacy, React.ReactNode> = {
+  PUBLIC:         <Globe className="w-3.5 h-3.5" />,
+  FRIENDS:        <Users className="w-3.5 h-3.5" />,
+  FRIENDS_EXCEPT: <Users className="w-3.5 h-3.5" />,
+  PRIVATE:        <Lock className="w-3.5 h-3.5" />,
+};
+
+const PRIVACY_LABEL: Record<Privacy, string> = {
+  PUBLIC:         'Công khai',
+  FRIENDS:        'Bạn bè',
+  FRIENDS_EXCEPT: 'Bạn bè trừ...',
+  PRIVATE:        'Chỉ mình tôi',
+};
+
 interface Post {
   id: string;
   author: {
+    id?: string;
     name: string;
     avatar: string;
     status?: string;
@@ -29,6 +46,9 @@ interface Post {
   media?: { type: 'image' | 'video'; url: string };
   mediaList?: PostGalleryItem[];
   reactionCounts?: ReactionCountMap;
+  privacy?: Privacy;
+  isOwner?: boolean;
+  currentUserId?: string;
 }
 
 interface PostDetailModalProps {
@@ -41,6 +61,7 @@ interface PostDetailModalProps {
   selectedReaction?: ReactionOption | null;
   onReactionChange?: (reaction: ReactionOption | null) => void;
   isReacting?: boolean;
+  onPrivacyChange?: (privacy: Privacy) => void;
 }
 
 export function PostDetailModal({
@@ -53,10 +74,12 @@ export function PostDetailModal({
   selectedReaction = null,
   onReactionChange,
   isReacting = false,
+  onPrivacyChange,
 }: PostDetailModalProps) {
   const [commentCount, setCommentCount] = useState(post.comments || 0);
   const [shareCount, setShareCount] = useState(post.shares || 0);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [privacy, setPrivacy] = useState<Privacy>(post.privacy ?? 'PUBLIC');
 
   const reactionCounts = post.reactionCounts || {
     LIKE: post.likes || 0,
@@ -82,6 +105,15 @@ export function PostDetailModal({
     });
     onCommentAdded?.();
   }, [onCommentAdded, onCommentCountChange]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -120,11 +152,22 @@ export function PostDetailModal({
                   <div className="flex items-center gap-1 text-xs text-gray-500">
                     <span>{post.timestamp}</span>
                     <span>·</span>
-                    <span>🌐</span>
+                    <span className="flex items-center gap-0.5" title={PRIVACY_LABEL[privacy]}>
+                      {PRIVACY_ICON[privacy]}
+                    </span>
                   </div>
                 </div>
               </div>
-              <PostMoreMenu postId={post.id} />
+              <PostMoreMenu
+                postId={post.id}
+                isOwner={post.isOwner}
+                privacy={privacy}
+                currentUserId={post.currentUserId}
+                onPrivacyChange={(p) => {
+                  setPrivacy(p);
+                  onPrivacyChange?.(p);
+                }}
+              />
             </div>
           </div>
 

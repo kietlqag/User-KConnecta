@@ -65,6 +65,7 @@ export function ProfilePage() {
 
         const res = await postService.getAllPosts(currentUser?.id, targetAuthorId, 0, PAGE_SIZE);
         const mapped = res.content
+          .filter(p => !p.status || p.status === 'PUBLISHED')
           .sort((a, b) => new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime())
           .map(mapApiPost);
 
@@ -88,6 +89,7 @@ export function ProfilePage() {
       const nextPage = postsPage + 1;
       const res = await postService.getAllPosts(currentUser?.id, targetAuthorId, nextPage, PAGE_SIZE);
       const mapped = res.content
+        .filter(p => !p.status || p.status === 'PUBLISHED')
         .sort((a, b) => new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime())
         .map(mapApiPost);
       setPosts(prev => [...prev, ...mapped]);
@@ -228,24 +230,21 @@ export function ProfilePage() {
   const featuredPhotos = profilePhotos.slice(0, 3);
   const photos = profilePhotos.slice(0, 9);
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Đang tải...</div>;
-  }
-
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
       <Header />
 
       <div className="pt-14">
         <ProfileHeader
-          coverPhoto={userProfile.coverPhoto}
-          avatar={userProfile.avatar}
+          coverPhoto={loading ? undefined : userProfile.coverPhoto}
+          avatar={loading ? undefined : userProfile.avatar}
           fullName={userProfile.fullName}
           username={userProfile.username}
           friendsCount={userProfile.friendsCount}
           location={userProfile.location}
           school={userProfile.school}
           isOwnProfile={isOwnProfile}
+          loading={loading}
           profileUserId={userProfile.id}
           friendshipStatus={friendshipStatus}
           onFriendshipStatusChange={setFriendshipStatus}
@@ -258,7 +257,7 @@ export function ProfilePage() {
 
         <div className="max-w-[1320px] mx-auto px-4 py-4 lg:py-6">
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.55fr)] gap-4 lg:gap-6 items-start">
-            <div className="space-y-4 order-2 lg:order-1 lg:sticky lg:top-[136px]">
+            <div className="space-y-4 lg:sticky lg:top-[136px] lg:max-h-[calc(100vh-136px)] lg:overflow-y-auto lg:pb-4 sidebar-scrollbar">
               <ProfileIntro
                 bio={userProfile.bio}
                 location={userProfile.location}
@@ -278,7 +277,7 @@ export function ProfilePage() {
               <PhotosPreview userId={profilePathKey} photos={photos} />
             </div>
 
-            <div className="space-y-4 order-1 lg:order-2">
+            <div className="space-y-4">
               {isOwnProfile && (
                 <ProfileCreatePost
                   username={userProfile.fullName}

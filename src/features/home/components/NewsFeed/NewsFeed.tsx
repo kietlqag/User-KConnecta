@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { Stories } from '../Stories';
@@ -11,21 +11,36 @@ import { mapApiPost } from '@/utils/postUtils';
 import { POSTS_FEED_KEY, useHighlightedPost, usePostsFeed } from '../../hooks/usePosts';
 
 export function NewsFeed() {
-  const currentUser = authService.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const highlightedPostId = searchParams.get('post');
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasNextPageRef = useRef(false);
+  const isFetchingNextPageRef = useRef(false);
+  const fetchNextPageRef = useRef<() => void>(() => {});
 
-  // Re-fetch feed when the logged-in user changes
+  // Synchronize currentUser and invalidate feed on auth change
   useEffect(() => {
-    const bump = () => queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
-    window.addEventListener(AUTH_USER_CHANGED_EVENT, bump);
-    return () => window.removeEventListener(AUTH_USER_CHANGED_EVENT, bump);
+    const handleAuthChange = () => {
+      setCurrentUser(authService.getCurrentUser());
+      void queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
+    };
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, handleAuthChange);
+    window.addEventListener('storage', handleAuthChange);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, handleAuthChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
   }, [queryClient]);
 
   const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error } =
     usePostsFeed(currentUser?.id);
+
+  // Keep refs in sync every render so the observer callback always reads fresh values
+  hasNextPageRef.current = hasNextPage ?? false;
+  isFetchingNextPageRef.current = isFetchingNextPage;
+  fetchNextPageRef.current = fetchNextPage;
 
   // Determine whether the highlighted post is already present in the loaded pages
   const feedPostIds = useMemo(
@@ -51,19 +66,22 @@ export function NewsFeed() {
     return highlight ? [highlight, ...withoutHighlight] : withoutHighlight;
   }, [data, highlightedPostId, highlightedPostData]);
 
-  // Sentinel-based infinite scroll: fetch next page when the bottom div enters the viewport
+  // Re-attach observer when feed grows so we fetch the next page if sentinel is already visible
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel) return;
+    if (!sentinel || isLoading || !hasNextPage) return;
 
-    const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        void fetchNextPage();
-      }
-    });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasNextPageRef.current && !isFetchingNextPageRef.current) {
+          void fetchNextPageRef.current();
+        }
+      },
+      { rootMargin: '0px 0px 400px 0px' }
+    );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [isLoading, hasNextPage, posts.length]);
 
   // Scroll to and highlight the target post after the feed finishes loading
   useEffect(() => {
