@@ -12,6 +12,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDeta
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +25,7 @@ public interface PostService {
     String uploadPostImage(MultipartFile file);
     void deleteMedia(String url);
     Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable);
-    List<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId);
+    Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable);
     List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId);
     List<PostResponse> getGroupFeedPosts(UUID currentUserId);
     PostResponse getPostById(UUID id, UUID currentUserId);
@@ -44,4 +45,5 @@ public interface PostService {
     List<PostResponse> getSavedPosts(UUID userId);
     void unsavePost(UUID userId, UUID postId);
     List<CheckInSuggestionResponse> getCheckInSuggestions(UUID currentUserId, String province, String ward);
+    PostResponse updatePrivacy(UUID postId, UUID userId, PostPrivacy privacy);
 }

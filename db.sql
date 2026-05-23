@@ -4,6 +4,11 @@
 -- ============================================================
 
 -- -------------------------
+-- Extensions
+-- -------------------------
+CREATE EXTENSION IF NOT EXISTS unaccent;
+
+-- -------------------------
 -- Auth + User
 -- -------------------------
 CREATE TABLE IF NOT EXISTS public.accounts (

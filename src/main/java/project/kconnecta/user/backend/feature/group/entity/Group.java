@@ -3,6 +3,7 @@ package project.kconnecta.user.backend.feature.group.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
+import project.kconnecta.user.backend.feature.search.redis.GroupSearchListener;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "user_groups", schema = "public")
+@EntityListeners(GroupSearchListener.class)
 @Getter
 @Setter
 @NoArgsConstructor

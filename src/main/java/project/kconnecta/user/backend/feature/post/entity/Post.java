@@ -6,6 +6,7 @@ import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import org.hibernate.annotations.BatchSize;
 import project.kconnecta.user.backend.feature.group.entity.Group;
+import project.kconnecta.user.backend.feature.search.redis.PostSearchListener;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "posts", schema = "public")
+@EntityListeners(PostSearchListener.class)
 @Getter
 @Setter
 @NoArgsConstructor

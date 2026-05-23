@@ -1,6 +1,8 @@
 package project.kconnecta.user.backend.feature.post.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import project.kconnecta.user.backend.feature.post.entity.Post;
 
@@ -9,6 +11,14 @@ import java.util.UUID;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, UUID> {
+
+    @Query("SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group " +
+           "WHERE p.status = 'PUBLISHED' AND p.privacy = 'PUBLIC'")
+    List<Post> findAllPublishedPublicWithAuthorAndGroup();
+
+    @Query("SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group " +
+           "WHERE p.id IN :ids")
+    List<Post> findAllByIdIn(@Param("ids") List<UUID> ids);
     interface CheckInSuggestionProjection {
         String getLocationText();
         Long getUsageCount();
@@ -47,6 +57,8 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "WHERE p.status = 'PUBLISHED' " +
         "  AND (p.group_id IS NULL " +
         "   OR g.privacy = 'PUBLIC' " +
+        "   OR p.privacy = 'PUBLIC' " +
+        "   OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
         "   OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
@@ -96,7 +108,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "SELECT count(*) FROM posts p " +
         "LEFT JOIN user_groups g ON p.group_id = g.id " +
         "WHERE p.status = 'PUBLISHED' " +
-        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR p.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
         "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
@@ -122,7 +134,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     // PostgreSQL ILIKE for case-insensitive full-text search on post content.
     // Tip: CREATE INDEX idx_posts_content_trgm ON public.posts USING GIN (content gin_trgm_ops);
     @org.springframework.data.jpa.repository.Query(
-        value = "SELECT * FROM posts WHERE status = 'PUBLISHED' AND privacy = 'PUBLIC' AND content ILIKE CONCAT('%', :q, '%') ORDER BY published_at DESC NULLS LAST",
+        value = "SELECT * FROM posts WHERE status = 'PUBLISHED' AND privacy = 'PUBLIC' AND unaccent(content) ILIKE unaccent(CONCAT('%', :q, '%')) ORDER BY published_at DESC NULLS LAST",
         nativeQuery = true
     )
     List<Post> searchByContent(@org.springframework.data.repository.query.Param("q") String q, org.springframework.data.domain.Pageable pageable);
@@ -131,6 +143,15 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group WHERE p.author.id = :authorId ORDER BY p.createdAt DESC"
     )
     List<Post> findByAuthorId(@org.springframework.data.repository.query.Param("authorId") UUID authorId);
+
+    @org.springframework.data.jpa.repository.Query(
+        value = "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group WHERE p.author.id = :authorId ORDER BY p.createdAt DESC",
+        countQuery = "SELECT COUNT(p) FROM Post p WHERE p.author.id = :authorId"
+    )
+    org.springframework.data.domain.Page<Post> findByAuthorIdPageable(
+        @org.springframework.data.repository.query.Param("authorId") UUID authorId,
+        org.springframework.data.domain.Pageable pageable
+    );
 
     @org.springframework.data.jpa.repository.Query(
         "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group WHERE p.group IS NOT NULL AND p.group.id = :groupId ORDER BY p.createdAt DESC"

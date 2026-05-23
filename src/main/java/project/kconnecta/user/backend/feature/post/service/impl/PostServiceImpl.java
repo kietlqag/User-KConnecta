@@ -144,9 +144,10 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId) {
-        List<Post> posts = postRepository.findByAuthorId(authorId);
-        return processPostsBulk(posts, currentUserId);
+    public Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable) {
+        Page<Post> postPage = postRepository.findByAuthorIdPageable(authorId, pageable);
+        List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
+        return new PageImpl<>(responses, pageable, postPage.getTotalElements());
     }
 
     @Override
@@ -487,6 +488,17 @@ public class PostServiceImpl implements PostService {
     @Override
     public void unsavePost(UUID userId, UUID postId) {
         postSavedRepository.deleteByPostIdAndUserId(postId, userId);
+    }
+
+    @Override
+    public PostResponse updatePrivacy(UUID postId, UUID userId, PostPrivacy privacy) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+        if (!post.getAuthor().getId().equals(userId)) {
+            throw new ValidationException("Bạn không có quyền chỉnh sửa bài viết này");
+        }
+        post.setPrivacy(privacy);
+        return mapToResponse(postRepository.save(post), userId);
     }
 
     @Override

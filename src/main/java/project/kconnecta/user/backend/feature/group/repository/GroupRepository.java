@@ -18,6 +18,6 @@ public interface GroupRepository extends JpaRepository<Group, UUID> {
     @Query("SELECT g FROM Group g WHERE g.id NOT IN (SELECT gm.group.id FROM GroupMember gm WHERE gm.user.id = :userId)")
     List<Group> findGroupsNotJoinedByUser(@Param("userId") UUID userId);
 
-    @Query("SELECT g FROM Group g WHERE LOWER(g.name) LIKE LOWER(CONCAT('%', :q, '%'))")
+    @Query(value = "SELECT * FROM public.user_groups g WHERE unaccent(LOWER(g.name)) LIKE unaccent(LOWER(CONCAT('%', :q, '%')))", nativeQuery = true)
     List<Group> searchByName(@Param("q") String q, Pageable pageable);
 }

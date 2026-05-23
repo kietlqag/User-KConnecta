@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
@@ -64,7 +65,7 @@ public class PostController {
             return ResponseEntity.ok(postService.getPostsByGroupId(groupId, currentUserId));
         }
         if (authorId != null) {
-            return ResponseEntity.ok(postService.getPostsByUserId(authorId, currentUserId));
+            return ResponseEntity.ok(postService.getPostsByUserId(authorId, currentUserId, pageable));
         }
         if (isGroupFeed) {
             return ResponseEntity.ok(postService.getGroupFeedPosts(currentUserId));
@@ -176,6 +177,14 @@ public class PostController {
             @Valid @RequestBody SharePostRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED).body(postService.sharePost(id, request));
+    }
+
+    @PatchMapping("/{id}/privacy")
+    public ResponseEntity<PostResponse> updatePrivacy(
+            @PathVariable UUID id,
+            @RequestParam UUID userId,
+            @RequestParam PostPrivacy privacy) {
+        return ResponseEntity.ok(postService.updatePrivacy(id, userId, privacy));
     }
 
     @DeleteMapping("/{id}")

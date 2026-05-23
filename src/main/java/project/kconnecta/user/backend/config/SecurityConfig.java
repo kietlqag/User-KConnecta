@@ -27,7 +27,8 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/set-password").authenticated()
-                        .requestMatchers("/api/auth/**", "/ws/**", "/*.html", "/**.html").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/search/suggest").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/internal/**", "/ws/**", "/*.html", "/**.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

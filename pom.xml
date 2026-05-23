@@ -141,6 +141,13 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Jedis 5 — native RediSearch (FT.*) API, used alongside Lettuce -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.1.0</version>
+        </dependency>
+
     </dependencies>
 
 	<build>

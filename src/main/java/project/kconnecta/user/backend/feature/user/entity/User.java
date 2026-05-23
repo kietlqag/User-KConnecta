@@ -3,6 +3,7 @@ package project.kconnecta.user.backend.feature.user.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
+import project.kconnecta.user.backend.feature.search.redis.UserSearchListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users", schema = "public")
+@EntityListeners(UserSearchListener.class)
 @Getter
 @Setter
 @NoArgsConstructor

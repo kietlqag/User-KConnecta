@@ -10,5 +10,6 @@ public enum NotificationType {
     MENTION,
     BIRTHDAY,
     EVENT,
-    MEMORY
+    MEMORY,
+    SYSTEM
 }
