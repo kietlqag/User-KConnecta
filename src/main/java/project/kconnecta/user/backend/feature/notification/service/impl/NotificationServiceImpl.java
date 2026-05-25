@@ -49,7 +49,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
 
         notification = notificationRepository.save(notification);
-        pushUnreadCountUpdate(recipient);
+        pushUnreadCountUpdate(recipient, type);
         return toResponse(notification);
     }
 
@@ -98,17 +98,24 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     private void pushUnreadCountUpdate(User recipient) {
+        pushUnreadCountUpdate(recipient, null);
+    }
+
+    private void pushUnreadCountUpdate(User recipient, NotificationType type) {
         if (recipient == null || recipient.getUsername() == null || recipient.getUsername().isBlank()) {
             return;
         }
         int unreadCount = notificationRepository.countUnreadByRecipientId(recipient.getId());
+        Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("event", "UNREAD_COUNT_UPDATED");
+        payload.put("unreadCount", unreadCount);
+        if (type != null) {
+            payload.put("notificationType", type.name());
+        }
         messagingTemplate.convertAndSendToUser(
                 recipient.getUsername(),
                 "/queue/notifications",
-                Map.of(
-                        "event", "UNREAD_COUNT_UPDATED",
-                        "unreadCount", unreadCount
-                )
+                payload
         );
     }
 

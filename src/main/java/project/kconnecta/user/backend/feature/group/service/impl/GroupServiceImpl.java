@@ -268,6 +268,25 @@ public class GroupServiceImpl implements GroupService {
         groupMemberRepository.delete(target);
     }
 
+    @Override
+    @Transactional
+    public void leaveGroup(UUID groupId, UUID userId) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        GroupMember member = groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("You are not a member of this group"));
+
+        if (member.getRole() == GroupMemberRole.ADMIN) {
+            long adminCount = groupMemberRepository.countByGroupIdAndRole(groupId, GroupMemberRole.ADMIN);
+            if (adminCount <= 1) {
+                throw new ValidationException("Bạn là quản trị viên duy nhất. Hãy chỉ định quản trị viên khác trước khi rời nhóm.");
+            }
+        }
+
+        groupMemberRepository.delete(member);
+    }
+
     private GroupResponse toResponse(Group group, GroupMemberRole role) {
         int memberCount = groupMemberRepository.countByGroupId(group.getId());
         return GroupResponse.builder()

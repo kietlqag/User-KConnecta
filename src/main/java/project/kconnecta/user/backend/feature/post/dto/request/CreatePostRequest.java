@@ -43,5 +43,7 @@ public class CreatePostRequest {
 
     private List<UUID> excludedUserIds;
 
+    private List<UUID> allowedUserIds;
+
     private List<UUID> taggedUserIds;
 }

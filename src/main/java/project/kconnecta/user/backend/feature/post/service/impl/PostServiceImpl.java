@@ -90,6 +90,10 @@ public class PostServiceImpl implements PostService {
             throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
         }
 
+        if (privacy != PostPrivacy.SPECIFIC_FRIENDS && request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
+            throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
+        }
+
         Group group = null;
         if (request.getGroupId() != null) {
             group = groupRepository.findById(request.getGroupId())
@@ -113,6 +117,7 @@ public class PostServiceImpl implements PostService {
 
         attachMedia(post, mediaRequests);
         attachExcludedUsers(post, request.getExcludedUserIds());
+        attachAllowedUsers(post, request.getAllowedUserIds());
         attachTaggedUsers(post, request.getTaggedUserIds());
 
         PostResponse response = mapToResponse(postRepository.save(post), request.getAuthorId());
@@ -145,7 +150,7 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable) {
-        Page<Post> postPage = postRepository.findByAuthorIdPageable(authorId, pageable);
+        Page<Post> postPage = postRepository.findByAuthorIdWithPrivacy(authorId, currentUserId, pageable);
         List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
         return new PageImpl<>(responses, pageable, postPage.getTotalElements());
     }
@@ -535,6 +540,18 @@ public class PostServiceImpl implements PostService {
             post.getAudienceExclusions().add(PostAudienceExclusion.builder()
                     .post(post)
                     .excludedUser(getUser(excludedUserId, "Excluded user not found"))
+                    .build());
+        }
+    }
+
+    private void attachAllowedUsers(Post post, List<UUID> allowedUserIds) {
+        if (allowedUserIds == null) {
+            return;
+        }
+        for (UUID allowedUserId : allowedUserIds.stream().distinct().toList()) {
+            post.getAudienceAllowances().add(PostAudienceAllowance.builder()
+                    .post(post)
+                    .allowedUser(getUser(allowedUserId, "Allowed user not found"))
                     .build());
         }
     }

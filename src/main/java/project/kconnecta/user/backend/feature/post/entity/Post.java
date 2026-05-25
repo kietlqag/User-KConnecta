@@ -85,6 +85,11 @@ public class Post {
     @BatchSize(size = 20)
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    private List<PostAudienceAllowance> audienceAllowances = new ArrayList<>();
+
+    @BatchSize(size = 20)
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<PostMention> mentions = new ArrayList<>();
 
     @PrePersist

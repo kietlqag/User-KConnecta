@@ -14,6 +14,8 @@ import project.kconnecta.user.backend.feature.friend.entity.Friendship;
 import project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus;
 import project.kconnecta.user.backend.feature.friend.repository.FriendshipRepository;
 import project.kconnecta.user.backend.feature.friend.service.FriendService;
+import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
+import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -34,6 +36,7 @@ public class FriendServiceImpl implements FriendService {
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final NotificationEventPublisher notificationEventPublisher;
 
     @Override
     public List<FriendResponse> getFriends(UUID userId) {
@@ -148,10 +151,17 @@ public class FriendServiceImpl implements FriendService {
                 .status(FriendshipStatus.PENDING)
                 .build();
 
-        FriendResponse result = mapToResponse(friendshipRepository.save(friendship), requesterId);
+        Friendship saved = friendshipRepository.save(friendship);
         activityLogService.log(requester.getId(), requester.getUsername(), ActivityLogType.FRIEND_REQUEST_SENT,
                 "{\"targetUserId\":\"" + addresseeId + "\"}");
-        return result;
+        notificationEventPublisher.publish(
+                requesterId,
+                addresseeId,
+                NotificationType.FRIEND_REQUEST,
+                requester.getFullName() + " đã gửi cho bạn lời mời kết bạn",
+                saved.getId()
+        );
+        return mapToResponse(saved, requesterId);
     }
 
     @Override
@@ -160,11 +170,19 @@ public class FriendServiceImpl implements FriendService {
                 .orElseThrow(() -> new ResourceNotFoundException("Friendship not found: " + friendshipId));
 
         friendship.setStatus(FriendshipStatus.ACCEPTED);
-        FriendResponse result = mapToResponse(friendshipRepository.save(friendship), friendship.getAddressee().getId());
-        User addressee = friendship.getAddressee();
+        Friendship saved = friendshipRepository.save(friendship);
+        User addressee = saved.getAddressee();
+        User requester = saved.getRequester();
         activityLogService.log(addressee.getId(), addressee.getUsername(), ActivityLogType.FRIEND_ACCEPTED,
-                "{\"requesterId\":\"" + friendship.getRequester().getId() + "\"}");
-        return result;
+                "{\"requesterId\":\"" + requester.getId() + "\"}");
+        notificationEventPublisher.publish(
+                addressee.getId(),
+                requester.getId(),
+                NotificationType.FRIEND_REQUEST,
+                addressee.getFullName() + " đã chấp nhận lời mời kết bạn của bạn",
+                saved.getId()
+        );
+        return mapToResponse(saved, addressee.getId());
     }
 
     @Override

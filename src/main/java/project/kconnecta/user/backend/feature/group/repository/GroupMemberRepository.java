@@ -22,6 +22,9 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, UUID> 
     @Query("SELECT COUNT(gm) FROM GroupMember gm WHERE gm.group.id = :groupId")
     int countByGroupId(@Param("groupId") UUID groupId);
 
+    @Query("SELECT COUNT(gm) FROM GroupMember gm WHERE gm.group.id = :groupId AND gm.role = :role")
+    long countByGroupIdAndRole(@Param("groupId") UUID groupId, @Param("role") GroupMemberRole role);
+
     @Query("SELECT gm FROM GroupMember gm JOIN FETCH gm.user WHERE gm.group.id = :groupId")
     List<GroupMember> findAllByGroupId(@Param("groupId") UUID groupId);
 

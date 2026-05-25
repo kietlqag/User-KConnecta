@@ -81,6 +81,15 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "        ) " +
         "      ) " +
         "    ) " +
+        "    OR (" +
+        "      :currentUserId IS NOT NULL " +
+        "      AND p.privacy = 'SPECIFIC_FRIENDS' " +
+        "      AND EXISTS (" +
+        "        SELECT 1 FROM post_audience_allowances paa " +
+        "        WHERE paa.post_id = p.id " +
+        "          AND paa.allowed_user_id = CAST(:currentUserId AS uuid) " +
+        "      ) " +
+        "    ) " +
         "  ) " +
         "ORDER BY (" +
         // w1=0.12 · affinity (reduced so one author does not dominate the whole page)
@@ -118,6 +127,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "      AND EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'ACCEPTED' AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id))) " +
         "      AND NOT (p.privacy = 'FRIENDS_EXCEPT' AND EXISTS (SELECT 1 FROM post_audience_exclusions pae WHERE pae.post_id = p.id AND pae.excluded_user_id = CAST(:currentUserId AS uuid))) " +
         "    ) " +
+        "    OR (:currentUserId IS NOT NULL AND p.privacy = 'SPECIFIC_FRIENDS' AND EXISTS (SELECT 1 FROM post_audience_allowances paa WHERE paa.post_id = p.id AND paa.allowed_user_id = CAST(:currentUserId AS uuid))) " +
         "  )",
         nativeQuery = true
     )
@@ -150,6 +160,41 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     )
     org.springframework.data.domain.Page<Post> findByAuthorIdPageable(
         @org.springframework.data.repository.query.Param("authorId") UUID authorId,
+        org.springframework.data.domain.Pageable pageable
+    );
+
+    @org.springframework.data.jpa.repository.Query(
+        value =
+        "SELECT p.* FROM posts p " +
+        "WHERE p.author_id = CAST(:authorId AS uuid) " +
+        "  AND p.status = 'PUBLISHED' " +
+        "  AND (" +
+        "    p.privacy = 'PUBLIC' " +
+        "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
+        "    OR (" +
+        "      :currentUserId IS NOT NULL " +
+        "      AND p.privacy IN ('FRIENDS', 'FRIENDS_EXCEPT') " +
+        "      AND EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'ACCEPTED' AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id))) " +
+        "      AND NOT (p.privacy = 'FRIENDS_EXCEPT' AND EXISTS (SELECT 1 FROM post_audience_exclusions pae WHERE pae.post_id = p.id AND pae.excluded_user_id = CAST(:currentUserId AS uuid))) " +
+        "    ) " +
+        "    OR (:currentUserId IS NOT NULL AND p.privacy = 'SPECIFIC_FRIENDS' AND EXISTS (SELECT 1 FROM post_audience_allowances paa WHERE paa.post_id = p.id AND paa.allowed_user_id = CAST(:currentUserId AS uuid))) " +
+        "  ) " +
+        "ORDER BY p.created_at DESC",
+        countQuery =
+        "SELECT COUNT(*) FROM posts p " +
+        "WHERE p.author_id = CAST(:authorId AS uuid) " +
+        "  AND p.status = 'PUBLISHED' " +
+        "  AND (" +
+        "    p.privacy = 'PUBLIC' " +
+        "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
+        "    OR (:currentUserId IS NOT NULL AND p.privacy IN ('FRIENDS', 'FRIENDS_EXCEPT') AND EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'ACCEPTED' AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id))) AND NOT (p.privacy = 'FRIENDS_EXCEPT' AND EXISTS (SELECT 1 FROM post_audience_exclusions pae WHERE pae.post_id = p.id AND pae.excluded_user_id = CAST(:currentUserId AS uuid)))) " +
+        "    OR (:currentUserId IS NOT NULL AND p.privacy = 'SPECIFIC_FRIENDS' AND EXISTS (SELECT 1 FROM post_audience_allowances paa WHERE paa.post_id = p.id AND paa.allowed_user_id = CAST(:currentUserId AS uuid))) " +
+        "  )",
+        nativeQuery = true
+    )
+    org.springframework.data.domain.Page<Post> findByAuthorIdWithPrivacy(
+        @org.springframework.data.repository.query.Param("authorId") UUID authorId,
+        @org.springframework.data.repository.query.Param("currentUserId") UUID currentUserId,
         org.springframework.data.domain.Pageable pageable
     );
 

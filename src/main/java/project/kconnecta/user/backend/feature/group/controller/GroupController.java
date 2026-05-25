@@ -111,4 +111,12 @@ public class GroupController {
         groupService.removeMember(id, userId, requesterId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{id}/leave")
+    public ResponseEntity<Void> leaveGroup(
+            @PathVariable UUID id,
+            @RequestParam UUID userId) {
+        groupService.leaveGroup(id, userId);
+        return ResponseEntity.noContent().build();
+    }
 }

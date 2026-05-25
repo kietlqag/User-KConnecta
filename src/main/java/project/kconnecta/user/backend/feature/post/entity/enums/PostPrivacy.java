@@ -4,5 +4,6 @@ public enum PostPrivacy {
     PUBLIC,
     FRIENDS,
     FRIENDS_EXCEPT,
+    SPECIFIC_FRIENDS,
     PRIVATE
 }
