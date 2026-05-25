@@ -1,4 +1,4 @@
-spring:
+﻿spring:
   jpa:
     show-sql: true
 
@@ -9,7 +9,7 @@ spring:
       timeout: 2000
 
   # Disable Redis caching locally so the app starts even if Redis is not running.
-  # @Cacheable / @CachePut / @CacheEvict become no-ops — logic still executes correctly.
+  # @Cacheable / @CachePut / @CacheEvict become no-ops - logic still executes correctly.
   cache:
     type: none
 

@@ -23,7 +23,7 @@ public class LiveDestinationService {
 
     public LiveDestinationsResponse getDestinations(UUID userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Nguoi dung khong ton tai"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         List<LiveDestinationItem> pages = pageRepository.findAllByCreatedByIdOrderByUpdatedAtDesc(userId)
                 .stream()

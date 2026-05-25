@@ -1,4 +1,4 @@
-spring:
+﻿spring:
   application:
     name: kconnecta.user.backend
 
@@ -37,7 +37,7 @@ spring:
             enable: true
 
   cache:
-    type: none   # safe default — overridden to "redis" only in application-docker.yml
+    type: none   # safe default - overridden to "redis" only in application-docker.yml
 
   servlet:
     multipart:
