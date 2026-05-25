@@ -4,6 +4,7 @@ import { NotificationItem } from '../NotificationItem';
 import { NotificationFilter } from '../../types/notifications.types';
 import { notificationService } from '../../../../services/notificationService';
 import { authService } from '../../../../services/authService';
+import { friendService, FRIENDSHIP_CHANGED_EVENT } from '../../../../services/friendService';
 import { useNotifications } from '../../useNotifications';
 
 interface NotificationsPanelProps {
@@ -33,6 +34,25 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
       window.dispatchEvent(new Event('notification:refresh'));
     } catch (error) {
       console.error('Failed to reject invite:', error);
+    }
+  };
+
+  const handleAcceptFriendRequest = async (notificationId: string, friendshipId: string) => {
+    try {
+      await friendService.acceptFriendRequest(friendshipId);
+      updateNotification(notificationId, { isActioned: true, isUnread: false });
+      window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
+    } catch (error) {
+      console.error('Failed to accept friend request:', error);
+    }
+  };
+
+  const handleRejectFriendRequest = async (notificationId: string, friendshipId: string) => {
+    try {
+      await friendService.deleteFriendship(friendshipId);
+      updateNotification(notificationId, { isActioned: true, isUnread: false });
+    } catch (error) {
+      console.error('Failed to reject friend request:', error);
     }
   };
 
@@ -100,6 +120,8 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
                 notification={notification}
                 onAcceptInvite={handleAcceptInvite}
                 onRejectInvite={handleRejectInvite}
+                onAcceptFriendRequest={handleAcceptFriendRequest}
+                onRejectFriendRequest={handleRejectFriendRequest}
                 onRead={markAsRead}
               />
             ))

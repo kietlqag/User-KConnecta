@@ -128,3 +128,16 @@ export function useRemoveMember() {
     },
   });
 }
+
+export function useLeaveGroup() {
+  const queryClient = useQueryClient();
+  const currentUser = authService.getCurrentUser();
+  return useMutation({
+    mutationFn: (groupId: string) =>
+      groupService.leaveGroup(groupId, currentUser!.id),
+    onSuccess: (_, groupId) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', 'joined'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
+    },
+  });
+}

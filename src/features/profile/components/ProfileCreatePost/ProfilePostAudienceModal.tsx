@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Globe, Users, UserMinus, Search, Check } from 'lucide-react';
+import { ArrowLeft, Globe, Users, UserMinus, UserCheck, Search, Check } from 'lucide-react';
 import { friendService, type FriendApiResponse } from '@/services/friendService';
 import { authService } from '@/services/authService';
 
@@ -8,7 +8,8 @@ interface ProfilePostAudienceModalProps {
   onClose: () => void;
   selectedAudience: string;
   excludedUserIds: string[];
-  onSelect: (audience: string, excludedUserIds: string[]) => void;
+  allowedUserIds: string[];
+  onSelect: (audience: string, excludedUserIds: string[], allowedUserIds: string[]) => void;
 }
 
 const audienceOptions = [
@@ -25,6 +26,12 @@ const audienceOptions = [
     description: 'Chỉ bạn bè của bạn mới có thể xem',
   },
   {
+    id: 'specific-friends',
+    icon: UserCheck,
+    title: 'Bạn bè cụ thể',
+    description: 'Chỉ những bạn bè được chọn mới có thể xem',
+  },
+  {
     id: 'friends-except',
     icon: UserMinus,
     title: 'Bạn bè ngoại trừ...',
@@ -37,11 +44,13 @@ export function ProfilePostAudienceModal({
   onClose,
   selectedAudience,
   excludedUserIds,
+  allowedUserIds,
   onSelect,
 }: ProfilePostAudienceModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [tempSelected, setTempSelected] = useState(selectedAudience);
   const [tempExcluded, setTempExcluded] = useState<string[]>(excludedUserIds);
+  const [tempAllowed, setTempAllowed] = useState<string[]>(allowedUserIds);
   const [friends, setFriends] = useState<FriendApiResponse[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -50,9 +59,10 @@ export function ProfilePostAudienceModal({
       setStep(1);
       setTempSelected(selectedAudience);
       setTempExcluded(excludedUserIds);
+      setTempAllowed(allowedUserIds);
       setSearchQuery('');
     }
-  }, [isOpen, selectedAudience, excludedUserIds]);
+  }, [isOpen, selectedAudience, excludedUserIds, allowedUserIds]);
 
   useEffect(() => {
     if (step === 2 && friends.length === 0) {
@@ -66,16 +76,20 @@ export function ProfilePostAudienceModal({
   if (!isOpen) return null;
 
   const handleStep1Done = () => {
-    if (tempSelected === 'friends-except') {
+    if (tempSelected === 'friends-except' || tempSelected === 'specific-friends') {
       setStep(2);
     } else {
-      onSelect(tempSelected, []);
+      onSelect(tempSelected, [], []);
       onClose();
     }
   };
 
   const handleStep2Done = () => {
-    onSelect('friends-except', tempExcluded);
+    if (tempSelected === 'specific-friends') {
+      onSelect('specific-friends', [], tempAllowed);
+    } else {
+      onSelect('friends-except', tempExcluded, []);
+    }
     onClose();
   };
 
@@ -85,11 +99,29 @@ export function ProfilePostAudienceModal({
     );
   };
 
+  const toggleAllow = (userId: string) => {
+    setTempAllowed(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId],
+    );
+  };
+
   const filteredFriends = friends.filter(f =>
     f.fullName.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const isSpecificFriends = tempSelected === 'specific-friends';
+
   if (step === 2) {
+    const selectedIds = isSpecificFriends ? tempAllowed : tempExcluded;
+    const toggle = isSpecificFriends ? toggleAllow : toggleExclude;
+    const title = isSpecificFriends ? 'Bạn bè cụ thể' : 'Bạn bè ngoại trừ';
+    const description = isSpecificFriends
+      ? 'Chọn bạn bè bạn muốn chia sẻ bài viết này'
+      : 'Chọn bạn bè bạn muốn ẩn bài viết này';
+    const doneLabel = isSpecificFriends
+      ? `Xong${tempAllowed.length > 0 ? ` (${tempAllowed.length})` : ''}`
+      : `Xong${tempExcluded.length > 0 ? ` (${tempExcluded.length})` : ''}`;
+
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
         <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
@@ -101,13 +133,13 @@ export function ProfilePostAudienceModal({
               <ArrowLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
             </button>
             <h2 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold text-gray-900 dark:text-white">
-              Bạn bè ngoại trừ
+              {title}
             </h2>
           </div>
 
           <div className="shrink-0 border-b border-gray-200 p-4 dark:border-gray-700">
             <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
-              Chọn bạn bè bạn muốn ẩn bài viết này
+              {description}
             </p>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -129,11 +161,11 @@ export function ProfilePostAudienceModal({
             ) : (
               <div className="space-y-1">
                 {filteredFriends.map(friend => {
-                  const isExcluded = tempExcluded.includes(friend.userId);
+                  const isSelected = selectedIds.includes(friend.userId);
                   return (
                     <button
                       key={friend.userId}
-                      onClick={() => toggleExclude(friend.userId)}
+                      onClick={() => toggle(friend.userId)}
                       className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <img
@@ -146,12 +178,12 @@ export function ProfilePostAudienceModal({
                       </span>
                       <div
                         className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
-                          isExcluded
+                          isSelected
                             ? 'border-emerald-600 bg-emerald-600 dark:border-emerald-400 dark:bg-emerald-400'
                             : 'border-gray-400 dark:border-gray-500'
                         }`}
                       >
-                        {isExcluded && <Check className="h-3 w-3 text-white" />}
+                        {isSelected && <Check className="h-3 w-3 text-white" />}
                       </div>
                     </button>
                   );
@@ -171,7 +203,7 @@ export function ProfilePostAudienceModal({
               onClick={handleStep2Done}
               className="rounded-lg bg-emerald-500 px-6 py-2 font-semibold text-white transition-colors hover:bg-emerald-600"
             >
-              Xong{tempExcluded.length > 0 ? ` (${tempExcluded.length})` : ''}
+              {doneLabel}
             </button>
           </div>
         </div>

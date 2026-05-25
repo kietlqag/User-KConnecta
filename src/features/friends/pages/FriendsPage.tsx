@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FriendsLeftSidebar, FriendCard, FriendRequestCard } from '../components';
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
 import { Friend, FriendRequest } from '../types/friends.types';
@@ -15,65 +15,72 @@ export const FriendsPage = () => {
   const [suggestions, setSuggestions] = useState<Friend[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
+  // userId → friendshipId cho các lời mời đã gửi nhưng chưa xử lý
+  const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
 
   const currentUser = authService.getCurrentUser();
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!currentUser) return;
+    setLoading(true);
+    try {
+      const [requestsData, suggestionsData, friendsData] = await Promise.all([
+        friendService.getFriendRequests(currentUser.id),
+        friendService.getSuggestions(currentUser.id),
+        friendService.getFriends(currentUser.id),
+      ]).catch((err) => {
+        toast.error(err.message || 'Không thể tải dữ liệu bạn bè');
+        throw err;
+      });
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [requestsData, suggestionsData, friendsData] = await Promise.all([
-          friendService.getFriendRequests(currentUser.id),
-          friendService.getSuggestions(currentUser.id),
-          friendService.getFriends(currentUser.id),
-        ]).catch((err) => {
-          toast.error(err.message || 'Không thể tải dữ liệu bạn bè');
-          throw err;
-        });
+      setFriendRequests(
+        requestsData.map((r) => ({
+          id: r.friendshipId!,
+          userId: r.userId,
+          name: r.fullName,
+          avatar: r.avatarUrl ?? DEFAULT_AVATAR,
+          mutualFriends: r.mutualFriends,
+          timestamp: r.createdAt
+            ? new Date(r.createdAt).toLocaleDateString('vi-VN')
+            : '',
+        }))
+      );
 
-        setFriendRequests(
-          requestsData.map((r) => ({
-            id: r.friendshipId!,
-            userId: r.userId,
-            name: r.fullName,
-            avatar: r.avatarUrl ?? DEFAULT_AVATAR,
-            mutualFriends: r.mutualFriends,
-            timestamp: r.createdAt
-              ? new Date(r.createdAt).toLocaleDateString('vi-VN')
-              : '',
-          }))
-        );
+      setSuggestions(
+        suggestionsData.map((s) => ({
+          id: s.userId,
+          userId: s.userId,
+          name: s.fullName,
+          avatar: s.avatarUrl ?? DEFAULT_AVATAR,
+          mutualFriends: s.mutualFriends,
+          isFriend: false,
+        }))
+      );
 
-        setSuggestions(
-          suggestionsData.map((s) => ({
-            id: s.userId,
-            userId: s.userId,
-            name: s.fullName,
-            avatar: s.avatarUrl ?? DEFAULT_AVATAR,
-            mutualFriends: s.mutualFriends,
-            isFriend: false,
-          }))
-        );
-
-        setFriends(
-          friendsData.map((f) => ({
-            id: f.friendshipId!,
-            userId: f.userId,
-            name: f.fullName,
-            avatar: f.avatarUrl ?? DEFAULT_AVATAR,
-            mutualFriends: f.mutualFriends,
-            isFriend: true,
-          }))
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+      setFriends(
+        friendsData.map((f) => ({
+          id: f.friendshipId!,
+          userId: f.userId,
+          name: f.fullName,
+          avatar: f.avatarUrl ?? DEFAULT_AVATAR,
+          mutualFriends: f.mutualFriends,
+          isFriend: true,
+        }))
+      );
+      setPendingRequests({});
+    } finally {
+      setLoading(false);
+    }
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    window.addEventListener(FRIENDSHIP_CHANGED_EVENT, fetchData);
+    return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, fetchData);
+  }, [fetchData]);
 
   const handleAcceptRequest = async (id: string) => {
     const target = friendRequests.find((r) => r.id === id);
@@ -87,12 +94,26 @@ export const FriendsPage = () => {
     setFriendRequests((prev) => prev.filter((req) => req.id !== id));
   };
 
-  const handleAddFriend = async (id: string) => {
+  const handleAddFriend = async (userId: string) => {
     if (!currentUser) return;
-    const target = suggestions.find((s) => s.id === id);
-    await friendService.sendFriendRequest(currentUser.id, id);
-    setSuggestions((prev) => prev.filter((sug) => sug.id !== id));
+    const target = suggestions.find((s) => s.userId === userId);
+    const res = await friendService.sendFriendRequest(currentUser.id, userId);
+    if (res.friendshipId) {
+      setPendingRequests((prev) => ({ ...prev, [userId]: res.friendshipId! }));
+    }
     toast.success(`Đã gửi lời mời kết bạn đến ${target?.name ?? 'người dùng'}`);
+  };
+
+  const handleCancelFriendRequest = async (userId: string) => {
+    const friendshipId = pendingRequests[userId];
+    if (!friendshipId) return;
+    await friendService.deleteFriendship(friendshipId);
+    setPendingRequests((prev) => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+    toast.success('Đã hủy lời mời kết bạn');
   };
 
   const handleRemoveSuggestion = (id: string) => {
@@ -149,6 +170,8 @@ export const FriendsPage = () => {
                   key={friend.id}
                   friend={friend}
                   onAddFriend={handleAddFriend}
+                  onCancelFriendRequest={handleCancelFriendRequest}
+                  pendingFriendshipId={pendingRequests[friend.userId]}
                   onRemoveSuggestion={handleRemoveSuggestion}
                   showRemove
                 />
@@ -230,6 +253,8 @@ export const FriendsPage = () => {
                   key={friend.id}
                   friend={friend}
                   onAddFriend={handleAddFriend}
+                  onCancelFriendRequest={handleCancelFriendRequest}
+                  pendingFriendshipId={pendingRequests[friend.userId]}
                   onRemoveSuggestion={handleRemoveSuggestion}
                   showRemove
                 />

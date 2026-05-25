@@ -18,6 +18,7 @@ export function ProfilePostGroupModal({
 }: ProfilePostGroupModalProps) {
   const [groups, setGroups] = useState<GroupApiResponse[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -26,7 +27,11 @@ export function ProfilePostGroupModal({
     }
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
-      groupService.getJoinedGroups(currentUser.id).then(setGroups).catch(() => {});
+      setLoading(true);
+      groupService.getJoinedGroups(currentUser.id)
+        .then(setGroups)
+        .catch(() => {})
+        .finally(() => setLoading(false));
     }
   }, [isOpen]);
 
@@ -94,11 +99,15 @@ export function ProfilePostGroupModal({
             )}
           </button>
 
-          {groups.length === 0 && (
+          {loading && (
             <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</p>
           )}
 
-          {groups.length > 0 && filtered.length === 0 && (
+          {!loading && groups.length === 0 && (
+            <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Bạn chưa tham gia nhóm nào</p>
+          )}
+
+          {!loading && groups.length > 0 && filtered.length === 0 && (
             <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
               Không tìm thấy nhóm
             </p>

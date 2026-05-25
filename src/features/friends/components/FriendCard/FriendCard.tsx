@@ -1,4 +1,5 @@
-import { MessageCircle, UserMinus, UserPlus, X } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, MessageCircle, UserMinus, UserPlus, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Friend } from '../../types/friends.types';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
@@ -6,20 +7,44 @@ import { ImageWithFallback } from '../../../../components/figma/ImageWithFallbac
 interface FriendCardProps {
   friend: Friend;
   onMessage?: (id: string) => void;
-  onUnfriend?: (id: string) => void;
-  onAddFriend?: (id: string) => void;
+  onUnfriend?: (id: string) => Promise<void>;
+  onAddFriend?: (userId: string) => Promise<void>;
+  onCancelFriendRequest?: (userId: string) => Promise<void>;
+  pendingFriendshipId?: string;
   onRemoveSuggestion?: (id: string) => void;
   showRemove?: boolean;
 }
 
-export const FriendCard = ({ 
-  friend, 
-  onMessage, 
-  onUnfriend, 
+export const FriendCard = ({
+  friend,
+  onMessage,
+  onUnfriend,
   onAddFriend,
+  onCancelFriendRequest,
+  pendingFriendshipId,
   onRemoveSuggestion,
-  showRemove = false 
+  showRemove = false
 }: FriendCardProps) => {
+  const [loading, setLoading] = useState<'add' | 'cancel' | 'unfriend' | null>(null);
+
+  const handleAdd = async () => {
+    if (!onAddFriend) return;
+    setLoading('add');
+    try { await onAddFriend(friend.userId); } finally { setLoading(null); }
+  };
+
+  const handleCancel = async () => {
+    if (!onCancelFriendRequest) return;
+    setLoading('cancel');
+    try { await onCancelFriendRequest(friend.userId); } finally { setLoading(null); }
+  };
+
+  const handleUnfriend = async () => {
+    if (!onUnfriend) return;
+    setLoading('unfriend');
+    try { await onUnfriend(friend.id); } finally { setLoading(null); }
+  };
+
   return (
     <div className="flex bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all p-3 gap-4">
       <Link to={`/profile/${friend.userId}`} className="relative flex-shrink-0">
@@ -67,20 +92,31 @@ export const FriendCard = ({
               )}
               {onUnfriend && (
                 <button
-                  onClick={() => onUnfriend(friend.id)}
-                  className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-1.5 px-3 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm"
+                  onClick={handleUnfriend}
+                  disabled={loading !== null}
+                  className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-60 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 font-semibold py-1.5 px-3 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm"
                 >
-                  <UserMinus className="w-4 h-4" />
+                  {loading === 'unfriend' ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserMinus className="w-4 h-4" />}
                 </button>
               )}
             </>
+          ) : pendingFriendshipId ? (
+            <button
+              onClick={handleCancel}
+              disabled={loading !== null}
+              className="w-full bg-gray-200 hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer text-sm"
+            >
+              {loading === 'cancel' ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+              Hủy lời mời
+            </button>
           ) : (
             onAddFriend && (
               <button
-                onClick={() => onAddFriend(friend.id)}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm text-sm"
+                onClick={handleAdd}
+                disabled={loading !== null}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm text-sm"
               >
-                <UserPlus className="w-4 h-4" />
+                {loading === 'add' ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                 Thêm bạn bè
               </button>
             )

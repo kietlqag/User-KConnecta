@@ -111,6 +111,7 @@ export interface IncomingPinnedMessage {
 export interface IncomingNotificationEvent {
   event?: string;
   unreadCount?: number;
+  notificationType?: string;
 }
 
 export type CallSignalType =

@@ -7,6 +7,7 @@ interface ProfilePostSettingsModalProps {
   postContent: string;
   privacy: string;
   excludedCount?: number;
+  allowedCount?: number;
   isPosting?: boolean;
   onOpenAudienceSelection?: () => void;
   scheduleSubtitle: string;
@@ -23,6 +24,7 @@ export function ProfilePostSettingsModal({
   postContent,
   privacy,
   excludedCount = 0,
+  allowedCount = 0,
   isPosting = false,
   onOpenAudienceSelection,
   scheduleSubtitle,
@@ -38,9 +40,11 @@ export function ProfilePostSettingsModal({
       case 'public':
         return 'Công khai';
       case 'friends':
-        return 'Chọn bạn bè để xem';
+        return 'Bạn bè';
       case 'friends-except':
         return excludedCount > 0 ? `Bạn bè ngoại trừ (${excludedCount} người)` : 'Bạn bè ngoại trừ...';
+      case 'specific-friends':
+        return allowedCount > 0 ? `Bạn bè cụ thể (${allowedCount} người)` : 'Bạn bè cụ thể...';
       default:
         return 'Chỉ mình tôi';
     }

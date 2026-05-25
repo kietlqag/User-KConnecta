@@ -15,12 +15,12 @@ export interface CreatePostPayload {
   content: string;
   imageUrl?: string;
   media?: CreatePostMediaRequest[];
-  privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
+  privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'SPECIFIC_FRIENDS' | 'PRIVATE';
   excludedUserIds?: string[];
+  allowedUserIds?: string[];
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT';
   scheduledAt?: string;
   locationText?: string | null;
-  excludedUserIds?: string[];
   taggedUserIds?: string[];
   promoted?: boolean;
 }

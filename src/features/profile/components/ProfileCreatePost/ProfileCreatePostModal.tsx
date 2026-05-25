@@ -10,6 +10,7 @@ import {
   UsersRound,
   Smile,
   UserMinus,
+  UserCheck,
   Loader2,
   AlertCircle,
 } from 'lucide-react';
@@ -53,6 +54,7 @@ export function ProfileCreatePostModal({
   const [postContent, setPostContent] = useState('');
   const [privacy, setPrivacy] = useState('public');
   const [excludedUserIds, setExcludedUserIds] = useState<string[]>([]);
+  const [allowedUserIds, setAllowedUserIds] = useState<string[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -222,6 +224,8 @@ export function ProfileCreatePostModal({
         return 'FRIENDS' as const;
       case 'friends-except':
         return 'FRIENDS_EXCEPT' as const;
+      case 'specific-friends':
+        return 'SPECIFIC_FRIENDS' as const;
       case 'private':
         return 'PRIVATE' as const;
       default:
@@ -299,6 +303,7 @@ export function ProfileCreatePostModal({
         media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
         privacy: mapPrivacyToApi(),
         ...(excludedUserIds.length > 0 && { excludedUserIds }),
+        ...(allowedUserIds.length > 0 && { allowedUserIds }),
         status: isScheduled ? 'SCHEDULED' : 'PUBLISHED',
         ...(isScheduled && scheduledAtApi ? { scheduledAt: scheduledAtApi } : {}),
       });
@@ -314,6 +319,7 @@ export function ProfileCreatePostModal({
       setScheduleMode('now');
       setScheduledAtLocal(defaultScheduledDatetimeLocal());
       setExcludedUserIds([]);
+      setAllowedUserIds([]);
       setSelectedGroupId(null);
       setSelectedGroupName(null);
     } catch (error) {
@@ -335,6 +341,13 @@ export function ProfileCreatePostModal({
           label: excludedUserIds.length > 0
             ? `Bạn bè ngoại trừ (${excludedUserIds.length})`
             : 'Bạn bè ngoại trừ...',
+        };
+      case 'specific-friends':
+        return {
+          icon: UserCheck,
+          label: allowedUserIds.length > 0
+            ? `Bạn bè cụ thể (${allowedUserIds.length})`
+            : 'Bạn bè cụ thể...',
         };
       default:
         return { icon: Globe, label: 'Công khai' };
@@ -633,9 +646,11 @@ export function ProfileCreatePostModal({
         }}
         selectedAudience={privacy}
         excludedUserIds={excludedUserIds}
-        onSelect={(audience, excluded) => {
+        allowedUserIds={allowedUserIds}
+        onSelect={(audience, excluded, allowed) => {
           setPrivacy(audience);
           setExcludedUserIds(excluded);
+          setAllowedUserIds(allowed);
           if (audience !== 'public') {
             setSelectedGroupId(null);
             setSelectedGroupName(null);
@@ -697,6 +712,7 @@ export function ProfileCreatePostModal({
         postContent={postContent}
         privacy={privacy}
         excludedCount={excludedUserIds.length}
+        allowedCount={allowedUserIds.length}
         isPosting={isPosting}
         scheduleSubtitle={scheduleSubtitle}
         postActionLabel={scheduleMode === 'scheduled' ? 'Lên lịch' : 'Đăng'}

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Camera, Plus, Edit, ChevronDown, MoreHorizontal,
+  Camera, Plus, Edit,
   X, Loader2, UserPlus, UserCheck, UserX, MessageCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -34,6 +34,7 @@ export function ProfileHeader({
   coverPhoto,
   avatar,
   fullName = '',
+  username,
   friendsCount = 0,
   isOwnProfile = false,
   loading = false,
@@ -289,6 +290,11 @@ export function ProfileHeader({
                   <h1 className="text-3xl font-bold text-gray-900 dark:text-white break-words">
                     {fullName}
                   </h1>
+                  {username && (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
+                      @{username}
+                    </p>
+                  )}
                   <p className="text-gray-600 dark:text-gray-400 font-semibold mt-1">
                     {friendsCount} người bạn
                   </p>
@@ -319,9 +325,6 @@ export function ProfileHeader({
                   >
                     <Edit className="w-4 h-4" />
                     Chỉnh sửa trang cá nhân
-                  </button>
-                  <button className="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors">
-                    <ChevronDown className="w-5 h-5" />
                   </button>
                 </>
               ) : (
@@ -374,9 +377,6 @@ export function ProfileHeader({
                     </button>
                   )}
 
-                  <button className="px-3 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors">
-                    <MoreHorizontal className="w-5 h-5" />
-                  </button>
                 </>
               )}
             </div>

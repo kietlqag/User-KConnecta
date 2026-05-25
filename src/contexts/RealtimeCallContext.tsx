@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
+import { FRIENDSHIP_CHANGED_EVENT } from '@/services/friendService';
 import { toast } from 'sonner';
 import { chatService } from '@/services/chatService';
 import { CallMinimizedBar, CallOverlayModal } from '@/features/messenger/components';
@@ -110,6 +111,9 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
 
   const handleIncomingNotificationEvent = useCallback((event: IncomingNotificationEvent) => {
     notificationEventListenersRef.current.forEach((listener) => listener(event));
+    if (event.notificationType === 'FRIEND_REQUEST') {
+      window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
+    }
   }, []);
 
   const closeDesktopNotification = useCallback(() => {

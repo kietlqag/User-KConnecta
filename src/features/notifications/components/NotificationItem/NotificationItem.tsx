@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Notification } from '../../types/notifications.types';
 
@@ -5,6 +7,8 @@ interface NotificationItemProps {
   notification: Notification;
   onAcceptInvite?: (notificationId: string, relatedId: string) => void;
   onRejectInvite?: (notificationId: string, relatedId: string) => void;
+  onAcceptFriendRequest?: (notificationId: string, friendshipId: string) => void;
+  onRejectFriendRequest?: (notificationId: string, friendshipId: string) => void;
   onRead?: (notificationId: string) => void;
 }
 
@@ -12,9 +16,13 @@ export const NotificationItem = ({
   notification,
   onAcceptInvite,
   onRejectInvite,
+  onAcceptFriendRequest,
+  onRejectFriendRequest,
   onRead
 }: NotificationItemProps) => {
   const navigate = useNavigate();
+  const [friendLoading, setFriendLoading] = useState<'accept' | 'reject' | null>(null);
+  const [inviteLoading, setInviteLoading] = useState<'accept' | 'reject' | null>(null);
 
   const handleViewProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -44,20 +52,6 @@ export const NotificationItem = ({
       }).format(date);
     } catch {
       return dateString;
-    }
-  };
-
-  const handleAccept = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (notification.relatedId && onAcceptInvite) {
-      onAcceptInvite(notification.id, notification.relatedId);
-    }
-  };
-
-  const handleReject = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (notification.relatedId && onRejectInvite) {
-      onRejectInvite(notification.id, notification.relatedId);
     }
   };
 
@@ -103,15 +97,77 @@ export const NotificationItem = ({
         {notification.type === 'group_invite' && !notification.isActioned && (
           <div className="flex items-center gap-2 mt-2">
             <button
-              onClick={handleAccept}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              disabled={inviteLoading !== null}
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (!notification.relatedId || !onAcceptInvite) return;
+                setInviteLoading('accept');
+                try {
+                  await onAcceptInvite(notification.id, notification.relatedId);
+                } finally {
+                  setInviteLoading(null);
+                }
+              }}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
+              {inviteLoading === 'accept' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Chấp nhận
             </button>
             <button
-              onClick={handleReject}
-              className="px-4 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              disabled={inviteLoading !== null}
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (!notification.relatedId || !onRejectInvite) return;
+                setInviteLoading('reject');
+                try {
+                  await onRejectInvite(notification.id, notification.relatedId);
+                } finally {
+                  setInviteLoading(null);
+                }
+              }}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-red-100 hover:bg-red-200 disabled:opacity-60 disabled:cursor-not-allowed text-red-600 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
+              {inviteLoading === 'reject' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              Từ chối
+            </button>
+          </div>
+        )}
+
+        {/* Friend Request Actions */}
+        {notification.type === 'friend_request' && !notification.isActioned && (
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              disabled={friendLoading !== null}
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (!notification.relatedId || !onAcceptFriendRequest) return;
+                setFriendLoading('accept');
+                try {
+                  await onAcceptFriendRequest(notification.id, notification.relatedId);
+                } finally {
+                  setFriendLoading(null);
+                }
+              }}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+            >
+              {friendLoading === 'accept' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              Chấp nhận
+            </button>
+            <button
+              disabled={friendLoading !== null}
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (!notification.relatedId || !onRejectFriendRequest) return;
+                setFriendLoading('reject');
+                try {
+                  await onRejectFriendRequest(notification.id, notification.relatedId);
+                } finally {
+                  setFriendLoading(null);
+                }
+              }}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-200 hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed text-gray-700 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+            >
+              {friendLoading === 'reject' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Từ chối
             </button>
           </div>

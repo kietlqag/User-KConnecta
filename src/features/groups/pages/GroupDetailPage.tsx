@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../../home/components/Header';
 import { GroupsLeftSidebar, GroupFeed, InviteFriendsModal } from '../components';
-import { PenTool, Edit3, MoreHorizontal, Lock, Users, Smile, Image as ImageIcon, Briefcase, EyeOff, X, Globe2, Search, Shield, UserMinus, AlertTriangle } from 'lucide-react';
-import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember } from '../hooks/useGroups';
+import { PenTool, Edit3, MoreHorizontal, Lock, Users, Smile, Image as ImageIcon, Briefcase, EyeOff, X, Globe2, Search, Shield, UserMinus, AlertTriangle, Loader2 } from 'lucide-react';
+import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember, useLeaveGroup } from '../hooks/useGroups';
 import { groupService } from '@/services/groupService';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
@@ -62,6 +62,8 @@ export const GroupDetailPage = () => {
   const [removingMember, setRemovingMember] = useState<{ userId: string; fullName: string } | null>(null);
   const navigate = useNavigate();
   const removeMemberMutation = useRemoveMember();
+  const leaveGroupMutation = useLeaveGroup();
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const isAdmin = group?.role === 'ADMIN';
 
   const filteredMembers = useMemo(() => {
@@ -280,12 +282,20 @@ export const GroupDetailPage = () => {
                         {joinGroupMutation.isPending ? 'Đang xử lý...' : 'Tham gia nhóm'}
                       </button>
                     ) : (
-                      <button 
-                        onClick={() => setIsInviteModalOpen(true)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
-                      >
-                        <span className="text-xl leading-none -mt-0.5">+</span> Mời
-                      </button>
+                      <>
+                        <button
+                          onClick={() => setIsInviteModalOpen(true)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
+                        >
+                          <span className="text-xl leading-none -mt-0.5">+</span> Mời
+                        </button>
+                        <button
+                          onClick={() => setShowLeaveConfirm(true)}
+                          className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
+                        >
+                          Rời nhóm
+                        </button>
+                      </>
                     )}
                     <button className="bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors">
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>
@@ -481,6 +491,51 @@ export const GroupDetailPage = () => {
           onClose={() => setIsInviteModalOpen(false)}
           existingMemberIds={members.map(m => m.userId)}
         />
+      )}
+
+      {/* Leave Group Confirmation Modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Rời nhóm</h3>
+              <p className="text-gray-500 text-sm">
+                Bạn có chắc chắn muốn rời khỏi nhóm <strong className="text-gray-900">{group?.name}</strong> không?
+              </p>
+            </div>
+            <div className="flex gap-2 px-6 pb-6">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                disabled={leaveGroupMutation.isPending}
+                className="flex-1 py-2.5 rounded-lg bg-gray-100 text-sm font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60 transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  leaveGroupMutation.mutate(groupId!, {
+                    onSuccess: () => {
+                      toast.success('Bạn đã rời khỏi nhóm');
+                      navigate('/groups');
+                    },
+                    onError: (err: any) => {
+                      toast.error(err?.response?.data?.message || err?.message || 'Không thể rời nhóm');
+                      setShowLeaveConfirm(false);
+                    },
+                  });
+                }}
+                disabled={leaveGroupMutation.isPending}
+                className="flex-1 py-2.5 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors cursor-pointer"
+              >
+                {leaveGroupMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                {leaveGroupMutation.isPending ? 'Đang xử lý...' : 'Rời nhóm'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Remove Member Confirmation Modal */}
