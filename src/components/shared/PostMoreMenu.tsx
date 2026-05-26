@@ -10,6 +10,7 @@ import {
   Users,
   Lock,
   Check,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -20,6 +21,16 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
@@ -57,6 +68,8 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   className,
 }) => {
   const [updating, setUpdating] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const handleAction = (action: string) => {
@@ -88,7 +101,35 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
     }
   };
 
+  const handleOpenReportDialog = () => {
+    if (!currentUserId) {
+      toast.error('Vui lòng đăng nhập để báo cáo bài viết.');
+      return;
+    }
+    setReportDialogOpen(true);
+  };
+
+  const handleReportPost = async () => {
+    if (reporting || !currentUserId) return;
+
+    setReporting(true);
+    try {
+      await postService.reportPost(postId, currentUserId, 'reported-from-post-menu');
+      setReportDialogOpen(false);
+      toast.success('Đã gửi báo cáo bài viết tới quản trị viên.');
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Không thể báo cáo bài viết. Vui lòng thử lại.';
+      toast.error(message);
+    } finally {
+      setReporting(false);
+    }
+  };
+
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className={`p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer ${className}`}>
@@ -123,6 +164,26 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         </DropdownMenuItem>
 
         <div className="my-1 border-t border-gray-100" />
+
+        {!isOwner && (
+          <>
+            <DropdownMenuItem
+              className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+              disabled={reporting}
+              onClick={handleOpenReportDialog}
+            >
+              <div className="mt-1">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-[15px]">Báo cáo bài viết</span>
+                <span className="text-[13px] text-red-400">Gửi bài viết này cho quản trị viên xem xét.</span>
+              </div>
+            </DropdownMenuItem>
+
+            <div className="my-1 border-t border-gray-100" />
+          </>
+        )}
 
         <DropdownMenuItem
           className="flex items-start gap-3 p-3 cursor-pointer"
@@ -199,5 +260,32 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+
+    <AlertDialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+      <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Báo cáo bài viết</AlertDialogTitle>
+          <AlertDialogDescription>
+            Bạn có chắc muốn báo cáo bài viết?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="cursor-pointer" disabled={reporting}>
+            Không
+          </AlertDialogCancel>
+          <AlertDialogAction
+            className="cursor-pointer bg-red-600 text-white hover:bg-red-700"
+            disabled={reporting}
+            onClick={(event) => {
+              event.preventDefault();
+              void handleReportPost();
+            }}
+          >
+            {reporting ? 'Đang gửi...' : 'Có'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };

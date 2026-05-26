@@ -70,5 +70,5 @@ export const searchService = {
     api.get<SearchSuggestionDto[]>(`/search/suggest?q=${encodeURIComponent(q)}`),
 
   search: (q: string) =>
-    api.get<SearchApiResponse>(`/search?q=${encodeURIComponent(q)}`),
+    api.get<SearchApiResponse>(`/search?q=${encodeURIComponent(q)}&limit=20`),
 };

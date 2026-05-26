@@ -56,7 +56,7 @@ export function NewsFeed() {
 
   // Flatten all pages and move/prepend the highlighted post to the top
   const posts = useMemo(() => {
-    const flat = data?.pages.flatMap((p) => p.content.map(mapApiPost)) ?? [];
+    const flat = data?.pages.flatMap((p) => p.content.filter((item) => item.status === 'PUBLISHED').map(mapApiPost)) ?? [];
     if (!highlightedPostId) return flat;
 
     const withoutHighlight = flat.filter((p) => p.id !== highlightedPostId);

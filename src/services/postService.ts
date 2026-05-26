@@ -80,7 +80,7 @@ export interface PostResponse {
   content: string;
   imageUrl?: string | null;
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
-  status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT';
+  status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT' | 'HIDDEN' | 'DELETED';
   scheduledAt?: string | null;
   publishedAt?: string | null;
   locationText?: string | null;
@@ -269,4 +269,9 @@ export const postService = {
     const params = new URLSearchParams({ userId, privacy });
     return api.patch<PostResponse>(`/posts/${postId}/privacy?${params.toString()}`);
   },
+  reportPost: (postId: string, reporterId: string, reason?: string) =>
+    api.post<void>(`/posts/${postId}/reports`, {
+      reporterId,
+      reason: reason?.trim() || null,
+    }),
 };
