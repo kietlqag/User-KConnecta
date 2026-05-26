@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequ
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
@@ -185,6 +186,14 @@ public class PostController {
             @RequestParam UUID userId,
             @RequestParam PostPrivacy privacy) {
         return ResponseEntity.ok(postService.updatePrivacy(id, userId, privacy));
+    }
+
+    @PostMapping("/{id}/reports")
+    public ResponseEntity<Void> reportPost(
+            @PathVariable UUID id,
+            @RequestBody ReportPostRequest request) {
+        postService.reportPost(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @DeleteMapping("/{id}")

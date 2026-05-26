@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.CreatePostMediaRe
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostMediaResponse;
@@ -64,6 +65,7 @@ public class PostServiceImpl implements PostService {
     private final PostCommentLikeRepository postCommentLikeRepository;
     private final PostShareRepository postShareRepository;
     private final PostSavedRepository postSavedRepository;
+    private final PostReportRepository postReportRepository;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
     private final CloudinaryService cloudinaryService;
@@ -504,6 +506,29 @@ public class PostServiceImpl implements PostService {
         }
         post.setPrivacy(privacy);
         return mapToResponse(postRepository.save(post), userId);
+    }
+
+    @Override
+    public void reportPost(UUID postId, ReportPostRequest request) {
+        if (request == null || request.getReporterId() == null) {
+            throw new ValidationException("Reporter is required");
+        }
+
+        Post post = getPost(postId);
+        User reporter = getUser(request.getReporterId(), "Reporter not found");
+        if (post.getAuthor().getId().equals(reporter.getId())) {
+            throw new ValidationException("Bạn không thể báo cáo bài viết của chính mình");
+        }
+        if (postReportRepository.existsByPostIdAndReporterId(postId, reporter.getId())) {
+            throw new ValidationException("Bạn đã báo cáo bài viết này");
+        }
+
+        postReportRepository.save(PostReport.builder()
+                .post(post)
+                .reporter(reporter)
+                .reason(trimToNull(request.getReason()))
+                .createdAt(LocalDateTime.now())
+                .build());
     }
 
     @Override
