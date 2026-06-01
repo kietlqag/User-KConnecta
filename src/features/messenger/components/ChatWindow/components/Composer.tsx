@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, Pause, X } from 'lucide-react';
+import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, Pause, X, Clock } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Message } from '../../../types/message.types';
@@ -32,6 +32,7 @@ interface ComposerProps {
   handleImageSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  cooldownSeconds?: number;
 }
 
 export const Composer: React.FC<ComposerProps> = ({
@@ -62,6 +63,7 @@ export const Composer: React.FC<ComposerProps> = ({
   handleImageSelect,
   handleFileSelect,
   onPaste,
+  cooldownSeconds = 0,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
@@ -69,6 +71,7 @@ export const Composer: React.FC<ComposerProps> = ({
 
   const canSend =
     connected &&
+    cooldownSeconds === 0 &&
     (Boolean(inputText.trim()) || hasPendingImages || hasPendingFiles) &&
     !isSendingImage &&
     !isSendingFile;
@@ -122,6 +125,15 @@ export const Composer: React.FC<ComposerProps> = ({
 
   return (
     <div className="p-3 bg-white border-t border-gray-200">
+      {cooldownSeconds > 0 && (
+        <div className="mb-2 px-3 py-2 bg-orange-50 rounded-xl border-l-4 border-orange-400 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-orange-500 shrink-0" />
+          <p className="text-sm text-orange-700">
+            Vui lòng thử lại sau{' '}
+            <span className="font-semibold tabular-nums">{cooldownSeconds}</span> giây
+          </p>
+        </div>
+      )}
       {replyToMessage && (
         <div className="mb-2 px-3 py-2 bg-gray-50 rounded-xl border-l-4 border-blue-500 flex items-center justify-between group">
           <div className="min-w-0">
@@ -239,8 +251,8 @@ export const Composer: React.FC<ComposerProps> = ({
                     e.currentTarget.style.height = 'auto';
                   }
                 }}
-                placeholder={connected ? 'Aa' : 'Đang kết nối...'}
-                disabled={!connected || isSendingImage || isSendingFile}
+                placeholder={!connected ? 'Đang kết nối...' : cooldownSeconds > 0 ? `Thử lại sau ${cooldownSeconds}s...` : 'Aa'}
+                disabled={!connected || cooldownSeconds > 0 || isSendingImage || isSendingFile}
                 rows={1}
                 className="w-full pl-3 pr-11 py-2 bg-transparent outline-none transition-all text-sm disabled:opacity-50 resize-none min-h-[36px] max-h-[120px] leading-relaxed block"
                 style={{ height: 'auto' }}

@@ -19,6 +19,7 @@ import { useVoiceCall } from '@/features/messenger/hooks/useVoiceCall';
 import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '@/features/messenger/utils/callDuration';
 import type {
   IncomingCallError,
+  IncomingChatError,
   IncomingCallSignal,
   IncomingChatMessage,
   IncomingMessageStatus,
@@ -32,6 +33,7 @@ type MessageStatusListener = (status: IncomingMessageStatus) => void;
 type PresenceStatusListener = (status: IncomingPresenceStatus) => void;
 type PinnedMessageListener = (event: IncomingPinnedMessage) => void;
 type NotificationEventListener = (event: IncomingNotificationEvent) => void;
+type ChatErrorListener = (error: IncomingChatError) => void;
 
 interface RealtimeCallContextValue {
   connected: boolean;
@@ -43,6 +45,7 @@ interface RealtimeCallContextValue {
   subscribePresenceStatuses: (listener: PresenceStatusListener) => () => void;
   subscribePinnedMessages: (listener: PinnedMessageListener) => () => void;
   subscribeNotificationEvents: (listener: NotificationEventListener) => () => void;
+  subscribeChatErrors: (listener: ChatErrorListener) => () => void;
   sendMessageDelivered: (messageId: string) => void;
   sendConversationSeen: (peerUserId: string) => void;
 }
@@ -71,6 +74,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const presenceListenersRef = useRef<Set<PresenceStatusListener>>(new Set());
   const pinnedMessageListenersRef = useRef<Set<PinnedMessageListener>>(new Set());
   const notificationEventListenersRef = useRef<Set<NotificationEventListener>>(new Set());
+  const chatErrorListenersRef = useRef<Set<ChatErrorListener>>(new Set());
   const latestPresenceByUserRef = useRef<Record<string, IncomingPresenceStatus>>({});
   const callSignalHandlerRef = useRef<(signal: IncomingCallSignal) => void>(() => {});
   const callErrorHandlerRef = useRef<(error: IncomingCallError) => void>(() => {});
@@ -214,6 +218,30 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     callErrorHandlerRef.current(error);
   }, []);
 
+  const handleIncomingChatError = useCallback((error: IncomingChatError) => {
+    let msg: string;
+    switch (error.code) {
+      case 'CHAT_RATE_LIMITED':
+        msg = error.retryAfterSeconds
+          ? `Bạn đang gửi tin nhắn quá nhanh. Vui lòng thử lại sau ${error.retryAfterSeconds} giây.`
+          : 'Bạn đang gửi tin nhắn quá nhanh. Vui lòng thử lại sau.';
+        break;
+      case 'CHAT_BLOCKED_KEYWORD':
+        msg = 'Tin nhắn chứa nội dung không phù hợp nên không thể gửi.';
+        break;
+      case 'CHAT_MALICIOUS_LINK':
+        msg = 'Tin nhắn chứa liên kết không an toàn nên đã bị chặn.';
+        break;
+      case 'CHAT_RESTRICTED':
+        msg = 'Bạn đang bị tạm khóa tính năng chat. Vui lòng thử lại sau.';
+        break;
+      default:
+        msg = error.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.';
+    }
+    toast.error(msg);
+    chatErrorListenersRef.current.forEach((listener) => listener(error));
+  }, []);
+
   const { connected, sendMessage, sendGroupMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen } = useChatSocket(
     currentUser?.token,
     handleIncomingMessage,
@@ -223,6 +251,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     handleIncomingPresenceStatus,
     handleIncomingPinnedMessage,
     handleIncomingNotificationEvent,
+    handleIncomingChatError,
   );
 
   const voiceCall = useVoiceCall({
@@ -275,6 +304,13 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     notificationEventListenersRef.current.add(listener);
     return () => {
       notificationEventListenersRef.current.delete(listener);
+    };
+  }, []);
+
+  const subscribeChatErrors = useCallback((listener: ChatErrorListener) => {
+    chatErrorListenersRef.current.add(listener);
+    return () => {
+      chatErrorListenersRef.current.delete(listener);
     };
   }, []);
 
@@ -517,6 +553,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       subscribePresenceStatuses,
       subscribePinnedMessages,
       subscribeNotificationEvents,
+      subscribeChatErrors,
       sendMessageDelivered,
       sendConversationSeen,
     }),
@@ -530,6 +567,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
       subscribeMessages,
       subscribePinnedMessages,
       subscribeNotificationEvents,
+      subscribeChatErrors,
       subscribePresenceStatuses,
       voiceCall,
     ],

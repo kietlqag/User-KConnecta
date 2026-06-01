@@ -13,6 +13,7 @@ import {
   UserCheck,
   Loader2,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -27,6 +28,8 @@ import {
   type PostScheduleMode,
 } from './ProfilePostScheduleModal';
 import { ProfilePostSettingsModal } from './ProfilePostSettingsModal';
+import { usePublicPolicies } from '@/hooks/usePublicPolicies';
+import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidation';
 
 function toApiScheduledAt(datetimeLocal: string): string {
   const t = datetimeLocal.trim();
@@ -78,6 +81,7 @@ export function ProfileCreatePostModal({
     uploadFailed?: boolean;
   }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: publicPolicy } = usePublicPolicies();
   const uploadPromisesRef = useRef<Map<string, Promise<string>>>(new Map());
   const uploadControllersRef = useRef<Map<string, AbortController>>(new Map());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -266,6 +270,16 @@ export function ProfileCreatePostModal({
       return;
     }
 
+    const policyError = validatePostAgainstPolicy(
+      postContent.trim(),
+      selectedImages.length,
+      publicPolicy
+    );
+    if (policyError) {
+      toast.error(policyError);
+      return;
+    }
+
     setIsPosting(true);
     try {
       // 1. Collect media — use cached URLs, wait only for still-uploading ones
@@ -444,6 +458,27 @@ export function ProfileCreatePostModal({
               className="min-h-[120px] w-full resize-none border-none bg-transparent text-2xl text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
               autoFocus
             />
+            {publicPolicy && (() => {
+              const max = publicPolicy.postPolicy.maxPostLength;
+              const len = postContent.length;
+              const ratio = len / max;
+              return (
+                <div className={`text-right text-xs ${
+                  ratio >= 1 ? 'text-red-500 font-medium' : ratio >= 0.9 ? 'text-orange-500' : 'text-gray-400 dark:text-gray-500'
+                }`}>
+                  {len} / {max}
+                </div>
+              );
+            })()}
+            {(() => {
+              const err = checkKeywords(postContent, publicPolicy);
+              return err ? (
+                <div className="flex items-center gap-1.5 mt-1 rounded-md bg-red-50 dark:bg-red-900/20 px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                  {err}
+                </div>
+              ) : null;
+            })()}
 
             {showImagePicker && (
               <div className="relative mb-4 rounded-lg bg-gray-50 border border-gray-200 p-2 group dark:bg-gray-700 dark:border-gray-600">
@@ -569,9 +604,16 @@ export function ProfileCreatePostModal({
           <div className="px-4 pb-3">
             <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-600">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  Thêm vào bài viết của bạn
-                </span>
+                <div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    Thêm vào bài viết của bạn
+                  </span>
+                  {publicPolicy && (
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      Tối đa {publicPolicy.postPolicy.maxImagesPerPost} ảnh/video
+                    </p>
+                  )}
+                </div>
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setShowImagePicker(true)}
@@ -592,7 +634,7 @@ export function ProfileCreatePostModal({
             {(() => {
               const hasContent = postContent.trim() || selectedImages.length > 0;
               const isUploading = selectedImages.some(img => img.uploading);
-              const disabled = !hasContent || isUploading;
+              const disabled = !hasContent || isUploading || !!checkKeywords(postContent, publicPolicy);
               return (
                 <button
                   type="button"
@@ -613,6 +655,17 @@ export function ProfileCreatePostModal({
                 </button>
               );
             })()}
+            <div className="mt-2 text-center">
+              <a
+                href="/policies"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500 dark:text-gray-500 dark:hover:text-blue-400 transition-colors"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Xem chính sách cộng đồng
+              </a>
+            </div>
           </div>
         </div>
       </div>

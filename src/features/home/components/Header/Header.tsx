@@ -90,21 +90,21 @@ export function Header() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50 border-b border-gray-200">
+    <header className="fixed top-0 left-0 right-0 bg-background shadow-sm z-50 border-b border-border">
       <div className="max-w-[1920px] mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           {/* Left Section - Logo & Search */}
           <div className="flex items-center gap-2 flex-1 max-w-[320px]">
-            <Link to="/home" className="flex items-center gap-2 hover:bg-gray-100 rounded-full p-2 transition-colors">
+            <Link to="/home" className="flex items-center gap-2 hover:bg-muted rounded-full p-2 transition-colors">
               <img src={logoV2} alt="KConnecta Logo V2" className="w-10 h-10 object-contain" />
             </Link>
             
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Tìm kiếm trên KConnecta"
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full outline-none focus:bg-gray-200 transition-colors"
+                className="w-full pl-10 pr-4 py-2 bg-muted text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-muted/70 transition-colors"
                 value={searchQuery}
                 onFocus={() => setShowSearchSuggestions(true)}
                 onChange={(e) => {
@@ -134,8 +134,8 @@ export function Header() {
 
           {/* Right Section - User Actions */}
           <div className="flex items-center gap-2 flex-1 justify-end max-w-[320px]">
-            <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors lg:hidden cursor-pointer">
-              <Menu className="w-6 h-6 text-gray-700" />
+            <button className="p-2 bg-muted hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors lg:hidden cursor-pointer">
+              <Menu className="w-6 h-6 text-foreground" />
             </button>
             
             <button 
@@ -145,15 +145,15 @@ export function Header() {
                 setShowNotifications(false);
                 setShowAccountMenu(false);
               }}
-              className={`hidden sm:flex p-2 hover:bg-gray-200 rounded-full transition-colors cursor-pointer ${
-                isMenuOpen ? 'bg-emerald-100' : 'bg-gray-100'
+              className={`hidden sm:flex p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer ${
+                isMenuOpen ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-muted'
               }`}
               title="Menu"
               aria-label="Menu"
               aria-expanded={isMenuOpen}
               data-menu-toggle
             >
-              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-emerald-600' : 'text-gray-700'}`} />
+              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-emerald-600' : 'text-foreground'}`} />
             </button>
             
             <button 
@@ -163,9 +163,9 @@ export function Header() {
                 setShowNotifications(false);
                 setShowAccountMenu(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
+              className="hidden sm:flex relative p-2 bg-muted hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer"
             >
-              <MessageCircle className="w-5 h-5 text-gray-700" />
+              <MessageCircle className="w-5 h-5 text-foreground" />
               {unreadMessagesCount > 0 && (
                 <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                   {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
@@ -180,9 +180,9 @@ export function Header() {
                 setShowMessenger(false);
                 setShowAccountMenu(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors cursor-pointer"
+              className="hidden sm:flex relative p-2 bg-muted hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer"
             >
-              <Bell className="w-5 h-5 text-gray-700" />
+              <Bell className="w-5 h-5 text-foreground" />
               {unreadNotifications > 0 && (
                 <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}

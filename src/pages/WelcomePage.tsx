@@ -15,7 +15,7 @@ export function WelcomePage() {
   }, []);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 h-72 w-72 animate-blob rounded-full bg-emerald-300 opacity-20 mix-blend-multiply blur-xl"></div>
         <div className="animation-delay-2000 absolute top-40 right-10 h-72 w-72 animate-blob rounded-full bg-teal-300 opacity-20 mix-blend-multiply blur-xl"></div>
@@ -69,47 +69,6 @@ export function WelcomePage() {
         </div>
       </div>
 
-      <style>{`
-        @keyframes logoIntro {
-          0% {
-            opacity: 0;
-            transform: translateY(110px) scale(2);
-          }
-          35% {
-            opacity: 1;
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        .animate-logo-intro {
-          animation: logoIntro 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        @keyframes blob {
-          0% {
-            transform: translate(0px, 0px) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-          100% {
-            transform: translate(0px, 0px) scale(1);
-          }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   );
 }

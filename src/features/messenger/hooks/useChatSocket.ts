@@ -3,6 +3,7 @@ import { Client } from '@stomp/stompjs';
 import { getWsBaseUrl } from '@/utils/apiBaseUrl';
 import type {
   IncomingCallError,
+  IncomingChatError,
   IncomingChatMessage,
   IncomingCallSignal,
   IncomingMessageStatus,
@@ -24,6 +25,7 @@ export function useChatSocket(
   onPresenceStatus?: (status: IncomingPresenceStatus) => void,
   onPinnedMessage?: (event: IncomingPinnedMessage) => void,
   onNotificationEvent?: (event: IncomingNotificationEvent) => void,
+  onChatError?: (error: IncomingChatError) => void,
 ) {
   const [connected, setConnected] = useState(false);
   const clientRef = useRef<Client | null>(null);
@@ -35,6 +37,7 @@ export function useChatSocket(
   const onPresenceStatusRef = useRef(onPresenceStatus);
   const onPinnedMessageRef = useRef(onPinnedMessage);
   const onNotificationEventRef = useRef(onNotificationEvent);
+  const onChatErrorRef = useRef(onChatError);
   onMessageRef.current = onMessage;
   onCallSignalRef.current = onCallSignal;
   onMessageStatusRef.current = onMessageStatus;
@@ -42,6 +45,7 @@ export function useChatSocket(
   onPresenceStatusRef.current = onPresenceStatus;
   onPinnedMessageRef.current = onPinnedMessage;
   onNotificationEventRef.current = onNotificationEvent;
+  onChatErrorRef.current = onChatError;
 
   useEffect(() => {
     if (!token) return;
@@ -115,6 +119,15 @@ export function useChatSocket(
             onNotificationEventRef.current?.(event);
           } catch (e) {
             console.error('[useChatSocket] Failed to parse notification event:', e);
+          }
+        });
+
+        client.subscribe('/user/queue/chat-errors', (frame) => {
+          try {
+            const error = JSON.parse(frame.body) as IncomingChatError;
+            onChatErrorRef.current?.(error);
+          } catch (e) {
+            console.error('[useChatSocket] Failed to parse chat error:', e);
           }
         });
 

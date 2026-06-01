@@ -152,9 +152,13 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
       {/* Footer Links */}
       <div className="px-4 py-3 bg-white border-t border-gray-200">
         <div className="text-xs text-gray-500 leading-relaxed">
-          <a href="#" className="hover:underline cursor-pointer">Quyền riêng tư</a>
+          <Link to="/policies" onClick={onClose} className="hover:underline cursor-pointer">
+            Chính sách
+          </Link>
           {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Điều khoản</a>
+          <Link to="/settings" onClick={onClose} className="hover:underline cursor-pointer">
+            Cài đặt
+          </Link>
           {' Â· '}
           <a href="#" className="hover:underline cursor-pointer">Quảng cáo</a>
           {' Â· '}

@@ -200,3 +200,11 @@ export interface IncomingCallError {
   conversationId?: string | null;
   occurredAt?: string;
 }
+
+export interface IncomingChatError {
+  code: string;
+  message: string;
+  retryAfterSeconds?: number | null;
+  conversationId?: string | null;
+  messageClientId?: string | null;
+}

@@ -15,6 +15,20 @@ interface LoginFormData {
   rememberMe: boolean;
 }
 
+function useBlinkTimer(setBlinking: (v: boolean) => void) {
+  useEffect(() => {
+    const schedule = () => {
+      const t = setTimeout(() => {
+        setBlinking(true);
+        setTimeout(() => { setBlinking(false); schedule(); }, 150);
+      }, Math.random() * 4000 + 3000);
+      return t;
+    };
+    const t = schedule();
+    return () => clearTimeout(t);
+  }, [setBlinking]);
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,8 +47,9 @@ export function LoginPage() {
   const isAuthenticating = isLoading || isGoogleLoading;
 
   const [showPassword, setShowPassword] = useState(false);
-  const [mouseX, setMouseX] = useState<number>(0);
-  const [mouseY, setMouseY] = useState<number>(0);
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const rafIdRef = useRef(0);
+  const [, setMouseTick] = useState(0);
   const [isPurpleBlinking, setIsPurpleBlinking] = useState(false);
   const [isBlackBlinking, setIsBlackBlinking] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -129,52 +144,20 @@ export function LoginPage() {
   }, [formData.rememberMe, navigate, redirectTo]);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMouseX(e.clientX);
-      setMouseY(e.clientY);
+    const handler = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY };
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = requestAnimationFrame(() => setMouseTick(n => n + 1));
     };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mousemove", handler);
+    return () => {
+      window.removeEventListener("mousemove", handler);
+      cancelAnimationFrame(rafIdRef.current);
+    };
   }, []);
 
-  useEffect(() => {
-    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
-
-    const scheduleBlink = () => {
-      const blinkTimeout = setTimeout(() => {
-        setIsPurpleBlinking(true);
-        setTimeout(() => {
-          setIsPurpleBlinking(false);
-          scheduleBlink();
-        }, 150);
-      }, getRandomBlinkInterval());
-
-      return blinkTimeout;
-    };
-
-    const timeout = scheduleBlink();
-    return () => clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    const getRandomBlinkInterval = () => Math.random() * 4000 + 3000;
-
-    const scheduleBlink = () => {
-      const blinkTimeout = setTimeout(() => {
-        setIsBlackBlinking(true);
-        setTimeout(() => {
-          setIsBlackBlinking(false);
-          scheduleBlink();
-        }, 150);
-      }, getRandomBlinkInterval());
-
-      return blinkTimeout;
-    };
-
-    const timeout = scheduleBlink();
-    return () => clearTimeout(timeout);
-  }, []);
+  useBlinkTimer(setIsPurpleBlinking);
+  useBlinkTimer(setIsBlackBlinking);
 
   useEffect(() => {
     if (isTyping) {
@@ -205,8 +188,8 @@ export function LoginPage() {
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 3;
 
-    const deltaX = mouseX - centerX;
-    const deltaY = mouseY - centerY;
+    const deltaX = mouseRef.current.x - centerX;
+    const deltaY = mouseRef.current.y - centerY;
 
     const faceX = Math.max(-15, Math.min(15, deltaX / 20));
     const faceY = Math.max(-10, Math.min(10, deltaY / 30));

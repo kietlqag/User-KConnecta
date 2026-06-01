@@ -17,12 +17,22 @@ import SearchResultsPage from '../features/search/pages/SearchResultsPage';
 import MessengerPage from '../features/messenger/pages/MessengerPage';
 import { SavedPage } from '../features/saved/pages/SavedPage';
 import SettingsPage from '../features/settings/pages/SettingsPage';
+import CommunityPoliciesPage from '../features/policies/pages/CommunityPoliciesPage';
 import { GuestRoute, ProtectedRoute } from './RouteGuards';
+import { RealtimeCallProvider } from '../contexts/RealtimeCallContext';
 
 export const router = createBrowserRouter([
   {
     path: '/',
     Component: WelcomePage,
+  },
+  {
+    path: '/policies',
+    element: (
+      <RealtimeCallProvider>
+        <CommunityPoliciesPage />
+      </RealtimeCallProvider>
+    ),
   },
   {
     Component: ProtectedRoute,

@@ -38,6 +38,8 @@ import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { formatLastActiveLabel } from '../utils/presenceLabel';
 import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '../utils/callDuration';
 import { toast } from 'sonner';
+import { usePublicPolicies } from '@/hooks/usePublicPolicies';
+import { validateChatAgainstPolicy } from '@/utils/policyValidation';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
 const REPLY_PREFIX = '__REPLY__:';
@@ -1569,6 +1571,7 @@ function EmptyInfoTab({ icon, text }: { icon: ReactNode; text: string }) {
 }
 
 export default function MessengerPage() {
+  const { data: publicPolicy } = usePublicPolicies();
   const currentUser = authService.getCurrentUser();
 
   const {
@@ -2073,9 +2076,20 @@ export default function MessengerPage() {
     subscribeMessageStatuses,
     subscribePresenceStatuses,
     subscribePinnedMessages,
+    subscribeChatErrors,
     sendMessageDelivered,
     sendConversationSeen,
   } = useRealtimeCall();
+
+  const [rateLimitUntil, setRateLimitUntil] = useState<number | null>(null);
+
+  useEffect(() => {
+    return subscribeChatErrors((error) => {
+      if (error.code === 'CHAT_RATE_LIMITED' && error.retryAfterSeconds) {
+        setRateLimitUntil(Date.now() + error.retryAfterSeconds * 1000);
+      }
+    });
+  }, [subscribeChatErrors]);
 
   const handleIncomingMessage = useCallback(
     (msg: IncomingChatMessage) => {
@@ -2632,6 +2646,25 @@ export default function MessengerPage() {
   const handleSendMessage = useCallback(
     (content: string) => {
       if (!activeChatUserId) return;
+
+      const isStructuredPayload =
+        content.startsWith(VOICE_MESSAGE_PREFIX) ||
+        content.startsWith(IMAGE_MESSAGE_PREFIX) ||
+        content.startsWith(FILE_MESSAGE_PREFIX) ||
+        content.startsWith(VIDEO_SHARE_PREFIX) ||
+        content.startsWith(POST_SHARE_PREFIX) ||
+        content.startsWith(CHAT_ACTION_PREFIX) ||
+        content.startsWith(STORY_REPLY_PREFIX) ||
+        content.startsWith(REPLY_PREFIX);
+
+      if (!isStructuredPayload) {
+        const policyError = validateChatAgainstPolicy(content, publicPolicy);
+        if (policyError) {
+          toast.error(policyError);
+          return;
+        }
+      }
+
       if (activeChatUserId.startsWith('group:')) {
         const conversationId = activeChatUserId.replace('group:', '');
         void chatService
@@ -2646,7 +2679,7 @@ export default function MessengerPage() {
       }
       sendMessage(activeChatUserId, content);
     },
-    [activeChatUserId, handleIncomingMessage, sendMessage],
+    [activeChatUserId, handleIncomingMessage, publicPolicy, sendMessage],
   );
 
   const buildForwardContent = useCallback((message: Message) => {
@@ -3321,6 +3354,7 @@ export default function MessengerPage() {
                 groupMembers={activeChatUserId ? groupMembersById[activeChatUserId] ?? [] : []}
                 themeColor={activeChatThemeColor}
                 jumpToMessageRequest={jumpToMessageRequest}
+                rateLimitUntil={rateLimitUntil}
               />
             </div>
           ) : activeChatUserId && loadingConversations ? (

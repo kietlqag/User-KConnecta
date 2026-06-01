@@ -53,6 +53,7 @@ interface ChatWindowProps {
   themeColor?: string | null;
   jumpToMessageRequest?: { messageId: string; nonce: number } | null;
   isFriend?: boolean;
+  rateLimitUntil?: number | null;
 }
 
 function formatVoiceDuration(totalSec: number) {
@@ -99,6 +100,7 @@ export const ChatWindow = ({
   themeColor,
   jumpToMessageRequest = null,
   isFriend = true,
+  rateLimitUntil = null,
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
@@ -106,6 +108,24 @@ export const ChatWindow = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [showPinnedModal, setShowPinnedModal] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!rateLimitUntil) {
+      setCooldownSeconds(0);
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((rateLimitUntil - Date.now()) / 1000));
+      setCooldownSeconds(remaining);
+      return remaining;
+    };
+    if (tick() === 0) return;
+    const id = window.setInterval(() => {
+      if (tick() === 0) window.clearInterval(id);
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [rateLimitUntil]);
 
   const { messageListRef, showJumpToLatest, scrollToBottom, handleListScroll, markUserScrollIntent } = useChatScroll(
     messages.length,
@@ -156,7 +176,7 @@ export const ChatWindow = ({
 
   const handleSend = () => {
     const text = inputText.trim();
-    if ((!text && pendingImages.length === 0 && pendingFiles.length === 0) || !connected || isRecordingVoice || isSendingVoice || isSendingImage || isSendingFile) {
+    if ((!text && pendingImages.length === 0 && pendingFiles.length === 0) || !connected || cooldownSeconds > 0 || isRecordingVoice || isSendingVoice || isSendingImage || isSendingFile) {
       return;
     }
 
@@ -321,6 +341,7 @@ export const ChatWindow = ({
             setInputText={setInputText}
             onSend={handleSend}
             connected={connected}
+            cooldownSeconds={cooldownSeconds}
             isRecordingVoice={isRecordingVoice}
             isSendingVoice={isSendingVoice}
             isSendingImage={isSendingImage}

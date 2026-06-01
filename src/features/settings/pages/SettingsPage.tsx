@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react';
-import { KeyRound, Loader2, CheckCircle2, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { KeyRound, Loader2, CheckCircle2, Mail, Lock, Eye, EyeOff, ScrollText } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Header } from '../../home/components/Header';
 import { authService } from '@/services/authService';
@@ -44,6 +45,13 @@ function SettingsSidebar({
               </span>
             </button>
           ))}
+          <Link
+            to="/policies"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-gray-100 text-gray-900"
+          >
+            <ScrollText className="w-5 h-5 text-gray-600" />
+            <span className="font-medium">Chính sách cộng đồng</span>
+          </Link>
         </div>
       </div>
     </div>
