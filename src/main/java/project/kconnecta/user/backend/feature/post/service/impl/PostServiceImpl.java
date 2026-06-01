@@ -35,6 +35,7 @@ import project.kconnecta.user.backend.feature.notification.event.NotificationEve
 import project.kconnecta.user.backend.feature.post.entity.PostSaved;
 import project.kconnecta.user.backend.feature.post.entity.PostCommentLike;
 import project.kconnecta.user.backend.feature.post.repository.*;
+import project.kconnecta.user.backend.feature.policy.service.PolicyContentValidator;
 import project.kconnecta.user.backend.feature.post.service.PostService;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
@@ -71,6 +72,7 @@ public class PostServiceImpl implements PostService {
     private final CloudinaryService cloudinaryService;
     private final NotificationEventPublisher notificationEventPublisher;
     private final ActivityLogService activityLogService;
+    private final PolicyContentValidator policyContentValidator;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -80,6 +82,12 @@ public class PostServiceImpl implements PostService {
         if ((request.getContent() == null || request.getContent().isBlank()) && mediaRequests.isEmpty()) {
             throw new ValidationException("Post must have content or media");
         }
+
+        policyContentValidator.validatePost(
+                author.getId(),
+                request.getContent(),
+                mediaRequests.size()
+        );
 
         PostStatus status = request.getStatus() == null ? PostStatus.PUBLISHED : request.getStatus();
         PostPrivacy privacy = request.getPrivacy() == null ? PostPrivacy.PUBLIC : request.getPrivacy();
@@ -351,6 +359,8 @@ public class PostServiceImpl implements PostService {
                 throw new ValidationException("Parent comment does not belong to this post");
             }
         }
+
+        policyContentValidator.validateComment(request.getContent());
 
         PostComment saved = postCommentRepository.save(PostComment.builder()
                 .post(post)

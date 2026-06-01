@@ -28,6 +28,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/set-password").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/search/suggest").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/policies/public").permitAll()
                         .requestMatchers("/api/auth/**", "/api/internal/**", "/ws/**", "/*.html", "/**.html").permitAll()
                         .anyRequest().authenticated()
                 )

@@ -28,6 +28,15 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    // 400/429 chat message validation (keyword, link, rate limit)
+    @ExceptionHandler(ChatValidationException.class)
+    public ResponseEntity<?> handleChatValidation(ChatValidationException ex) {
+        HttpStatus status = "CHAT_RATE_LIMITED".equals(ex.getCode())
+                ? HttpStatus.TOO_MANY_REQUESTS
+                : HttpStatus.BAD_REQUEST;
+        return buildResponse(status, ex.getMessage());
+    }
+
     // 400 custom validation
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<?> handleValidation(ValidationException ex) {

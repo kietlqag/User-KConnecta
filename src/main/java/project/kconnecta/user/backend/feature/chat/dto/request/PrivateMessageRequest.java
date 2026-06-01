@@ -11,4 +11,5 @@ import java.util.UUID;
 public class PrivateMessageRequest {
     private UUID receiverId;
     private String content;
+    private String messageClientId;
 }

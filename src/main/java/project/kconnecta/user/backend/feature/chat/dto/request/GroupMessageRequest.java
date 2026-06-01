@@ -10,5 +10,6 @@ import java.util.UUID;
 public class GroupMessageRequest {
     private UUID conversationId;
     private String content;
+    private String messageClientId;
 }
 

@@ -52,6 +52,7 @@ import project.kconnecta.user.backend.feature.chat.repository.ChatPinnedConversa
 import project.kconnecta.user.backend.feature.chat.repository.ChatPinnedMessageRepository;
 import project.kconnecta.user.backend.feature.chat.repository.GroupCallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
+import project.kconnecta.user.backend.feature.policy.service.PolicyContentValidator;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -98,12 +99,15 @@ public class ChatServiceImpl implements ChatService {
     private final ChatPinnedMessageRepository chatPinnedMessageRepository;
     private final CallSessionRepository callSessionRepository;
     private final GroupCallSessionRepository groupCallSessionRepository;
+    private final PolicyContentValidator policyContentValidator;
 
     @Override
     public void sendPrivateMessage(String currentUsername, PrivateMessageRequest request) {
 
         User sender = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
+
+        policyContentValidator.validateChatMessage(sender.getId(), request.getContent(), null, request.getMessageClientId());
 
         User receiver = userRepository.findById(request.getReceiverId())
                 .orElseThrow(() -> new RuntimeException("Receiver not found"));
@@ -279,6 +283,8 @@ public class ChatServiceImpl implements ChatService {
         if (!isMember) {
             throw new RuntimeException("Forbidden");
         }
+
+        policyContentValidator.validateChatMessage(sender.getId(), request.getContent(), conversation.getId(), request.getMessageClientId());
 
         LocalDateTime now = LocalDateTime.now();
         ChatMessage message = ChatMessage.builder()

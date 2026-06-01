@@ -7,7 +7,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.exception.BadRequestException;
+import project.kconnecta.user.backend.exception.ChatValidationException;
 import project.kconnecta.user.backend.exception.ForbiddenException;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatErrorMessage;
 import project.kconnecta.user.backend.feature.chat.dto.request.CallSignalRequest;
 import project.kconnecta.user.backend.feature.chat.dto.CallParticipantInfo;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationSeenRequest;
@@ -552,6 +554,19 @@ public class ChatSocketController {
         }
 
         return null;
+    }
+
+    @MessageExceptionHandler(ChatValidationException.class)
+    public void handleChatValidationError(ChatValidationException ex, Principal principal) {
+        if (principal == null) return;
+        ChatErrorMessage error = new ChatErrorMessage(
+                ex.getCode(),
+                ex.getMessage(),
+                ex.getRetryAfterSeconds(),
+                ex.getConversationId(),
+                ex.getMessageClientId()
+        );
+        messagingTemplate.convertAndSendToUser(principal.getName(), "/queue/chat-errors", error);
     }
 
     @MessageExceptionHandler

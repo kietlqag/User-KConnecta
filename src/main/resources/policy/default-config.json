@@ -1,0 +1,24 @@
+{
+  "communityRules": [
+    {"id":"banned_content","label":"Nội dung bị cấm","description":"Nội dung vi phạm pháp luật","enabled":true,"severity":"critical"},
+    {"id":"spam","label":"Spam","description":"Quảng cáo, flood","enabled":true,"severity":"medium"},
+    {"id":"toxic","label":"Toxic / xúc phạm","description":"Ngôn từ thù ghét","enabled":true,"severity":"high"},
+    {"id":"fake_news","label":"Fake news","description":"Tin giả","enabled":true,"severity":"high"},
+    {"id":"nsfw","label":"Nội dung 18+","description":"Nội dung người lớn","enabled":true,"severity":"critical"},
+    {"id":"scam","label":"Lừa đảo","description":"Phishing, scam","enabled":true,"severity":"critical"},
+    {"id":"violence","label":"Bạo lực","description":"Kích động, đe dọa","enabled":true,"severity":"critical"}
+  ],
+  "keywords": [
+    {"id":"kw-1","value":"từ tục","category":"blacklist"},
+    {"id":"kw-2","value":"casino","category":"blocked_domain"},
+    {"id":"kw-3","value":"bit.ly/phish","category":"blocked_domain"}
+  ],
+  "violationPolicies": [{"id":"default","label":"Mặc định","steps":[{"offense":1,"action":"warning"},{"offense":2,"action":"lock_temp","lockDays":3},{"offense":3,"action":"ban_permanent"}]}],
+  "aiModeration": {"enabled":true,"sensitivity":72,"detect":{"toxic":true,"spam":true,"nsfw":true,"hateSpeech":true,"scam":true},"autoHidePost":true,"autoWarning":true,"autoBan":false},
+  "privacy": {"storeProfile":true,"storePosts":true,"storeChat":true,"storeActivityLog":true,"logRetentionDays":90,"chatRetentionDays":30,"allowDataExport":true,"allowAccountDeletion":true,"cookiePolicyEnabled":true,"sessionMaxHours":168},
+  "postPolicy": {"maxPostLength":5000,"maxImagesPerPost":10,"maxVideoMb":100,"allowedFileTypes":"jpg,jpeg,png,gif,webp,mp4,mov","postsPerMinute":3},
+  "chatPolicy": {"antiSpamEnabled":true,"blockMaliciousLinks":true,"messagesPerMinute":20,"aiScanEnabled":true},
+  "recommendation": {"prioritizeHot":true,"prioritizeFriends":true,"prioritizeTopics":true,"reduceToxicContent":true,"weights":{"engagement":40,"friends":30,"trending":20,"newContent":10}},
+  "ruleEngine": [],
+  "auditLog": []
+}

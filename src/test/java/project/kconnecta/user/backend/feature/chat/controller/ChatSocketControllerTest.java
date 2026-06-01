@@ -7,7 +7,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import project.kconnecta.user.backend.exception.ChatValidationException;
 import project.kconnecta.user.backend.feature.chat.dto.request.CallSignalRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.response.ChatErrorMessage;
 import project.kconnecta.user.backend.feature.chat.entity.ChatConversation;
 import project.kconnecta.user.backend.feature.chat.entity.GroupCallSession;
 import project.kconnecta.user.backend.feature.chat.repository.CallSessionRepository;
@@ -136,5 +139,40 @@ class ChatSocketControllerTest {
         verify(messagingTemplate).convertAndSendToUser(eq("alice"), eq("/queue/call-errors"), any());
         verify(messagingTemplate).convertAndSendToUser(eq("bob"), eq("/queue/call-errors"), any());
         verify(messagingTemplate, never()).convertAndSendToUser(eq("bob"), eq("/queue/call"), any());
+    }
+
+    @Test
+    void handleChatValidationError_rateLimited_sendsToQueueChatErrors() {
+        ChatValidationException ex = new ChatValidationException(
+                "CHAT_RATE_LIMITED", "Quá nhanh. Thử lại sau 5 giây.", 5, null, "client-123");
+        Principal principal = () -> "alice";
+
+        controller.handleChatValidationError(ex, principal);
+
+        ArgumentCaptor<ChatErrorMessage> captor = ArgumentCaptor.forClass(ChatErrorMessage.class);
+        verify(messagingTemplate).convertAndSendToUser(eq("alice"), eq("/queue/chat-errors"), captor.capture());
+        assertThat(captor.getValue().getCode()).isEqualTo("CHAT_RATE_LIMITED");
+        assertThat(captor.getValue().getRetryAfterSeconds()).isEqualTo(5);
+        assertThat(captor.getValue().getMessageClientId()).isEqualTo("client-123");
+    }
+
+    @Test
+    void handleChatValidationError_doesNotSendToCallErrors() {
+        ChatValidationException ex = new ChatValidationException(
+                "CHAT_BLOCKED_KEYWORD", "Nội dung không phù hợp.", null, null, null);
+
+        controller.handleChatValidationError(ex, () -> "alice");
+
+        verify(messagingTemplate, never()).convertAndSendToUser(eq("alice"), eq("/queue/call-errors"), any());
+    }
+
+    @Test
+    void handleChatValidationError_nullPrincipal_doesNothing() {
+        ChatValidationException ex = new ChatValidationException(
+                "CHAT_RATE_LIMITED", "msg", 3, null, null);
+
+        controller.handleChatValidationError(ex, null);
+
+        verify(messagingTemplate, never()).convertAndSendToUser(any(), any(), any());
     }
 }
