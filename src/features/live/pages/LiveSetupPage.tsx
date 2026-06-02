@@ -1077,17 +1077,21 @@ export default function LiveSetupPage() {
         ...(taggedFriendIds.length > 0 ? { taggedUserIds: taggedFriendIds } : {}),
       });
 
-      navigate('/live/producer', {
-        state: {
-          postId: started.postId,
-          title: postTitle.trim(),
-          description: postDescription.trim(),
-          taggedUserIds: taggedFriendIds,
-          locationText: checkInLocation.trim() || null,
-          selectedCameraId,
-          selectedMicId,
-        },
-      });
+      const producerState = {
+        postId: started.postId,
+        sessionId: started.sessionId,
+        roomName: started.roomName,
+        livekitUrl: started.livekitUrl,
+        hostToken: started.hostToken,
+        title: postTitle.trim(),
+        description: postDescription.trim(),
+        taggedUserIds: taggedFriendIds,
+        locationText: checkInLocation.trim() || null,
+        selectedCameraId,
+        selectedMicId,
+      };
+      window.sessionStorage.setItem('kconnecta.liveProducerState', JSON.stringify(producerState));
+      navigate('/live/producer', { state: producerState });
     } catch (err) {
       setCreateLiveError(err instanceof Error ? err.message : 'Không thể khởi tạo phiên live. Vui lòng thử lại.');
     } finally {

@@ -4,14 +4,12 @@
   Camera,
   ChartNoAxesColumn,
   ChevronDown,
-  Clapperboard,
   Eye,
   Globe,
   MessageCircle,
   Mic,
   Monitor,
   MoreHorizontal,
-  Pencil,
   Settings,
   Share2,
   Sparkles,
@@ -20,12 +18,30 @@
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Room, RoomEvent, Track } from 'livekit-client';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
+import { liveService, type LiveSessionStatsResponse, type LiveSessionToolStateResponse } from '@/services/liveService';
+import { postService, type PostCommentResponse, type PostResponse } from '@/services/postService';
 
 type MainSection = 'dashboard' | 'details' | 'settings';
-type SettingsSub = 'video' | 'viewer' | 'tab-live';
+type SettingsSub = 'video';
+type MediaStats = {
+  videoBitrateKbps: number | null;
+  audioBitrateKbps: number | null;
+  fps: number | null;
+  width: number | null;
+  height: number | null;
+};
+type PreviousTrackStats = Record<string, { timestamp: number; bytesSent: number; framesEncoded?: number }>;
 interface ProducerLocationState {
+  postId?: string;
+  sessionId?: string;
+  roomName?: string;
+  livekitUrl?: string | null;
+  hostToken?: string | null;
+  title?: string;
+  description?: string;
   selectedCameraId?: string;
   selectedMicId?: string;
 }
@@ -62,8 +78,24 @@ export default function LiveProducerPage() {
   const currentUserAvatar = currentUser?.avatarUrl || '';
   const location = useLocation();
   const routeState = (location.state as ProducerLocationState | null) ?? null;
-  const preferredCameraId = routeState?.selectedCameraId?.trim() || '';
-  const preferredMicId = routeState?.selectedMicId?.trim() || '';
+  const storedProducerState = useMemo<ProducerLocationState | null>(() => {
+    try {
+      const raw = window.sessionStorage.getItem('kconnecta.liveProducerState');
+      return raw ? (JSON.parse(raw) as ProducerLocationState) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+  const producerState = routeState?.sessionId ? routeState : storedProducerState;
+  const querySessionId = new URLSearchParams(location.search).get('sessionId')?.trim() || '';
+  const preferredCameraId = producerState?.selectedCameraId?.trim() || '';
+  const preferredMicId = producerState?.selectedMicId?.trim() || '';
+  const sessionId = producerState?.sessionId?.trim() || querySessionId;
+  const postId = producerState?.postId?.trim() || '';
+  const livekitUrl = producerState?.livekitUrl?.trim() || '';
+  const hostToken = producerState?.hostToken?.trim() || '';
+  const liveTitle = producerState?.title?.trim() || 'Video trực tiếp';
+  const liveDescription = producerState?.description?.trim() || '';
   const [mainSection, setMainSection] = useState<MainSection>('dashboard');
   const [settingsSub, setSettingsSub] = useState<SettingsSub>('video');
   const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
@@ -72,9 +104,49 @@ export default function LiveProducerPage() {
   const [selectedMicId, setSelectedMicId] = useState(preferredMicId);
   const [isMediaReady, setIsMediaReady] = useState(false);
   const [mediaError, setMediaError] = useState('');
+  const [liveStatus, setLiveStatus] = useState(hostToken ? 'Đang kết nối LiveKit...' : 'Thiếu token LiveKit cho phiên live.');
+  const [liveError, setLiveError] = useState('');
+  const [viewerCount, setViewerCount] = useState(0);
+  const [liveStats, setLiveStats] = useState<LiveSessionStatsResponse | null>(null);
+  const [toolState, setToolState] = useState<LiveSessionToolStateResponse | null>(null);
+  const [toolError, setToolError] = useState('');
+  const [toolMessage, setToolMessage] = useState('');
+  const [pollEnabled, setPollEnabled] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [featuredLinkTitle, setFeaturedLinkTitle] = useState('');
+  const [featuredLinkUrl, setFeaturedLinkUrl] = useState('');
+  const [hostNotice, setHostNotice] = useState('');
+  const [postMetrics, setPostMetrics] = useState<PostResponse | null>(null);
+  const [mediaStats, setMediaStats] = useState<MediaStats>({
+    videoBitrateKbps: null,
+    audioBitrateKbps: null,
+    fps: null,
+    width: null,
+    height: null,
+  });
+  const [comments, setComments] = useState<PostCommentResponse[]>([]);
+  const [localStreamVersion, setLocalStreamVersion] = useState(0);
   const mainVideoRef = useRef<HTMLVideoElement | null>(null);
   const miniVideoRef = useRef<HTMLVideoElement | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  const roomRef = useRef<Room | null>(null);
+  const publishedTracksRef = useRef<MediaStreamTrack[]>([]);
+  const previousTrackStatsRef = useRef<PreviousTrackStats>({});
+  const commentCount = postMetrics?.commentCount ?? comments.length;
+  const shareCount = postMetrics?.shareCount ?? 0;
+  const reactionCount = liveStats?.totalReactionCount ?? 0;
+  const peakViewerCount = liveStats?.peakViewerCount ?? viewerCount;
+  const hasFeaturedLink = Boolean(toolState?.featuredLinkTitle && toolState?.featuredLinkUrl);
+  const viewerUrl = useMemo(() => {
+    if (!sessionId) return '';
+    return `${window.location.origin}/live/viewer?sessionId=${encodeURIComponent(sessionId)}`;
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!routeState?.sessionId) return;
+    window.sessionStorage.setItem('kconnecta.liveProducerState', JSON.stringify(routeState));
+  }, [routeState]);
 
   const bindStreamToPreview = useCallback(async (stream: MediaStream) => {
     const bind = async (el: HTMLVideoElement | null) => {
@@ -148,6 +220,7 @@ export default function LiveProducerPage() {
         localStreamRef.current?.getTracks().forEach((t) => t.stop());
         localStreamRef.current = stream;
         setIsMediaReady(true);
+        setLocalStreamVersion((prev) => prev + 1);
         setMediaError('');
         await bindStreamToPreview(stream);
       } catch {
@@ -162,9 +235,324 @@ export default function LiveProducerPage() {
   }, [selectedCameraId, selectedMicId, bindStreamToPreview]);
 
   useEffect(() => {
+    if (!livekitUrl || !hostToken) return;
+    let cancelled = false;
+    const room = new Room();
+    roomRef.current = room;
+
+    const updateParticipants = () => {
+      setViewerCount(room.remoteParticipants.size);
+    };
+
+    room
+      .on(RoomEvent.ParticipantConnected, updateParticipants)
+      .on(RoomEvent.ParticipantDisconnected, updateParticipants)
+      .on(RoomEvent.Disconnected, () => {
+        if (!cancelled) setLiveStatus('Đã ngắt kết nối LiveKit.');
+      });
+
+    const connect = async () => {
+      try {
+        await room.connect(livekitUrl, hostToken);
+        if (cancelled) return;
+        setLiveStatus('Đang phát trực tiếp.');
+        updateParticipants();
+      } catch (err) {
+        if (!cancelled) {
+          setLiveError(err instanceof Error ? err.message : 'Không thể kết nối LiveKit.');
+          setLiveStatus('Kết nối LiveKit thất bại.');
+        }
+      }
+    };
+
+    void connect();
+
+    return () => {
+      cancelled = true;
+      publishedTracksRef.current = [];
+      room.disconnect();
+      roomRef.current = null;
+    };
+  }, [hostToken, livekitUrl]);
+
+  useEffect(() => {
+    const room = roomRef.current;
+    const stream = localStreamRef.current;
+    if (!room || room.state !== 'connected' || !stream) return;
+
+    const publish = async () => {
+      try {
+        for (const track of publishedTracksRef.current) {
+          await room.localParticipant.unpublishTrack(track);
+        }
+        publishedTracksRef.current = [];
+
+        const tracks = [...stream.getVideoTracks(), ...stream.getAudioTracks()];
+        for (const track of tracks) {
+          await room.localParticipant.publishTrack(track, {
+            source: track.kind === 'video' ? Track.Source.Camera : Track.Source.Microphone,
+          });
+          publishedTracksRef.current.push(track);
+        }
+        setLiveError('');
+      } catch (err) {
+        setLiveError(err instanceof Error ? err.message : 'Không thể publish camera/microphone.');
+      }
+    };
+
+    void publish();
+  }, [localStreamVersion, liveStatus]);
+
+  useEffect(() => {
     if (!localStreamRef.current) return;
     void bindStreamToPreview(localStreamRef.current);
   }, [mainSection, bindStreamToPreview]);
+
+  useEffect(() => {
+    if (!postId) return;
+    let cancelled = false;
+    const loadComments = async () => {
+      try {
+        const data = await postService.getComments(postId, 0, 30, currentUser?.id);
+        if (!cancelled) setComments(data.content);
+      } catch {
+        if (!cancelled) setComments([]);
+      }
+    };
+    void loadComments();
+    const interval = window.setInterval(() => void loadComments(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [currentUser?.id, postId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    const loadLiveStats = async () => {
+      try {
+        const stats = await liveService.getStats(sessionId);
+        if (cancelled) return;
+        setLiveStats(stats);
+        setViewerCount(stats.viewerCount);
+      } catch {
+        // Keep LiveKit participant count as fallback.
+      }
+    };
+    void loadLiveStats();
+    const interval = window.setInterval(() => void loadLiveStats(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    const loadTools = async () => {
+      try {
+        const data = await liveService.getTools(sessionId);
+        if (cancelled) return;
+        setToolState(data);
+        setPollEnabled(data.pollEnabled);
+        setPollQuestion(data.pollQuestion ?? '');
+        setPollOptions(data.pollOptions.length >= 2 ? data.pollOptions : ['', '']);
+        setFeaturedLinkTitle(data.featuredLinkTitle ?? '');
+        setFeaturedLinkUrl(data.featuredLinkUrl ?? '');
+        setHostNotice(data.hostNotice ?? '');
+      } catch {
+        if (!cancelled) setToolError('Không thể tải công cụ live.');
+      }
+    };
+    void loadTools();
+    const interval = window.setInterval(() => void loadTools(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!postId) return;
+    let cancelled = false;
+    const loadPostMetrics = async () => {
+      try {
+        const data = await postService.getPostById(postId, currentUser?.id);
+        if (!cancelled) setPostMetrics(data);
+      } catch {
+        // Metrics remain at their last known values.
+      }
+    };
+    void loadPostMetrics();
+    const interval = window.setInterval(() => void loadPostMetrics(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [currentUser?.id, postId]);
+
+  useEffect(() => {
+    const measureMediaStats = async () => {
+      const room = roomRef.current;
+      const stream = localStreamRef.current;
+      if (!room || !stream) return;
+
+      const videoSettings = stream.getVideoTracks()[0]?.getSettings();
+      const nextStats: MediaStats = {
+        videoBitrateKbps: null,
+        audioBitrateKbps: null,
+        fps: videoSettings?.frameRate ? Math.round(videoSettings.frameRate) : null,
+        width: videoSettings?.width ?? null,
+        height: videoSettings?.height ?? null,
+      };
+
+      const publications = Array.from(room.localParticipant.trackPublications.values());
+      for (const publication of publications) {
+        const track = publication.track as unknown as {
+          sid?: string;
+          kind?: string;
+          mediaStreamTrack?: MediaStreamTrack;
+          getRTCStatsReport?: () => Promise<RTCStatsReport | undefined>;
+        } | null;
+        if (!track?.getRTCStatsReport) continue;
+        const report = await track.getRTCStatsReport();
+        if (!report) continue;
+
+        report.forEach((entry) => {
+          const outbound = entry as RTCOutboundRtpStreamStats & {
+            framesEncoded?: number;
+            isRemote?: boolean;
+            kind?: string;
+            mediaType?: string;
+          };
+          if (outbound.type !== 'outbound-rtp' || outbound.isRemote) return;
+          const mediaKind = outbound.kind ?? outbound.mediaType ?? track.kind ?? track.mediaStreamTrack?.kind;
+          const bytesSent = typeof outbound.bytesSent === 'number' ? outbound.bytesSent : null;
+          const timestamp = typeof outbound.timestamp === 'number' ? outbound.timestamp : null;
+          if (bytesSent == null || timestamp == null) return;
+
+          const key = `${mediaKind}-${outbound.id}`;
+          const previous = previousTrackStatsRef.current[key];
+          if (previous) {
+            const elapsedSeconds = (timestamp - previous.timestamp) / 1000;
+            if (elapsedSeconds > 0) {
+              const kbps = Math.max(0, Math.round(((bytesSent - previous.bytesSent) * 8) / elapsedSeconds / 1000));
+              if (mediaKind === 'video') nextStats.videoBitrateKbps = kbps;
+              if (mediaKind === 'audio') nextStats.audioBitrateKbps = kbps;
+
+              if (mediaKind === 'video' && typeof outbound.framesEncoded === 'number') {
+                const frameDelta = outbound.framesEncoded - (previous.framesEncoded ?? outbound.framesEncoded);
+                nextStats.fps = Math.max(0, Math.round(frameDelta / elapsedSeconds));
+              }
+            }
+          }
+
+          previousTrackStatsRef.current[key] = {
+            timestamp,
+            bytesSent,
+            framesEncoded: typeof outbound.framesEncoded === 'number' ? outbound.framesEncoded : undefined,
+          };
+        });
+      }
+
+      setMediaStats(nextStats);
+    };
+
+    void measureMediaStats();
+    const interval = window.setInterval(() => void measureMediaStats(), 2000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const handleCopyViewerUrl = useCallback(async () => {
+    if (!viewerUrl) return;
+    try {
+      await navigator.clipboard.writeText(viewerUrl);
+    } catch {
+      const input = document.createElement('input');
+      input.value = viewerUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+    }
+  }, [viewerUrl]);
+
+  const showToolMessage = (message: string) => {
+    setToolError('');
+    setToolMessage(message);
+    window.setTimeout(() => setToolMessage(''), 2200);
+  };
+
+  const handleSavePoll = async () => {
+    if (!sessionId) return;
+    try {
+      const data = await liveService.upsertPoll(sessionId, {
+        enabled: pollEnabled,
+        question: pollQuestion,
+        options: pollOptions,
+      });
+      setToolState(data);
+      showToolMessage('Đã lưu cuộc thăm dò ý kiến cho phiên live.');
+    } catch (err) {
+      setToolMessage('');
+      setToolError(err instanceof Error ? err.message : 'Không thể lưu cuộc thăm dò ý kiến.');
+    }
+  };
+
+  const handleClearPoll = async () => {
+    if (!sessionId) return;
+    const data = await liveService.upsertPoll(sessionId, { enabled: false, question: null, options: [] });
+    setToolState(data);
+    setPollEnabled(false);
+    setPollQuestion('');
+    setPollOptions(['', '']);
+    showToolMessage('Đã xóa cuộc thăm dò ý kiến.');
+  };
+
+  const handleSaveFeaturedLink = async () => {
+    if (!sessionId) return;
+    try {
+      const data = await liveService.upsertFeaturedLink(sessionId, {
+        title: featuredLinkTitle,
+        url: featuredLinkUrl,
+      });
+      setToolState(data);
+      showToolMessage('Đã lưu liên kết đáng chú ý.');
+    } catch (err) {
+      setToolMessage('');
+      setToolError(err instanceof Error ? err.message : 'Không thể lưu liên kết.');
+    }
+  };
+
+  const handleClearFeaturedLink = async () => {
+    if (!sessionId) return;
+    const data = await liveService.upsertFeaturedLink(sessionId, { title: null, url: null });
+    setToolState(data);
+    setFeaturedLinkTitle('');
+    setFeaturedLinkUrl('');
+    showToolMessage('Đã xóa liên kết đáng chú ý.');
+  };
+
+  const handleSaveHostNotice = async () => {
+    if (!sessionId) return;
+    const data = await liveService.upsertHostNotice(sessionId, { notice: hostNotice });
+    setToolState(data);
+    showToolMessage('Đã lưu thông báo host.');
+  };
+
+  const handleEndLive = async () => {
+    try {
+      if (sessionId) {
+        await liveService.endSession(sessionId);
+      }
+    } finally {
+      roomRef.current?.disconnect();
+      localStreamRef.current?.getTracks().forEach((track) => track.stop());
+      navigate('/live');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -220,21 +608,19 @@ export default function LiveProducerPage() {
               {mainSection === 'settings' && (
                 <div className="ml-14 mt-1 space-y-1">
                   <button onClick={() => setSettingsSub('video')} className={`block w-full text-left rounded-lg px-3 py-2 font-medium ${settingsSub === 'video' ? 'bg-blue-50 text-gray-900' : 'hover:bg-gray-100 text-gray-700'}`}>Video đang phát</button>
-                  <button onClick={() => setSettingsSub('viewer')} className={`block w-full text-left rounded-lg px-3 py-2 font-medium ${settingsSub === 'viewer' ? 'bg-blue-50 text-gray-900' : 'hover:bg-gray-100 text-gray-700'}`}>Người xem</button>
-                  <button onClick={() => setSettingsSub('tab-live')} className={`block w-full text-left rounded-lg px-3 py-2 font-medium ${settingsSub === 'tab-live' ? 'bg-blue-50 text-gray-900' : 'hover:bg-gray-100 text-gray-700'}`}>Tab Live</button>
                 </div>
               )}
             </div>
 
-            <button className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
+            <button onClick={() => setMainSection('dashboard')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
               <span className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center"><Sparkles className="w-5 h-5" /></span>
               Tương tác
             </button>
-            <button className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
+            <button onClick={() => setMainSection('dashboard')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
               <span className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center"><Activity className="w-5 h-5" /></span>
               Phân phối
             </button>
-            <button className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
+            <button onClick={() => setMainSection('details')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
               <span className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center"><Bell className="w-5 h-5" /></span>
               Báo cáo sự cố
             </button>
@@ -245,11 +631,17 @@ export default function LiveProducerPage() {
               <span className="h-2 w-2 rounded-full bg-red-500" />
               <LiveTimer />
             </div>
-            <button className="w-full rounded-xl bg-red-600 text-white font-semibold py-2.5 hover:bg-red-700">Kết thúc video trực tiếp</button>
+            <button onClick={() => void handleEndLive()} className="w-full rounded-xl bg-red-600 text-white font-semibold py-2.5 hover:bg-red-700">Kết thúc video trực tiếp</button>
           </div>
         </aside>
 
         <main className="flex-1 p-6">
+          {(toolMessage || toolError) && (
+            <div className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${toolError ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+              {toolError || toolMessage}
+            </div>
+          )}
+
           {mainSection === 'dashboard' && (
             <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-4 items-start">
               <div className="space-y-4">
@@ -262,8 +654,13 @@ export default function LiveProducerPage() {
                         {mediaError || 'Đang chờ camera/microphone...'}
                       </div>
                     )}
+                    {liveError && (
+                      <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-red-600/90 px-3 py-2 text-sm text-white">
+                        {liveError}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-3 text-xl font-semibold flex items-center gap-2"><MessageCircle className="w-6 h-6 text-gray-700" /> Nhật ký sự kiện</div>
+                  <div className="mt-3 text-xl font-semibold flex items-center gap-2"><MessageCircle className="w-6 h-6 text-gray-700" /> {liveStatus}</div>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -274,11 +671,11 @@ export default function LiveProducerPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-xl bg-gray-100 p-3">
                       <p className="text-sm text-gray-600">Số người đang xem</p>
-                      <p className="text-4xl font-bold mt-1">0</p>
+                      <p className="text-4xl font-bold mt-1">{viewerCount}</p>
                     </div>
                     <div className="rounded-xl bg-gray-100 p-3">
                       <p className="text-sm text-gray-600">Số bình luận hiện tại</p>
-                      <p className="text-4xl font-bold mt-1">0</p>
+                      <p className="text-4xl font-bold mt-1">{commentCount}</p>
                     </div>
                   </div>
                 </section>
@@ -295,40 +692,33 @@ export default function LiveProducerPage() {
                     <div className="flex items-start gap-3">
                       <Eye className="w-5 h-5 text-gray-500 mt-1" />
                       <div>
-                        <p className="text-3xl font-bold leading-none">0</p>
+                        <p className="text-3xl font-bold leading-none">{viewerCount}</p>
                         <p className="text-gray-600">Người xem</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <MessageCircle className="w-5 h-5 text-green-600 mt-1" />
                       <div>
-                        <p className="text-3xl font-bold leading-none">0</p>
+                        <p className="text-3xl font-bold leading-none">{commentCount}</p>
                         <p className="text-gray-600">Bình luận</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <ThumbsUp className="w-5 h-5 text-blue-600 mt-1" />
                       <div>
-                        <p className="text-3xl font-bold leading-none">0</p>
+                        <p className="text-3xl font-bold leading-none">{reactionCount}</p>
                         <p className="text-gray-600">Cảm xúc</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
                       <Share2 className="w-5 h-5 text-blue-600 mt-1" />
                       <div>
-                        <p className="text-3xl font-bold leading-none">0</p>
+                        <p className="text-3xl font-bold leading-none">{shareCount}</p>
                         <p className="text-gray-600">Lượt chia sẻ</p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <Clapperboard className="w-5 h-5 text-red-500 mt-1" />
-                      <div>
-                        <p className="text-3xl font-bold leading-none">0</p>
-                        <p className="text-gray-600">Clip</p>
-                      </div>
-                    </div>
                   </div>
-                  <button className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Xem thông tin chi tiết</button>
+                  <button onClick={() => setMainSection('details')} className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Xem thông tin chi tiết</button>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -337,23 +727,22 @@ export default function LiveProducerPage() {
                     <MoreHorizontal className="w-5 h-5 text-gray-500" />
                   </div>
                   <div className="space-y-4">
-                    <div>
-                      <svg viewBox="0 0 320 54" className="w-full h-16">
-                        <path d="M0,36 C18,12 42,42 68,28 C90,16 114,38 136,24 C164,8 192,34 216,20 C240,8 270,30 320,18" fill="none" stroke="#1877F2" strokeWidth="2.5" />
-                      </svg>
-                      <p className="text-sm text-gray-600">14.4 Kbps - Tốc độ bit của video</p>
+                    <div className="rounded-xl bg-gray-100 p-4">
+                      <p className="text-sm text-gray-600">Tốc độ bit của video</p>
+                      <p className="mt-1 text-3xl font-bold">{mediaStats.videoBitrateKbps == null ? 'Đang đo' : `${mediaStats.videoBitrateKbps} Kbps`}</p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {mediaStats.width && mediaStats.height ? `${mediaStats.width}×${mediaStats.height}` : 'Chưa có độ phân giải'}
+                      </p>
                     </div>
-                    <div>
-                      <svg viewBox="0 0 320 54" className="w-full h-16">
-                        <path d="M0,22 C24,18 44,34 74,26 C100,18 126,38 152,28 C176,20 202,34 226,24 C252,16 278,28 320,20" fill="none" stroke="#1877F2" strokeWidth="2.5" />
-                      </svg>
-                      <p className="text-sm text-gray-600">30 fps - Tỷ lệ khung hình</p>
+                    <div className="rounded-xl bg-gray-100 p-4">
+                      <p className="text-sm text-gray-600">Tỷ lệ khung hình</p>
+                      <p className="mt-1 text-3xl font-bold">{mediaStats.fps == null ? 'Đang đo' : `${mediaStats.fps} fps`}</p>
+                      <p className="mt-1 text-xs text-gray-500">Lấy từ WebRTC sender stats hoặc camera settings</p>
                     </div>
-                    <div>
-                      <svg viewBox="0 0 320 54" className="w-full h-16">
-                        <path d="M0,32 C24,10 50,40 78,30 C104,20 126,36 152,26 C178,14 202,34 230,24 C256,16 286,30 320,22" fill="none" stroke="#1877F2" strokeWidth="2.5" />
-                      </svg>
-                      <p className="text-sm text-gray-600">28 Kbps - Tốc độ bit của âm thanh</p>
+                    <div className="rounded-xl bg-gray-100 p-4">
+                      <p className="text-sm text-gray-600">Tốc độ bit của âm thanh</p>
+                      <p className="mt-1 text-3xl font-bold">{mediaStats.audioBitrateKbps == null ? 'Đang đo' : `${mediaStats.audioBitrateKbps} Kbps`}</p>
+                      <p className="mt-1 text-xs text-gray-500">Cập nhật khoảng mỗi 2 giây khi đang publish</p>
                     </div>
                   </div>
                 </section>
@@ -365,8 +754,8 @@ export default function LiveProducerPage() {
                   </div>
                   <p className="text-gray-700 mb-3">Chia sẻ liên kết của video trực tiếp với người kiểm duyệt. Liên kết này sẽ mở trong Live Producer để dễ dàng truy cập.</p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">https://www.facebook.com/live/producer/abc</div>
-                    <button className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Sao chép</button>
+                    <div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem live'}</div>
+                    <button onClick={() => void handleCopyViewerUrl()} disabled={!viewerUrl} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2 disabled:text-gray-400 disabled:cursor-not-allowed">Sao chép</button>
                   </div>
                 </section>
               </div>
@@ -374,10 +763,23 @@ export default function LiveProducerPage() {
               <div className="space-y-4">
                 <section className="rounded-2xl border border-gray-200 bg-white p-5 min-h-[520px]">
                   <h3 className="text-2xl font-bold mb-4">Bình luận</h3>
-                  <div className="rounded-xl bg-gray-100 p-6 text-center text-gray-500 min-h-[320px] flex flex-col justify-center">
-                    <MessageCircle className="w-7 h-7 mx-auto mb-2" />
-                    <p className="font-semibold">Chưa có bình luận</p>
-                    <p className="text-sm">Bình luận của đối tượng sẽ hiển thị ở đây.</p>
+                  <div className="rounded-xl bg-gray-100 p-4 text-gray-700 min-h-[320px] max-h-[420px] overflow-y-auto">
+                    {comments.length === 0 ? (
+                      <div className="flex min-h-[280px] flex-col justify-center text-center text-gray-500">
+                        <MessageCircle className="w-7 h-7 mx-auto mb-2" />
+                        <p className="font-semibold">Chưa có bình luận</p>
+                        <p className="text-sm">Bình luận của đối tượng sẽ hiển thị ở đây.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {comments.map((comment) => (
+                          <div key={comment.id} className="rounded-xl bg-white px-3 py-2 shadow-sm">
+                            <p className="text-sm font-semibold text-gray-900">{comment.userFullName || comment.username || 'Người dùng'}</p>
+                            <p className="text-sm text-gray-700">{comment.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </section>
 
@@ -406,15 +808,10 @@ export default function LiveProducerPage() {
                     </div>
 
                     <div className="mt-4">
-                      <p className="text-xl font-semibold text-gray-900 leading-tight">hhhh</p>
-                      <p className="mt-1.5 text-lg text-gray-700 leading-tight">hhh</p>
+                      <p className="text-xl font-semibold text-gray-900 leading-tight">{liveTitle}</p>
+                      {liveDescription && <p className="mt-1.5 text-lg text-gray-700 leading-tight">{liveDescription}</p>}
                     </div>
                   </div>
-
-                  <button className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-                    <Pencil className="h-4 w-4" />
-                    Chỉnh sửa bài viết
-                  </button>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -422,17 +819,41 @@ export default function LiveProducerPage() {
                     <h3 className="text-2xl font-bold">Cuộc thăm dò ý kiến</h3>
                     <MoreHorizontal className="w-5 h-5 text-gray-500" />
                   </div>
-                  <p className="text-lg font-semibold mb-2">Tạo cuộc thăm dò ý kiến</p>
                   <div className="space-y-3">
-                    <input className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none" placeholder="Câu hỏi" />
-                    <input className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none" placeholder="Lựa chọn" />
-                    <input className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none" placeholder="Lựa chọn" />
-                    <button className="w-full rounded-xl border border-dashed border-blue-500 text-blue-600 py-2.5 font-medium">Thêm lựa chọn</button>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <input type="checkbox" checked={pollEnabled} onChange={(event) => setPollEnabled(event.target.checked)} />
+                      Bật thăm dò ý kiến cho phiên live
+                    </label>
+                    <input
+                      value={pollQuestion}
+                      onChange={(event) => setPollQuestion(event.target.value)}
+                      className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
+                      placeholder="Câu hỏi"
+                    />
+                    {pollOptions.map((option, index) => (
+                      <input
+                        key={index}
+                        value={option}
+                        onChange={(event) => setPollOptions((prev) => prev.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))}
+                        className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
+                        placeholder={`Lựa chọn ${index + 1}`}
+                      />
+                    ))}
+                    <button
+                      onClick={() => setPollOptions((prev) => (prev.length >= 6 ? prev : [...prev, '']))}
+                      className="w-full rounded-xl border border-dashed border-blue-500 text-blue-600 py-2.5 font-medium"
+                    >
+                      Thêm lựa chọn
+                    </button>
                     <div className="grid grid-cols-2 gap-2">
-                      <button className="rounded-xl bg-gray-200 text-gray-500 py-2.5 font-semibold">Xóa</button>
-                      <button className="rounded-xl bg-gray-200 text-gray-500 py-2.5 font-semibold">Lưu</button>
+                      <button onClick={() => void handleClearPoll()} className="rounded-xl bg-gray-200 text-gray-700 py-2.5 font-semibold">Xóa</button>
+                      <button onClick={() => void handleSavePoll()} className="rounded-xl bg-blue-600 text-white py-2.5 font-semibold">Lưu thăm dò</button>
                     </div>
-                    <button className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Tạo cuộc thăm dò ý kiến</button>
+                    {toolState?.pollEnabled && (
+                      <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">
+                        Thăm dò đang bật: {toolState.pollQuestion}
+                      </div>
+                    )}
                   </div>
                 </section>
 
@@ -441,7 +862,15 @@ export default function LiveProducerPage() {
                     <h3 className="text-2xl font-bold">Thông báo</h3>
                     <MoreHorizontal className="w-5 h-5 text-gray-500" />
                   </div>
-                  <div className="rounded-xl bg-gray-50 p-5 min-h-[180px]" />
+                  <div className="space-y-3">
+                    <textarea
+                      value={hostNotice}
+                      onChange={(event) => setHostNotice(event.target.value)}
+                      className="min-h-[110px] w-full resize-none rounded-xl bg-gray-100 px-4 py-3 outline-none"
+                      placeholder="Ghi chú/thông báo cho host hoặc người kiểm duyệt..."
+                    />
+                    <button onClick={() => void handleSaveHostNotice()} className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Lưu thông báo</button>
+                  </div>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -449,8 +878,29 @@ export default function LiveProducerPage() {
                     <h3 className="text-2xl font-bold">Liên kết đáng chú ý</h3>
                     <MoreHorizontal className="w-5 h-5 text-gray-500" />
                   </div>
-                  <p className="text-gray-700 mb-3">Chưa thiết lập liên kết nào. Hãy nhấp vào nút Thêm ở bên dưới để thiết lập liên kết đáng chú ý.</p>
-                  <button className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Thêm</button>
+                  <div className="space-y-3">
+                    <input
+                      value={featuredLinkTitle}
+                      onChange={(event) => setFeaturedLinkTitle(event.target.value)}
+                      className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
+                      placeholder="Tiêu đề liên kết"
+                    />
+                    <input
+                      value={featuredLinkUrl}
+                      onChange={(event) => setFeaturedLinkUrl(event.target.value)}
+                      className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
+                      placeholder="https://..."
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <button onClick={() => void handleClearFeaturedLink()} className="rounded-xl bg-gray-200 text-gray-700 py-2.5 font-semibold">Xóa</button>
+                      <button onClick={() => void handleSaveFeaturedLink()} className="rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Lưu liên kết</button>
+                    </div>
+                    {hasFeaturedLink && (
+                      <a href={toolState?.featuredLinkUrl ?? '#'} target="_blank" rel="noreferrer" className="block rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-700">
+                        {toolState?.featuredLinkTitle}
+                      </a>
+                    )}
+                  </div>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 bg-white p-5">
@@ -460,8 +910,8 @@ export default function LiveProducerPage() {
                   </div>
                   <p className="text-gray-700 mb-3">Nhấp vào liên kết bên dưới để xem những gì người xem nhìn thấy</p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">https://www.facebook.com/quoc.kiet/live-preview</div>
-                    <button onClick={() => navigate('/live/viewer')} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Xem bài viết</button>
+                    <div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem trước'}</div>
+                    <button onClick={() => navigate(`/live/viewer?sessionId=${encodeURIComponent(sessionId)}`)} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Xem bài viết</button>
                   </div>
                 </section>
               </div>
@@ -473,9 +923,12 @@ export default function LiveProducerPage() {
               <h2 className="text-4xl font-bold text-gray-900">Thông tin chi tiết</h2>
               <p className="text-gray-600">Một số thông tin chi tiết có thể hiển thị chậm hơn so với những gì bạn đang thấy.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Số người đang xem</p><p className="text-4xl font-bold mt-2">0</p></div>
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Số người xem đồng thời cao nhất</p><p className="text-4xl font-bold mt-2">0</p></div>
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Tổng số bình luận</p><p className="text-4xl font-bold mt-2">0</p></div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Số người đang xem</p><p className="text-4xl font-bold mt-2">{viewerCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Số người xem đồng thời cao nhất</p><p className="text-4xl font-bold mt-2">{peakViewerCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Tổng số bình luận</p><p className="text-4xl font-bold mt-2">{commentCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Tổng cảm xúc live</p><p className="text-4xl font-bold mt-2">{reactionCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Lượt chia sẻ bài viết</p><p className="text-4xl font-bold mt-2">{shareCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Video bitrate</p><p className="text-4xl font-bold mt-2">{mediaStats.videoBitrateKbps == null ? '—' : mediaStats.videoBitrateKbps}</p><p className="text-sm text-gray-500">Kbps</p></div>
               </div>
             </div>
           )}
@@ -485,12 +938,12 @@ export default function LiveProducerPage() {
               <section className="rounded-2xl border border-gray-200 bg-white p-5">
                 <h3 className="text-2xl font-bold mb-4">Cài đặt phát trực tiếp</h3>
                 <p className="font-semibold mb-1">Độ trễ của video trực tiếp</p>
-                <p className="text-gray-600 mb-6">Độ trễ video đang phát là khoảng thời gian trễ từ khi camera ghi lại một khoảnh khắc đến khi người xem nhìn thấy khoảnh khắc đó.</p>
+                <p className="text-gray-600 mb-6">Độ trễ đang phụ thuộc vào LiveKit/WebRTC và môi trường mạng. UI này chỉ hiển thị trạng thái, chưa đổi cấu hình server.</p>
 
                 <div className="space-y-4">
-                  <div className="border-b border-gray-200 pb-3"><p className="font-semibold">Tự động</p><p className="text-gray-600">Chúng tôi sẽ chọn độ trễ phù hợp nhất cho nội dung phát của bạn.</p></div>
-                  <div className="border-b border-gray-200 pb-3"><p className="font-semibold">Bình thường</p><p className="text-gray-600">Nên dùng nếu bạn không định tương tác với người xem.</p></div>
-                  <div><p className="font-semibold">Độ trễ thấp</p><p className="text-gray-600">Nên dùng nếu bạn muốn tương tác với người xem gần như ngay tức thì.</p></div>
+                  <div className="border-b border-gray-200 pb-3"><p className="font-semibold">LiveKit WebRTC</p><p className="text-gray-600">Luồng camera/mic được publish trực tiếp vào room LiveKit.</p></div>
+                  <div className="border-b border-gray-200 pb-3"><p className="font-semibold">Người xem hiện tại</p><p className="text-gray-600">{viewerCount} người đang kết nối vào phiên live.</p></div>
+                  <div><p className="font-semibold">Chất lượng gửi lên</p><p className="text-gray-600">{mediaStats.videoBitrateKbps == null ? 'Đang đo bitrate video.' : `${mediaStats.videoBitrateKbps} Kbps video`}</p></div>
                 </div>
               </section>
 
@@ -532,29 +985,6 @@ export default function LiveProducerPage() {
                 </div>
               </section>
             </div>
-          )}
-
-          {mainSection === 'settings' && settingsSub === 'viewer' && (
-            <section className="rounded-2xl border border-gray-200 bg-white p-5 max-w-[640px]">
-              <h3 className="text-2xl font-bold mb-5">Cài đặt cho người xem</h3>
-              <div className="space-y-4">
-                <div className="border-b border-gray-200 pb-3"><p className="font-semibold">Cho phép người xem tua lại</p><p className="text-gray-600">Người xem có thể tua lại video trực tiếp mà bạn bắt đầu trong Live Producer.</p></div>
-                <div className="border-b border-gray-200 pb-3"><p className="font-semibold">Bật chú thích tạo tự động</p><p className="text-gray-600">Chú thích sẽ tự động tạo trong video trực tiếp của bạn.</p></div>
-                <div><p className="font-semibold">Cho phép người xem nhắn tin cho bạn</p><p className="text-gray-600">Người xem có thể nhắn tin thẳng cho bạn qua Messenger từ video trực tiếp.</p></div>
-              </div>
-            </section>
-          )}
-
-          {mainSection === 'settings' && settingsSub === 'tab-live' && (
-            <section className="rounded-2xl border border-gray-200 bg-white p-5 max-w-[760px]">
-              <h3 className="text-2xl font-bold mb-2">Truy cập nhanh vào video trực tiếp</h3>
-              <p className="text-gray-600 mb-4">Cho người xem biết vị trí để tìm video trực tiếp của bạn.</p>
-              <p className="font-semibold mb-2">Hiển thị Tab Live trên Trang</p>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2"><div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">https://www.facebook.com/quoc.kiet/live_video</div><button className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Sao chép</button></div>
-                <div className="flex items-center gap-2"><div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">https://www.facebook.com/quoc.kiet/videos/14</div><button className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Sao chép</button></div>
-              </div>
-            </section>
           )}
 
           {mainSection !== 'dashboard' && (

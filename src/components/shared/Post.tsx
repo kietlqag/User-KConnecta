@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+﻿import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MessageCircle,
   Share2,
   Globe,
+  Radio,
+  Play,
   X,
   ChevronLeft,
   ChevronRight,
@@ -15,6 +17,7 @@ import {
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, SAVED_POSTS_CHANGED_EVENT, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
+import { liveService } from '@/services/liveService';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { PostDetailModal } from '../posts/PostDetailModal';
 import { PostShareModal } from '../posts/PostShareModal';
@@ -85,6 +88,7 @@ export interface PostProps {
   group?: Group;
   commentsData?: Comment[];
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+  isLivePost?: boolean;
   onDelete?: (postId: string) => void;
   onReactionChange?: (postId: string, reactionType: ReactionType | null) => void;
 }
@@ -105,6 +109,7 @@ export function Post({
   reactionCounts: serverReactionCounts,
   group,
   mediaList = [],
+  isLivePost = false,
   onDelete,
   onReactionChange,
 }: PostProps) {
@@ -127,6 +132,8 @@ export function Post({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const currentUser = authService.getCurrentUser();
   const isOwner = !!currentUser && currentUser.id === author.id;
+  const [liveSessionStatus, setLiveSessionStatus] = useState<'LIVE' | 'ENDED' | 'CANCELED' | 'SCHEDULED' | null>(null);
+  const isLiveEnded = liveSessionStatus === 'ENDED' || liveSessionStatus === 'CANCELED';
   const [reactionCounts, setReactionCounts] = useState<ReactionCountMap>(() =>
     mapReactionCounts(
       serverReactionCounts,
@@ -199,6 +206,25 @@ export function Post({
     }
   }, [lightboxIndex, isLightboxOpen]);
 
+  useEffect(() => {
+    if (!isLivePost) return;
+    let cancelled = false;
+    const loadLiveStatus = async () => {
+      try {
+        const session = await liveService.getSessionByPost(id);
+        if (!cancelled) setLiveSessionStatus(session.status);
+      } catch {
+        if (!cancelled) setLiveSessionStatus(null);
+      }
+    };
+    void loadLiveStatus();
+    const interval = window.setInterval(() => void loadLiveStatus(), 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [id, isLivePost]);
+
   // Handle scroll lock
   useEffect(() => {
     const scrollableEl = document.querySelector('#root') as HTMLElement;
@@ -223,6 +249,10 @@ export function Post({
   const mediaType = firstItem?.type === 'VIDEO' ? 'video' : 'image';
   const activeReactions = getActiveReactions(reactionCounts);
   const totalReactionCount = getTotalReactionCount(reactionCounts);
+  const [liveTitle, liveDescription] = useMemo(() => {
+    const [title, ...rest] = content.split(/\n\s*\n/);
+    return [title?.trim() || 'Video trực tiếp', rest.join('\n\n').trim()];
+  }, [content]);
 
   const postData = useMemo(
     () => ({
@@ -342,6 +372,20 @@ export function Post({
     }
   };
 
+  const handleOpenLive = async () => {
+    try {
+      const session = await liveService.getSessionByPost(id);
+      setLiveSessionStatus(session.status);
+      if (session.status === 'ENDED' || session.status === 'CANCELED') {
+        toast.info('Live đã kết thúc.');
+        return;
+      }
+      navigate(`/live/viewer?sessionId=${encodeURIComponent(session.id)}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể mở phiên live');
+    }
+  };
+
   return (
     <>
       <div id={`post-${id}`} className="bg-white rounded-lg shadow mb-4">
@@ -399,10 +443,52 @@ export function Post({
             />
           </div>
 
-          <p className="text-gray-900 mb-3 whitespace-pre-wrap">{content}</p>
+          {!isLivePost && <p className="text-gray-900 mb-3 whitespace-pre-wrap">{content}</p>}
         </div>
 
-        {galleryItems.length >= 2 ? (
+        {isLivePost ? (
+          <div className="px-4 pb-4">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-zinc-950 shadow-sm">
+              <button
+                type="button"
+                onClick={() => void handleOpenLive()}
+                className="group relative block aspect-video w-full overflow-hidden bg-gradient-to-br from-zinc-950 via-zinc-900 to-slate-800 text-left"
+              >
+                <div className="absolute inset-0 opacity-40 [background:radial-gradient(circle_at_25%_25%,rgba(239,68,68,.45),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(37,99,235,.38),transparent_30%),linear-gradient(135deg,rgba(15,23,42,.2),rgba(0,0,0,.9))]" />
+                <div className={`absolute left-4 top-4 inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow ${isLiveEnded ? 'bg-gray-700' : 'bg-red-600'}`}>
+                  <span className={`h-2 w-2 rounded-full bg-white ${isLiveEnded ? '' : 'animate-pulse'}`} />
+                  {isLiveEnded ? 'Đã kết thúc' : 'Live'}
+                </div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur transition-transform group-hover:scale-105">
+                    <Play className="ml-1 h-8 w-8 fill-white" />
+                  </span>
+                </div>
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/75 to-transparent p-4 text-white">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-red-100">
+                    <Radio className="h-4 w-4" />
+                    {isLiveEnded ? 'Live đã kết thúc' : 'Đang phát trực tiếp'}
+                  </div>
+                  <h2 className="line-clamp-2 text-xl font-bold leading-tight">{liveTitle}</h2>
+                  {liveDescription && <p className="mt-1 line-clamp-2 text-sm text-white/75">{liveDescription}</p>}
+                </div>
+              </button>
+              <div className="flex items-center justify-between gap-3 bg-white px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-gray-900">{liveTitle}</p>
+                  <p className="text-xs text-gray-500">Nhấn để xem phiên live và tham gia bình luận</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleOpenLive()}
+                  className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold text-white ${isLiveEnded ? 'bg-gray-700 hover:bg-gray-800' : 'bg-red-600 hover:bg-red-700'}`}
+                >
+                  {isLiveEnded ? 'Đã kết thúc' : 'Xem trực tiếp'}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : galleryItems.length >= 2 ? (
           <PostMediaGallery
             items={galleryItems}
             onMediaClick={(itemIndex) => {

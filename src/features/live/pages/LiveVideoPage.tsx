@@ -1,19 +1,43 @@
-﻿import { Video, Calendar } from 'lucide-react';
+import { Calendar, Video } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../../home/components';
 import { LiveSidebar, LiveOptionCard } from '../components';
+import { liveService, type LiveSessionResponse } from '@/services/liveService';
 
 export default function LiveVideoPage() {
   const navigate = useNavigate();
+  const [activeSessions, setActiveSessions] = useState<LiveSessionResponse[]>([]);
+  const [isLoadingActive, setIsLoadingActive] = useState(false);
 
   const handleGoLive = () => {
     navigate('/live/setup');
   };
 
   const handleCreateEvent = () => {
-    console.log('Creating live event...');
-    // Navigation logic to event creation form
+    navigate('/live/setup');
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadActiveSessions = async () => {
+      setIsLoadingActive(true);
+      try {
+        const data = await liveService.listActiveSessions();
+        if (!cancelled) setActiveSessions(data);
+      } catch {
+        if (!cancelled) setActiveSessions([]);
+      } finally {
+        if (!cancelled) setIsLoadingActive(false);
+      }
+    };
+    void loadActiveSessions();
+    const interval = window.setInterval(() => void loadActiveSessions(), 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -56,11 +80,28 @@ export default function LiveVideoPage() {
             </div>
 
             <div className="mt-12 bg-white rounded-lg shadow-sm p-6">
-              <h3 className="font-semibold mb-4">Đóng góp ý kiến</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Chúng tôi luôn cải thiện trải nghiệm phát trực tiếp. Hãy cho chúng tôi biết suy nghĩ của bạn!
-              </p>
-              <button className="text-blue-600 hover:underline text-sm font-medium">Gửi phản hồi</button>
+              <h3 className="font-semibold mb-4">Đang phát trực tiếp</h3>
+              {isLoadingActive && activeSessions.length === 0 ? (
+                <p className="text-sm text-gray-600">Đang tải phiên live...</p>
+              ) : activeSessions.length === 0 ? (
+                <p className="text-sm text-gray-600">Chưa có phiên live nào đang phát.</p>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {activeSessions.map((session) => (
+                    <button
+                      key={session.id}
+                      type="button"
+                      onClick={() => navigate(`/live/viewer?sessionId=${encodeURIComponent(session.id)}`)}
+                      className="rounded-lg border border-gray-200 p-4 text-left hover:border-blue-400 hover:bg-blue-50"
+                    >
+                      <div className="mb-2 inline-flex rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">LIVE</div>
+                      <p className="font-semibold text-gray-900">{session.title}</p>
+                      <p className="mt-1 text-sm text-gray-600 line-clamp-2">{session.description || 'Video trực tiếp'}</p>
+                      <p className="mt-3 text-xs text-gray-500">{session.viewerCount} người đang xem</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
