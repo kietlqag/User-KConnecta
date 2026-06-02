@@ -65,6 +65,12 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY}
   api-secret: ${CLOUDINARY_API_SECRET}
 
+livekit:
+  url: ${LIVEKIT_URL:}
+  api-key: ${LIVEKIT_API_KEY:}
+  api-secret: ${LIVEKIT_API_SECRET:}
+  token-ttl-minutes: ${LIVEKIT_TOKEN_TTL_MINUTES:120}
+
 logging:
   level:
     org.springframework.mail: debug

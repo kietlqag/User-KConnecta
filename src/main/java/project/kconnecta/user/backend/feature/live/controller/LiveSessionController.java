@@ -48,6 +48,11 @@ public class LiveSessionController {
         return ResponseEntity.ok(liveSessionService.join(sessionId, request));
     }
 
+    @PutMapping("/{sessionId}/viewer/heartbeat")
+    public ResponseEntity<LiveSessionResponse> heartbeat(@PathVariable UUID sessionId, @Valid @RequestBody LiveViewerRequest request) {
+        return ResponseEntity.ok(liveSessionService.heartbeat(sessionId, request));
+    }
+
     @PutMapping("/{sessionId}/viewer/leave")
     public ResponseEntity<LiveSessionResponse> leave(@PathVariable UUID sessionId, @Valid @RequestBody LiveViewerRequest request) {
         return ResponseEntity.ok(liveSessionService.leave(sessionId, request));
@@ -61,6 +66,11 @@ public class LiveSessionController {
     @GetMapping("/{sessionId}")
     public ResponseEntity<LiveSessionResponse> getById(@PathVariable UUID sessionId) {
         return ResponseEntity.ok(liveSessionService.getById(sessionId));
+    }
+
+    @GetMapping("/by-post/{postId}")
+    public ResponseEntity<LiveSessionResponse> getByPostId(@PathVariable UUID postId) {
+        return ResponseEntity.ok(liveSessionService.getByPostId(postId));
     }
 
     @GetMapping("/active")

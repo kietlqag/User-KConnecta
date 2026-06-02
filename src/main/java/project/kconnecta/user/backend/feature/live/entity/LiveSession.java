@@ -70,6 +70,9 @@ public class LiveSession {
     @Column(name = "stream_key", nullable = false, length = 120, unique = true)
     private String streamKey;
 
+    @Column(name = "room_name", nullable = false, length = 120, unique = true)
+    private String roomName;
+
     @Column(name = "playback_url", length = 500)
     private String playbackUrl;
 

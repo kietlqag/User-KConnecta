@@ -31,6 +31,8 @@ import java.util.UUID;
 @Transactional
 public class LiveSessionServiceImpl implements LiveSessionService {
 
+    private static final long VIEWER_HEARTBEAT_TIMEOUT_SECONDS = 45;
+
     private final LiveSessionRepository liveSessionRepository;
     private final LiveSessionViewerRepository liveSessionViewerRepository;
     private final LiveSessionReactionRepository liveSessionReactionRepository;
@@ -57,6 +59,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .scheduledAt(request.getStartMode() == LiveStartMode.SCHEDULED ? request.getScheduledAt() : null)
                 .status(initialStatus)
                 .streamKey("live_" + UUID.randomUUID().toString().replace("-", ""))
+                .roomName("live_" + UUID.randomUUID().toString().replace("-", ""))
                 .playbackUrl(request.getPlaybackUrl())
                 .thumbnailUrl(request.getThumbnailUrl())
                 .viewerCount(0)
@@ -102,17 +105,28 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     public LiveSessionResponse join(UUID sessionId, LiveViewerRequest request) {
         LiveSession session = findLiveSession(sessionId);
         User user = findUser(request.getUserId());
+        cleanupStaleViewers(session);
 
-        boolean existed = liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, user.getId()).isPresent();
-        if (!existed) {
-            liveSessionViewerRepository.save(LiveSessionViewer.builder().session(session).user(user).build());
-            int viewers = session.getViewerCount() + 1;
-            session.setViewerCount(viewers);
-            if (viewers > session.getPeakViewerCount()) {
-                session.setPeakViewerCount(viewers);
-            }
-            liveSessionRepository.save(session);
-        }
+        LiveSessionViewer viewer = liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, user.getId())
+                .orElseGet(() -> LiveSessionViewer.builder().session(session).user(user).build());
+        viewer.setLastSeenAt(LocalDateTime.now());
+        liveSessionViewerRepository.save(viewer);
+        refreshViewerCount(session);
+
+        return toResponse(session);
+    }
+
+    @Override
+    public LiveSessionResponse heartbeat(UUID sessionId, LiveViewerRequest request) {
+        LiveSession session = findLiveSession(sessionId);
+        User user = findUser(request.getUserId());
+        cleanupStaleViewers(session);
+
+        LiveSessionViewer viewer = liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, user.getId())
+                .orElseGet(() -> LiveSessionViewer.builder().session(session).user(user).build());
+        viewer.setLastSeenAt(LocalDateTime.now());
+        liveSessionViewerRepository.save(viewer);
+        refreshViewerCount(session);
 
         return toResponse(session);
     }
@@ -124,9 +138,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, request.getUserId())
                 .ifPresent(viewer -> {
                     liveSessionViewerRepository.delete(viewer);
-                    session.setViewerCount(Math.max(0, session.getViewerCount() - 1));
-                    liveSessionRepository.save(session);
                 });
+        refreshViewerCount(session);
 
         return toResponse(session);
     }
@@ -165,6 +178,14 @@ public class LiveSessionServiceImpl implements LiveSessionService {
 
     @Override
     @Transactional(readOnly = true)
+    public LiveSessionResponse getByPostId(UUID postId) {
+        return liveSessionRepository.findByPostId(postId)
+                .map(this::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Live session not found for post: " + postId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<LiveSessionResponse> listActive() {
         return liveSessionRepository.findAllByStatusOrderByCreatedAtDesc(LiveSessionStatus.LIVE)
                 .stream()
@@ -182,9 +203,12 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public LiveSessionStatsResponse getStats(UUID sessionId) {
         LiveSession session = findSession(sessionId);
+        if (session.getStatus() == LiveSessionStatus.LIVE) {
+            cleanupStaleViewers(session);
+            refreshViewerCount(session);
+        }
         return LiveSessionStatsResponse.builder()
                 .sessionId(session.getId())
                 .viewerCount(session.getViewerCount())
@@ -222,6 +246,24 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
     }
 
+    private void cleanupStaleViewers(LiveSession session) {
+        liveSessionViewerRepository.deleteStaleBySessionId(
+                session.getId(),
+                LocalDateTime.now().minusSeconds(VIEWER_HEARTBEAT_TIMEOUT_SECONDS)
+        );
+    }
+
+    private void refreshViewerCount(LiveSession session) {
+        int viewers = session.getStatus() == LiveSessionStatus.LIVE
+                ? liveSessionViewerRepository.countBySessionId(session.getId())
+                : 0;
+        session.setViewerCount(viewers);
+        if (viewers > session.getPeakViewerCount()) {
+            session.setPeakViewerCount(viewers);
+        }
+        liveSessionRepository.save(session);
+    }
+
     private LiveSessionResponse toResponse(LiveSession session) {
         return LiveSessionResponse.builder()
                 .id(session.getId())
@@ -235,6 +277,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .scheduledAt(session.getScheduledAt())
                 .status(session.getStatus())
                 .streamKey(session.getStreamKey())
+                .roomName(session.getRoomName())
                 .playbackUrl(session.getPlaybackUrl())
                 .thumbnailUrl(session.getThumbnailUrl())
                 .startedAt(session.getStartedAt())

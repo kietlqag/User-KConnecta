@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
@@ -46,6 +47,9 @@ public class LiveSessionViewer {
     @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt;
 
+    @Column(name = "last_seen_at")
+    private LocalDateTime lastSeenAt;
+
     @PrePersist
     public void prePersist() {
         if (id == null) {
@@ -54,5 +58,13 @@ public class LiveSessionViewer {
         if (joinedAt == null) {
             joinedAt = LocalDateTime.now();
         }
+        if (lastSeenAt == null) {
+            lastSeenAt = joinedAt;
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        lastSeenAt = LocalDateTime.now();
     }
 }

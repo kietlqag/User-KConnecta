@@ -14,9 +14,11 @@ public interface LiveSessionService {
     LiveSessionResponse goLive(UUID sessionId);
     LiveSessionResponse endLive(UUID sessionId);
     LiveSessionResponse join(UUID sessionId, LiveViewerRequest request);
+    LiveSessionResponse heartbeat(UUID sessionId, LiveViewerRequest request);
     LiveSessionResponse leave(UUID sessionId, LiveViewerRequest request);
     LiveSessionResponse react(UUID sessionId, UpsertLiveReactionRequest request);
     LiveSessionResponse getById(UUID sessionId);
+    LiveSessionResponse getByPostId(UUID postId);
     List<LiveSessionResponse> listActive();
     List<LiveSessionResponse> listByHost(UUID hostUserId);
     LiveSessionStatsResponse getStats(UUID sessionId);

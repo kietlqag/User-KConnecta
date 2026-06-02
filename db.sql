@@ -107,6 +107,88 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_receiver_sender_created_at
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_created_at
     ON public.chat_messages(conversation_id, created_at DESC, id DESC);
 
+-- -------------------------
+-- Live
+-- -------------------------
+CREATE TABLE IF NOT EXISTS public.live_schedules (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    start_mode VARCHAR(20) NOT NULL,
+    scheduled_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_schedules_user_updated
+    ON public.live_schedules(user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.live_pinned_comment_settings (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    comment_text VARCHAR(1000),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_pinned_comment_user_updated
+    ON public.live_pinned_comment_settings(user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.live_sessions (
+    id UUID PRIMARY KEY,
+    host_user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    group_id UUID,
+    post_id UUID,
+    title VARCHAR(255) NOT NULL,
+    description VARCHAR(5000),
+    privacy VARCHAR(20) NOT NULL,
+    start_mode VARCHAR(20) NOT NULL,
+    scheduled_at TIMESTAMP,
+    status VARCHAR(20) NOT NULL,
+    stream_key VARCHAR(120) NOT NULL UNIQUE,
+    room_name VARCHAR(120) NOT NULL UNIQUE,
+    playback_url VARCHAR(500),
+    thumbnail_url VARCHAR(500),
+    started_at TIMESTAMP,
+    ended_at TIMESTAMP,
+    viewer_count INTEGER NOT NULL DEFAULT 0,
+    peak_viewer_count INTEGER NOT NULL DEFAULT 0,
+    total_reaction_count BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_sessions_status_created
+    ON public.live_sessions(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_live_sessions_host_created
+    ON public.live_sessions(host_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_live_sessions_post_id
+    ON public.live_sessions(post_id);
+
+CREATE TABLE IF NOT EXISTS public.live_session_viewers (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES public.live_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_live_session_viewer UNIQUE (session_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_session_viewers_session_id
+    ON public.live_session_viewers(session_id);
+
+CREATE TABLE IF NOT EXISTS public.live_session_reactions (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES public.live_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    reaction_type VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_live_session_reaction UNIQUE (session_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_session_reactions_session_id
+    ON public.live_session_reactions(session_id);
+
 CREATE TABLE IF NOT EXISTS public.chat_pinned_conversations (
     id UUID PRIMARY KEY,
     owner_user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,

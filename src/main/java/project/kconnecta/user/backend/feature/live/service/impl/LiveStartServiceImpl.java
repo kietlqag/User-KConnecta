@@ -4,14 +4,25 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.feature.live.dto.request.LiveKitTokenRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.StartLiveRequest;
+import project.kconnecta.user.backend.feature.live.dto.response.LiveKitTokenResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.StartLiveResponse;
+import project.kconnecta.user.backend.feature.live.entity.LiveSession;
+import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
+import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
+import project.kconnecta.user.backend.feature.live.service.LiveKitTokenService;
 import project.kconnecta.user.backend.feature.live.service.LiveStartService;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import project.kconnecta.user.backend.feature.post.service.PostService;
+import project.kconnecta.user.backend.feature.user.entity.User;
+import project.kconnecta.user.backend.feature.user.repository.UserRepository;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +30,9 @@ import project.kconnecta.user.backend.feature.post.service.PostService;
 public class LiveStartServiceImpl implements LiveStartService {
 
     private final PostService postService;
+    private final UserRepository userRepository;
+    private final LiveSessionRepository liveSessionRepository;
+    private final LiveKitTokenService liveKitTokenService;
 
     @Override
     public StartLiveResponse startLive(StartLiveRequest request) {
@@ -40,11 +54,50 @@ public class LiveStartServiceImpl implements LiveStartService {
         createPostRequest.setPromoted(Boolean.FALSE);
 
         PostResponse post = postService.createPost(createPostRequest);
+        User host = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new ValidationException("User not found: " + request.getUserId()));
+
+        LiveSessionStatus status = request.getStartMode() == LiveStartMode.SCHEDULED
+                ? LiveSessionStatus.SCHEDULED
+                : LiveSessionStatus.LIVE;
+        LocalDateTime now = LocalDateTime.now();
+        String roomName = "live_" + post.getId().toString().replace("-", "");
+        LiveSession session = liveSessionRepository.save(LiveSession.builder()
+                .host(host)
+                .groupId(request.getGroupId())
+                .postId(post.getId())
+                .title(request.getTitle().trim())
+                .description(request.getDescription() == null ? null : request.getDescription().trim())
+                .privacy(request.getPrivacy())
+                .startMode(request.getStartMode())
+                .scheduledAt(request.getStartMode() == LiveStartMode.SCHEDULED ? request.getScheduledAt() : null)
+                .status(status)
+                .streamKey(roomName)
+                .roomName(roomName)
+                .playbackUrl(roomName)
+                .viewerCount(0)
+                .peakViewerCount(0)
+                .totalReactionCount(0)
+                .startedAt(status == LiveSessionStatus.LIVE ? now : null)
+                .build());
+
+        LiveKitTokenResponse hostToken = null;
+        if (status == LiveSessionStatus.LIVE) {
+            LiveKitTokenRequest tokenRequest = new LiveKitTokenRequest();
+            tokenRequest.setUserId(request.getUserId());
+            tokenRequest.setSessionId(session.getId());
+            tokenRequest.setRole(LiveKitTokenRequest.LiveKitParticipantRole.HOST);
+            hostToken = liveKitTokenService.createToken(tokenRequest);
+        }
 
         return StartLiveResponse.builder()
                 .postId(post.getId())
+                .sessionId(session.getId())
                 .userId(post.getAuthorId())
                 .title(request.getTitle().trim())
+                .roomName(session.getRoomName())
+                .livekitUrl(hostToken == null ? null : hostToken.getLivekitUrl())
+                .hostToken(hostToken == null ? null : hostToken.getToken())
                 .startMode(request.getStartMode())
                 .postStatus(post.getStatus())
                 .scheduledAt(post.getScheduledAt())

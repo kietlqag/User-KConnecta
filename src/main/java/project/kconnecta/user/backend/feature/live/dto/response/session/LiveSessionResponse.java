@@ -23,6 +23,7 @@ public class LiveSessionResponse {
     private LocalDateTime scheduledAt;
     private LiveSessionStatus status;
     private String streamKey;
+    private String roomName;
     private String playbackUrl;
     private String thumbnailUrl;
     private LocalDateTime startedAt;

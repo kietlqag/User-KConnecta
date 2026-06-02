@@ -209,4 +209,26 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "ORDER BY p.createdAt DESC"
     )
     List<Post> findGroupFeedPostsByUserId(@org.springframework.data.repository.query.Param("userId") UUID userId);
+
+    @org.springframework.data.jpa.repository.Query(
+        value =
+        "SELECT EXISTS (" +
+        "  SELECT 1 FROM posts p " +
+        "  LEFT JOIN user_groups g ON p.group_id = g.id " +
+        "  WHERE p.id = CAST(:postId AS uuid) " +
+        "    AND p.status = 'PUBLISHED' " +
+        "    AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR p.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = CAST(:currentUserId AS uuid)))) " +
+        "    AND (" +
+        "      p.privacy = 'PUBLIC' " +
+        "      OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
+        "      OR (:currentUserId IS NOT NULL AND p.privacy IN ('FRIENDS', 'FRIENDS_EXCEPT') AND EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'ACCEPTED' AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id))) AND NOT (p.privacy = 'FRIENDS_EXCEPT' AND EXISTS (SELECT 1 FROM post_audience_exclusions pae WHERE pae.post_id = p.id AND pae.excluded_user_id = CAST(:currentUserId AS uuid)))) " +
+        "      OR (:currentUserId IS NOT NULL AND p.privacy = 'SPECIFIC_FRIENDS' AND EXISTS (SELECT 1 FROM post_audience_allowances paa WHERE paa.post_id = p.id AND paa.allowed_user_id = CAST(:currentUserId AS uuid))) " +
+        "    )" +
+        ")",
+        nativeQuery = true
+    )
+    boolean isVisibleToUser(
+        @org.springframework.data.repository.query.Param("postId") UUID postId,
+        @org.springframework.data.repository.query.Param("currentUserId") UUID currentUserId
+    );
 }

@@ -12,8 +12,12 @@ import java.util.UUID;
 @Builder
 public class StartLiveResponse {
     private UUID postId;
+    private UUID sessionId;
     private UUID userId;
     private String title;
+    private String roomName;
+    private String livekitUrl;
+    private String hostToken;
     private LiveStartMode startMode;
     private PostStatus postStatus;
     private LocalDateTime scheduledAt;
