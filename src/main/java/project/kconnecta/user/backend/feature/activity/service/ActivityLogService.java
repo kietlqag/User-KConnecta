@@ -29,4 +29,14 @@ public class ActivityLogService {
     public void log(UUID userId, String username, ActivityLogType actionType) {
         log(userId, username, actionType, null);
     }
+
+    /** Synchronous write for admin-critical events (e.g. account review requests). */
+    public void logSync(UUID userId, String username, ActivityLogType actionType, String metadata) {
+        repository.save(UserActivityLog.builder()
+                .userId(userId)
+                .username(username)
+                .actionType(actionType)
+                .metadata(metadata)
+                .build());
+    }
 }

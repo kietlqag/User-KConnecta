@@ -45,7 +45,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<?> logout(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
         authService.logout(authHeader);
         return ResponseEntity.ok(Map.of("message", "Dang xuat thanh cong"));
     }
@@ -74,6 +76,12 @@ public class AuthController {
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.ok(Map.of("message", "Dat lai mat khau thanh cong"));
+    }
+
+    @PostMapping("/request-account-review")
+    public ResponseEntity<?> requestAccountReview(@RequestBody Map<String, String> body) {
+        authService.requestAccountReview(body.get("email"), body.get("reason"));
+        return ResponseEntity.ok(Map.of("message", "Yêu cầu xem xét đã được gửi đến admin"));
     }
 
     @PostMapping("/change-password")

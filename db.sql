@@ -19,6 +19,17 @@ CREATE TABLE IF NOT EXISTS public.accounts (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE public.accounts
+    DROP CONSTRAINT IF EXISTS accounts_status_check;
+
+UPDATE public.accounts
+SET status = 'BLOCKED'
+WHERE status = 'LOCKED';
+
+ALTER TABLE public.accounts
+    ADD CONSTRAINT accounts_status_check
+    CHECK (status IN ('ACTIVE', 'INACTIVE', 'BLOCKED', 'DELETED'));
+
 CREATE TABLE IF NOT EXISTS public.users (
     id UUID PRIMARY KEY,
     username VARCHAR(30) NOT NULL UNIQUE,

@@ -25,6 +25,7 @@ import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
 import project.kconnecta.user.backend.feature.user.dto.request.ResetPasswordRequest;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
+import project.kconnecta.user.backend.integration.AdminReviewNotificationClient;
 
 import java.io.IOException;
 import java.net.URI;
@@ -48,6 +49,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
     private final ActivityLogService activityLogService;
+    private final AdminReviewNotificationClient adminReviewNotificationClient;
 
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
@@ -103,10 +105,6 @@ public class AuthService {
         Account account = accountRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
 
-        if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new ValidationException("Tai khoan khong kha dung");
-        }
-
         if (account.getPasswordHash() == null) {
             throw new ValidationException("Tai khoan nay dang nhap qua Google, vui long dung nut Dang nhap bang Google");
         }
@@ -117,6 +115,18 @@ public class AuthService {
 
         User user = userRepository.findByAccountId(account.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
+
+        if (account.getStatus() == AccountStatus.BLOCKED) {
+            activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.ACCOUNT_LOCKED,
+                    "{\"reason\":\"Tai khoan bi khoa tam thoi khi dang nhap\"}");
+            return toBlockedResponse(user);
+        }
+        if (account.getStatus() == AccountStatus.DELETED) {
+            throw new ValidationException("Tai khoan da bi xoa");
+        }
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new ValidationException("Tai khoan khong kha dung");
+        }
 
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.LOGIN);
         return toResponse(user);
@@ -153,6 +163,14 @@ public class AuthService {
         }
 
         Account account = user.getAccount();
+        if (account.getStatus() == AccountStatus.BLOCKED) {
+            activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.ACCOUNT_LOCKED,
+                    "{\"reason\":\"Tai khoan bi khoa tam thoi khi dang nhap Google\"}");
+            return toBlockedResponse(user);
+        }
+        if (account.getStatus() == AccountStatus.DELETED) {
+            throw new ValidationException("Tai khoan da bi xoa");
+        }
         if (account.getStatus() != AccountStatus.ACTIVE) {
             throw new ValidationException("Tai khoan khong kha dung");
         }
@@ -203,6 +221,23 @@ public class AuthService {
 
     public boolean usernameExists(String username) {
         return userRepository.existsByUsername(username);
+    }
+
+    public void requestAccountReview(String email, String reason) {
+        Account account = accountRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
+        if (account.getStatus() != AccountStatus.BLOCKED) {
+            throw new ValidationException("Tai khoan nay khong o trang thai bi khoa");
+        }
+
+        User user = userRepository.findByAccountId(account.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
+        String displayReason = reason == null || reason.isBlank()
+                ? "Người dùng yêu cầu admin xem xét mở khóa"
+                : reason.trim();
+        String metadata = "{\"reason\":\"" + escapeJson(displayReason) + "\"}";
+        activityLogService.logSync(user.getId(), user.getUsername(), ActivityLogType.ACCOUNT_REVIEW_REQUESTED, metadata);
+        adminReviewNotificationClient.notifyAccountReviewRequest(user.getId(), user.getUsername(), displayReason);
     }
 
     public void resetPassword(ResetPasswordRequest request) {
@@ -287,7 +322,29 @@ public class AuthService {
                 .hasPassword(user.getAccount().getPasswordHash() != null)
                 .requiresProfileSetup(false)
                 .token(token)
+                .accountStatus(user.getAccount().getStatus())
                 .build();
+    }
+
+    private AuthResponse toBlockedResponse(User user) {
+        return AuthResponse.builder()
+                .id(user.getId())
+                .email(user.getAccount().getEmail())
+                .fullName(user.getFullName())
+                .username(user.getUsername())
+                .hasPassword(user.getAccount().getPasswordHash() != null)
+                .requiresProfileSetup(false)
+                .accountStatus(AccountStatus.BLOCKED)
+                .blockedReason("Tài khoản của bạn đang bị khóa tạm thời do bị báo cáo hoặc admin cần xem xét thủ công.")
+                .build();
+    }
+
+    private String escapeJson(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", " ")
+                .replace("\n", " ");
     }
 
     private record GoogleTokenInfo(

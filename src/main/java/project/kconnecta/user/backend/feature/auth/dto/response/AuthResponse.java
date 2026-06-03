@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.auth.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;
+import project.kconnecta.user.backend.common.enums.AccountStatus;
 
 import java.util.UUID;
 
@@ -15,4 +16,6 @@ public class AuthResponse {
     private boolean hasPassword;
     private boolean requiresProfileSetup;
     private String token;
+    private AccountStatus accountStatus;
+    private String blockedReason;
 }
