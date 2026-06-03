@@ -26,6 +26,8 @@ export interface AuthUser {
   fullName: string;
   username: string;
   token?: string;
+  accountStatus?: 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'DELETED';
+  blockedReason?: string;
   hasPassword?: boolean;
   bio?: string;
   gender?: string;
@@ -122,6 +124,9 @@ export const authService = {
   googleCompleteRegister: (data: GoogleCompleteRegisterData) =>
     api.post<AuthUser>('/auth/google-complete-register', data),
 
+  requestAccountReview: (email: string, reason: string) =>
+    api.post<{ message: string }>('/auth/request-account-review', { email, reason }),
+
   saveCurrentUser: (user: AuthUser, rememberMe?: boolean) => {
     const readCurrentState = (): CurrentAuthState => {
       const localRaw = localStorage.getItem(AUTH_USER_KEY);
@@ -171,7 +176,7 @@ export const authService = {
     const mergedUser: AuthUser = {
       ...(currentState.user ?? {}),
       ...user,
-      token: user.token ?? currentState.user?.token,
+      token: user.accountStatus === 'BLOCKED' ? undefined : user.token ?? currentState.user?.token,
     };
 
     const targetStorage: 'local' | 'session' =
@@ -240,8 +245,11 @@ export const authService = {
   },
 
   logout: async () => {
+    const token = authService.getCurrentUser()?.token;
     try {
-      await api.post<{ message?: string }>('/auth/logout', {});
+      if (token) {
+        await api.post<{ message?: string }>('/auth/logout', {});
+      }
     } catch {
       // Vẫn đăng xuất cục bộ nếu token hết hạn hoặc mạng lỗi
     } finally {

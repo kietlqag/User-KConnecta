@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, Pause, X, Clock } from 'lucide-react';
+import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, Pause, X } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Message } from '../../../types/message.types';
@@ -125,15 +125,6 @@ export const Composer: React.FC<ComposerProps> = ({
 
   return (
     <div className="p-3 bg-white border-t border-gray-200">
-      {cooldownSeconds > 0 && (
-        <div className="mb-2 px-3 py-2 bg-orange-50 rounded-xl border-l-4 border-orange-400 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-orange-500 shrink-0" />
-          <p className="text-sm text-orange-700">
-            Vui lòng thử lại sau{' '}
-            <span className="font-semibold tabular-nums">{cooldownSeconds}</span> giây
-          </p>
-        </div>
-      )}
       {replyToMessage && (
         <div className="mb-2 px-3 py-2 bg-gray-50 rounded-xl border-l-4 border-blue-500 flex items-center justify-between group">
           <div className="min-w-0">

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, LogOut, MailCheck } from "lucide-react";
 import { authService, type AuthUser } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
 import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
 
@@ -29,11 +30,84 @@ function useBlinkTimer(setBlinking: (v: boolean) => void) {
   }, [setBlinking]);
 }
 
+function BlockedLoginContent({ user, onLogout }: { user: AuthUser; onLogout: () => Promise<void> }) {
+  const blockedReason =
+    user.blockedReason?.startsWith("Tai khoan cua ban")
+      ? "Tài khoản của bạn đang bị khóa tạm thời do bị báo cáo hoặc admin cần xem xét thủ công."
+      : user.blockedReason ||
+        "Tài khoản có thể đã bị báo cáo, bị admin khóa thủ công, hoặc đang cần xem xét thêm trước khi mở lại.";
+  const [reason, setReason] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!user.email) return;
+    setSending(true);
+    setMessage("");
+    setError("");
+    try {
+      const response = await authService.requestAccountReview(user.email, reason);
+      setMessage(response.message || "Yêu cầu xem xét đã được gửi đến admin.");
+      setReason("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể gửi yêu cầu xem xét.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
+          <Lock className="size-7" />
+        </div>
+        <p className="text-sm font-semibold uppercase tracking-wide text-red-500">Tài khoản bị khóa tạm thời</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight">Bạn chưa thể truy cập KConnecta</h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">{blockedReason}</p>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm">
+        <p className="font-medium text-foreground">{user.fullName || user.username || "Người dùng"}</p>
+        <p className="mt-1 text-muted-foreground">{user.email}</p>
+        <p className="mt-3 leading-6 text-muted-foreground">
+          Muốn mở lại tài khoản, bạn cần gửi yêu cầu để admin xem xét. Trong thời gian bị khóa, bạn sẽ không thể vào trang Home hoặc sử dụng các tính năng chính.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Textarea
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder="Nhập lý do hoặc thông tin bạn muốn admin xem xét..."
+          className="min-h-32 resize-none"
+        />
+        {message && <p className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{message}</p>}
+        {error && <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        <Button type="submit" disabled={sending || !user.email} className="h-12 w-full text-base font-medium">
+          <MailCheck className="mr-2 size-4" />
+          {sending ? "Đang gửi..." : "Gửi yêu cầu xem xét"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onLogout} className="h-12 w-full text-base font-medium">
+          <LogOut className="mr-2 size-4" />
+          Đăng xuất
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const authLockRef = useRef(false);
+  const [blockedUser, setBlockedUser] = useState<AuthUser | null>(() => {
+    const currentUser = authService.getCurrentUser();
+    return currentUser?.accountStatus === "BLOCKED" ? currentUser : null;
+  });
 
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
@@ -103,6 +177,11 @@ export function LoginPage() {
               return;
             }
             await persistAndHydrateUser(user);
+            if (user.accountStatus === "BLOCKED") {
+              setBlockedUser(user);
+              navigate("/auth/login", { replace: true });
+              return;
+            }
             navigate(redirectTo, { replace: true });
           } catch (err) {
             setGoogleError(err instanceof Error ? err.message : "Đăng nhập Google thất bại");
@@ -224,7 +303,13 @@ export function LoginPage() {
   };
 
   const persistAndHydrateUser = async (authUser: AuthUser) => {
+    if (authUser.accountStatus === "BLOCKED") {
+      await authService.logout();
+    }
     authService.saveCurrentUser(authUser, !!formData.rememberMe);
+    if (authUser.accountStatus === "BLOCKED" || !authUser.token) {
+      return;
+    }
     try {
       const profile = await authService.getUserById(authUser.id);
       authService.saveCurrentUser(
@@ -252,6 +337,11 @@ export function LoginPage() {
     try {
       const user = await authService.login(formData.email, formData.password);
       await persistAndHydrateUser(user);
+      if (user.accountStatus === "BLOCKED") {
+        setBlockedUser(user);
+        navigate("/auth/login", { replace: true });
+        return;
+      }
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
@@ -259,6 +349,12 @@ export function LoginPage() {
       authLockRef.current = false;
       setIsLoading(false);
     }
+  };
+
+  const handleBlockedLogout = async () => {
+    await authService.logout();
+    setBlockedUser(null);
+    navigate("/auth/login", { replace: true });
   };
 
   return (
@@ -471,109 +567,115 @@ export function LoginPage() {
             <img src={logoV1} alt="KConnecta Logo V1" className="h-10 w-auto" />
           </div>
 
-          <div className="mb-10 text-center">
-            <h1 className="mb-2 text-3xl font-bold tracking-tight">Chào mừng bạn quay lại!</h1>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <div className="relative">
-                <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="anna@gmail.com"
-                  value={formData.email}
-                  autoComplete="off"
-                  disabled={isAuthenticating}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                  onFocus={() => setIsTyping(true)}
-                  onBlur={() => setIsTyping(false)}
-                  required
-                  className="h-12 border-border/60 bg-background pl-10 focus:border-primary"
-                />
+          {blockedUser ? (
+            <BlockedLoginContent user={blockedUser} onLogout={handleBlockedLogout} />
+          ) : (
+            <>
+              <div className="mb-10 text-center">
+                <h1 className="mb-2 text-3xl font-bold tracking-tight">Chào mừng bạn quay lại!</h1>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium">Mật khẩu</Label>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  disabled={isAuthenticating}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                  required
-                  className="h-12 border-border/60 bg-background pl-10 pr-10 focus:border-primary"
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="anna@gmail.com"
+                      value={formData.email}
+                      autoComplete="off"
+                      disabled={isAuthenticating}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                      onFocus={() => setIsTyping(true)}
+                      onBlur={() => setIsTyping(false)}
+                      required
+                      className="h-12 border-border/60 bg-background pl-10 focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium">Mật khẩu</Label>
+                  <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={formData.password}
+                      disabled={isAuthenticating}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                      required
+                      className="h-12 border-border/60 bg-background pl-10 pr-10 focus:border-primary"
+                    />
+                    <button
+                      type="button"
+                      disabled={isAuthenticating}
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember"
+                      disabled={isAuthenticating}
+                      checked={formData.rememberMe}
+                      onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, rememberMe: checked === true }))}
+                      className="cursor-pointer"
+                    />
+                    <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">Ghi nhớ đăng nhập</Label>
+                  </div>
+                  <Link
+                    to="/auth/forgot-password"
+                    className={`text-sm font-medium text-primary hover:underline ${isAuthenticating ? "pointer-events-none opacity-50" : ""}`}
+                  >
+                    Quên mật khẩu?
+                  </Link>
+                </div>
+
+                {error && <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">{error}</div>}
+
+                <Button type="submit" className="h-12 w-full text-base font-medium" size="lg" disabled={isAuthenticating}>
+                  {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+                </Button>
+              </form>
+
+              <div className="my-6 relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="bg-background px-4 text-muted-foreground">Hoặc</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div
+                  ref={googleButtonRef}
+                  className={`flex min-h-[44px] items-center justify-center ${isAuthenticating ? "pointer-events-none opacity-60" : ""}`}
                 />
-                <button
-                  type="button"
-                  disabled={isAuthenticating}
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                {isGoogleLoading && <p className="text-center text-sm text-muted-foreground">Đang xác thực với Google...</p>}
+                {googleError && <p className="text-center text-sm text-red-500">{googleError}</p>}
+              </div>
+
+              <div className="mt-8 text-center text-sm text-muted-foreground">
+                Chưa có tài khoản? {" "}
+                <Link
+                  to="/auth/register"
+                  className={`font-medium text-foreground hover:underline ${isAuthenticating ? "pointer-events-none opacity-50" : ""}`}
                 >
-                  {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-                </button>
+                  Đăng ký ngay
+                </Link>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  disabled={isAuthenticating}
-                  checked={formData.rememberMe}
-                  onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, rememberMe: checked === true }))}
-                  className="cursor-pointer"
-                />
-                <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">Ghi nhớ đăng nhập</Label>
-              </div>
-              <Link
-                to="/auth/forgot-password"
-                className={`text-sm font-medium text-primary hover:underline ${isAuthenticating ? "pointer-events-none opacity-50" : ""}`}
-              >
-                Quên mật khẩu?
-              </Link>
-            </div>
-
-            {error && <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">{error}</div>}
-
-            <Button type="submit" className="h-12 w-full text-base font-medium" size="lg" disabled={isAuthenticating}>
-              {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-            </Button>
-          </form>
-
-          <div className="my-6 relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-background px-4 text-muted-foreground">Hoặc</span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div
-              ref={googleButtonRef}
-              className={`flex min-h-[44px] items-center justify-center ${isAuthenticating ? "pointer-events-none opacity-60" : ""}`}
-            />
-            {isGoogleLoading && <p className="text-center text-sm text-muted-foreground">Đang xác thực với Google...</p>}
-            {googleError && <p className="text-center text-sm text-red-500">{googleError}</p>}
-          </div>
-
-          <div className="mt-8 text-center text-sm text-muted-foreground">
-            Chưa có tài khoản? {" "}
-            <Link
-              to="/auth/register"
-              className={`font-medium text-foreground hover:underline ${isAuthenticating ? "pointer-events-none opacity-50" : ""}`}
-            >
-              Đăng ký ngay
-            </Link>
-          </div>
+            </>
+          )}
         </div>
       </div>
     </div>

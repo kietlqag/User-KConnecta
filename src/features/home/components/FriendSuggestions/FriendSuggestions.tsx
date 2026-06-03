@@ -56,7 +56,12 @@ export const FriendSuggestions = () => {
     <div className="bg-white rounded-lg shadow mb-4 p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-gray-900 font-bold text-lg">Bạn bè có thể biết</h3>
-        <button className="text-blue-600 text-sm font-medium hover:underline">Xem tất cả</button>
+        <button
+          className="text-blue-600 text-sm font-medium hover:underline cursor-pointer"
+          onClick={() => navigate('/friends?tab=suggestions')}
+        >
+          Xem tất cả
+        </button>
       </div>
 
       <div className="relative group">

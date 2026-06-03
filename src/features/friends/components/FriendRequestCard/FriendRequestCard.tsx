@@ -14,60 +14,73 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
 
   const handleAccept = async () => {
     setLoading('accept');
-    try { await onAccept(request.id); } finally { setLoading(null); }
+    try {
+      await onAccept(request.id);
+    } finally {
+      setLoading(null);
+    }
   };
 
   const handleDelete = async () => {
     setLoading('delete');
-    try { await onDelete(request.id); } finally { setLoading(null); }
+    try {
+      await onDelete(request.id);
+    } finally {
+      setLoading(null);
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
       <div className="relative">
-        <Link to={`/profile/${request.userId}`}>
+        <Link to={`/profile/${request.userId}`} className="block aspect-square overflow-hidden bg-gray-100">
           <img
             src={request.avatar}
             alt={request.name}
-            className="w-full h-[280px] object-cover"
+            className="h-full w-full object-cover transition-transform hover:scale-105"
           />
         </Link>
         <button
           onClick={handleDelete}
           disabled={loading !== null}
-          className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          className="absolute right-2 top-2 rounded-full bg-white/95 p-2 shadow-md transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label="Xóa lời mời"
         >
-          {loading === 'delete' ? <Loader2 className="w-4 h-4 animate-spin text-gray-600" /> : <X className="w-4 h-4 text-gray-600" />}
+          {loading === 'delete' ? (
+            <Loader2 className="h-4 w-4 animate-spin text-gray-600" />
+          ) : (
+            <X className="h-4 w-4 text-gray-600" />
+          )}
         </button>
       </div>
 
-      <div className="p-4">
+      <div className="flex min-h-[172px] flex-1 flex-col p-3">
         <Link to={`/profile/${request.userId}`}>
-          <h3 className="font-semibold text-gray-900 mb-1 hover:underline cursor-pointer">
+          <h3 className="truncate text-[15px] font-bold leading-6 text-gray-900 hover:underline">
             {request.name}
           </h3>
         </Link>
 
-        <p className="text-sm text-gray-600 mb-3">
+        <p className="mt-1 h-5 truncate text-sm text-gray-600">
           {request.mutualFriends} bạn chung
         </p>
-        <p className="text-xs text-gray-500 mb-3">{request.timestamp}</p>
+        <p className="mt-1 h-4 truncate text-xs text-gray-500">{request.timestamp}</p>
 
-        <div className="flex gap-2">
+        <div className="mt-auto flex flex-col gap-2 pt-4">
           <button
             onClick={handleAccept}
             disabled={loading !== null}
-            className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-4 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading === 'accept' && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading === 'accept' && <Loader2 className="h-4 w-4 animate-spin" />}
             Xác nhận
           </button>
           <button
             onClick={handleDelete}
             disabled={loading !== null}
-            className="flex-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed text-gray-900 font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gray-200 px-4 font-semibold text-gray-900 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading === 'delete' && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading === 'delete' && <Loader2 className="h-4 w-4 animate-spin" />}
             Xóa
           </button>
         </div>

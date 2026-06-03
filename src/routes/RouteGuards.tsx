@@ -11,6 +11,15 @@ export function ProtectedRoute() {
     return <Navigate to="/auth/login" replace state={{ from: location }} />;
   }
 
+  if (currentUser.accountStatus === 'BLOCKED') {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  if (currentUser.accountStatus === 'DELETED') {
+    void authService.logout();
+    return <Navigate to="/auth/login" replace />;
+  }
+
   return (
     <RealtimeCallProvider>
       <Outlet />
@@ -19,9 +28,14 @@ export function ProtectedRoute() {
 }
 
 export function GuestRoute() {
+  const location = useLocation();
   const currentUser = useMemo(() => authService.getCurrentUser(), []);
 
-  if (currentUser) {
+  if (currentUser?.accountStatus === 'BLOCKED') {
+    return location.pathname === '/auth/login' ? <Outlet /> : <Navigate to="/auth/login" replace />;
+  }
+
+  if (currentUser?.accountStatus === 'ACTIVE' || currentUser?.token) {
     return <Navigate to="/home" replace />;
   }
 

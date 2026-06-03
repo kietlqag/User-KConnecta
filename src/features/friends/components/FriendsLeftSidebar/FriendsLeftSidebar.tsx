@@ -26,7 +26,7 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
   ];
 
   return (
-    <div className="w-[360px] bg-white border-r border-gray-200 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto sidebar-scrollbar">
+    <div className="sticky top-14 hidden min-h-[calc(100vh-56px)] w-[clamp(280px,23vw,360px)] shrink-0 overflow-y-auto border-r border-gray-200 bg-white sidebar-scrollbar md:block">
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-gray-900">Bạn bè</h1>

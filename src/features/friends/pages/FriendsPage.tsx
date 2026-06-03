@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { FriendsLeftSidebar, FriendCard, FriendRequestCard } from '../components';
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
 import { Friend, FriendRequest } from '../types/friends.types';
@@ -7,16 +8,41 @@ import { friendService, FRIENDSHIP_CHANGED_EVENT } from '../../../services/frien
 import { authService } from '../../../services/authService';
 import { toast } from 'sonner';
 
+const PAGE_SIZE = 8;
+const FRIEND_GRID_CLASS =
+  'grid grid-cols-[repeat(auto-fill,minmax(min(190px,100%),1fr))] gap-3 sm:gap-4';
+
 const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=random&name=User';
 
 export const FriendsPage = () => {
-  const [activeTab, setActiveTab] = useState<FriendsTab>('home');
+  const [searchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as FriendsTab) || 'home';
+  const [activeTab, setActiveTab] = useState<FriendsTab>(initialTab);
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [suggestions, setSuggestions] = useState<Friend[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
-  // userId → friendshipId cho các lời mời đã gửi nhưng chưa xử lý
   const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const sentinelCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (node) {
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            setVisibleCount((prev) => prev + PAGE_SIZE);
+          }
+        },
+        { threshold: 0.1 }
+      );
+      observerRef.current.observe(node);
+    }
+  }, []);
 
   const currentUser = authService.getCurrentUser();
 
@@ -82,6 +108,10 @@ export const FriendsPage = () => {
     return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, fetchData);
   }, [fetchData]);
 
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [activeTab]);
+
   const handleAcceptRequest = async (id: string) => {
     const target = friendRequests.find((r) => r.id === id);
     await friendService.acceptFriendRequest(id);
@@ -142,7 +172,7 @@ export const FriendsPage = () => {
           {friendRequests.length === 0 ? (
             <p className="text-gray-500">Không có lời mời kết bạn nào.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className={FRIEND_GRID_CLASS}>
               {friendRequests.map((request) => (
                 <FriendRequestCard
                   key={request.id}
@@ -158,31 +188,38 @@ export const FriendsPage = () => {
     }
 
     if (activeTab === 'suggestions') {
+      const visible = suggestions.slice(0, visibleCount);
+      const hasMore = visibleCount < suggestions.length;
       return (
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-4">Những người bạn có thể biết</h2>
           {suggestions.length === 0 ? (
             <p className="text-gray-500">Không có gợi ý nào.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {suggestions.map((friend) => (
-                <FriendCard
-                  key={friend.id}
-                  friend={friend}
-                  onAddFriend={handleAddFriend}
-                  onCancelFriendRequest={handleCancelFriendRequest}
-                  pendingFriendshipId={pendingRequests[friend.userId]}
-                  onRemoveSuggestion={handleRemoveSuggestion}
-                  showRemove
-                />
-              ))}
-            </div>
+            <>
+              <div className={FRIEND_GRID_CLASS}>
+                {visible.map((friend) => (
+                  <FriendCard
+                    key={friend.id}
+                    friend={friend}
+                    onAddFriend={handleAddFriend}
+                    onCancelFriendRequest={handleCancelFriendRequest}
+                    pendingFriendshipId={pendingRequests[friend.userId]}
+                    onRemoveSuggestion={handleRemoveSuggestion}
+                    showRemove
+                  />
+                ))}
+              </div>
+              {hasMore && <div ref={sentinelCallbackRef} className="h-8" />}
+            </>
           )}
         </section>
       );
     }
 
     if (activeTab === 'all-friends') {
+      const visible = friends.slice(0, visibleCount);
+      const hasMore = visibleCount < friends.length;
       return (
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-4">
@@ -192,15 +229,18 @@ export const FriendsPage = () => {
           {friends.length === 0 ? (
             <p className="text-gray-500">Bạn chưa có bạn bè nào.</p>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              {friends.map((friend) => (
-                <FriendCard
-                  key={friend.id}
-                  friend={friend}
-                  onUnfriend={handleUnfriend}
-                />
-              ))}
-            </div>
+            <>
+              <div className={FRIEND_GRID_CLASS}>
+                {visible.map((friend) => (
+                  <FriendCard
+                    key={friend.id}
+                    friend={friend}
+                    onUnfriend={handleUnfriend}
+                  />
+                ))}
+              </div>
+              {hasMore && <div ref={sentinelCallbackRef} className="h-8" />}
+            </>
           )}
         </section>
       );
@@ -223,7 +263,7 @@ export const FriendsPage = () => {
                 Xem tất cả
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className={FRIEND_GRID_CLASS}>
               {friendRequests.slice(0, 4).map((request) => (
                 <FriendRequestCard
                   key={request.id}
@@ -247,7 +287,7 @@ export const FriendsPage = () => {
                 Xem tất cả
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className={FRIEND_GRID_CLASS}>
               {suggestions.slice(0, 4).map((friend) => (
                 <FriendCard
                   key={friend.id}
@@ -280,14 +320,14 @@ export const FriendsPage = () => {
 
   return (
     <MainLayout>
-      <div className="max-w-[1920px] mx-auto">
-        <div className="flex">
+      <div className="mx-auto max-w-[1920px]">
+        <div className="flex min-w-0">
           <FriendsLeftSidebar
             activeTab={activeTab}
             onTabChange={setActiveTab}
             requestCount={friendRequests.length}
           />
-          <main className="flex-1 p-8 max-w-[920px]">
+          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
             {renderContent()}
           </main>
         </div>
