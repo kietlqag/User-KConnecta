@@ -1,4 +1,5 @@
 export { ProfilePage } from './ProfilePage';
+export { ProfileLayout } from './ProfileLayout';
 export { ProfileFriendsPage } from './ProfileFriendsPage';
 export { ProfilePhotosPage } from './ProfilePhotosPage';
 export { ProfileAboutPage } from './ProfileAboutPage';

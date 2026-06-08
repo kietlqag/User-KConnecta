@@ -10,6 +10,7 @@ interface InviteFriendsModalProps {
   isOpen: boolean;
   onClose: () => void;
   existingMemberIds: string[];
+  onInviteSuccess?: () => void;
 }
 
 export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
@@ -17,6 +18,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
   isOpen,
   onClose,
   existingMemberIds,
+  onInviteSuccess,
 }) => {
   const currentUser = authService.getCurrentUser();
   const { data: friends = [], isLoading } = useFriends(currentUser?.id);
@@ -51,6 +53,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
       onSuccess: () => {
         toast.success(`Đã gửi lời mời đến ${selectedUserIds.length} người bạn`);
         window.dispatchEvent(new Event('notification:refresh'));
+        onInviteSuccess?.();
         onClose();
         setSelectedUserIds([]);
       },

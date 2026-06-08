@@ -95,7 +95,8 @@ export function PostDetailModal({
   useEffect(() => {
     setCommentCount(post.comments || 0);
     setShareCount(post.shares || 0);
-  }, [post.comments, post.shares, post.id]);
+    setPrivacy(post.privacy ?? 'PUBLIC');
+  }, [post.comments, post.shares, post.id, post.privacy]);
 
   const handleCommentAdded = useCallback(() => {
     setCommentCount((prev) => {

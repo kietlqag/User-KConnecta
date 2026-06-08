@@ -36,7 +36,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 import { postService } from '@/services/postService';
 
-type Privacy = 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
+export type Privacy = 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
 
 const PRIVACY_OPTIONS: { value: Privacy; label: string; desc: string; icon: React.ReactNode }[] = [
   { value: 'PUBLIC',  label: 'Công khai',    desc: 'Mọi người đều thấy',   icon: <Globe className="w-5 h-5" /> },

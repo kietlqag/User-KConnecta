@@ -1,12 +1,5 @@
 ﻿import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { authService } from '@/services/authService';
 
 interface ProfileTabsProps {
@@ -28,14 +21,8 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
     { label: 'Bạn bè', path: `/profile/${resolvedProfileKey}/friends` },
     { label: 'Ảnh', path: `/profile/${resolvedProfileKey}/photos` },
     { label: 'Reels', path: `/profile/${resolvedProfileKey}/reels` },
-    ...(isOwnProfile ? [{ label: 'Bài đã lên lịch', path: `/profile/${resolvedProfileKey}/scheduled` }] : []),
-  ];
-
-  const moreTabs = [
     { label: 'Thích', path: `/profile/${resolvedProfileKey}/likes` },
-    { label: 'Clip', path: `/profile/${resolvedProfileKey}/clips` },
-    { label: 'Sự kiện', path: `/profile/${resolvedProfileKey}/events` },
-    { label: 'Câu hỏi', path: `/profile/${resolvedProfileKey}/questions` },
+    ...(isOwnProfile ? [{ label: 'Bài đã lên lịch', path: `/profile/${resolvedProfileKey}/scheduled` }] : []),
   ];
 
   const isActive = (path: string) => {
@@ -64,29 +51,6 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
               </Link>
             ))}
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={`flex items-center gap-1 whitespace-nowrap px-4 py-4 font-medium transition-colors outline-none ${
-                    moreTabs.some((tab) => isActive(tab.path))
-                      ? 'border-b-4 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-                      : 'rounded-t-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  Xem thêm
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                {moreTabs.map((tab) => (
-                  <DropdownMenuItem key={tab.path} asChild>
-                    <Link to={tab.path} className="w-full cursor-pointer">
-                      {tab.label}
-                    </Link>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </nav>
 
         </div>

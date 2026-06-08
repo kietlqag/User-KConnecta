@@ -17,6 +17,7 @@ export interface FeedPost {
   group?: { id: string; name: string; icon?: string };
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
   isLivePost?: boolean;
+  privacy: PostResponse['privacy'];
 }
 
 export function formatPostTimestamp(dateString?: string | null): string {
@@ -82,5 +83,6 @@ export function mapApiPost(item: PostResponse): FeedPost {
       url: m.mediaUrl || m.fileUrl || ''
     })),
     isLivePost,
+    privacy: item.privacy ?? 'PUBLIC',
   };
 }

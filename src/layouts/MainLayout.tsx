@@ -1,7 +1,8 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Header } from '../features/home/components/Header';
 import { LeftSidebar } from '../features/home/components/LeftSidebar';
+import { useSidebar } from '../contexts/SidebarContext';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -10,6 +11,13 @@ interface MainLayoutProps {
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
   const isHomePage = location.pathname === '/home' || location.pathname === '/home/';
+  const { setLeftSidebarOpen } = useSidebar();
+
+  useEffect(() => {
+    if (!isHomePage) {
+      setLeftSidebarOpen(false);
+    }
+  }, [isHomePage, setLeftSidebarOpen]);
 
   return (
     <div className="min-h-screen bg-gray-100">

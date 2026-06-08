@@ -1,0 +1,171 @@
+import * as React from 'react';
+import { Outlet, useNavigate, useLocation, useParams, useOutletContext } from 'react-router-dom';
+import { Header } from '../../home/components/Header';
+import { EditProfileDialog, ProfileHeader, ProfileTabs } from '../components';
+import { authService, type AuthUser } from '@/services/authService';
+import { friendService, type FriendshipStatusResponse } from '@/services/friendService';
+import {
+  buildEditProfileInitialData,
+  buildProfileDisplay,
+  getProfileHeaderName,
+  isOwnProfileUser,
+  resolveRouteProfileUserId,
+} from '../utils/profileDisplayUtils';
+
+export interface ProfileLayoutContext {
+  profile: AuthUser | null;
+  setProfile: React.Dispatch<React.SetStateAction<AuthUser | null>>;
+  resolvedId: string;
+  isOwnProfile: boolean;
+  friendsCount: number;
+  friendshipStatus: FriendshipStatusResponse | null;
+  setFriendshipStatus: React.Dispatch<React.SetStateAction<FriendshipStatusResponse | null>>;
+  loading: boolean;
+  onEditClick: () => void;
+}
+
+export function useProfileLayoutContext() {
+  return useOutletContext<ProfileLayoutContext>();
+}
+
+export function ProfileLayout() {
+  const { userId: routeUserId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
+
+  const userId = React.useMemo(
+    () => resolveRouteProfileUserId(routeUserId, currentUser),
+    [routeUserId, currentUser],
+  );
+
+  const [profile, setProfile] = React.useState<AuthUser | null>(null);
+  const [resolvedId, setResolvedId] = React.useState('');
+  const [friendsCount, setFriendsCount] = React.useState(0);
+  const [friendshipStatus, setFriendshipStatus] = React.useState<FriendshipStatusResponse | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
+
+  const isOwnProfile = isOwnProfileUser(currentUser, {
+    resolvedProfileId: resolvedId,
+    routeUserId: userId,
+  });
+
+  React.useEffect(() => {
+    if (!userId || userId === 'undefined') { setLoading(false); return; }
+    let cancelled = false;
+    setLoading(true);
+
+    const run = async () => {
+      try {
+        const profileData = (await authService.getUser(userId)) as AuthUser;
+
+        const id: string = profileData.id;
+
+        const fetchStatusPromise = (!currentUser || currentUser.id === id)
+          ? Promise.resolve(null)
+          : friendService.getStatus(currentUser.id, id);
+
+        const [friendsRes, statusRes] = await Promise.all([
+          friendService.getFriends(id),
+          fetchStatusPromise,
+        ]);
+
+        if (cancelled) return;
+
+        setProfile(profileData);
+        setResolvedId(id);
+        setFriendsCount(friendsRes.length);
+        setFriendshipStatus(statusRes);
+
+        // Redirect /profile/UUID → /profile/username
+        if (profileData.username && userId !== profileData.username) {
+          const subPath = location.pathname.replace(`/profile/${userId}`, '');
+          navigate(
+            { pathname: `/profile/${profileData.username}${subPath}`, search: location.search },
+            { replace: true },
+          );
+        }
+      } catch (err) {
+        console.error('Error loading profile:', err);
+        if (!cancelled && currentUser && (userId === currentUser.id || userId === currentUser.username)) {
+          setProfile(currentUser);
+          setResolvedId(currentUser.id);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    run();
+    return () => { cancelled = true; };
+  }, [userId, currentUser?.id]);
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!currentUser) return;
+    const updatedUser = await authService.uploadAvatar(currentUser.id, file);
+    authService.saveCurrentUser(updatedUser);
+    setProfile(updatedUser);
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    if (!currentUser) return;
+    const updatedUser = await authService.uploadCoverPhoto(currentUser.id, file);
+    authService.saveCurrentUser(updatedUser);
+    setProfile(updatedUser);
+  };
+
+  const profilePathKey = profile?.username || userId;
+
+  const userProfile = buildProfileDisplay(profile, {
+    currentUser,
+    fallbackUserId: resolvedId || userId,
+    preferCurrentUserMedia: isOwnProfile,
+  });
+
+  const context: ProfileLayoutContext = {
+    profile,
+    setProfile,
+    resolvedId,
+    isOwnProfile,
+    friendsCount,
+    friendshipStatus,
+    setFriendshipStatus,
+    loading,
+    onEditClick: () => setIsEditOpen(true),
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <Header />
+      <div className="pt-14">
+        <ProfileHeader
+          coverPhoto={loading ? undefined : userProfile.coverPhoto}
+          avatar={loading ? undefined : userProfile.avatar}
+          fullName={getProfileHeaderName(userProfile)}
+          username={userProfile.username}
+          friendsCount={friendsCount}
+          location={userProfile.location}
+          school={userProfile.school}
+          isOwnProfile={isOwnProfile}
+          loading={loading}
+          profileUserId={userProfile.id}
+          friendshipStatus={friendshipStatus}
+          onFriendshipStatusChange={setFriendshipStatus}
+          onEditClick={isOwnProfile ? () => setIsEditOpen(true) : undefined}
+          onAvatarUpload={isOwnProfile ? handleAvatarUpload : undefined}
+          onCoverUpload={isOwnProfile ? handleCoverUpload : undefined}
+        />
+        <ProfileTabs profileKey={profilePathKey} isOwnProfile={isOwnProfile} />
+        <Outlet context={context} />
+      </div>
+      {isOwnProfile && profile && (
+        <EditProfileDialog
+          open={isEditOpen}
+          onOpenChange={setIsEditOpen}
+          initialData={buildEditProfileInitialData(profile)}
+        />
+      )}
+    </div>
+  );
+}

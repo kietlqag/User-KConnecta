@@ -196,6 +196,15 @@ export const postService = {
       .get<SpringPaginatedRaw<PostResponse>>(`/posts?${params.toString()}`)
       .then(normalizePaginatedResponse);
   },
+  getWatchPosts: (currentUserId?: string, page = 0, size = 20) => {
+    const params = new URLSearchParams();
+    if (currentUserId) params.append('currentUserId', currentUserId);
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    return api
+      .get<SpringPaginatedRaw<PostResponse>>(`/posts/watch?${params.toString()}`)
+      .then(normalizePaginatedResponse);
+  },
   getGroupPosts: (groupId: string, currentUserId?: string) => {
     const params = new URLSearchParams({ groupId });
     if (currentUserId) params.append('currentUserId', currentUserId);
@@ -206,7 +215,16 @@ export const postService = {
     if (currentUserId) params.append('currentUserId', currentUserId);
     return api.get<PostResponse[]>(`/posts?${params.toString()}`);
   },
-  createPost: (data: CreatePostPayload) => api.post<PostResponse>('/posts', data),
+  createPost: (data: CreatePostPayload) => {
+    if (import.meta.env.DEV) {
+      console.log('[post-schedule] api payload', {
+        status: data.status,
+        scheduledAt: data.scheduledAt ?? null,
+        groupId: data.groupId ?? null,
+      });
+    }
+    return api.post<PostResponse>('/posts', data);
+  },
   uploadPostImage: (file: File, signal?: AbortSignal) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -257,12 +275,12 @@ export const postService = {
     if (params.ward) query.append('ward', params.ward);
     return api.get<CheckInSuggestionResponse[]>(`/posts/checkin-suggestions?${query.toString()}`);
   },
-  savePost: (userId: string, postId: string) =>
-    api.post<void>('/posts/saved', { userId, postId }),
-  getSavedPosts: (userId: string) =>
-    api.get<PostResponse[]>(`/posts/saved/${userId}`),
-  unsavePost: (userId: string, postId: string) =>
-    api.delete<void>(`/posts/saved?userId=${encodeURIComponent(userId)}&postId=${encodeURIComponent(postId)}`),
+  savePost: (_userId: string, postId: string) =>
+    api.post<void>('/posts/saved', { postId }),
+  getSavedPosts: (_userId: string) =>
+    api.get<PostResponse[]>('/posts/saved'),
+  unsavePost: (_userId: string, postId: string) =>
+    api.delete<void>(`/posts/saved?postId=${encodeURIComponent(postId)}`),
   deletePost: (postId: string, userId: string) =>
     api.delete<void>(`/posts/${postId}?userId=${encodeURIComponent(userId)}`),
   updatePrivacy: (postId: string, userId: string, privacy: PostResponse['privacy']) => {

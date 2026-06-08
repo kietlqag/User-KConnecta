@@ -23,8 +23,8 @@ export const friendService = {
   getFriends: (userId: string) =>
     api.get<FriendApiResponse[]>(`/friends/${userId}`),
 
-  getFriendRequests: (userId: string) =>
-    api.get<FriendApiResponse[]>(`/friends/${userId}/requests`),
+  getFriendRequests: () =>
+    api.get<FriendApiResponse[]>('/friends/requests'),
 
   getSuggestions: (userId: string) =>
     api.get<FriendApiResponse[]>(`/friends/${userId}/suggestions`),

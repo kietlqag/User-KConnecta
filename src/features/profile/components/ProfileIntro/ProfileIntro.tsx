@@ -1,4 +1,4 @@
-import { MapPin, Home, Heart, Edit2, Plus } from 'lucide-react';
+import { MapPin, Home, Heart, Edit2, Briefcase } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 
@@ -8,9 +8,15 @@ interface ProfileIntroProps {
   hometown?: string;
   relationship?: string;
   school?: string;
+  workplace?: string;
+  jobTitle?: string;
   featuredPhotos?: Array<{ id: string; url: string; count?: number }>;
   isOwnProfile?: boolean;
   onEditClick?: () => void;
+}
+
+function hasText(value?: string) {
+  return Boolean(value?.trim());
 }
 
 export function ProfileIntro({
@@ -19,10 +25,15 @@ export function ProfileIntro({
   hometown,
   relationship,
   school,
+  workplace,
+  jobTitle,
   featuredPhotos = [],
   isOwnProfile = true,
   onEditClick,
 }: ProfileIntroProps) {
+  const hasIntroDetails =
+    hasText(bio) || hasText(location) || hasText(hometown) || hasText(relationship);
+
   return (
     <div className="space-y-4">
       {/* Intro Card */}
@@ -40,13 +51,18 @@ export function ProfileIntro({
         </div>
 
         <div className="space-y-3">
-          {bio && (
+          {!hasIntroDetails && (
+            <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+              Chưa có thông tin cá nhân.
+            </p>
+          )}
+          {hasText(bio) && (
             <div className="text-center py-2 px-1">
               <p className="text-gray-700 dark:text-gray-300 italic">"{bio}"</p>
               <div className="h-px bg-gray-100 dark:bg-gray-700 my-4 w-full" />
             </div>
           )}
-          {location && (
+          {hasText(location) && (
             <div className="flex items-start gap-3">
               <MapPin className="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
               <div>
@@ -56,7 +72,7 @@ export function ProfileIntro({
             </div>
           )}
 
-          {hometown && (
+          {hasText(hometown) && (
             <div className="flex items-start gap-3">
               <Home className="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
               <div>
@@ -66,7 +82,7 @@ export function ProfileIntro({
             </div>
           )}
 
-          {relationship && (
+          {hasText(relationship) && (
             <div className="flex items-start gap-3">
               <Heart className="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
               <div>
@@ -77,8 +93,45 @@ export function ProfileIntro({
         </div>
       </div>
 
+      {/* Work Card */}
+      {(hasText(workplace) || hasText(jobTitle)) && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Công việc</h2>
+            {isOwnProfile && (
+              <button
+                onClick={onEditClick}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <Edit2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-3">
+            {hasText(workplace) && (
+              <div className="flex items-start gap-3">
+                <Briefcase className="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="text-gray-900 dark:text-white">Làm việc tại </span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{workplace}</span>
+                </div>
+              </div>
+            )}
+            {hasText(jobTitle) && (
+              <div className="flex items-start gap-3">
+                <Briefcase className="w-5 h-5 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="font-semibold text-gray-900 dark:text-white">{jobTitle}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Education Card */}
-      {school && (
+      {hasText(school) && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Học vấn</h2>

@@ -4,6 +4,8 @@ import {
   MessageCircle,
   Share2,
   Globe,
+  Users,
+  Lock,
   Radio,
   Play,
   X,
@@ -33,7 +35,7 @@ import {
   type ReactionOption,
   updateReactionCounts,
 } from '../reactions';
-import { PostMoreMenu } from './PostMoreMenu';
+import { PostMoreMenu, type Privacy } from './PostMoreMenu';
 import { PostMediaGallery, type PostGalleryItem } from './PostMediaGallery';
 import {
   AlertDialog,
@@ -89,6 +91,7 @@ export interface PostProps {
   commentsData?: Comment[];
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
   isLivePost?: boolean;
+  privacy?: Privacy;
   onDelete?: (postId: string) => void;
   onReactionChange?: (postId: string, reactionType: ReactionType | null) => void;
 }
@@ -110,6 +113,7 @@ export function Post({
   group,
   mediaList = [],
   isLivePost = false,
+  privacy: initialPrivacy = 'PUBLIC',
   onDelete,
   onReactionChange,
 }: PostProps) {
@@ -130,7 +134,12 @@ export function Post({
   const [isReacting, setIsReacting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [currentPrivacy, setCurrentPrivacy] = useState<Privacy>(initialPrivacy);
   const currentUser = authService.getCurrentUser();
+
+  useEffect(() => {
+    setCurrentPrivacy(initialPrivacy);
+  }, [initialPrivacy, id]);
   const isOwner = !!currentUser && currentUser.id === author.id;
   const [liveSessionStatus, setLiveSessionStatus] = useState<'LIVE' | 'ENDED' | 'CANCELED' | 'SCHEDULED' | null>(null);
   const isLiveEnded = liveSessionStatus === 'ENDED' || liveSessionStatus === 'CANCELED';
@@ -270,14 +279,20 @@ export function Post({
       media: mediaUrl ? { type: mediaType, url: mediaUrl } as const : undefined,
       mediaList: galleryItems.length > 1 ? galleryItems : undefined,
       reactionCounts,
+      privacy: currentPrivacy,
+      isOwner,
+      currentUserId: currentUser?.id,
     }),
     [
       author.avatar,
       author.name,
       commentCount,
       content,
+      currentPrivacy,
+      currentUser?.id,
       galleryItems,
       id,
+      isOwner,
       likeCount,
       mediaUrl,
       mediaType,
@@ -429,7 +444,13 @@ export function Post({
                   ) : null}
                   <span>{timestamp}</span>
                   <span>·</span>
-                  <Globe className="w-3 h-3" />
+                  {currentPrivacy === 'PRIVATE' ? (
+                    <Lock className="w-3 h-3" />
+                  ) : currentPrivacy === 'PUBLIC' ? (
+                    <Globe className="w-3 h-3" />
+                  ) : (
+                    <Users className="w-3 h-3" />
+                  )}
                 </div>
               </div>
             </div>
@@ -437,9 +458,11 @@ export function Post({
               postId={id}
               isSaved={isSaved}
               isOwner={isOwner}
+              privacy={currentPrivacy}
               currentUserId={currentUser?.id}
               onToggleSave={handleToggleSave}
               onDelete={() => setDeleteDialogOpen(true)}
+              onPrivacyChange={setCurrentPrivacy}
             />
           </div>
 
@@ -589,6 +612,7 @@ export function Post({
         selectedReaction={selectedReaction}
         onReactionChange={handleReactionChange}
         isReacting={isReacting}
+        onPrivacyChange={setCurrentPrivacy}
       />
 
       <ReactionSummaryDialog

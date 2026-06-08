@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Home, Users, UsersRound, Video, Store, Grid3x3, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
@@ -8,8 +8,9 @@ import { AccountMenu } from '../../../account/components';
 import { SearchSuggestions } from '../../../search/components';
 import { RecentSearchItem } from '../../../search/types/search.types';
 import { useMenu } from '../../../../contexts/MenuContext';
+import { useSidebar } from '../../../../contexts/SidebarContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
-import { useFriendConversations } from '../../../messenger/hooks/useFriendConversations';
+import { useMessengerUnreadCount } from '../../../messenger/hooks/useMessengerUnreadCount';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
@@ -26,8 +27,11 @@ export function Header() {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isHomePage = location.pathname === '/home' || location.pathname === '/home/';
   const { subscribeNotificationEvents } = useRealtimeCall();
   const { isMenuOpen, toggleMenu, setMenuOpen } = useMenu();
+  const { isLeftSidebarOpen, toggleLeftSidebar } = useSidebar();
   const userAvatar = currentUser?.avatarUrl || avatarImage;
 
   useEffect(() => {
@@ -75,11 +79,7 @@ export function Header() {
     });
   }, [currentUser?.id, subscribeNotificationEvents]);
 
-  const { conversations } = useFriendConversations();
-  const unreadMessagesCount = conversations.reduce(
-    (total, conversation) => total + Math.max(0, conversation.unreadCount ?? (conversation.isUnread ? 1 : 0)),
-    0,
-  );
+  const unreadMessagesCount = useMessengerUnreadCount();
 
   const navItems = [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
@@ -95,6 +95,26 @@ export function Header() {
         <div className="flex items-center justify-between h-14">
           {/* Left Section - Logo & Search */}
           <div className="flex items-center gap-2 flex-1 max-w-[320px]">
+            {isHomePage && (
+              <button
+                type="button"
+                onClick={() => {
+                  toggleLeftSidebar();
+                  setMenuOpen(false);
+                  setShowMessenger(false);
+                  setShowNotifications(false);
+                  setShowAccountMenu(false);
+                }}
+                className={`lg:hidden p-2 rounded-full transition-colors cursor-pointer shrink-0 ${
+                  isLeftSidebarOpen ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-muted hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+                title="Menu điều hướng"
+                aria-label="Menu điều hướng"
+                aria-expanded={isLeftSidebarOpen}
+              >
+                <Menu className={`w-6 h-6 ${isLeftSidebarOpen ? 'text-emerald-600' : 'text-foreground'}`} />
+              </button>
+            )}
             <Link to="/home" className="flex items-center gap-2 hover:bg-muted rounded-full p-2 transition-colors">
               <img src={logoV2} alt="KConnecta Logo V2" className="w-10 h-10 object-contain" />
             </Link>
@@ -134,10 +154,6 @@ export function Header() {
 
           {/* Right Section - User Actions */}
           <div className="flex items-center gap-2 flex-1 justify-end max-w-[320px]">
-            <button className="p-2 bg-muted hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors lg:hidden cursor-pointer">
-              <Menu className="w-6 h-6 text-foreground" />
-            </button>
-            
             <button 
               onClick={() => {
                 toggleMenu();

@@ -5,3 +5,4 @@ export { ReelInteractionPanel } from './ReelInteractionPanel';
 export { ReelNavigation } from './ReelNavigation';
 export { CommentsPanel } from './CommentsPanel';
 export { ShareModal } from './ShareModal/ShareModal';
+export { ReelMoreMenu } from './ReelMoreMenu';

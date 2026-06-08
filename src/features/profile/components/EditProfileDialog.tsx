@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
-import { User, MapPin, Heart, Loader2, Camera } from 'lucide-react';
+import { User, MapPin, Heart, Loader2, Camera, Briefcase } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,8 @@ interface EditProfileDialogProps {
     location?: string;
     hometown?: string;
     school?: string;
+    workplace?: string;
+    jobTitle?: string;
     relationship?: string;
     birthday?: string;
     dateOfBirth?: string;
@@ -43,18 +45,42 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const coverInputRef = React.useRef<HTMLInputElement>(null);
 
+  const buildFormValues = React.useCallback(
+    (data: EditProfileDialogProps['initialData']) => ({
+      fullName: data.fullName || '',
+      bio: data.bio || '',
+      location: data.location || '',
+      hometown: data.hometown || '',
+      school: data.school || '',
+      workplace: data.workplace || '',
+      jobTitle: data.jobTitle || '',
+      relationship: data.relationship || '',
+      day: data.dateOfBirth ? data.dateOfBirth.split('-')[2]?.replace(/^0/, '') : '',
+      month: data.dateOfBirth ? data.dateOfBirth.split('-')[1]?.replace(/^0/, '') : '',
+      year: data.dateOfBirth ? data.dateOfBirth.split('-')[0] : '',
+    }),
+    [],
+  );
+
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm({
-    defaultValues: {
-      ...initialData,
-      day: initialData.dateOfBirth ? initialData.dateOfBirth.split('-')[2]?.replace(/^0/, '') : '',
-      month: initialData.dateOfBirth ? initialData.dateOfBirth.split('-')[1]?.replace(/^0/, '') : '',
-      year: initialData.dateOfBirth ? initialData.dateOfBirth.split('-')[0] : '',
-    },
+    defaultValues: buildFormValues(initialData),
   });
+
+  React.useEffect(() => {
+    if (!open) return;
+    reset(buildFormValues(initialData));
+    setAvatarPreview(initialData.avatarUrl);
+    setCoverPreview(initialData.coverPhotoUrl);
+    setAvatarFile(null);
+    setCoverFile(null);
+    // Chỉ nạp lại form khi mở dialog, tránh reset khi parent re-render lúc đang gõ.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString());
   const months = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
@@ -102,6 +128,8 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
         location: formData.location,
         hometown: formData.hometown,
         school: formData.school,
+        workplace: formData.workplace,
+        jobTitle: formData.jobTitle,
         relationshipStatus: formData.relationship,
         dateOfBirth: formData.year && formData.month && formData.day
           ? `${formData.year}-${formData.month.padStart(2, '0')}-${formData.day.padStart(2, '0')}`
@@ -304,6 +332,42 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
                           className="pl-11 h-12 dark:bg-gray-800"
                           {...register('school')}
                           placeholder="VD: Trường Đại học Công nghệ TP.HCM"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section: Work */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-4 pb-2 border-b dark:border-gray-800">
+                    <div className="w-1.5 h-6 bg-amber-500 rounded-full"></div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Công việc</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <Label htmlFor="workplace" className="text-xs font-bold text-gray-500 uppercase">Nơi làm việc</Label>
+                      <div className="relative">
+                        <Briefcase className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Input
+                          id="workplace"
+                          className="pl-11 h-12 dark:bg-gray-800"
+                          {...register('workplace')}
+                          placeholder="VD: Công ty ABC"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="jobTitle" className="text-xs font-bold text-gray-500 uppercase">Chức danh</Label>
+                      <div className="relative">
+                        <Briefcase className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Input
+                          id="jobTitle"
+                          className="pl-11 h-12 dark:bg-gray-800"
+                          {...register('jobTitle')}
+                          placeholder="VD: Lập trình viên"
                         />
                       </div>
                     </div>

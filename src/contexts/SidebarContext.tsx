@@ -27,8 +27,7 @@ export const SidebarProvider = ({ children }: SidebarProviderProps) => {
     if (stored !== null) {
       return stored === 'true';
     }
-    // Default to open on desktop
-    return window.innerWidth >= 1024;
+    return false;
   });
 
   // Persist to localStorage whenever it changes

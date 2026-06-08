@@ -35,6 +35,8 @@ export interface AuthUser {
   hometown?: string;
   relationshipStatus?: string;
   school?: string;
+  workplace?: string;
+  jobTitle?: string;
   dateOfBirth?: string;
   avatarUrl?: string;
   coverPhotoUrl?: string;
@@ -53,6 +55,8 @@ export interface RegisterData {
   hometown?: string;
   relationshipStatus?: string;
   school?: string;
+  workplace?: string;
+  jobTitle?: string;
 }
 
 export interface GoogleCompleteRegisterData {
@@ -65,6 +69,13 @@ export interface GoogleCompleteRegisterData {
   bio?: string;
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isUuid(value: string | undefined | null): boolean {
+  return typeof value === 'string' && UUID_RE.test(value);
+}
+
 export const authService = {
   updateProfile: (id: string, data: Partial<RegisterData>) => {
     if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
@@ -73,6 +84,13 @@ export const authService = {
   getUserById: (id: string) => {
     if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
     return api.get<AuthUser>(`/users/${id}`);
+  },
+  /** Resolves profile by UUID or username without a failed UUID request first. */
+  getUser: (identifier: string) => {
+    if (!identifier || identifier === 'undefined') {
+      return Promise.reject(new Error('Invalid user identifier'));
+    }
+    return api.get<AuthUser>(`/users/${encodeURIComponent(identifier)}`);
   },
 
   uploadAvatar: (id: string, file: File) => {

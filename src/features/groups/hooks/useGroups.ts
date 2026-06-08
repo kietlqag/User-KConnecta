@@ -20,6 +20,7 @@ export function mapApiGroup(g: GroupApiResponse): Group {
     id: g.id,
     name: g.name,
     icon: g.coverPhotoUrl ?? '',
+    description: g.description ?? null,
     members: g.memberCount,
     privacy: g.privacy === 'PUBLIC' ? 'public' : 'private',
     lastActivity: formatLastActivity(g.updatedAt),

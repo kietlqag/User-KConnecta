@@ -1,0 +1,54 @@
+import type { LucideIcon } from 'lucide-react';
+import { MessageSquare, Users, Calendar, Images, FileText } from 'lucide-react';
+
+export const GROUP_DETAIL_TABS = [
+  {
+    id: 'discussion',
+    label: 'Thảo luận',
+    shortLabel: 'Thảo luận',
+    icon: MessageSquare,
+    ready: true,
+  },
+  {
+    id: 'members',
+    label: 'Thành viên',
+    shortLabel: 'Thành viên',
+    icon: Users,
+    ready: true,
+  },
+  {
+    id: 'events',
+    label: 'Sự kiện',
+    shortLabel: 'Sự kiện',
+    icon: Calendar,
+    ready: false,
+  },
+  {
+    id: 'media',
+    label: 'Ảnh & Video',
+    shortLabel: 'Ảnh/Video',
+    icon: Images,
+    ready: false,
+  },
+  {
+    id: 'documents',
+    label: 'Tài liệu',
+    shortLabel: 'Tài liệu',
+    icon: FileText,
+    ready: false,
+  },
+] as const;
+
+export type GroupDetailTabId = (typeof GROUP_DETAIL_TABS)[number]['id'];
+
+export type GroupDetailTabConfig = (typeof GROUP_DETAIL_TABS)[number] & { icon: LucideIcon };
+
+export const DEFAULT_GROUP_TAB: GroupDetailTabId = 'discussion';
+
+export function isGroupDetailTabId(value: string | null | undefined): value is GroupDetailTabId {
+  return GROUP_DETAIL_TABS.some(t => t.id === value);
+}
+
+export function getGroupDetailTab(id: GroupDetailTabId): GroupDetailTabConfig {
+  return GROUP_DETAIL_TABS.find(t => t.id === id)!;
+}

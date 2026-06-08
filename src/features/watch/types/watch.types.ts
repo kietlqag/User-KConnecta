@@ -1,3 +1,5 @@
+import type { ReactionType } from '@/services/postService';
+
 export interface Reel {
   id: string;
   videoUrl: string;
@@ -18,6 +20,9 @@ export interface Reel {
   shares: number;
   views: number;
   duration: number;
+  isLiked?: boolean;
+  currentUserReactionType?: ReactionType | null;
+  isSaved?: boolean;
 }
 
 export interface ReelComment {

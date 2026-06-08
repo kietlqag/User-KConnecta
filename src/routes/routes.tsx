@@ -4,9 +4,9 @@ import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth/pa
 import { WelcomePage } from '../pages';
 import { CreateStoryPage, StoryViewerPage } from '../features/stories/pages';
 import { HomePage } from '../features/home/pages';
-import { ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage, ProfileReelsPage, ProfileLikesPage, ProfileScheduledPage } from '../features/profile/pages';
+import { ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage, ProfileReelsPage, ProfileLikesPage, ProfileScheduledPage, ProfileLayout } from '../features/profile/pages';
 import { FriendsPage } from '../features/friends/pages';
-import { GroupsPage, CreateGroupPage, GroupDetailPage, JoinedGroupsPage, DiscoverGroupsPage } from '../features/groups/pages';
+import { GroupsPage, CreateGroupPage, GroupDetailPage, JoinedGroupsPage, DiscoverGroupsPage, GroupSearchPage } from '../features/groups/pages';
 import { WatchPage } from '../features/watch/pages';
 import { MarketplacePage } from '../features/marketplace/pages';
 import LiveVideoPage from '../features/live/pages/LiveVideoPage';
@@ -43,31 +43,16 @@ export const router = createBrowserRouter([
       },
       {
         path: '/profile/:userId?',
-        Component: ProfilePage,
-      },
-      {
-        path: '/profile/:userId/friends',
-        Component: ProfileFriendsPage,
-      },
-      {
-        path: '/profile/:userId/photos',
-        Component: ProfilePhotosPage,
-      },
-      {
-        path: '/profile/:userId/about',
-        Component: ProfileAboutPage,
-      },
-      {
-        path: '/profile/:userId/reels',
-        Component: ProfileReelsPage,
-      },
-      {
-        path: '/profile/:userId/likes',
-        Component: ProfileLikesPage,
-      },
-      {
-        path: '/profile/:userId/scheduled',
-        Component: ProfileScheduledPage,
+        Component: ProfileLayout,
+        children: [
+          { index: true, Component: ProfilePage },
+          { path: 'friends', Component: ProfileFriendsPage },
+          { path: 'photos', Component: ProfilePhotosPage },
+          { path: 'about', Component: ProfileAboutPage },
+          { path: 'reels', Component: ProfileReelsPage },
+          { path: 'likes', Component: ProfileLikesPage },
+          { path: 'scheduled', Component: ProfileScheduledPage },
+        ],
       },
       {
         path: '/friends',
@@ -88,6 +73,10 @@ export const router = createBrowserRouter([
       {
         path: '/groups/discover',
         Component: DiscoverGroupsPage,
+      },
+      {
+        path: '/groups/search',
+        Component: GroupSearchPage,
       },
       {
         path: '/groups/:groupId',

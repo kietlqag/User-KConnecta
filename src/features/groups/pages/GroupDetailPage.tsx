@@ -1,9 +1,33 @@
-import React, { useRef, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useRef, useState, useMemo, useEffect, useCallback } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../../home/components/Header';
-import { GroupsLeftSidebar, GroupFeed, InviteFriendsModal } from '../components';
-import { PenTool, Edit3, MoreHorizontal, Lock, Users, Smile, Image as ImageIcon, Briefcase, EyeOff, X, Globe2, Search, Shield, UserMinus, AlertTriangle, Loader2 } from 'lucide-react';
+import {
+  GroupsLeftSidebar,
+  GroupFeed,
+  InviteFriendsModal,
+  GroupDetailSidebar,
+  GroupActivationMobileBar,
+  EditGroupDescriptionModal,
+  GroupTabBar,
+  GroupMembersTab,
+  GroupPlaceholderTab,
+} from '../components';
+import {
+  DEFAULT_GROUP_TAB,
+  isGroupDetailTabId,
+  type GroupDetailTabId,
+} from '../constants/groupDetailTabs';
+import { Edit3, MoreHorizontal, Lock, Users, Image as ImageIcon, AlertTriangle, Loader2, X } from 'lucide-react';
+import { useGroupSetupProgress, type SetupStepId } from '../hooks/useGroupSetupProgress';
+import {
+  dismissSetup,
+  isSetupDismissed,
+  hasShownSetupCompleteToast,
+  markSetupCompleteToastShown,
+  isInviteSent,
+  markInviteSent,
+} from '../utils/groupSetupStorage';
 import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember, useLeaveGroup } from '../hooks/useGroups';
 import { groupService } from '@/services/groupService';
 import { authService } from '@/services/authService';
@@ -47,7 +71,25 @@ export const GroupDetailPage = () => {
   const { data: members = [] } = useGroupMembers(groupId);
   const { data: managedGroups = [] } = useManagedGroups();
   const { data: joinedGroups = [] } = useJoinedGroups();
-  const [activeTab, setActiveTab] = useState('Thảo luận');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const activeTab: GroupDetailTabId = isGroupDetailTabId(tabParam) ? tabParam : DEFAULT_GROUP_TAB;
+
+  const setActiveTab = useCallback(
+    (tabId: GroupDetailTabId) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev);
+          if (tabId === DEFAULT_GROUP_TAB) next.delete('tab');
+          else next.set('tab', tabId);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
   const joinGroupMutation = useJoinGroup();
 
   const queryClient = useQueryClient();
@@ -64,7 +106,64 @@ export const GroupDetailPage = () => {
   const removeMemberMutation = useRemoveMember();
   const leaveGroupMutation = useLeaveGroup();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [setupDismissed, setSetupDismissed] = useState(() => (groupId ? isSetupDismissed(groupId) : false));
+  const [postCount, setPostCount] = useState(0);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
+  const [inviteSent, setInviteSent] = useState(() => (groupId ? isInviteSent(groupId) : false));
   const isAdmin = group?.role === 'ADMIN';
+
+  const setupProgress = useGroupSetupProgress({
+    memberCount: members.length,
+    hasCover: !!(group?.icon?.trim()),
+    hasDescription: !!(group?.description?.trim()),
+    hasPosts: postCount > 0,
+    inviteSent,
+  });
+
+  const showSetupChecklist = isAdmin && !setupDismissed;
+
+  useEffect(() => {
+    if (!groupId) return;
+    setSetupDismissed(isSetupDismissed(groupId));
+  }, [groupId]);
+
+  useEffect(() => {
+    if (!groupId || !setupProgress.isComplete || !isAdmin) return;
+    if (hasShownSetupCompleteToast(groupId)) return;
+    toast.success('Nhóm đã sẵn sàng! Tiếp tục mời thêm thành viên nhé.');
+    markSetupCompleteToastShown(groupId);
+  }, [groupId, setupProgress.isComplete, isAdmin]);
+
+  const scrollToComposer = useCallback(() => {
+    document.getElementById('group-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, []);
+
+  const handleSetupStep = useCallback(
+    (stepId: SetupStepId) => {
+      switch (stepId) {
+        case 'invite':
+          setIsInviteModalOpen(true);
+          break;
+        case 'welcome_post':
+          scrollToComposer();
+          setComposerOpen(true);
+          break;
+        case 'cover':
+          fileInputRef.current?.click();
+          break;
+        case 'description':
+          setDescriptionModalOpen(true);
+          break;
+      }
+    },
+    [scrollToComposer],
+  );
+
+  const handleDismissSetup = useCallback(() => {
+    if (groupId) dismissSetup(groupId);
+    setSetupDismissed(true);
+  }, [groupId]);
 
   const filteredMembers = useMemo(() => {
     if (!memberSearch.trim()) return members;
@@ -304,185 +403,129 @@ export const GroupDetailPage = () => {
                   </div>
                 </div>
                 
-                {/* Tabs */}
-                <div className="flex items-center gap-1 pt-1 overflow-x-auto no-scrollbar">
-                  {['Thảo luận', 'Thành viên', 'Sự kiện', 'File phương tiện', 'File'].map((tab) => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`px-4 py-3.5 font-semibold text-[15px] whitespace-nowrap transition-colors ${
-                        activeTab === tab 
-                          ? 'text-blue-600 border-b-[3px] border-blue-600 rounded-t' 
-                          : 'text-gray-500 hover:bg-gray-100 rounded-lg h-11 my-1 flex items-center'
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
+                <GroupTabBar
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  memberCount={members.length}
+                />
               </div>
             </div>
           </div>
           
           {/* Main Layout Area */}
           <div className="max-w-[1050px] mx-auto px-4 py-4 lg:py-6 flex flex-col md:flex-row gap-6">
-             {/* Left Column (Posts Flow / Members Tab) */}
-             <div className="flex-1 min-w-0">
-               {activeTab === 'Thành viên' ? (
-                 /* ===== Members Management Panel ===== */
-                 <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                   {/* Header */}
-                   <div className="p-4 border-b border-gray-200">
-                     <div className="flex items-center justify-between mb-4">
-                       <h2 className="text-xl font-bold text-gray-900">Thành viên · {members.length}</h2>
-                       {isAdmin && (
-                         <button
-                           onClick={() => setIsInviteModalOpen(true)}
-                           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-1.5 transition-colors cursor-pointer"
-                         >
-                           <span className="text-lg leading-none">+</span> Mời thành viên
-                         </button>
-                       )}
-                     </div>
-                     {/* Search */}
-                     <div className="relative">
-                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                       <input
-                         type="text"
-                         placeholder="Tìm kiếm thành viên"
-                         value={memberSearch}
-                         onChange={(e) => setMemberSearch(e.target.value)}
-                         className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                       />
-                     </div>
-                   </div>
+             {/* Sidebar — first on mobile for admins */}
+             {group && activeTab === 'discussion' && (
+               <div className="order-1 md:order-2">
+                 <GroupDetailSidebar
+                   group={group}
+                   members={members}
+                   isAdmin={isAdmin}
+                   setupProgress={setupProgress}
+                   showSetupChecklist={showSetupChecklist}
+                   onDismissSetup={handleDismissSetup}
+                   onStepAction={handleSetupStep}
+                   onInvite={() => setIsInviteModalOpen(true)}
+                   onCreatePost={() => {
+                     scrollToComposer();
+                     setComposerOpen(true);
+                   }}
+                   onCover={() => fileInputRef.current?.click()}
+                   onEditDescription={() => setDescriptionModalOpen(true)}
+                   onViewMembers={() => setActiveTab('members')}
+                 />
+               </div>
+             )}
 
-                   {/* Admin section */}
-                   {adminMembers.length > 0 && (
-                     <div className="p-4 border-b border-gray-100">
-                       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Quản trị viên · {adminMembers.length}</h3>
-                       <div className="space-y-1">
-                         {adminMembers.map(member => (
-                           <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors group">
-                             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/profile/${member.userId}`)}>
-                               <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} className="w-12 h-12" />
-                               <div>
-                                 <div className="font-semibold text-gray-900 text-[15px] group-hover:underline">{member.fullName}</div>
-                                 <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
-                                   <Shield className="w-3 h-3" /> Quản trị viên
-                                 </div>
-                               </div>
-                             </div>
-                             <button className="p-2 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-                               <MoreHorizontal className="w-5 h-5 text-gray-500" />
-                             </button>
-                           </div>
-                         ))}
-                       </div>
-                     </div>
-                   )}
+             {/* Main column */}
+             <div
+               className="flex-1 min-w-0 order-2 md:order-1"
+               role="tabpanel"
+               id={`group-tabpanel-${activeTab}`}
+               aria-labelledby={`group-tab-${activeTab}`}
+             >
+               {isAdmin && showSetupChecklist && activeTab === 'discussion' && (
+                 <GroupActivationMobileBar
+                   progress={setupProgress}
+                   onContinue={() => setupProgress.nextStep && handleSetupStep(setupProgress.nextStep.id)}
+                 />
+               )}
+               {activeTab === 'members' && (
+                 <GroupMembersTab
+                   members={members}
+                   adminMembers={adminMembers}
+                   regularMembers={regularMembers}
+                   memberSearch={memberSearch}
+                   onMemberSearchChange={setMemberSearch}
+                   isAdmin={isAdmin}
+                   onInvite={() => setIsInviteModalOpen(true)}
+                   onMemberClick={userId => navigate(`/profile/${userId}`)}
+                   onRemoveMember={isAdmin ? m => setRemovingMember(m) : undefined}
+                 />
+               )}
 
-                   {/* Regular members section */}
-                   <div className="p-4">
-                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Thành viên · {regularMembers.length}</h3>
-                     {regularMembers.length === 0 ? (
-                       <p className="text-gray-400 text-sm py-4 text-center">
-                         {memberSearch ? 'Không tìm thấy thành viên nào.' : 'Chưa có thành viên nào.'}
-                       </p>
-                     ) : (
-                       <div className="space-y-1">
-                         {regularMembers.map(member => (
-                           <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors group">
-                             <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/profile/${member.userId}`)}>
-                               <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} className="w-12 h-12" />
-                               <div>
-                                 <div className="font-semibold text-gray-900 text-[15px] group-hover:underline">{member.fullName}</div>
-                                 <div className="text-xs text-gray-500">Thành viên</div>
-                               </div>
-                             </div>
-                             <div className="flex items-center gap-1">
-                               {isAdmin && (
-                                 <button
-                                   onClick={() => setRemovingMember({ userId: member.userId, fullName: member.fullName })}
-                                   className="p-2 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                                   title="Xóa khỏi nhóm"
-                                 >
-                                   <UserMinus className="w-5 h-5" />
-                                 </button>
-                               )}
-                               <button className="p-2 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-                                 <MoreHorizontal className="w-5 h-5 text-gray-500" />
-                               </button>
-                             </div>
-                           </div>
-                         ))}
-                       </div>
-                     )}
-                   </div>
-                 </div>
-               ) : (
-                 groupId && <GroupFeed groupId={groupId} />
+               {activeTab === 'discussion' && groupId && (
+                 <GroupFeed
+                   groupId={groupId}
+                   composerOpen={composerOpen}
+                   onComposerOpenChange={setComposerOpen}
+                   onPostsLoaded={setPostCount}
+                 />
+               )}
+
+               {(activeTab === 'events' || activeTab === 'media' || activeTab === 'documents') && (
+                 <GroupPlaceholderTab
+                   tabId={activeTab}
+                   isAdmin={isAdmin}
+                   onCreateEvent={() => toast.info('Tạo sự kiện — đang phát triển')}
+                   onPostWithMedia={() => {
+                     setActiveTab('discussion');
+                     setTimeout(() => {
+                       scrollToComposer();
+                       setComposerOpen(true);
+                     }, 0);
+                   }}
+                 />
                )}
              </div>
 
-             {/* Right Column (Widgets) */}
-             <div className="w-full md:w-[360px] shrink-0 flex flex-col gap-4">
-               {/* Setup Tracker */}
-               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 pb-2">
-                 <div className="flex justify-between items-start mb-2">
-                   <div>
-                     <h3 className="font-semibold text-gray-900 text-[17px] leading-tight">Hãy hoàn tất quy trình thiết lập nhóm</h3>
-                     <p className="text-[13px] font-semibold text-gray-900 mt-1">Đã hoàn thành <span className="text-green-600">0/4</span> bước</p>
-                     <p className="text-[13px] text-gray-500 leading-snug mt-1.5">Tiếp tục thêm các thông tin chính và bắt đầu tương tác với cộng đồng của bạn.</p>
-                   </div>
-                   <button className="text-gray-400 hover:bg-gray-100 p-1.5 rounded-full transition-colors">
-                     <X className="w-5 h-5" />
-                   </button>
-                 </div>
-                 
-                 <div className="mt-4 space-y-1">
-                   {[
-                     { icon: Users, label: 'Mời mọi người tham gia', onClick: undefined },
-                     { icon: ImageIcon, label: 'Thêm ảnh bìa', onClick: () => fileInputRef.current?.click() },
-                     { icon: Edit3, label: 'Thêm phần mô tả', onClick: undefined },
-                     { icon: PenTool, label: 'Tạo bài viết', onClick: undefined },
-                   ].map((step, idx) => (
-                     <button key={idx} onClick={step.onClick} className="w-full flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg transition-colors group">
-                       <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
-                         <step.icon className="w-4 h-4 text-gray-700" />
-                       </div>
-                       <span className="font-semibold text-gray-900 text-[15px]">{step.label}</span>
-                     </button>
-                   ))}
-                 </div>
+             {/* Sidebar on other tabs — about + members only */}
+             {group && activeTab !== 'discussion' && (
+               <div className="order-1 md:order-2 w-full md:w-[360px] shrink-0">
+                 <GroupDetailSidebar
+                   group={group}
+                   members={members}
+                   isAdmin={isAdmin}
+                   setupProgress={setupProgress}
+                   showSetupChecklist={false}
+                   onDismissSetup={handleDismissSetup}
+                   onStepAction={handleSetupStep}
+                   onInvite={() => setIsInviteModalOpen(true)}
+                   onCreatePost={() => {
+                     setActiveTab('discussion');
+                     setTimeout(() => {
+                       scrollToComposer();
+                       setComposerOpen(true);
+                     }, 0);
+                   }}
+                   onCover={() => fileInputRef.current?.click()}
+                   onEditDescription={() => setDescriptionModalOpen(true)}
+                   onViewMembers={() => setActiveTab('members')}
+                 />
                </div>
-
-               {/* About Widget */}
-               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                 <h3 className="font-semibold text-[17px] text-gray-900 mb-4">Giới thiệu</h3>
-                 <div className="flex gap-3 mb-4">
-                   <div className="mt-0.5 shrink-0"><Lock className="w-5 h-5 text-gray-900" /></div>
-                   <div>
-                     <div className="font-semibold text-gray-900 text-[15px]">Riêng tư</div>
-                     <div className="text-[15px] text-gray-500 leading-snug">Chỉ thành viên mới nhìn thấy mọi người trong nhóm và những gì họ đăng.</div>
-                   </div>
-                 </div>
-                 <div className="flex gap-3 mb-5">
-                   <div className="mt-0.5 shrink-0"><EyeOff className="w-5 h-5 text-gray-900" /></div>
-                   <div>
-                     <div className="font-semibold text-gray-900 text-[15px]">Ẩn</div>
-                     <div className="text-[15px] text-gray-500 leading-snug">Chỉ thành viên mới tìm thấy nhóm này.</div>
-                   </div>
-                 </div>
-                 
-                 <button className="w-full py-2 bg-gray-200 hover:bg-gray-300 transition-colors rounded-lg font-semibold text-gray-900 text-[15px]">
-                   Tìm hiểu thêm về nhóm này
-                 </button>
-               </div>
-             </div>
+             )}
           </div>
         </main>
       </div>
+
+      {groupId && group && (
+        <EditGroupDescriptionModal
+          groupId={groupId}
+          isOpen={descriptionModalOpen}
+          initialDescription={group.description}
+          onClose={() => setDescriptionModalOpen(false)}
+        />
+      )}
 
       {groupId && (
         <InviteFriendsModal 
@@ -490,6 +533,12 @@ export const GroupDetailPage = () => {
           isOpen={isInviteModalOpen}
           onClose={() => setIsInviteModalOpen(false)}
           existingMemberIds={members.map(m => m.userId)}
+          onInviteSuccess={() => {
+            if (groupId) {
+              markInviteSent(groupId);
+              setInviteSent(true);
+            }
+          }}
         />
       )}
 

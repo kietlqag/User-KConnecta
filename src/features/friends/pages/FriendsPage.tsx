@@ -2,27 +2,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FriendsLeftSidebar, FriendCard, FriendRequestCard } from '../components';
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
-import { Friend, FriendRequest } from '../types/friends.types';
 import { MainLayout } from '../../../layouts';
 import { friendService, FRIENDSHIP_CHANGED_EVENT } from '../../../services/friendService';
 import { authService } from '../../../services/authService';
 import { toast } from 'sonner';
+import { useFriendsPageData } from '../hooks/useFriendsPageData';
 
 const PAGE_SIZE = 8;
 const FRIEND_GRID_CLASS =
   'grid grid-cols-[repeat(auto-fill,minmax(min(190px,100%),1fr))] gap-3 sm:gap-4';
 
-const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=random&name=User';
-
 export const FriendsPage = () => {
   const [searchParams] = useSearchParams();
   const initialTab = (searchParams.get('tab') as FriendsTab) || 'home';
   const [activeTab, setActiveTab] = useState<FriendsTab>(initialTab);
-  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
-  const [suggestions, setSuggestions] = useState<Friend[]>([]);
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [loading, setLoading] = useState(true);
   const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
+  const [hiddenSuggestionIds, setHiddenSuggestionIds] = useState<Set<string>>(() => new Set());
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
@@ -45,68 +40,16 @@ export const FriendsPage = () => {
   }, []);
 
   const currentUser = authService.getCurrentUser();
+  const { friendRequests, suggestions, friends, loading, error, refetch } = useFriendsPageData(
+    currentUser?.id,
+    activeTab,
+  );
 
-  const fetchData = useCallback(async () => {
-    if (!currentUser) return;
-    setLoading(true);
-    try {
-      const [requestsData, suggestionsData, friendsData] = await Promise.all([
-        friendService.getFriendRequests(currentUser.id),
-        friendService.getSuggestions(currentUser.id),
-        friendService.getFriends(currentUser.id),
-      ]).catch((err) => {
-        toast.error(err.message || 'Không thể tải dữ liệu bạn bè');
-        throw err;
-      });
-
-      setFriendRequests(
-        requestsData.map((r) => ({
-          id: r.friendshipId!,
-          userId: r.userId,
-          name: r.fullName,
-          avatar: r.avatarUrl ?? DEFAULT_AVATAR,
-          mutualFriends: r.mutualFriends,
-          timestamp: r.createdAt
-            ? new Date(r.createdAt).toLocaleDateString('vi-VN')
-            : '',
-        }))
-      );
-
-      setSuggestions(
-        suggestionsData.map((s) => ({
-          id: s.userId,
-          userId: s.userId,
-          name: s.fullName,
-          avatar: s.avatarUrl ?? DEFAULT_AVATAR,
-          mutualFriends: s.mutualFriends,
-          isFriend: false,
-        }))
-      );
-
-      setFriends(
-        friendsData.map((f) => ({
-          id: f.friendshipId!,
-          userId: f.userId,
-          name: f.fullName,
-          avatar: f.avatarUrl ?? DEFAULT_AVATAR,
-          mutualFriends: f.mutualFriends,
-          isFriend: true,
-        }))
-      );
-      setPendingRequests({});
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (error) {
+      toast.error((error as Error).message || 'Không thể tải dữ liệu bạn bè');
     }
-  }, [currentUser?.id]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
-    window.addEventListener(FRIENDSHIP_CHANGED_EVENT, fetchData);
-    return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, fetchData);
-  }, [fetchData]);
+  }, [error]);
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
@@ -115,13 +58,13 @@ export const FriendsPage = () => {
   const handleAcceptRequest = async (id: string) => {
     const target = friendRequests.find((r) => r.id === id);
     await friendService.acceptFriendRequest(id);
-    setFriendRequests((prev) => prev.filter((req) => req.id !== id));
+    refetch();
     toast.success(`Đã chấp nhận lời mời kết bạn từ ${target?.name ?? 'người dùng'}`);
   };
 
   const handleDeleteRequest = async (id: string) => {
     await friendService.deleteFriendship(id);
-    setFriendRequests((prev) => prev.filter((req) => req.id !== id));
+    refetch();
   };
 
   const handleAddFriend = async (userId: string) => {
@@ -147,12 +90,13 @@ export const FriendsPage = () => {
   };
 
   const handleRemoveSuggestion = (id: string) => {
-    setSuggestions((prev) => prev.filter((sug) => sug.id !== id));
+    setHiddenSuggestionIds((prev) => new Set(prev).add(id));
   };
+
+  const visibleSuggestions = suggestions.filter((s) => !hiddenSuggestionIds.has(s.id));
 
   const handleUnfriend = async (id: string) => {
     await friendService.deleteFriendship(id);
-    setFriends((prev) => prev.filter((f) => f.id !== id));
     window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
     toast.success('Đã hủy kết bạn');
   };
@@ -188,12 +132,12 @@ export const FriendsPage = () => {
     }
 
     if (activeTab === 'suggestions') {
-      const visible = suggestions.slice(0, visibleCount);
-      const hasMore = visibleCount < suggestions.length;
+      const visible = visibleSuggestions.slice(0, visibleCount);
+      const hasMore = visibleCount < visibleSuggestions.length;
       return (
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-4">Những người bạn có thể biết</h2>
-          {suggestions.length === 0 ? (
+          {visibleSuggestions.length === 0 ? (
             <p className="text-gray-500">Không có gợi ý nào.</p>
           ) : (
             <>
@@ -276,7 +220,7 @@ export const FriendsPage = () => {
           </section>
         )}
 
-        {suggestions.length > 0 && (
+        {visibleSuggestions.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Những người bạn có thể biết</h2>
@@ -288,7 +232,7 @@ export const FriendsPage = () => {
               </button>
             </div>
             <div className={FRIEND_GRID_CLASS}>
-              {suggestions.slice(0, 4).map((friend) => (
+              {visibleSuggestions.slice(0, 4).map((friend) => (
                 <FriendCard
                   key={friend.id}
                   friend={friend}
@@ -303,7 +247,7 @@ export const FriendsPage = () => {
           </section>
         )}
 
-        {friendRequests.length === 0 && suggestions.length === 0 && (
+        {friendRequests.length === 0 && visibleSuggestions.length === 0 && (
           <div className="text-center py-16">
             <div className="text-gray-400 mb-4">
               <svg className="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,10 +1,16 @@
-import { ArrowLeft, Lock, Clock, Users, Bookmark, Loader2 } from 'lucide-react';
+import { ArrowLeft, Lock, Clock, Users, Bookmark, Loader2, Shield, MapPin } from 'lucide-react';
+import {
+  type PostPublishContext,
+  type GroupPrivacyDisplay,
+  getGroupPrivacySummary,
+} from './postPublishContext';
 
 interface ProfilePostSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPost: () => void | Promise<void>;
   postContent: string;
+  postContext: PostPublishContext;
   privacy: string;
   excludedCount?: number;
   allowedCount?: number;
@@ -14,6 +20,8 @@ interface ProfilePostSettingsModalProps {
   onOpenScheduleSelection?: () => void;
   onOpenGroupSelection?: () => void;
   selectedGroupName?: string | null;
+  groupName?: string;
+  groupPrivacy?: GroupPrivacyDisplay;
   postActionLabel?: string;
 }
 
@@ -22,6 +30,7 @@ export function ProfilePostSettingsModal({
   onClose,
   onPost,
   postContent,
+  postContext,
   privacy,
   excludedCount = 0,
   allowedCount = 0,
@@ -31,9 +40,13 @@ export function ProfilePostSettingsModal({
   onOpenScheduleSelection,
   onOpenGroupSelection,
   selectedGroupName,
+  groupName,
+  groupPrivacy = 'private',
   postActionLabel = 'Đăng',
 }: ProfilePostSettingsModalProps) {
   if (!isOpen) return null;
+
+  const isGroupContext = postContext === 'GROUP';
 
   const getPrivacyLabel = () => {
     switch (privacy) {
@@ -50,11 +63,15 @@ export function ProfilePostSettingsModal({
     }
   };
 
+  const groupPrivacyCopy = getGroupPrivacySummary(groupPrivacy);
+  const canCrossPostToGroup = !isGroupContext && privacy === 'public';
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
       <div className="max-h-[90vh] w-full max-w-[500px] overflow-y-auto rounded-lg bg-white shadow-xl dark:bg-gray-800">
         <div className="sticky top-0 relative flex items-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <button
+            type="button"
             onClick={onClose}
             disabled={isPosting}
             className="rounded-full p-2 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed dark:hover:bg-gray-700"
@@ -69,27 +86,54 @@ export function ProfilePostSettingsModal({
         <div className="space-y-4 p-4">
           <div className="border-b border-gray-200 pb-4 dark:border-gray-700">
             <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">Xem trước bài viết</h3>
-            <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{postContent}</p>
+            <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
+              {postContent.trim() || '—'}
+            </p>
           </div>
 
+          {isGroupContext && groupName && (
+            <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
+                <MapPin className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Đăng trong</p>
+                <p className="truncate font-semibold text-gray-900 dark:text-white">{groupName}</p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1">
-            <button
-              type="button"
-              disabled={isPosting}
-              onClick={() => onOpenAudienceSelection?.()}
-              className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
-                <Lock className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+            {isGroupContext ? (
+              <div className="flex w-full items-start gap-3 rounded-lg p-3 bg-gray-50 dark:bg-gray-700/40">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
+                  <Shield className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Quyền riêng tư</h4>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{groupPrivacyCopy.title}</p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{groupPrivacyCopy.description}</p>
+                </div>
               </div>
-              <div className="flex-1 text-left">
-                <h4 className="font-semibold text-gray-900 dark:text-white">Đối tượng của bài viết</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{getPrivacyLabel()}</p>
-              </div>
-              <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isPosting}
+                onClick={() => onOpenAudienceSelection?.()}
+                className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
+                  <Lock className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                </div>
+                <div className="flex-1 text-left">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Đối tượng của bài viết</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{getPrivacyLabel()}</p>
+                </div>
+                <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
 
             <button
               type="button"
@@ -109,32 +153,39 @@ export function ProfilePostSettingsModal({
               </svg>
             </button>
 
-            {(() => {
-              const canShareToGroup = privacy === 'public';
-              return (
-                <button
-                  type="button"
-                  disabled={isPosting || !canShareToGroup}
-                  onClick={() => onOpenGroupSelection?.()}
-                  className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-700"
+            {!isGroupContext && (
+              <button
+                type="button"
+                disabled={isPosting || !canCrossPostToGroup}
+                onClick={() => onOpenGroupSelection?.()}
+                className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-700"
+              >
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                    selectedGroupName ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
                 >
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-full ${selectedGroupName ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                    <Users className={`h-5 w-5 ${selectedGroupName ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'}`} />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <h4 className="font-semibold text-gray-900 dark:text-white">Chia sẻ lên nhóm</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {canShareToGroup
-                        ? (selectedGroupName ?? 'Chọn nhóm để đăng bài')
-                        : 'Chỉ dùng được khi bài viết ở chế độ Công khai'}
-                    </p>
-                  </div>
+                  <Users
+                    className={`h-5 w-5 ${
+                      selectedGroupName ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  />
+                </div>
+                <div className="flex-1 text-left">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">Cũng đăng lên nhóm</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {canCrossPostToGroup
+                      ? selectedGroupName ?? 'Chọn nhóm (tùy chọn)'
+                      : 'Chỉ bài công khai mới đăng thêm vào nhóm.'}
+                  </p>
+                </div>
+                {canCrossPostToGroup && (
                   <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
-              );
-            })()}
+                )}
+              </button>
+            )}
 
             <div className="flex w-full cursor-not-allowed items-center gap-3 rounded-lg p-3 opacity-50">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
@@ -142,17 +193,15 @@ export function ProfilePostSettingsModal({
               </div>
               <div className="flex-1 text-left">
                 <h4 className="font-semibold text-gray-500 dark:text-gray-400">Chia sẻ lên tin</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-500">Tắt</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500">Sắp ra mắt</p>
               </div>
-              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
             </div>
           </div>
         </div>
 
         <div className="sticky bottom-0 flex items-center gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <button
+            type="button"
             onClick={onClose}
             disabled={isPosting}
             className="flex-1 rounded-lg bg-gray-200 px-6 py-2.5 font-semibold text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
@@ -160,6 +209,7 @@ export function ProfilePostSettingsModal({
             Lưu
           </button>
           <button
+            type="button"
             onClick={onPost}
             disabled={isPosting}
             className="flex-1 rounded-lg bg-emerald-500 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-300"

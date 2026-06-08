@@ -274,6 +274,8 @@ export const chatService = {
     return api.get<ConversationPinResponse[]>('/chat/conversations/pin');
   },
 
+  getTotalPrivateUnreadCount: () => api.get<number>('/chat/unread-count'),
+
   getConversationSummaries: (options?: { peerUserIds?: string[]; conversationIds?: string[] }) => {
     const params = new URLSearchParams();
     options?.peerUserIds?.forEach((id) => params.append('peerUserIds', id));

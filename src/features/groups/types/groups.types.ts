@@ -2,6 +2,7 @@ export interface Group {
   id: string;
   name: string;
   icon: string;
+  description: string | null;
   members: number;
   privacy: 'public' | 'private';
   lastActivity?: string;

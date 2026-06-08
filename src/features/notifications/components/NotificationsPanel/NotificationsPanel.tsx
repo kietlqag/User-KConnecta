@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { MoreHorizontal } from 'lucide-react';
 import { NotificationItem } from '../NotificationItem';
 import { NotificationFilter } from '../../types/notifications.types';
 import { notificationService } from '../../../../services/notificationService';
@@ -79,9 +78,6 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
                   Đánh dấu tất cả đã đọc
                 </button>
               )}
-              <button className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer">
-                <MoreHorizontal className="w-5 h-5 text-gray-600" />
-              </button>
             </div>
           </div>
 

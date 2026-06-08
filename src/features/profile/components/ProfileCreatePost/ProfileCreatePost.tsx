@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Video, Smile, MapPin } from 'lucide-react';
+import { Image, Video } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ProfileCreatePostModal } from './ProfileCreatePostModal';
 import { CurrentUserAvatar } from '@/components/shared';
@@ -38,7 +38,7 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
 
         <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <Link
             to="/live"
             className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center"
@@ -59,19 +59,7 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
             </span>
           </button>
 
-          <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center cursor-pointer">
-            <Smile className="w-6 h-6 text-yellow-500" />
-            <span className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">
-              Cảm xúc
-            </span>
-          </button>
 
-          <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors justify-center cursor-pointer">
-            <MapPin className="w-6 h-6 text-blue-500" />
-            <span className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">
-              Địa điểm
-            </span>
-          </button>
         </div>
       </div>
 

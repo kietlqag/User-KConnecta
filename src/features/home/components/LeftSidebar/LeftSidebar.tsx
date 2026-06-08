@@ -1,5 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSidebar } from '@/contexts/SidebarContext';
+import { cn } from '@/lib/utils';
 import {
   Users,
   Clock,
@@ -20,8 +22,24 @@ import { useManagedGroups } from '@/features/groups/hooks/useGroups';
 
 export const LeftSidebar = () => {
   const navigate = useNavigate();
+  const { isLeftSidebarOpen, setLeftSidebarOpen } = useSidebar();
+  const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
   const { data: managedGroups = [] } = useManagedGroups();
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const syncScreenSize = () => setIsLargeScreen(mediaQuery.matches);
+    mediaQuery.addEventListener('change', syncScreenSize);
+    return () => mediaQuery.removeEventListener('change', syncScreenSize);
+  }, []);
+
+  const handleNavigate = (href: string) => {
+    navigate(href);
+    if (!isLargeScreen) {
+      setLeftSidebarOpen(false);
+    }
+  };
   useEffect(() => {
     const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
     window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
@@ -88,16 +106,30 @@ export const LeftSidebar = () => {
   ];
 
   return (
-    <aside
-      className="fixed left-0 top-14 w-72 h-[calc(100vh-56px)] bg-white border-r border-gray-200 overflow-y-auto z-30 sidebar-scrollbar"
-    >
+    <>
+      {isLeftSidebarOpen && !isLargeScreen && (
+        <button
+          type="button"
+          className="fixed inset-0 top-14 bg-black/40 z-20 cursor-default"
+          onClick={() => setLeftSidebarOpen(false)}
+          aria-label="Đóng menu điều hướng"
+        />
+      )}
+
+      <aside
+        className={cn(
+          'fixed left-0 top-14 w-72 h-[calc(100vh-56px)] bg-white border-r border-gray-200 overflow-y-auto z-30 sidebar-scrollbar transition-transform duration-300 ease-in-out lg:translate-x-0',
+          isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+        aria-hidden={!isLargeScreen && !isLeftSidebarOpen}
+      >
       <div className="p-2">
         {/* Menu Items */}
         <nav className="space-y-1" role="navigation" aria-label="Main navigation">
           {menuItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => navigate(item.href)}
+              onClick={() => handleNavigate(item.href)}
               className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left group cursor-pointer"
               aria-label={item.label}
             >
@@ -124,7 +156,7 @@ export const LeftSidebar = () => {
             managedGroups.slice(0, 5).map((group) => (
               <button
                 key={group.id}
-                onClick={() => navigate(`/groups/${group.id}`)}
+                onClick={() => handleNavigate(`/groups/${group.id}`)}
                 className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
               >
                 <div className="w-9 h-9 rounded-lg bg-gray-300 flex items-center justify-center overflow-hidden">
@@ -139,7 +171,7 @@ export const LeftSidebar = () => {
             ))
           ) : (
             <button
-              onClick={() => navigate('/groups/create')}
+              onClick={() => handleNavigate('/groups/create')}
               className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors text-left cursor-pointer"
             >
               <div className="w-9 h-9 rounded-lg bg-gray-300 flex items-center justify-center overflow-hidden">
@@ -171,5 +203,6 @@ export const LeftSidebar = () => {
         </div>
       </div>
     </aside>
+    </>
   );
 };

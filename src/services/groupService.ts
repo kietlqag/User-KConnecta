@@ -60,6 +60,9 @@ export const groupService = {
   removeCoverPhoto: (groupId: string) =>
     api.delete<void>(`/groups/${groupId}/cover-photo`),
 
+  updateDescription: (groupId: string, requesterId: string, description: string) =>
+    api.put<GroupApiResponse>(`/groups/${groupId}/description`, { requesterId, description }),
+
   removeMember: (groupId: string, userId: string, requesterId: string) =>
     api.delete<void>(`/groups/${groupId}/members/${userId}?requesterId=${requesterId}`),
 

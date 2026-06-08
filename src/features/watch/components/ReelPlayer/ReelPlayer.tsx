@@ -7,7 +7,8 @@ import { CommentsPanel } from '../CommentsPanel';
 import { ShareModal } from '../ShareModal/ShareModal';
 import { ReelNavigation } from '../ReelNavigation';
 import { authService } from '@/services/authService';
-import { postService } from '@/services/postService';
+import { postService, SAVED_POSTS_CHANGED_EVENT, type ReactionType } from '@/services/postService';
+import { reactions, type ReactionOption } from '@/components/reactions';
 import { toast } from 'sonner';
 
 interface ReelPlayerProps {
@@ -44,16 +45,38 @@ export const ReelPlayer = ({
   };
 
   const [likeCount, setLikeCount] = useState(reel.likes);
-  const [isLiked, setIsLiked] = useState(reel.isLiked || false);
+  const [selectedReaction, setSelectedReaction] = useState<ReactionOption | null>(
+    reel.currentUserReactionType
+      ? reactions.find((item) => item.type === reel.currentUserReactionType) ?? null
+      : null,
+  );
+  const [isReacting, setIsReacting] = useState(false);
   const [shareCount, setShareCount] = useState(reel.shares);
   const [commentCount, setCommentCount] = useState(reel.comments);
+  const [isSaved, setIsSaved] = useState(reel.isSaved ?? false);
 
   useEffect(() => {
     setLikeCount(reel.likes);
-    setIsLiked(reel.isLiked || false);
+    setSelectedReaction(
+      reel.currentUserReactionType
+        ? reactions.find((item) => item.type === reel.currentUserReactionType) ?? null
+        : null,
+    );
     setShareCount(reel.shares);
     setCommentCount(reel.comments);
+    setIsSaved(reel.isSaved ?? false);
   }, [reel]);
+
+  useEffect(() => {
+    const onSavedChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ postId: string; saved: boolean }>).detail;
+      if (detail?.postId === reel.id) {
+        setIsSaved(detail.saved);
+      }
+    };
+    window.addEventListener(SAVED_POSTS_CHANGED_EVENT, onSavedChanged);
+    return () => window.removeEventListener(SAVED_POSTS_CHANGED_EVENT, onSavedChanged);
+  }, [reel.id]);
 
   useEffect(() => {
     setIsMuted(true);
@@ -65,7 +88,7 @@ export const ReelPlayer = ({
     }
   }, [isMuted]);
 
-  const handleLike = async () => {
+  const handleReactionChange = async (reaction: ReactionOption | null) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để thả cảm xúc');
@@ -73,17 +96,26 @@ export const ReelPlayer = ({
     }
 
     try {
-      if (isLiked) {
+      setIsReacting(true);
+      if (!reaction) {
+        if (!selectedReaction) return;
         await postService.removeReaction(reel.id, currentUser.id);
-        setIsLiked(false);
-        setLikeCount(prev => Math.max(0, prev - 1));
+        setSelectedReaction(null);
+        setLikeCount((prev) => Math.max(0, prev - 1));
       } else {
-        await postService.addReaction(reel.id, { userId: currentUser.id, reactionType: 'LIKE' });
-        setIsLiked(true);
-        setLikeCount(prev => prev + 1);
+        await postService.addReaction(reel.id, {
+          userId: currentUser.id,
+          reactionType: reaction.type as ReactionType,
+        });
+        if (!selectedReaction) {
+          setLikeCount((prev) => prev + 1);
+        }
+        setSelectedReaction(reaction);
       }
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra, vui lòng thử lại');
+    } finally {
+      setIsReacting(false);
     }
   };
 
@@ -109,10 +141,6 @@ export const ReelPlayer = ({
     } catch (error) {
       toast.error('Không thể chia sẻ bài viết');
     }
-  };
-
-  const handleMore = () => {
-    console.log('More options for reel:', reel.id);
   };
 
   const toggleMute = (e?: React.MouseEvent) => {
@@ -280,14 +308,17 @@ export const ReelPlayer = ({
         {/* Interaction Buttons - Always next to video */}
         <div className="flex-shrink-0 flex items-center">
           <ReelInteractionPanel
+            postId={reel.id}
             likes={likeCount}
             comments={commentCount}
             shares={shareCount}
-            isLiked={isLiked}
-            onLike={handleLike}
+            selectedReaction={selectedReaction}
+            onReactionChange={handleReactionChange}
+            isReacting={isReacting}
+            isSaved={isSaved}
+            isOwner={authService.getCurrentUser()?.id === reel.creator.id}
             onComment={handleComment}
             onShare={handleShare}
-            onMore={handleMore}
           />
         </div>
 

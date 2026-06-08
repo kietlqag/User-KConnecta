@@ -1,7 +1,49 @@
-import { useState } from 'react';
-import { Grid3x3, List, FileText, Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Grid3x3, List, FileText, Loader2, X, ChevronLeft, ChevronRight, Play, Images } from 'lucide-react';
 import type { FeedPost } from '@/utils/postUtils';
 import { Post } from '../../../../components/shared/Post';
+import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
+
+interface GridTile {
+  postId: string;
+  type: 'image' | 'video';
+  url: string;
+  allImages: string[];
+  extraImageCount: number;
+}
+
+function getPostGridTile(post: FeedPost): GridTile | null {
+  const allImages = [
+    ...(post.mediaList?.filter((m) => m.type === 'IMAGE' && m.url?.trim()).map((m) => m.url) ?? []),
+    ...(post.image?.trim() && !post.mediaList?.length ? [post.image] : []),
+  ].filter(Boolean) as string[];
+
+  const videoUrl =
+    post.mediaList?.find((m) => m.type === 'VIDEO' && m.url?.trim())?.url ??
+    (post.media?.type === 'video' && post.media.url?.trim() ? post.media.url : null);
+
+  if (allImages.length > 0) {
+    return {
+      postId: post.id,
+      type: 'image',
+      url: allImages[0],
+      allImages,
+      extraImageCount: Math.max(0, allImages.length - 1),
+    };
+  }
+
+  if (videoUrl) {
+    return {
+      postId: post.id,
+      type: 'video',
+      url: videoUrl,
+      allImages: [],
+      extraImageCount: 0,
+    };
+  }
+
+  return null;
+}
 
 interface ProfilePostsProps {
   posts: FeedPost[];
@@ -41,7 +83,13 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
-  const gridPosts = posts.filter(p => p.mediaList && p.mediaList.length > 0 || p.image || p.media?.url);
+  const gridTiles = useMemo(
+    () =>
+      posts
+        .map(getPostGridTile)
+        .filter((tile): tile is GridTile => tile !== null),
+    [posts],
+  );
 
   const openLightbox = (images: string[], index: number) => {
     setLightboxImages(images);
@@ -146,48 +194,86 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          {gridPosts.length === 0 ? (
-            <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
-              Không có bài viết có ảnh để hiển thị ở chế độ lưới.
+          {gridTiles.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+              <div className="relative mb-4 h-16 w-16">
+                <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
+                  <Images className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                </div>
+              </div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Không có bài viết có ảnh hoặc video
+              </p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Chuyển sang danh sách để xem bài viết dạng chữ.
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-0.5 bg-gray-200 dark:bg-gray-700">
-              {gridPosts.map((post) => {
-                const allImages = [
-                  ...(post.mediaList?.filter(m => m.type === 'IMAGE').map(m => m.url) || []),
-                  ...(post.image && !post.mediaList?.length ? [post.image] : []),
-                ].filter(Boolean) as string[];
-                const thumbUrl = allImages[0] || post.media?.url || '';
-                const isVideo = !thumbUrl && post.mediaList?.find(m => m.type === 'VIDEO');
-                return (
-                  <div
-                    key={post.id}
-                    className="relative aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden group cursor-pointer"
-                    onClick={() => allImages.length > 0 ? openLightbox(allImages, 0) : undefined}
+            <>
+              <div className="grid grid-cols-3 gap-1 p-1 sm:gap-1.5 sm:p-1.5">
+                {gridTiles.map((tile) => (
+                  <button
+                    key={tile.postId}
+                    type="button"
+                    className="group relative aspect-square w-full min-w-0 overflow-hidden rounded-md bg-gray-100 dark:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    onClick={() => {
+                      if (tile.type === 'image' && tile.allImages.length > 0) {
+                        openLightbox(tile.allImages, 0);
+                      }
+                    }}
                   >
-                    {thumbUrl ? (
-                      <img
-                        src={thumbUrl}
+                    {tile.type === 'image' ? (
+                      <ImageWithFallback
+                        src={tile.url}
                         alt=""
                         className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                       />
-                    ) : isVideo ? (
-                      <video
-                        src={post.mediaList?.find(m => m.type === 'VIDEO')?.url}
-                        className="h-full w-full object-cover"
-                        muted
-                      />
-                    ) : null}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                    {allImages.length > 1 && (
-                      <span className="absolute bottom-2 right-2 bg-black/60 text-white text-xs font-semibold px-1.5 py-0.5 rounded">
-                        +{allImages.length - 1}
+                    ) : (
+                      <>
+                        <video
+                          src={tile.url}
+                          className="h-full w-full object-cover"
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white shadow-lg">
+                            <Play className="ml-0.5 h-5 w-5 fill-white" />
+                          </span>
+                        </span>
+                      </>
+                    )}
+                    <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/20" />
+                    {tile.extraImageCount > 0 && (
+                      <span className="pointer-events-none absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded bg-black/65 px-1.5 py-0.5 text-[11px] font-semibold text-white">
+                        <Images className="h-3 w-3" />
+                        +{tile.extraImageCount}
                       </span>
                     )}
-                  </div>
-                );
-              })}
-            </div>
+                  </button>
+                ))}
+              </div>
+              {hasMore && (
+                <div className="border-t border-gray-200 p-3 dark:border-gray-700">
+                  <button
+                    onClick={onLoadMore}
+                    disabled={loadingMore}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 py-2.5 font-semibold text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang tải...
+                      </>
+                    ) : (
+                      'Xem thêm bài viết'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

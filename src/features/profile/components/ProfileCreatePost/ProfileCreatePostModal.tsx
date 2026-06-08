@@ -14,7 +14,11 @@ import {
   Loader2,
   AlertCircle,
   ExternalLink,
+  Lock,
+  Shield,
 } from 'lucide-react';
+import { useGroupById } from '@/features/groups/hooks/useGroups';
+import { getGroupPrivacyShortLabel } from './postPublishContext';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type CreatePostMediaRequest } from '@/services/postService';
@@ -31,11 +35,7 @@ import { ProfilePostSettingsModal } from './ProfilePostSettingsModal';
 import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidation';
 
-function toApiScheduledAt(datetimeLocal: string): string {
-  const t = datetimeLocal.trim();
-  if (!t) return '';
-  return t.length >= 19 ? t : `${t}:00`;
-}
+import { toApiScheduledAt, debugScheduleLog } from './postScheduleUtils';
 
 interface ProfileCreatePostModalProps {
   isOpen: boolean;
@@ -89,6 +89,10 @@ export function ProfileCreatePostModal({
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [emojiPickerPos, setEmojiPickerPos] = useState({ top: 0, right: 0 });
+
+  const { data: targetGroup } = useGroupById(groupId);
+  const postContext = groupId ? 'GROUP' : 'PROFILE';
+  const isGroupPost = postContext === 'GROUP';
 
   // Sync state when initialShowImagePicker changes
   useEffect(() => {
@@ -308,22 +312,33 @@ export function ProfileCreatePostModal({
       const isScheduled = scheduleMode === 'scheduled';
       const scheduledAtApi = isScheduled ? toApiScheduledAt(scheduledAtLocal) : undefined;
 
+      debugScheduleLog('create post', {
+        scheduleMode,
+        scheduledAtLocal,
+        scheduledAtApi,
+        status: isScheduled ? 'SCHEDULED' : 'PUBLISHED',
+        groupId: groupId ?? selectedGroupId ?? null,
+      });
+
       const effectiveGroupId = groupId ?? selectedGroupId ?? undefined;
+      const apiPrivacy = isGroupPost ? ('PUBLIC' as const) : mapPrivacyToApi();
       await postService.createPost({
         authorId: user?.id || '',
         ...(effectiveGroupId && { groupId: effectiveGroupId }),
         content: postContent.trim(),
         imageUrl: uploadedMedia.length > 0 ? uploadedMedia[0].fileUrl : undefined,
         media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
-        privacy: mapPrivacyToApi(),
-        ...(excludedUserIds.length > 0 && { excludedUserIds }),
-        ...(allowedUserIds.length > 0 && { allowedUserIds }),
+        privacy: apiPrivacy,
+        ...(!isGroupPost && excludedUserIds.length > 0 && { excludedUserIds }),
+        ...(!isGroupPost && allowedUserIds.length > 0 && { allowedUserIds }),
         status: isScheduled ? 'SCHEDULED' : 'PUBLISHED',
         ...(isScheduled && scheduledAtApi ? { scheduledAt: scheduledAtApi } : {}),
       });
 
       toast.success(isScheduled ? 'Đã lên lịch đăng bài' : 'Đăng bài thành công');
-      onPostCreated?.();
+      if (!isScheduled) {
+        onPostCreated?.();
+      }
       onClose();
       setPostContent('');
       setSelectedImages([]);
@@ -392,22 +407,35 @@ export function ProfileCreatePostModal({
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white">{username}</h3>
                 <div className="mt-1 flex flex-wrap items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReopenSettingsAfterAudience(false);
-                      setShowAudienceModal(true);
-                    }}
-                    className="flex items-center gap-1 rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                  >
-                    <PrivacyIcon className="h-3 w-3" />
-                    <span>{privacyInfo.label}</span>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
+                  {isGroupPost && targetGroup ? (
+                    <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                      {targetGroup.privacy === 'private' ? (
+                        <Lock className="h-3 w-3" />
+                      ) : (
+                        <Shield className="h-3 w-3" />
+                      )}
+                      <span className="max-w-[200px] truncate">{targetGroup.name}</span>
+                      <span className="text-emerald-600/80 dark:text-emerald-400/80">·</span>
+                      <span>{getGroupPrivacyShortLabel(targetGroup.privacy)}</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReopenSettingsAfterAudience(false);
+                        setShowAudienceModal(true);
+                      }}
+                      className="flex items-center gap-1 rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                    >
+                      <PrivacyIcon className="h-3 w-3" />
+                      <span>{privacyInfo.label}</span>
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  )}
 
-                  {!groupId && privacy === 'public' && (
+                  {!isGroupPost && privacy === 'public' && (
                     <button
                       type="button"
                       onClick={() => setShowGroupModal(true)}
@@ -695,7 +723,10 @@ export function ProfileCreatePostModal({
         isOpen={showAudienceModal}
         onClose={() => {
           setShowAudienceModal(false);
-          setReopenSettingsAfterAudience(false);
+          if (reopenSettingsAfterAudience) {
+            setReopenSettingsAfterAudience(false);
+            setShowSettingsModal(true);
+          }
         }}
         selectedAudience={privacy}
         excludedUserIds={excludedUserIds}
@@ -707,31 +738,13 @@ export function ProfileCreatePostModal({
           if (audience !== 'public') {
             setSelectedGroupId(null);
             setSelectedGroupName(null);
+            if (selectedGroupId) {
+              toast.info('Đã bỏ đăng lên nhóm vì bài không còn ở chế độ Công khai.');
+            }
           }
           setShowAudienceModal(false);
           if (reopenSettingsAfterAudience) {
             setReopenSettingsAfterAudience(false);
-            setShowSettingsModal(true);
-          }
-        }}
-      />
-
-      <ProfilePostScheduleModal
-        isOpen={showScheduleModal}
-        mode={scheduleMode}
-        scheduledAtLocal={scheduledAtLocal}
-        onConfirm={({ mode, scheduledAtLocal: nextLocal }) => {
-          setScheduleMode(mode);
-          if (mode === 'scheduled') {
-            setScheduledAtLocal(nextLocal);
-          } else {
-            setScheduledAtLocal(defaultScheduledDatetimeLocal());
-          }
-        }}
-        onClose={() => {
-          setShowScheduleModal(false);
-          if (reopenSettingsAfterSchedule) {
-            setReopenSettingsAfterSchedule(false);
             setShowSettingsModal(true);
           }
         }}
@@ -763,28 +776,39 @@ export function ProfileCreatePostModal({
         onClose={() => setShowSettingsModal(false)}
         onPost={handlePost}
         postContent={postContent}
+        postContext={postContext}
         privacy={privacy}
         excludedCount={excludedUserIds.length}
         allowedCount={allowedUserIds.length}
         isPosting={isPosting}
         scheduleSubtitle={scheduleSubtitle}
         postActionLabel={scheduleMode === 'scheduled' ? 'Lên lịch' : 'Đăng'}
-        onOpenAudienceSelection={() => {
-          setReopenSettingsAfterAudience(true);
-          setShowSettingsModal(false);
-          setShowAudienceModal(true);
-        }}
+        groupName={targetGroup?.name}
+        groupPrivacy={targetGroup?.privacy}
+        onOpenAudienceSelection={
+          isGroupPost
+            ? undefined
+            : () => {
+                setReopenSettingsAfterAudience(true);
+                setShowSettingsModal(false);
+                setShowAudienceModal(true);
+              }
+        }
         onOpenScheduleSelection={() => {
           setReopenSettingsAfterSchedule(true);
           setShowSettingsModal(false);
           setShowScheduleModal(true);
         }}
-        onOpenGroupSelection={() => {
-          setReopenSettingsAfterGroup(true);
-          setShowSettingsModal(false);
-          setShowGroupModal(true);
-        }}
-        selectedGroupName={groupId ? undefined : selectedGroupName}
+        onOpenGroupSelection={
+          isGroupPost
+            ? undefined
+            : () => {
+                setReopenSettingsAfterGroup(true);
+                setShowSettingsModal(false);
+                setShowGroupModal(true);
+              }
+        }
+        selectedGroupName={selectedGroupName}
       />
 
       {showEmojiPicker && createPortal(
