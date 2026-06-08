@@ -1,6 +1,6 @@
 ﻿spring:
   jpa:
-    show-sql: true
+    show-sql: false
 
   data:
     redis:
@@ -13,7 +13,27 @@
   cache:
     type: none
 
+  mail:
+    username: ${MAIL_USERNAME:dev@localhost}
+    password: ${MAIL_PASSWORD:dev}
+
 logging:
   level:
-    org.hibernate.SQL: debug
-    org.hibernate.orm.jdbc.bind: trace
+    org.hibernate.SQL: warn
+    org.hibernate.orm.jdbc.bind: warn
+
+# Local-only fallbacks when .env keys are missing. Do not rely on these outside `local` profile.
+jwt:
+  secret: ${JWT_SECRET:local-dev-jwt-secret-change-in-production-must-be-at-least-64-chars-long!!}
+
+admin-service:
+  internal-key: ${INTERNAL_API_KEY:local-dev-internal-api-key}
+
+internal:
+  api:
+    key: ${INTERNAL_API_KEY:local-dev-internal-api-key}
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:local}
+  api-key: ${CLOUDINARY_API_KEY:local}
+  api-secret: ${CLOUDINARY_API_SECRET:local}

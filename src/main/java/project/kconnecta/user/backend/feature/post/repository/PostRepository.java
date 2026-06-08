@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import project.kconnecta.user.backend.feature.post.entity.Post;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -136,8 +137,89 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         org.springframework.data.domain.Pageable pageable
     );
 
+    @org.springframework.data.jpa.repository.Query(value =
+        "SELECT p.* FROM posts p " +
+        "LEFT JOIN user_groups g ON p.group_id = g.id " +
+        "WHERE p.status = 'PUBLISHED' " +
+        "  AND (" +
+        "    EXISTS (SELECT 1 FROM post_media pm WHERE pm.post_id = p.id AND pm.media_type = 'VIDEO') " +
+        "    OR (p.image_url IS NOT NULL AND (" +
+        "      p.image_url ILIKE '%/video/%' " +
+        "      OR p.image_url ~* '\\.(mp4|mov|webm|m4v|ogg)(\\?.*)?$'" +
+        "    ))" +
+        "  ) " +
+        "  AND (p.group_id IS NULL " +
+        "   OR g.privacy = 'PUBLIC' " +
+        "   OR p.privacy = 'PUBLIC' " +
+        "   OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
+        "   OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (" +
+        "    p.privacy = 'PUBLIC' " +
+        "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
+        "    OR (" +
+        "      :currentUserId IS NOT NULL " +
+        "      AND p.privacy IN ('FRIENDS', 'FRIENDS_EXCEPT') " +
+        "      AND EXISTS (" +
+        "        SELECT 1 FROM friendships f " +
+        "        WHERE f.status = 'ACCEPTED' " +
+        "          AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) " +
+        "            OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id)) " +
+        "      ) " +
+        "      AND NOT (" +
+        "        p.privacy = 'FRIENDS_EXCEPT' " +
+        "        AND EXISTS (" +
+        "          SELECT 1 FROM post_audience_exclusions pae " +
+        "          WHERE pae.post_id = p.id " +
+        "            AND pae.excluded_user_id = CAST(:currentUserId AS uuid) " +
+        "        ) " +
+        "      ) " +
+        "    ) " +
+        "    OR (" +
+        "      :currentUserId IS NOT NULL " +
+        "      AND p.privacy = 'SPECIFIC_FRIENDS' " +
+        "      AND EXISTS (" +
+        "        SELECT 1 FROM post_audience_allowances paa " +
+        "        WHERE paa.post_id = p.id " +
+        "          AND paa.allowed_user_id = CAST(:currentUserId AS uuid) " +
+        "      ) " +
+        "    ) " +
+        "  ) " +
+        "ORDER BY COALESCE(p.published_at, p.created_at) DESC",
+        countQuery =
+        "SELECT count(*) FROM posts p " +
+        "LEFT JOIN user_groups g ON p.group_id = g.id " +
+        "WHERE p.status = 'PUBLISHED' " +
+        "  AND (" +
+        "    EXISTS (SELECT 1 FROM post_media pm WHERE pm.post_id = p.id AND pm.media_type = 'VIDEO') " +
+        "    OR (p.image_url IS NOT NULL AND (" +
+        "      p.image_url ILIKE '%/video/%' " +
+        "      OR p.image_url ~* '\\.(mp4|mov|webm|m4v|ogg)(\\?.*)?$'" +
+        "    ))" +
+        "  ) " +
+        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR p.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (" +
+        "    p.privacy = 'PUBLIC' " +
+        "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
+        "    OR (" +
+        "      :currentUserId IS NOT NULL " +
+        "      AND p.privacy IN ('FRIENDS', 'FRIENDS_EXCEPT') " +
+        "      AND EXISTS (SELECT 1 FROM friendships f WHERE f.status = 'ACCEPTED' AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id))) " +
+        "      AND NOT (p.privacy = 'FRIENDS_EXCEPT' AND EXISTS (SELECT 1 FROM post_audience_exclusions pae WHERE pae.post_id = p.id AND pae.excluded_user_id = CAST(:currentUserId AS uuid))) " +
+        "    ) " +
+        "    OR (:currentUserId IS NOT NULL AND p.privacy = 'SPECIFIC_FRIENDS' AND EXISTS (SELECT 1 FROM post_audience_allowances paa WHERE paa.post_id = p.id AND paa.allowed_user_id = CAST(:currentUserId AS uuid))) " +
+        "  )",
+        nativeQuery = true
+    )
+    org.springframework.data.domain.Page<Post> findWatchFeedPosts(
+        @org.springframework.data.repository.query.Param("currentUserId") UUID currentUserId,
+        org.springframework.data.domain.Pageable pageable
+    );
+
     @org.springframework.data.jpa.repository.Query(
-        "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group WHERE p.group IS NULL OR p.group.privacy = project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy.PUBLIC ORDER BY p.createdAt DESC"
+        "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group " +
+        "WHERE p.status = 'PUBLISHED' " +
+        "AND (p.group IS NULL OR p.group.privacy = project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy.PUBLIC) " +
+        "ORDER BY p.createdAt DESC"
     )
     List<Post> findHomeFeedPostsOrderByCreatedAtDesc();
 
@@ -150,13 +232,14 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     List<Post> searchByContent(@org.springframework.data.repository.query.Param("q") String q, org.springframework.data.domain.Pageable pageable);
 
     @org.springframework.data.jpa.repository.Query(
-        "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group WHERE p.author.id = :authorId ORDER BY p.createdAt DESC"
+        "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group " +
+        "WHERE p.author.id = :authorId AND p.status = 'PUBLISHED' ORDER BY p.createdAt DESC"
     )
     List<Post> findByAuthorId(@org.springframework.data.repository.query.Param("authorId") UUID authorId);
 
     @org.springframework.data.jpa.repository.Query(
-        value = "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group WHERE p.author.id = :authorId ORDER BY p.createdAt DESC",
-        countQuery = "SELECT COUNT(p) FROM Post p WHERE p.author.id = :authorId"
+        value = "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group WHERE p.author.id = :authorId AND p.status = 'PUBLISHED' ORDER BY p.createdAt DESC",
+        countQuery = "SELECT COUNT(p) FROM Post p WHERE p.author.id = :authorId AND p.status = 'PUBLISHED'"
     )
     org.springframework.data.domain.Page<Post> findByAuthorIdPageable(
         @org.springframework.data.repository.query.Param("authorId") UUID authorId,
@@ -199,16 +282,25 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     );
 
     @org.springframework.data.jpa.repository.Query(
-        "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group WHERE p.group IS NOT NULL AND p.group.id = :groupId ORDER BY p.createdAt DESC"
+        "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group " +
+        "WHERE p.group IS NOT NULL AND p.group.id = :groupId AND p.status = 'PUBLISHED' " +
+        "ORDER BY p.publishedAt DESC, p.createdAt DESC"
     )
     List<Post> findByGroupId(@org.springframework.data.repository.query.Param("groupId") UUID groupId);
 
     @org.springframework.data.jpa.repository.Query(
         "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group g " +
-        "WHERE g.id IN (SELECT gm.group.id FROM GroupMember gm WHERE gm.user.id = :userId) " +
-        "ORDER BY p.createdAt DESC"
+        "WHERE p.status = 'PUBLISHED' " +
+        "AND g.id IN (SELECT gm.group.id FROM GroupMember gm WHERE gm.user.id = :userId) " +
+        "ORDER BY p.publishedAt DESC, p.createdAt DESC"
     )
     List<Post> findGroupFeedPostsByUserId(@org.springframework.data.repository.query.Param("userId") UUID userId);
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group " +
+        "WHERE p.status = 'SCHEDULED' AND p.scheduledAt IS NOT NULL AND p.scheduledAt <= :now"
+    )
+    List<Post> findDueScheduledPosts(@Param("now") LocalDateTime now);
 
     @org.springframework.data.jpa.repository.Query(
         value =

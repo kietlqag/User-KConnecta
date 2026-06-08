@@ -69,22 +69,22 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        Account account = accountRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ValidationException("Email chua duoc gui ma OTP"));
-
-        if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new ValidationException("Email chua duoc kich hoat OTP");
+        if (!otpService.isActivationVerified(request.getEmail())) {
+            throw new ValidationException("Email chua duoc xac thuc OTP");
         }
 
-        if (userRepository.findByAccountEmail(request.getEmail()).isPresent()) {
+        if (accountRepository.existsByEmail(request.getEmail())) {
             throw new DuplicateResourceException("Email da duoc su dung");
         }
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new DuplicateResourceException("Ten nguoi dung da ton tai");
         }
 
-        account.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-        accountRepository.save(account);
+        Account account = accountRepository.save(Account.builder()
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .status(AccountStatus.ACTIVE)
+                .build());
 
         User user = User.builder()
                 .account(account)
@@ -97,6 +97,7 @@ public class AuthService {
                 .build();
 
         User saved = userRepository.save(user);
+        otpService.clear(request.getEmail());
         activityLogService.log(saved.getId(), saved.getUsername(), ActivityLogType.REGISTER);
         return toResponse(saved);
     }

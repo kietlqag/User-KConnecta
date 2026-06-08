@@ -214,6 +214,23 @@ public class GroupServiceImpl implements GroupService {
     }
 
     @Override
+    public GroupResponse updateDescription(UUID groupId, UUID requesterId, String description) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        GroupMember requester = groupMemberRepository.findByGroupIdAndUserId(groupId, requesterId)
+                .orElseThrow(() -> new ValidationException("Requester is not a member of this group"));
+        if (requester.getRole() != GroupMemberRole.ADMIN) {
+            throw new ValidationException("Only admins can update group description");
+        }
+
+        String trimmed = description == null ? null : description.trim();
+        group.setDescription(trimmed == null || trimmed.isEmpty() ? null : trimmed);
+        Group saved = groupRepository.save(group);
+        return toResponse(saved, GroupMemberRole.ADMIN);
+    }
+
+    @Override
     public void removeCoverPhoto(UUID groupId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));

@@ -130,7 +130,7 @@ public class RedisSearchIndexer {
     public void reindexAll() {
         long start = System.currentTimeMillis();
 
-        List<User> users = userRepository.findAll();
+        List<UserRepository.UserSearchProjection> users = userRepository.findAllSearchProjections();
         users.forEach(this::indexUser);
 
         List<Group> groups = groupRepository.findAll();
@@ -147,18 +147,38 @@ public class RedisSearchIndexer {
     // ── Index single document ─────────────────────────────────────────────────
 
     public void indexUser(User user) {
+        indexUser(
+                user.getId(),
+                user.getFullName(),
+                user.getUsername(),
+                user.getAvatarUrl(),
+                user.getBio()
+        );
+    }
+
+    public void indexUser(UserRepository.UserSearchProjection user) {
+        indexUser(
+                user.getId(),
+                user.getFullName(),
+                user.getUsername(),
+                user.getAvatarUrl(),
+                user.getBio()
+        );
+    }
+
+    private void indexUser(UUID userId, String fullName, String username, String avatarUrl, String bio) {
         try {
             Map<String, String> h = new HashMap<>();
-            h.put("fullName",  safe(user.getFullName()));
-            h.put("username",  safe(user.getUsername()));
-            h.put("avatarUrl", safe(user.getAvatarUrl()));
-            h.put("bio",       safe(user.getBio()));
-            h.put("s_name",     normalize(user.getFullName()));
-            h.put("s_username", normalize(user.getUsername()));
-            h.put("s_bio",      normalize(user.getBio()));
-            jedis.hset(USER_PFX + user.getId(), h);
+            h.put("fullName",  safe(fullName));
+            h.put("username",  safe(username));
+            h.put("avatarUrl", safe(avatarUrl));
+            h.put("bio",       safe(bio));
+            h.put("s_name",     normalize(fullName));
+            h.put("s_username", normalize(username));
+            h.put("s_bio",      normalize(bio));
+            jedis.hset(USER_PFX + userId, h);
         } catch (Exception e) {
-            log.debug("[RedisSearch] indexUser {} failed: {}", user.getId(), e.getMessage());
+            log.debug("[RedisSearch] indexUser {} failed: {}", userId, e.getMessage());
         }
     }
 

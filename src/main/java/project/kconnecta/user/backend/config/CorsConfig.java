@@ -16,9 +16,6 @@ public class CorsConfig {
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000,https://user-k-connecta.vercel.app}")
     private String allowedOrigins;
 
-    @Value("${app.cors.allowed-origin-patterns:https://*.vercel.app}")
-    private String allowedOriginPatterns;
-
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
@@ -26,9 +23,8 @@ public class CorsConfig {
             public void addCorsMappings(@NonNull CorsRegistry registry) {
                 registry.addMapping("/api/**")
                         .allowedOrigins(splitCsv(allowedOrigins))
-                        .allowedOriginPatterns(splitCsv(allowedOriginPatterns))
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
+                        .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                        .allowedHeaders("Authorization", "Content-Type")
                         .maxAge(3600);
             }
         };

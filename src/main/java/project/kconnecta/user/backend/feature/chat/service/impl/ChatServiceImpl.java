@@ -1088,6 +1088,15 @@ public class ChatServiceImpl implements ChatService {
         return result;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public int getTotalPrivateUnreadCount(String currentUsername) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        long count = chatMessageRepository.countTotalPrivateUnread(currentUser.getId());
+        return count > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) count;
+    }
+
     private PinnedMessageResponse toPinnedMessageResponse(
             ChatPinnedMessage row,
             UUID peerUserId,

@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.user.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.search.redis.UserSearchListener;
 
@@ -12,6 +13,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "users", schema = "public")
 @EntityListeners(UserSearchListener.class)
+@BatchSize(size = 25)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -47,7 +49,13 @@ public class User {
     @Column(length = 150)
     private String school;
 
-    @OneToOne(optional = false, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Column(length = 150)
+    private String workplace;
+
+    @Column(name = "job_title", length = 120)
+    private String jobTitle;
+
+    @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "account_id", nullable = false, unique = true)
     private Account account;
 

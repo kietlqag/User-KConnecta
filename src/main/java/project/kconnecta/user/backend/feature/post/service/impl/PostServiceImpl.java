@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.feature.post.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,11 +38,17 @@ import project.kconnecta.user.backend.feature.post.entity.PostCommentLike;
 import project.kconnecta.user.backend.feature.post.repository.*;
 import project.kconnecta.user.backend.feature.policy.service.PolicyContentValidator;
 import project.kconnecta.user.backend.feature.post.service.PostService;
+import project.kconnecta.user.backend.feature.search.redis.RedisSearchIndexer;
 import project.kconnecta.user.backend.feature.group.entity.Group;
+import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
+import org.springframework.data.redis.core.RedisTemplate;
+import project.kconnecta.user.backend.exception.ForbiddenException;
+
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
@@ -54,6 +61,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -69,10 +77,14 @@ public class PostServiceImpl implements PostService {
     private final PostReportRepository postReportRepository;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
+    private final GroupMemberRepository groupMemberRepository;
     private final CloudinaryService cloudinaryService;
     private final NotificationEventPublisher notificationEventPublisher;
     private final ActivityLogService activityLogService;
+    private final project.kconnecta.user.backend.integration.AdminPostReportNotificationClient adminPostReportNotificationClient;
     private final PolicyContentValidator policyContentValidator;
+    private final RedisSearchIndexer redisSearchIndexer;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -96,6 +108,17 @@ public class PostServiceImpl implements PostService {
             throw new ValidationException("scheduledAt is required when status is SCHEDULED");
         }
 
+        if (status == PostStatus.SCHEDULED) {
+            if (!request.getScheduledAt().isAfter(LocalDateTime.now())) {
+                throw new ValidationException("scheduledAt must be in the future");
+            }
+        } else if (request.getScheduledAt() != null && request.getScheduledAt().isAfter(LocalDateTime.now())) {
+            status = PostStatus.SCHEDULED;
+        }
+
+        log.info("create post: authorId={}, status={}, scheduledAt={}, groupId={}",
+                request.getAuthorId(), status, request.getScheduledAt(), request.getGroupId());
+
         if (privacy != PostPrivacy.FRIENDS_EXCEPT && request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
             throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
         }
@@ -108,6 +131,20 @@ public class PostServiceImpl implements PostService {
         if (request.getGroupId() != null) {
             group = groupRepository.findById(request.getGroupId())
                     .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + request.getGroupId()));
+
+            if (!groupMemberRepository.findByGroupIdAndUserId(group.getId(), author.getId()).isPresent()) {
+                throw new ValidationException("Only group members can post in this group");
+            }
+
+            if (privacy != PostPrivacy.PUBLIC) {
+                privacy = PostPrivacy.PUBLIC;
+            }
+            if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
+                throw new ValidationException("Audience exclusions are not supported for group posts");
+            }
+            if (request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
+                throw new ValidationException("Audience allowances are not supported for group posts");
+            }
         }
 
         Post post = Post.builder()
@@ -130,22 +167,68 @@ public class PostServiceImpl implements PostService {
         attachAllowedUsers(post, request.getAllowedUserIds());
         attachTaggedUsers(post, request.getTaggedUserIds());
 
-        PostResponse response = mapToResponse(postRepository.save(post), request.getAuthorId());
-        activityLogService.log(author.getId(), author.getUsername(), ActivityLogType.POST_CREATED,
-                "{\"postId\":\"" + response.getId() + "\"}");
+        Post saved = postRepository.save(post);
+        log.info("create post saved: postId={}, status={}, publishedAt={}",
+                saved.getId(), saved.getStatus(), saved.getPublishedAt());
+
+        PostResponse response = mapToResponse(saved, request.getAuthorId());
+        if (saved.getStatus() == PostStatus.PUBLISHED) {
+            activityLogService.log(author.getId(), author.getUsername(), ActivityLogType.POST_CREATED,
+                    "{\"postId\":\"" + response.getId() + "\"}");
+        }
         return response;
     }
 
     @Override
-    public String uploadPostImage(MultipartFile file) {
+    public int publishDueScheduledPosts() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Post> due = postRepository.findDueScheduledPosts(now);
+        if (due.isEmpty()) {
+            return 0;
+        }
+
+        int count = 0;
+        for (Post post : due) {
+            log.info("scheduler publish: postId={}, scheduledAt={}, now={}",
+                    post.getId(), post.getScheduledAt(), now);
+            post.setStatus(PostStatus.PUBLISHED);
+            post.setPublishedAt(now);
+            Post saved = postRepository.save(post);
+            redisSearchIndexer.indexPost(saved);
+            User author = saved.getAuthor();
+            activityLogService.log(author.getId(), author.getUsername(), ActivityLogType.POST_CREATED,
+                    "{\"postId\":\"" + saved.getId() + "\",\"scheduled\":true}");
+            count++;
+        }
+        return count;
+    }
+
+    private static final String UPLOAD_OWNERSHIP_PREFIX = "post:upload:";
+    private static final Duration UPLOAD_OWNERSHIP_TTL = Duration.ofHours(2);
+
+    @Override
+    public String uploadPostImage(UUID uploaderId, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ValidationException("Image file is required");
         }
-        return cloudinaryService.uploadPostImage(file);
+        String url = cloudinaryService.uploadPostImage(file);
+        try {
+            redisTemplate.opsForValue().set(
+                    UPLOAD_OWNERSHIP_PREFIX + uploaderId + ":" + url, "1", UPLOAD_OWNERSHIP_TTL);
+        } catch (Exception ignored) {
+            // Non-fatal: ownership tracking best-effort
+        }
+        return url;
     }
 
     @Override
-    public void deleteMedia(String url) {
+    public void deleteMedia(String url, UUID userId) {
+        boolean ownsUpload = Boolean.TRUE.equals(
+                redisTemplate.hasKey(UPLOAD_OWNERSHIP_PREFIX + userId + ":" + url));
+        if (!ownsUpload) {
+            throw new ForbiddenException("You do not have permission to delete this media");
+        }
+        redisTemplate.delete(UPLOAD_OWNERSHIP_PREFIX + userId + ":" + url);
         cloudinaryService.deleteImageByUrl(url);
     }
 
@@ -153,6 +236,14 @@ public class PostServiceImpl implements PostService {
     @Transactional(readOnly = true)
     public Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable) {
         Page<Post> postPage = postRepository.findHomeFeedPostsWithScoring(currentUserId, pageable);
+        List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
+        return new PageImpl<>(responses, pageable, postPage.getTotalElements());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getWatchPosts(UUID currentUserId, Pageable pageable) {
+        Page<Post> postPage = postRepository.findWatchFeedPosts(currentUserId, pageable);
         List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
         return new PageImpl<>(responses, pageable, postPage.getTotalElements());
     }
@@ -168,9 +259,9 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId) {
-        List<Post> posts = postRepository.findByGroupId(groupId).stream()
-                .filter(p -> p.getGroup() != null && p.getGroup().getId().equals(groupId))
-                .toList();
+        List<Post> posts = postRepository.findByGroupId(groupId);
+        log.debug("feed query getPostsByGroupId: groupId={}, count={}, statuses=PUBLISHED only",
+                groupId, posts.size());
         return processPostsBulk(posts, currentUserId);
     }
 
@@ -217,6 +308,7 @@ public class PostServiceImpl implements PostService {
         final Set<UUID> finalSavedPostIds = savedPostIds;
 
         return posts.stream()
+                .filter(p -> p.getStatus() == PostStatus.PUBLISHED)
                 .map(post -> mapToResponseOptimized(post, currentUserId,
                         finalReactionCounts.getOrDefault(post.getId(), Collections.emptyMap()),
                         finalCommentCounts.getOrDefault(post.getId(), 0L),
@@ -385,15 +477,15 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public PostCommentResponse updateComment(UUID commentId, UpdateCommentRequest request) {
+    public PostCommentResponse updateComment(UUID commentId, UUID userId, UpdateCommentRequest request) {
         PostComment comment = postCommentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
-        if (!comment.getUser().getId().equals(request.getUserId())) {
-            throw new ValidationException("Bạn không có quyền chỉnh sửa bình luận này");
+        if (!comment.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("Bạn không có quyền chỉnh sửa bình luận này");
         }
         comment.setContent(request.getContent().trim());
         PostComment saved = postCommentRepository.save(comment);
-        return toCommentResponse(saved, saved.getParentComment() == null ? null : saved.getParentComment().getId(), request.getUserId());
+        return toCommentResponse(saved, saved.getParentComment() == null ? null : saved.getParentComment().getId(), userId);
     }
 
     @Override
@@ -508,6 +600,14 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<PostResponse> getPostsByIds(List<UUID> postIds, UUID currentUserId) {
+        if (postIds.isEmpty()) return Collections.emptyList();
+        List<Post> posts = postRepository.findAllById(postIds);
+        return processPostsBulk(posts, currentUserId);
+    }
+
+    @Override
     public PostResponse updatePrivacy(UUID postId, UUID userId, PostPrivacy privacy) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
@@ -539,6 +639,13 @@ public class PostServiceImpl implements PostService {
                 .reason(trimToNull(request.getReason()))
                 .createdAt(LocalDateTime.now())
                 .build());
+
+        adminPostReportNotificationClient.notifyPostReport(
+                reporter.getId(),
+                postId,
+                reporter.getUsername(),
+                request.getReason()
+        );
     }
 
     @Override

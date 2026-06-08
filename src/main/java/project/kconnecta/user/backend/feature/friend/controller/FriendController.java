@@ -4,7 +4,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.friend.dto.request.FriendRequestBody;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendResponse;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendshipStatusResponse;
@@ -25,9 +27,10 @@ public class FriendController {
         return ResponseEntity.ok(friendService.getFriends(userId));
     }
 
-    @GetMapping("/{userId}/requests")
-    public ResponseEntity<List<FriendResponse>> getFriendRequests(@PathVariable UUID userId) {
-        return ResponseEntity.ok(friendService.getFriendRequests(userId));
+    @GetMapping("/requests")
+    public ResponseEntity<List<FriendResponse>> getFriendRequests(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(friendService.getFriendRequests(principal.getUserId()));
     }
 
     @GetMapping("/{userId}/suggestions")
@@ -37,15 +40,17 @@ public class FriendController {
 
     @GetMapping("/status")
     public ResponseEntity<FriendshipStatusResponse> getStatus(
-            @RequestParam UUID me,
+            @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam UUID target) {
-        return ResponseEntity.ok(friendService.getStatus(me, target));
+        return ResponseEntity.ok(friendService.getStatus(principal.getUserId(), target));
     }
 
     @PostMapping("/request")
-    public ResponseEntity<FriendResponse> sendFriendRequest(@Valid @RequestBody FriendRequestBody body) {
+    public ResponseEntity<FriendResponse> sendFriendRequest(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody FriendRequestBody body) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(friendService.sendFriendRequest(body.getRequesterId(), body.getAddresseeId()));
+                .body(friendService.sendFriendRequest(principal.getUserId(), body.getAddresseeId()));
     }
 
     @PutMapping("/{friendshipId}/accept")

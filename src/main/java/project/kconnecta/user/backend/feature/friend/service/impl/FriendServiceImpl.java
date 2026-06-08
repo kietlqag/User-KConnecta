@@ -40,7 +40,7 @@ public class FriendServiceImpl implements FriendService {
 
     @Override
     public List<FriendResponse> getFriends(UUID userId) {
-        return friendshipRepository.findAllByUserIdAndStatus(userId, FriendshipStatus.ACCEPTED)
+        return friendshipRepository.findAllByUserIdAndStatusWithUsers(userId, FriendshipStatus.ACCEPTED)
                 .stream()
                 .map(f -> mapToResponse(f, userId))
                 .toList();
@@ -48,7 +48,7 @@ public class FriendServiceImpl implements FriendService {
 
     @Override
     public List<FriendResponse> getFriendRequests(UUID userId) {
-        return friendshipRepository.findAllByAddresseeIdAndStatus(userId, FriendshipStatus.PENDING)
+        return friendshipRepository.findAllByAddresseeIdAndStatusWithUsers(userId, FriendshipStatus.PENDING)
                 .stream()
                 .map(f -> mapToResponse(f, userId))
                 .toList();
@@ -66,11 +66,22 @@ public class FriendServiceImpl implements FriendService {
         excluded.addAll(friendshipRepository.findRequesterIdsByAddresseeId(userId));
         excluded.add(userId);
 
-        // BFS Level 2: traverse friends-of-friends, count how many mutual friends each candidate has
+        // Friends-of-friends: one query for all edges touching my friends, then count mutuals in memory
         Map<UUID, Integer> mutualCountMap = new HashMap<>();
-        for (UUID friendId : myFriendIds) {
-            List<UUID> friendsOfFriend = friendshipRepository.findFriendIdsByUserIdAndStatus(friendId, FriendshipStatus.ACCEPTED);
-            for (UUID candidate : friendsOfFriend) {
+        if (!myFriendIds.isEmpty()) {
+            for (Object[] pair : friendshipRepository.findFriendshipPairsInvolvingUsers(
+                    new ArrayList<>(myFriendIds),
+                    FriendshipStatus.ACCEPTED)) {
+                UUID requesterId = (UUID) pair[0];
+                UUID addresseeId = (UUID) pair[1];
+                UUID candidate;
+                if (myFriendIds.contains(requesterId) && !myFriendIds.contains(addresseeId)) {
+                    candidate = addresseeId;
+                } else if (myFriendIds.contains(addresseeId) && !myFriendIds.contains(requesterId)) {
+                    candidate = requesterId;
+                } else {
+                    continue;
+                }
                 if (!excluded.contains(candidate)) {
                     mutualCountMap.merge(candidate, 1, Integer::sum);
                 }

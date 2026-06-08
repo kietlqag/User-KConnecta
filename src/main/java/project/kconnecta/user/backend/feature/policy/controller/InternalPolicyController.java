@@ -22,7 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class InternalPolicyController {
 
-    @Value("${internal.api.key:kconnecta-internal-secret}")
+    @Value("${internal.api.key}")
     private String internalApiKey;
 
     private final PolicyService policyService;

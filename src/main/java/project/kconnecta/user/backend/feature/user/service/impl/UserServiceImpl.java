@@ -7,23 +7,23 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import project.kconnecta.user.backend.common.enums.AccountStatus;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
-import project.kconnecta.user.backend.feature.user.dto.request.CreateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.request.UpdateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.response.UserResponse;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 import project.kconnecta.user.backend.feature.user.service.UserService;
 
-import java.util.List;
+import java.io.IOException;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -57,58 +57,12 @@ public class UserServiceImpl implements UserService {
     private final CacheManager cacheManager;
 
     // -------------------------------------------------------------------------
-    // CREATE
-    // -------------------------------------------------------------------------
-
-    @Override
-    @Transactional
-    @Caching(put = {
-            @CachePut(cacheNames = "userById",       key = "#result.id"),
-            @CachePut(cacheNames = "userByUsername", key = "#result.username")
-    })
-    public UserResponse createUser(CreateUserRequest request) {
-        if (accountRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email already exists");
-        }
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Username already exists");
-        }
-
-        String normalizedGender = request.getGender() == null
-                ? null : request.getGender().trim().toUpperCase();
-
-        Account account = Account.builder()
-                .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .status(AccountStatus.ACTIVE)
-                .build();
-
-        User user = User.builder()
-                .username(request.getUsername())
-                .account(account)
-                .fullName(request.getFullName())
-                .bio(request.getBio())
-                .gender(normalizedGender)
-                .location(request.getLocation())
-                .hometown(request.getHometown())
-                .relationshipStatus(request.getRelationshipStatus())
-                .school(request.getSchool())
-                .dateOfBirth(request.getDateOfBirth())
-                .build();
-
-        return mapToResponse(userRepository.save(Objects.requireNonNull(user)));
-    }
-
-    // -------------------------------------------------------------------------
     // READ
     // -------------------------------------------------------------------------
 
     @Override
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll()
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+    public Page<UserResponse> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable).map(this::mapToResponse);
     }
 
     @Override
@@ -125,6 +79,19 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
         return mapToResponse(user);
+    }
+
+    @Override
+    public UserResponse getUserByIdOrUsername(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            throw new ResourceNotFoundException("User identifier is required");
+        }
+        String normalized = identifier.trim();
+        try {
+            return getUserById(UUID.fromString(normalized));
+        } catch (IllegalArgumentException ignored) {
+            return getUserByUsername(normalized);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -172,6 +139,8 @@ public class UserServiceImpl implements UserService {
         if (request.getHometown()           != null) user.setHometown(request.getHometown());
         if (request.getRelationshipStatus() != null) user.setRelationshipStatus(request.getRelationshipStatus());
         if (request.getSchool()             != null) user.setSchool(request.getSchool());
+        if (request.getWorkplace()          != null) user.setWorkplace(request.getWorkplace());
+        if (request.getJobTitle()           != null) user.setJobTitle(request.getJobTitle());
         if (request.getDateOfBirth()        != null) user.setDateOfBirth(request.getDateOfBirth());
         if (request.getAvatarUrl()          != null) user.setAvatarUrl(request.getAvatarUrl());
         if (request.getCoverPhotoUrl()      != null) user.setCoverPhotoUrl(request.getCoverPhotoUrl());
@@ -276,15 +245,29 @@ public class UserServiceImpl implements UserService {
         if (file == null || file.isEmpty()) {
             throw new RuntimeException("File is empty");
         }
-        String contentType = file.getContentType();
-        if (contentType == null ||
-                (!contentType.equals("image/jpeg")
-                        && !contentType.equals("image/png")
-                        && !contentType.equals("image/webp"))) {
-            throw new RuntimeException("Only JPG, PNG, WEBP are allowed");
-        }
         if (file.getSize() > 5 * 1024 * 1024) {
             throw new RuntimeException("File size must be less than 5MB");
+        }
+        if (!hasValidImageMagicBytes(file)) {
+            throw new RuntimeException("Only JPG, PNG, WEBP are allowed");
+        }
+    }
+
+    private static boolean hasValidImageMagicBytes(MultipartFile file) {
+        try {
+            byte[] header = new byte[12];
+            int read = file.getInputStream().read(header);
+            if (read < 3) return false;
+            // JPEG: FF D8 FF
+            if ((header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF) return true;
+            // PNG: 89 50 4E 47
+            if ((header[0] & 0xFF) == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) return true;
+            // WebP: RIFF....WEBP
+            if (read >= 12 && header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
+                    && header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50) return true;
+            return false;
+        } catch (IOException e) {
+            return false;
         }
     }
 
@@ -301,6 +284,8 @@ public class UserServiceImpl implements UserService {
                 .hometown(user.getHometown())
                 .relationshipStatus(user.getRelationshipStatus())
                 .school(user.getSchool())
+                .workplace(user.getWorkplace())
+                .jobTitle(user.getJobTitle())
                 .dateOfBirth(user.getDateOfBirth())
                 .avatarUrl(user.getAvatarUrl())
                 .coverPhotoUrl(user.getCoverPhotoUrl())

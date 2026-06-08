@@ -17,8 +17,8 @@ import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Random;
 
 @Service
 @Slf4j
@@ -28,6 +28,7 @@ public class OtpService {
 
     private static final String REDIS_KEY_PREFIX = "otp:";
     private static final long OTP_EXPIRATION_MINUTES = 1;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final MailService mailService;
     private final AccountRepository accountRepository;
@@ -36,19 +37,13 @@ public class OtpService {
     private Resource otpEmailTemplateResource;
 
     public void sendOtp(String email) {
-        Account account = accountRepository.findByEmail(email)
-                .orElseGet(() -> accountRepository.save(
-                        Account.builder()
-                                .email(email)
-                                .status(AccountStatus.INACTIVE)
-                                .build()
-                ));
+        Account account = accountRepository.findByEmail(email).orElse(null);
 
-        OtpType otpType = account.getStatus() == AccountStatus.ACTIVE
+        OtpType otpType = (account != null && account.getStatus() == AccountStatus.ACTIVE)
                 ? OtpType.PASSWORD_RESET
                 : OtpType.ACCOUNT_ACTIVATION;
 
-        String code = String.format("%06d", new Random().nextInt(1_000_000));
+        String code = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
         String key = buildKey(email, otpType);
         OtpSession session = new OtpSession(code, otpType, false);
         try {
@@ -68,12 +63,11 @@ public class OtpService {
     }
 
     public void verifyOtp(String email, String code) {
-        Account account = accountRepository.findByEmail(email)
-                .orElseThrow(() -> new ValidationException("Chua gui OTP cho email nay"));
+        Account account = accountRepository.findByEmail(email).orElse(null);
 
-        OtpType otpType = account.getStatus() == AccountStatus.INACTIVE
-                ? OtpType.ACCOUNT_ACTIVATION
-                : OtpType.PASSWORD_RESET;
+        OtpType otpType = (account != null && account.getStatus() == AccountStatus.ACTIVE)
+                ? OtpType.PASSWORD_RESET
+                : OtpType.ACCOUNT_ACTIVATION;
 
         String key = buildKey(email, otpType);
         OtpSession otp = getValidOtp(key);
@@ -82,14 +76,14 @@ public class OtpService {
             throw new ValidationException("Ma OTP khong dung");
         }
 
-        if (otpType == OtpType.ACCOUNT_ACTIVATION) {
-            account.setStatus(AccountStatus.ACTIVE);
-            accountRepository.save(account);
-            redisTemplate.delete(key);
-            return;
-        }
-
+        // Mark verified; account creation/activation happens downstream (register / resetPassword)
         redisTemplate.opsForValue().set(key, otp.markVerified(), Duration.ofMinutes(OTP_EXPIRATION_MINUTES));
+    }
+
+    public boolean isActivationVerified(String email) {
+        String key = buildKey(email, OtpType.ACCOUNT_ACTIVATION);
+        OtpSession otp = (OtpSession) redisTemplate.opsForValue().get(key);
+        return otp != null && otp.verified();
     }
 
     public boolean isVerified(String email) {

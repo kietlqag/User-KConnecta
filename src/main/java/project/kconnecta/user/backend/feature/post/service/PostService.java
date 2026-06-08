@@ -23,9 +23,10 @@ import java.util.UUID;
 
 public interface PostService {
     PostResponse createPost(CreatePostRequest request);
-    String uploadPostImage(MultipartFile file);
-    void deleteMedia(String url);
+    String uploadPostImage(UUID uploaderId, MultipartFile file);
+    void deleteMedia(String url, UUID userId);
     Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable);
+    Page<PostResponse> getWatchPosts(UUID currentUserId, Pageable pageable);
     Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable);
     List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId);
     List<PostResponse> getGroupFeedPosts(UUID currentUserId);
@@ -36,7 +37,7 @@ public interface PostService {
     Page<PostCommentResponse> getComments(UUID postId, UUID currentUserId, Pageable pageable);
     List<PostCommentResponse> getReplies(UUID commentId, UUID currentUserId);
     PostCommentResponse addComment(UUID postId, CreateCommentRequest request);
-    PostCommentResponse updateComment(UUID commentId, UpdateCommentRequest request);
+    PostCommentResponse updateComment(UUID commentId, UUID userId, UpdateCommentRequest request);
     boolean deleteComment(UUID commentId, UUID userId);
     void likeComment(UUID commentId, UUID userId);
     void unlikeComment(UUID commentId, UUID userId);
@@ -48,4 +49,9 @@ public interface PostService {
     List<CheckInSuggestionResponse> getCheckInSuggestions(UUID currentUserId, String province, String ward);
     PostResponse updatePrivacy(UUID postId, UUID userId, PostPrivacy privacy);
     void reportPost(UUID postId, ReportPostRequest request);
+
+    List<PostResponse> getPostsByIds(List<UUID> postIds, UUID currentUserId);
+
+    /** Publishes all SCHEDULED posts with scheduledAt <= now. Returns number published. */
+    int publishDueScheduledPosts();
 }

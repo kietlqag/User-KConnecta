@@ -34,10 +34,14 @@ import project.kconnecta.user.backend.feature.chat.dto.response.VoiceMessageUplo
 import project.kconnecta.user.backend.feature.chat.service.CallRecordingService;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 
+import java.io.IOException;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import project.kconnecta.user.backend.config.security.UserPrincipal;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -48,18 +52,24 @@ public class ChatController {
     private static final long MAX_CHAT_IMAGE_BYTES = 10L * 1024L * 1024L;
     private static final long MAX_CHAT_FILE_BYTES = 25L * 1024L * 1024L;
 
+    private static final Set<String> BLOCKED_EXTENSIONS = Set.of(
+            "html", "htm", "js", "jsx", "ts", "tsx", "php", "asp", "aspx", "jsp",
+            "exe", "bat", "sh", "cmd", "ps1", "msi", "dll", "so", "dylib",
+            "vbs", "wsf", "hta", "jar", "py", "rb", "pl"
+    );
+
     private final ChatService chatService;
     private final CallRecordingService callRecordingService;
     private final CloudinaryService cloudinaryService;
 
     @GetMapping("/history")
     public ResponseEntity<ChatHistoryPageResponse> getChatHistory(
-            @RequestParam UUID userId1,
+            @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam UUID userId2,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime beforeCreatedAt,
             @RequestParam(required = false) Integer limit
     ) {
-        return ResponseEntity.ok(chatService.getChatHistory(userId1, userId2, beforeCreatedAt, limit));
+        return ResponseEntity.ok(chatService.getChatHistory(principal.getUserId(), userId2, beforeCreatedAt, limit));
     }
 
     @GetMapping("/conversations/{conversationId}/history")
@@ -120,6 +130,14 @@ public class ChatController {
             return ResponseEntity.status(401).build();
         }
         return ResponseEntity.ok(chatService.getMyGroupConversations(principal.getName()));
+    }
+
+    @GetMapping("/unread-count")
+    public ResponseEntity<Integer> getTotalPrivateUnreadCount(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getTotalPrivateUnreadCount(principal.getName()));
     }
 
     @GetMapping("/conversations/summaries")
@@ -257,8 +275,7 @@ public class ChatController {
         if (principal == null) {
             return ResponseEntity.status(401).build();
         }
-        String username = principal == null ? null : principal.getName();
-        return ResponseEntity.ok(callRecordingService.saveRecording(callId, username, file, durationSec, mediaType));
+        return ResponseEntity.ok(callRecordingService.saveRecording(callId, principal.getName(), file, durationSec, mediaType));
     }
 
     @PostMapping(value = "/messages/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -310,15 +327,11 @@ public class ChatController {
             throw new ValidationException("Image file is too large");
         }
 
-        String contentType = file.getContentType();
-        if (contentType == null ||
-                (!contentType.equals("image/jpeg")
-                        && !contentType.equals("image/png")
-                        && !contentType.equals("image/webp")
-                        && !contentType.equals("image/gif"))) {
+        if (!hasValidImageMagicBytes(file)) {
             throw new ValidationException("Unsupported image content type");
         }
 
+        String contentType = file.getContentType();
         String imageUrl = cloudinaryService.uploadChatImage(file);
         return ResponseEntity.ok(
                 ChatImageUploadResponse.builder()
@@ -344,10 +357,15 @@ public class ChatController {
             throw new ValidationException("File is too large");
         }
 
-        String fileUrl = cloudinaryService.uploadChatFile(file);
-        String contentType = file.getContentType();
         String originalFilename = file.getOriginalFilename();
         String safeFilename = originalFilename == null || originalFilename.isBlank() ? "file" : originalFilename;
+        String ext = getExtension(safeFilename);
+        if (BLOCKED_EXTENSIONS.contains(ext.toLowerCase())) {
+            throw new ValidationException("File type not allowed");
+        }
+
+        String fileUrl = cloudinaryService.uploadChatFile(file);
+        String contentType = file.getContentType();
 
         return ResponseEntity.ok(
                 ChatFileUploadResponse.builder()
@@ -404,5 +422,30 @@ public class ChatController {
         }
         chatService.reportMessage(principal.getName(), messageId, request);
         return ResponseEntity.ok().build();
+    }
+
+    private static boolean hasValidImageMagicBytes(MultipartFile file) {
+        try {
+            byte[] header = new byte[12];
+            int read = file.getInputStream().read(header);
+            if (read < 3) return false;
+            // JPEG: FF D8 FF
+            if ((header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF) return true;
+            // PNG: 89 50 4E 47
+            if ((header[0] & 0xFF) == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) return true;
+            // WebP: RIFF....WEBP
+            if (read >= 12 && header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
+                    && header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50) return true;
+            // GIF: 47 49 46 38
+            if (header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38) return true;
+            return false;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private static String getExtension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        return dot >= 0 ? filename.substring(dot + 1) : "";
     }
 }

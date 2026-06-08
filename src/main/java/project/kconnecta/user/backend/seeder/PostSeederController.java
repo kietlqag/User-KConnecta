@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.seeder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.Random;
 
 @Slf4j
+@Profile("dev")
 @RestController
 @RequestMapping("/api/internal/seed")
 @RequiredArgsConstructor

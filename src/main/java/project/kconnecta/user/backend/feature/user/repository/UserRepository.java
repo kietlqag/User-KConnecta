@@ -1,9 +1,11 @@
 package project.kconnecta.user.backend.feature.user.repository;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Repository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
@@ -17,16 +19,41 @@ import java.util.UUID;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
+
+    interface UserSearchProjection {
+        UUID getId();
+        String getFullName();
+        String getUsername();
+        String getAvatarUrl();
+        String getBio();
+    }
+
     boolean existsByUsername(String username);
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"account"})
-    @org.springframework.lang.NonNull
-    java.util.Optional<User> findById(@org.springframework.lang.NonNull UUID id);
+    @EntityGraph(attributePaths = {"account"})
+    @NonNull
+    Optional<User> findById(@NonNull UUID id);
 
-    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"account"})
+    @EntityGraph(attributePaths = {"account"})
+    @Override
+    @NonNull
+    List<User> findAllById(@NonNull Iterable<UUID> ids);
+
+    @EntityGraph(attributePaths = {"account"})
     Optional<User> findByUsername(String username);
+
+    @EntityGraph(attributePaths = {"account"})
     Optional<User> findByAccountEmail(String email);
+
+    @EntityGraph(attributePaths = {"account"})
     Optional<User> findByAccountId(UUID accountId);
+
+    @Query("""
+            SELECT u.id AS id, u.fullName AS fullName, u.username AS username,
+                   u.avatarUrl AS avatarUrl, u.bio AS bio
+            FROM User u
+            """)
+    List<UserSearchProjection> findAllSearchProjections();
 
     @Query("SELECT u FROM User u WHERE u.id NOT IN :excludedIds")
     List<User> findSuggestionsExcluding(@Param("excludedIds") Collection<UUID> excludedIds, Pageable pageable);

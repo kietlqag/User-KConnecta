@@ -116,5 +116,8 @@ public class Post {
     @PreUpdate
     public void preUpdate() {
         updatedAt = LocalDateTime.now();
+        if (status == PostStatus.PUBLISHED && publishedAt == null) {
+            publishedAt = updatedAt;
+        }
     }
 }

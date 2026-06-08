@@ -17,8 +17,36 @@ public interface FriendshipRepository extends JpaRepository<Friendship, UUID> {
     @Query("SELECT f FROM Friendship f WHERE (f.requester.id = :userId OR f.addressee.id = :userId) AND f.status = :status")
     List<Friendship> findAllByUserIdAndStatus(@Param("userId") UUID userId, @Param("status") FriendshipStatus status);
 
+    @Query("""
+            SELECT DISTINCT f FROM Friendship f
+            JOIN FETCH f.requester
+            JOIN FETCH f.addressee
+            WHERE (f.requester.id = :userId OR f.addressee.id = :userId) AND f.status = :status
+            """)
+    List<Friendship> findAllByUserIdAndStatusWithUsers(@Param("userId") UUID userId, @Param("status") FriendshipStatus status);
+
     @Query("SELECT f FROM Friendship f WHERE f.addressee.id = :addresseeId AND f.status = :status")
     List<Friendship> findAllByAddresseeIdAndStatus(@Param("addresseeId") UUID addresseeId, @Param("status") FriendshipStatus status);
+
+    @Query("""
+            SELECT DISTINCT f FROM Friendship f
+            JOIN FETCH f.requester
+            JOIN FETCH f.addressee
+            WHERE f.addressee.id = :addresseeId AND f.status = :status
+            """)
+    List<Friendship> findAllByAddresseeIdAndStatusWithUsers(
+            @Param("addresseeId") UUID addresseeId,
+            @Param("status") FriendshipStatus status);
+
+    @Query("""
+            SELECT f.requester.id, f.addressee.id
+            FROM Friendship f
+            WHERE f.status = :status
+              AND (f.requester.id IN :friendIds OR f.addressee.id IN :friendIds)
+            """)
+    List<Object[]> findFriendshipPairsInvolvingUsers(
+            @Param("friendIds") List<UUID> friendIds,
+            @Param("status") FriendshipStatus status);
 
     @Query("SELECT f.addressee.id FROM Friendship f WHERE f.requester.id = :userId")
     List<UUID> findAddresseeIdsByRequesterId(@Param("userId") UUID userId);

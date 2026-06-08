@@ -52,5 +52,6 @@ public interface ChatService {
     PinnedMessageResponse setPinnedMessage(String currentUsername, PinnedMessageRequest request);
     List<PinnedMessageResponse> getPinnedMessages(String currentUsername);
     List<ConversationSummaryResponse> getConversationSummaries(String currentUsername, List<UUID> peerUserIds, List<UUID> conversationIds);
+    int getTotalPrivateUnreadCount(String currentUsername);
     CallSessionSnapshotResponse getCallSessionSnapshot(String currentUsername, UUID callId);
 }

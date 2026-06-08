@@ -8,7 +8,6 @@ import java.util.UUID;
 @Data
 public class SavePostRequest {
 
-    @NotNull
     private UUID userId;
 
     @NotNull

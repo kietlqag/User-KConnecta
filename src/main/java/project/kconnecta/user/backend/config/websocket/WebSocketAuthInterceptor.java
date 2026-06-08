@@ -9,6 +9,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 import project.kconnecta.user.backend.common.util.JwtUtil;
+import project.kconnecta.user.backend.config.security.TokenBlacklistService;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
 
 @Component
@@ -16,6 +17,7 @@ import project.kconnecta.user.backend.config.security.UserPrincipal;
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     public Message<?> preSend(@org.springframework.lang.NonNull Message<?> message, @org.springframework.lang.NonNull MessageChannel channel) {
@@ -31,7 +33,7 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
             String token = authHeader.substring(7);
 
-            if (!jwtUtil.isTokenValid(token)) {
+            if (!jwtUtil.isTokenValid(token) || tokenBlacklistService.isBlacklisted(token)) {
                 throw new IllegalArgumentException("Invalid or expired JWT token");
             }
 

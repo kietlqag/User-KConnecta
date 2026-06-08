@@ -4,9 +4,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.group.dto.request.CreateGroupRequest;
+import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupDescriptionRequest;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupMemberResponse;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
@@ -22,39 +25,42 @@ public class GroupController {
     private final GroupService groupService;
 
     @GetMapping("/joined")
-    public ResponseEntity<List<GroupResponse>> getJoinedGroups(@RequestParam UUID userId) {
-        return ResponseEntity.ok(groupService.getJoinedGroups(userId));
+    public ResponseEntity<List<GroupResponse>> getJoinedGroups(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(groupService.getJoinedGroups(principal.getUserId()));
     }
 
     @GetMapping("/managed")
-    public ResponseEntity<List<GroupResponse>> getManagedGroups(@RequestParam UUID userId) {
-        return ResponseEntity.ok(groupService.getManagedGroups(userId));
+    public ResponseEntity<List<GroupResponse>> getManagedGroups(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(groupService.getManagedGroups(principal.getUserId()));
     }
 
     @GetMapping("/discover")
-    public ResponseEntity<List<GroupResponse>> getDiscoverGroups(@RequestParam UUID userId) {
-        return ResponseEntity.ok(groupService.getDiscoverGroups(userId));
+    public ResponseEntity<List<GroupResponse>> getDiscoverGroups(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(groupService.getDiscoverGroups(principal.getUserId()));
     }
 
     @PostMapping("/{id}/join")
     public ResponseEntity<GroupResponse> joinGroup(
-            @PathVariable UUID id,
-            @RequestParam UUID userId
-    ) {
-        return ResponseEntity.ok(groupService.joinGroup(id, userId));
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(groupService.joinGroup(id, principal.getUserId()));
     }
 
-
     @PostMapping
-    public ResponseEntity<GroupResponse> createGroup(@Valid @RequestBody CreateGroupRequest request) {
+    public ResponseEntity<GroupResponse> createGroup(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody CreateGroupRequest request) {
+        request.setCreatorId(principal.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED).body(groupService.createGroup(request));
     }
 
     @PutMapping("/{id}/cover-photo")
     public ResponseEntity<GroupResponse> updateCoverPhoto(
             @PathVariable UUID id,
-            @RequestParam("coverPhoto") MultipartFile file
-    ) {
+            @RequestParam("coverPhoto") MultipartFile file) {
         return ResponseEntity.ok(groupService.updateCoverPhoto(id, file));
     }
 
@@ -64,12 +70,22 @@ public class GroupController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{id}/description")
+    public ResponseEntity<GroupResponse> updateDescription(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateGroupDescriptionRequest request) {
+        request.setRequesterId(principal.getUserId());
+        return ResponseEntity.ok(
+                groupService.updateDescription(id, request.getRequesterId(), request.getDescription())
+        );
+    }
+
     @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<GroupResponse> getGroupById(
-            @PathVariable UUID id,
-            @RequestParam(required = false) UUID currentUserId
-    ) {
-        return ResponseEntity.ok(groupService.getGroupById(id, currentUserId));
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(groupService.getGroupById(id, principal.getUserId()));
     }
 
     @GetMapping("/{id}/members")
@@ -79,19 +95,19 @@ public class GroupController {
 
     @PostMapping("/{id}/invite")
     public ResponseEntity<Void> inviteFriends(
-            @PathVariable UUID id, 
-            @RequestParam UUID currentUserId, 
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
             @RequestBody List<UUID> userIds) {
-        groupService.inviteFriends(id, currentUserId, userIds);
+        groupService.inviteFriends(id, principal.getUserId(), userIds);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/invites/{notificationId}/accept")
     public ResponseEntity<Void> acceptInvite(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID id,
-            @PathVariable UUID notificationId,
-            @RequestParam UUID userId) {
-        groupService.acceptInvite(id, notificationId, userId);
+            @PathVariable UUID notificationId) {
+        groupService.acceptInvite(id, notificationId, principal.getUserId());
         return ResponseEntity.noContent().build();
     }
 
@@ -105,18 +121,18 @@ public class GroupController {
 
     @DeleteMapping("/{id}/members/{userId}")
     public ResponseEntity<Void> removeMember(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID id,
-            @PathVariable UUID userId,
-            @RequestParam UUID requesterId) {
-        groupService.removeMember(id, userId, requesterId);
+            @PathVariable UUID userId) {
+        groupService.removeMember(id, userId, principal.getUserId());
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}/leave")
     public ResponseEntity<Void> leaveGroup(
-            @PathVariable UUID id,
-            @RequestParam UUID userId) {
-        groupService.leaveGroup(id, userId);
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id) {
+        groupService.leaveGroup(id, principal.getUserId());
         return ResponseEntity.noContent().build();
     }
 }

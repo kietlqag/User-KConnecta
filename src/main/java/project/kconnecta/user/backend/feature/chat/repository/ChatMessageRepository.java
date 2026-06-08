@@ -219,4 +219,13 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             @Param("currentUserId") UUID currentUserId,
             @Param("peerUserIds") List<UUID> peerUserIds
     );
+
+    @Query(value = """
+            SELECT COUNT(*)
+            FROM chat_messages m
+            WHERE m.conversation_id IS NULL
+              AND m.receiver_id = :currentUserId
+              AND m.seen = false
+            """, nativeQuery = true)
+    long countTotalPrivateUnread(@Param("currentUserId") UUID currentUserId);
 }
