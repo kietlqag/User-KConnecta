@@ -135,4 +135,29 @@ public class GroupController {
         groupService.leaveGroup(id, principal.getUserId());
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}/requests")
+    public ResponseEntity<List<GroupMemberResponse>> getJoinRequests(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(groupService.getJoinRequests(id, principal.getUserId()));
+    }
+
+    @PostMapping("/{id}/requests/{userId}/approve")
+    public ResponseEntity<Void> approveJoinRequest(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @PathVariable UUID userId) {
+        groupService.approveJoinRequest(id, userId, principal.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/requests/{userId}/reject")
+    public ResponseEntity<Void> rejectJoinRequest(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @PathVariable UUID userId) {
+        groupService.rejectJoinRequest(id, userId, principal.getUserId());
+        return ResponseEntity.noContent().build();
+    }
 }

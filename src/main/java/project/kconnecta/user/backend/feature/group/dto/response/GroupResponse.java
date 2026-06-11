@@ -3,6 +3,7 @@ package project.kconnecta.user.backend.feature.group.dto.response;
 import lombok.Builder;
 import lombok.Data;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
 
 import java.time.LocalDateTime;
@@ -18,5 +19,6 @@ public class GroupResponse {
     private GroupPrivacy privacy;
     private int memberCount;
     private GroupMemberRole role;
+    private GroupMemberStatus status;
     private LocalDateTime updatedAt;
 }

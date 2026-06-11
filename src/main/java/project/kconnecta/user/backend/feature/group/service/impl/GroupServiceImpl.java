@@ -13,6 +13,7 @@ import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.entity.GroupMember;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
@@ -39,7 +40,7 @@ public class GroupServiceImpl implements GroupService {
     @Transactional(readOnly = true)
     public List<GroupResponse> getJoinedGroups(UUID userId) {
         return groupMemberRepository.findAllByUserId(userId).stream()
-                .map(gm -> toResponse(gm.getGroup(), gm.getRole()))
+                .map(gm -> toResponse(gm.getGroup(), gm.getRole(), gm.getStatus()))
                 .toList();
     }
 
@@ -47,7 +48,7 @@ public class GroupServiceImpl implements GroupService {
     @Transactional(readOnly = true)
     public List<GroupResponse> getManagedGroups(UUID userId) {
         return groupMemberRepository.findAllByUserIdAndRole(userId, GroupMemberRole.ADMIN).stream()
-                .map(gm -> toResponse(gm.getGroup(), gm.getRole()))
+                .map(gm -> toResponse(gm.getGroup(), gm.getRole(), gm.getStatus()))
                 .toList();
     }
 
@@ -57,13 +58,13 @@ public class GroupServiceImpl implements GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
 
-        GroupMemberRole role = groupMemberRepository.findAllByUserId(currentUserId).stream()
-                .filter(gm -> gm.getGroup().getId().equals(groupId))
-                .map(GroupMember::getRole)
-                .findFirst()
+        GroupMember member = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
                 .orElse(null);
 
-        return toResponse(group, role);
+        GroupMemberRole role = member != null ? member.getRole() : null;
+        GroupMemberStatus status = member != null ? member.getStatus() : null;
+
+        return toResponse(group, role, status);
     }
 
     @Override
@@ -84,7 +85,7 @@ public class GroupServiceImpl implements GroupService {
     @Transactional(readOnly = true)
     public List<GroupResponse> getDiscoverGroups(UUID userId) {
         return groupRepository.findGroupsNotJoinedByUser(userId).stream()
-                .map(g -> toResponse(g, null))
+                .map(g -> toResponse(g, null, null))
                 .toList();
     }
 
@@ -95,22 +96,36 @@ public class GroupServiceImpl implements GroupService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
-        boolean alreadyJoined = groupMemberRepository.findAllByUserId(userId).stream()
-                .anyMatch(gm -> gm.getGroup().getId().equals(groupId));
-
+        boolean alreadyJoined = groupMemberRepository.findByGroupIdAndUserId(groupId, userId).isPresent();
         if (alreadyJoined) {
-            throw new ValidationException("User already joined this group");
+            throw new ValidationException("Bạn đã tham gia hoặc đã gửi yêu cầu tham gia nhóm này rồi.");
         }
 
         GroupMember member = GroupMember.builder()
                 .group(group)
                 .user(user)
                 .role(GroupMemberRole.MEMBER)
+                .status(GroupMemberStatus.PENDING)
                 .build();
 
         groupMemberRepository.save(member);
 
-        return toResponse(group, GroupMemberRole.MEMBER);
+        // Notify admins
+        List<GroupMember> admins = groupMemberRepository.findAllByGroupId(groupId).stream()
+                .filter(gm -> gm.getRole() == GroupMemberRole.ADMIN)
+                .toList();
+
+        for (GroupMember admin : admins) {
+            notificationService.createNotification(
+                    admin.getUser().getId(),
+                    userId,
+                    NotificationType.GROUP_JOIN_REQUEST,
+                    user.getFullName() + " đã yêu cầu tham gia nhóm " + group.getName() + ".",
+                    groupId
+            );
+        }
+
+        return toResponse(group, GroupMemberRole.MEMBER, GroupMemberStatus.PENDING);
     }
 
     @Override
@@ -156,6 +171,7 @@ public class GroupServiceImpl implements GroupService {
                     .group(group)
                     .user(user)
                     .role(GroupMemberRole.MEMBER)
+                    .status(GroupMemberStatus.APPROVED)
                     .build();
             groupMemberRepository.save(member);
         }
@@ -188,11 +204,12 @@ public class GroupServiceImpl implements GroupService {
                 .group(group)
                 .user(creator)
                 .role(GroupMemberRole.ADMIN)
+                .status(GroupMemberStatus.APPROVED)
                 .build();
 
         groupMemberRepository.save(adminMember);
 
-        return toResponse(group, GroupMemberRole.ADMIN);
+        return toResponse(group, GroupMemberRole.ADMIN, GroupMemberStatus.APPROVED);
     }
 
     @Override
@@ -210,7 +227,7 @@ public class GroupServiceImpl implements GroupService {
             cloudinaryService.deleteImageByUrl(oldCoverUrl);
         }
 
-        return toResponse(saved, GroupMemberRole.ADMIN); // Assuming caller is admin or role is irrelevant for this response
+        return toResponse(saved, GroupMemberRole.ADMIN, GroupMemberStatus.APPROVED); // Assuming caller is admin or role is irrelevant for this response
     }
 
     @Override
@@ -227,7 +244,7 @@ public class GroupServiceImpl implements GroupService {
         String trimmed = description == null ? null : description.trim();
         group.setDescription(trimmed == null || trimmed.isEmpty() ? null : trimmed);
         Group saved = groupRepository.save(group);
-        return toResponse(saved, GroupMemberRole.ADMIN);
+        return toResponse(saved, GroupMemberRole.ADMIN, GroupMemberStatus.APPROVED);
     }
 
     @Override
@@ -304,7 +321,7 @@ public class GroupServiceImpl implements GroupService {
         groupMemberRepository.delete(member);
     }
 
-    private GroupResponse toResponse(Group group, GroupMemberRole role) {
+    private GroupResponse toResponse(Group group, GroupMemberRole role, GroupMemberStatus status) {
         int memberCount = groupMemberRepository.countByGroupId(group.getId());
         return GroupResponse.builder()
                 .id(group.getId())
@@ -314,7 +331,88 @@ public class GroupServiceImpl implements GroupService {
                 .privacy(group.getPrivacy())
                 .memberCount(memberCount)
                 .role(role)
+                .status(status)
                 .updatedAt(group.getUpdatedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GroupMemberResponse> getJoinRequests(UUID groupId, UUID adminId) {
+        GroupMember requester = groupMemberRepository.findByGroupIdAndUserId(groupId, adminId)
+                .orElseThrow(() -> new ValidationException("Requester is not a member of this group"));
+        if (requester.getRole() != GroupMemberRole.ADMIN || requester.getStatus() != GroupMemberStatus.APPROVED) {
+            throw new ValidationException("Only approved admins can view join requests");
+        }
+
+        return groupMemberRepository.findPendingRequestsByGroupId(groupId).stream()
+                .map(gm -> GroupMemberResponse.builder()
+                        .id(gm.getId())
+                        .userId(gm.getUser().getId())
+                        .fullName(gm.getUser().getFullName())
+                        .avatarUrl(gm.getUser().getAvatarUrl())
+                        .role(gm.getRole())
+                        .build())
+                .toList();
+    }
+
+    @Override
+    public void approveJoinRequest(UUID groupId, UUID targetUserId, UUID adminId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        GroupMember admin = groupMemberRepository.findByGroupIdAndUserId(groupId, adminId)
+                .orElseThrow(() -> new ValidationException("Admin is not a member of this group"));
+        if (admin.getRole() != GroupMemberRole.ADMIN || admin.getStatus() != GroupMemberStatus.APPROVED) {
+            throw new ValidationException("Only approved admins can approve join requests");
+        }
+
+        GroupMember target = groupMemberRepository.findByGroupIdAndUserId(groupId, targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Join request not found"));
+
+        if (target.getStatus() == GroupMemberStatus.APPROVED) {
+            return;
+        }
+
+        target.setStatus(GroupMemberStatus.APPROVED);
+        groupMemberRepository.save(target);
+
+        // Notify target user
+        notificationService.createNotification(
+                targetUserId,
+                adminId,
+                NotificationType.GROUP_ACTIVITY,
+                "Yêu cầu tham gia nhóm " + group.getName() + " của bạn đã được phê duyệt.",
+                groupId
+        );
+    }
+
+    @Override
+    public void rejectJoinRequest(UUID groupId, UUID targetUserId, UUID adminId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        GroupMember admin = groupMemberRepository.findByGroupIdAndUserId(groupId, adminId)
+                .orElseThrow(() -> new ValidationException("Admin is not a member of this group"));
+        if (admin.getRole() != GroupMemberRole.ADMIN || admin.getStatus() != GroupMemberStatus.APPROVED) {
+            throw new ValidationException("Only approved admins can reject join requests");
+        }
+
+        GroupMember target = groupMemberRepository.findByGroupIdAndUserId(groupId, targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Join request not found"));
+
+        if (target.getStatus() == GroupMemberStatus.APPROVED) {
+            throw new ValidationException("Không thể từ chối thành viên đã tham gia nhóm.");
+        }
+
+        groupMemberRepository.delete(target);
+
+        notificationService.createNotification(
+                targetUserId,
+                adminId,
+                NotificationType.GROUP_ACTIVITY,
+                "Yêu cầu tham gia nhóm " + group.getName() + " của bạn đã bị từ chối.",
+                groupId
+        );
     }
 }

@@ -23,4 +23,7 @@ public interface GroupService {
     GroupResponse updateDescription(UUID groupId, UUID requesterId, String description);
     void removeMember(UUID groupId, UUID userId, UUID requesterId);
     void leaveGroup(UUID groupId, UUID userId);
+    List<GroupMemberResponse> getJoinRequests(UUID groupId, UUID adminId);
+    void approveJoinRequest(UUID groupId, UUID targetUserId, UUID adminId);
+    void rejectJoinRequest(UUID groupId, UUID targetUserId, UUID adminId);
 }

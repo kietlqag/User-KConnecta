@@ -3,6 +3,7 @@ package project.kconnecta.user.backend.feature.group.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -37,6 +38,10 @@ public class GroupMember {
     @Column(nullable = false, length = 10)
     private GroupMemberRole role;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private GroupMemberStatus status;
+
     @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt;
 
@@ -44,5 +49,6 @@ public class GroupMember {
     public void prePersist() {
         if (id == null) id = UUID.randomUUID();
         if (joinedAt == null) joinedAt = LocalDateTime.now();
+        if (status == null) status = GroupMemberStatus.APPROVED;
     }
 }

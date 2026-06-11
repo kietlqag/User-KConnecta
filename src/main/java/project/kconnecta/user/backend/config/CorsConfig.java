@@ -21,16 +21,24 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
-                registry.addMapping("/api/**")
-                        .allowedOrigins(splitCsv(allowedOrigins))
+                String[] origins = splitCsv(allowedOrigins);
+                String[] patterns = splitCsv(allowedOrigins);
+                var mapping = registry.addMapping("/api/**")
                         .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                         .allowedHeaders("Authorization", "Content-Type")
                         .maxAge(3600);
+                // Use allowedOriginPatterns when any entry contains a wildcard
+                boolean hasPattern = Arrays.stream(origins).anyMatch(o -> o.contains("*"));
+                if (hasPattern) {
+                    mapping.allowedOriginPatterns(patterns);
+                } else {
+                    mapping.allowedOrigins(origins);
+                }
             }
         };
     }
 
-    private @NonNull String[] splitCsv(String value) {
+    private @NonNull String[] splitCsv(@Nullable String value) {
         if (value == null || value.isBlank()) {
             return new String[0];
         }

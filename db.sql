@@ -1,4 +1,4 @@
-﻿-- ============================================================
+-- ============================================================
 -- KConnecta User Service - PostgreSQL schema
 -- Synced with JPA entities in user_be/src/main/java/.../feature
 -- ============================================================
@@ -446,9 +446,34 @@ CREATE TABLE IF NOT EXISTS public.group_members (
     group_id UUID NOT NULL REFERENCES public.user_groups(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     role VARCHAR(10) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'APPROVED',
     joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_group_members_group_user UNIQUE (group_id, user_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_group_members_user_id ON public.group_members(user_id);
+
+-- -------------------------
+-- Notification
+-- -------------------------
+CREATE TABLE IF NOT EXISTS public.notifications (
+    id UUID PRIMARY KEY,
+    recipient_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+    type VARCHAR(50) NOT NULL,
+    content TEXT NOT NULL,
+    related_id UUID,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    is_actioned BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP,
+    CONSTRAINT notifications_type_check CHECK (type IN (
+        'LIKE', 'COMMENT', 'SHARE', 'FRIEND_REQUEST',
+        'GROUP_ACTIVITY', 'GROUP_INVITE', 'GROUP_JOIN_REQUEST',
+        'MENTION', 'BIRTHDAY', 'EVENT', 'MEMORY', 'SYSTEM'
+    ))
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON public.notifications(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON public.group_members(group_id);

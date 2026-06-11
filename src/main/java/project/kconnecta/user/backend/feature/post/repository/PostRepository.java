@@ -291,7 +291,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     @org.springframework.data.jpa.repository.Query(
         "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group g " +
         "WHERE p.status = 'PUBLISHED' " +
-        "AND g.id IN (SELECT gm.group.id FROM GroupMember gm WHERE gm.user.id = :userId) " +
+        "AND g.id IN (SELECT gm.group.id FROM GroupMember gm WHERE gm.user.id = :userId AND gm.status = project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus.APPROVED) " +
         "ORDER BY p.publishedAt DESC, p.createdAt DESC"
     )
     List<Post> findGroupFeedPostsByUserId(@org.springframework.data.repository.query.Param("userId") UUID userId);

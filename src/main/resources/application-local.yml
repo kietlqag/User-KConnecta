@@ -1,4 +1,8 @@
-﻿spring:
+﻿app:
+  cors:
+    allowed-origins: http://localhost:*,http://127.0.0.1:*,https://user-k-connecta.vercel.app
+
+spring:
   jpa:
     show-sql: false
 

@@ -52,6 +52,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -132,8 +133,12 @@ public class PostServiceImpl implements PostService {
             group = groupRepository.findById(request.getGroupId())
                     .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + request.getGroupId()));
 
-            if (!groupMemberRepository.findByGroupIdAndUserId(group.getId(), author.getId()).isPresent()) {
-                throw new ValidationException("Only group members can post in this group");
+            boolean isMember = groupMemberRepository.findByGroupIdAndUserId(group.getId(), author.getId())
+                    .map(gm -> gm.getStatus() == project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus.APPROVED)
+                    .orElse(false);
+
+            if (!isMember) {
+                throw new ValidationException("Only approved group members can post in this group");
             }
 
             if (privacy != PostPrivacy.PUBLIC) {
@@ -236,8 +241,24 @@ public class PostServiceImpl implements PostService {
     @Transactional(readOnly = true)
     public Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable) {
         Page<Post> postPage = postRepository.findHomeFeedPostsWithScoring(currentUserId, pageable);
-        List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
+        List<Post> diversified = applyAuthorDiversity(postPage.getContent(), 3);
+        List<PostResponse> responses = processPostsBulk(diversified, currentUserId);
         return new PageImpl<>(responses, pageable, postPage.getTotalElements());
+    }
+
+    private List<Post> applyAuthorDiversity(List<Post> posts, int maxPerAuthor) {
+        Map<UUID, Integer> authorCount = new HashMap<>();
+        return posts.stream()
+                .filter(p -> {
+                    UUID authorId = p.getAuthor().getId();
+                    int count = authorCount.getOrDefault(authorId, 0);
+                    if (count < maxPerAuthor) {
+                        authorCount.put(authorId, count + 1);
+                        return true;
+                    }
+                    return false;
+                })
+                .toList();
     }
 
     @Override
@@ -259,6 +280,18 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        if (group.getPrivacy() == project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy.PRIVATE) {
+            boolean isMember = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId)
+                    .map(gm -> gm.getStatus() == project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus.APPROVED)
+                    .orElse(false);
+            if (!isMember) {
+                return java.util.Collections.emptyList();
+            }
+        }
+
         List<Post> posts = postRepository.findByGroupId(groupId);
         log.debug("feed query getPostsByGroupId: groupId={}, count={}, statuses=PUBLISHED only",
                 groupId, posts.size());

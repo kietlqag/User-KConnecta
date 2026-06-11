@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import project.kconnecta.user.backend.feature.policy.dto.AiModerationConfigRequest;
 import project.kconnecta.user.backend.feature.policy.dto.PublicPolicyResponse;
 import project.kconnecta.user.backend.feature.policy.entity.PlatformPolicy;
 import project.kconnecta.user.backend.feature.policy.repository.PlatformPolicyRepository;
@@ -145,6 +147,19 @@ public class PolicyServiceImpl implements PolicyService {
     private PlatformPolicy getEntity() {
         return repository.findById(PlatformPolicy.SINGLETON_ID)
                 .orElseThrow(() -> new IllegalStateException("Platform policy not initialized"));
+    }
+
+    @Override
+    @Transactional
+    public void saveAiModerationConfig(AiModerationConfigRequest config, String updatedBy) {
+        try {
+            ObjectNode mutable = (ObjectNode) objectMapper.readTree(objectMapper.writeValueAsString(getConfigJson()));
+            ObjectNode aiNode = objectMapper.valueToTree(config);
+            mutable.set("aiModeration", aiNode);
+            saveConfig(mutable, updatedBy);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Failed to save AI moderation config: " + e.getMessage());
+        }
     }
 
     private JsonNode loadFromDb() {

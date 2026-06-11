@@ -7,6 +7,7 @@ public enum NotificationType {
     FRIEND_REQUEST,
     GROUP_ACTIVITY,
     GROUP_INVITE,
+    GROUP_JOIN_REQUEST,
     MENTION,
     BIRTHDAY,
     EVENT,

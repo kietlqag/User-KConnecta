@@ -1,4 +1,4 @@
-﻿spring:
+spring:
   application:
     name: kconnecta.user.backend
 
@@ -51,7 +51,7 @@ server:
   port: ${PORT:8080}
 
 jwt:
-  secret: ${JWT_SECRET}  # Required — app fails to start if missing
+  secret: ${JWT_SECRET:local-dev-jwt-secret-change-in-production-must-be-at-least-64-chars-long!!}
   expiration: ${JWT_EXPIRATION:86400000}
 
 google:
@@ -84,8 +84,10 @@ livekit:
 
 logging:
   level:
-    org.springframework.mail: warn
-    org.eclipse.angus.mail: warn
-    org.springframework: warn
-    org.hibernate.SQL: warn
-    org.hibernate.orm.jdbc.bind: warn
+    root: INFO
+    com.kconnecta: DEBUG
+    org.springframework.mail: WARN
+    org.eclipse.angus.mail: WARN
+    org.springframework: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
