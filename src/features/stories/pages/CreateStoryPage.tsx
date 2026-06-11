@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type ChangeEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { Camera, Check, ChevronRight, Crop, Globe, Music, Search, Settings, Sparkles, Type, UserPlus, Users, X } from 'lucide-react';
+import { Camera, Check, ChevronRight, Crop, Globe, Lock, Music, Search, Sparkles, Type, UserPlus, Users, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authService, AuthUser } from '@/services/authService';
@@ -12,7 +12,24 @@ import bgImg5 from './backgroundImage/992d312079803e982fed2aa32d3f6992.jpg';
 import bgImg6 from './backgroundImage/bb693fb7f6b569c4821a018d9bdcf242.jpg';
 import bgImg7 from './backgroundImage/e46e6b20a5944479a9ee44cbb495567c.jpg';
 
-type StoryEditorTool = 'text' | 'music' | 'alt-text' | 'image' | 'background';
+type StoryEditorTool = 'text' | 'music' | 'alt-text' | 'image' | 'background' | 'filter' | 'sticker';
+
+const COLOR_FILTERS = [
+  { id: 'none',     label: 'Gốc',      style: '' },
+  { id: 'warm',     label: 'Ấm',       style: 'bg-orange-400/30' },
+  { id: 'cool',     label: 'Lạnh',     style: 'bg-blue-400/30' },
+  { id: 'vintage',  label: 'Vintage',  style: 'bg-yellow-700/25 mix-blend-multiply' },
+  { id: 'dark',     label: 'Tối',      style: 'bg-black/35' },
+  { id: 'pink',     label: 'Hồng',     style: 'bg-pink-400/30' },
+  { id: 'green',    label: 'Xanh lá',  style: 'bg-green-400/25' },
+  { id: 'mono',     label: 'Xám',      style: 'bg-gray-500/40 mix-blend-color' },
+] as const;
+type FilterId = typeof COLOR_FILTERS[number]['id'];
+
+interface StickerItem { id: string; emoji: string; x: number; y: number; size: number; }
+
+const EMOJI_LIST = ['😊','😂','🥰','😎','🔥','❤️','✨','🎉','👍','😍','🤩','😜','🥳','💯','🌈','🎶','💪','👀','🙌','💀','🫶','😭','🤣','😱','🌸','⭐','🍀','🦋'];
+
 
 interface MusicTrack {
   id: string;
@@ -101,6 +118,7 @@ export function CreateStoryPage() {
   const [textPosition, setTextPosition] = useState({ x: 50, y: 50 });
   const [isDraggingText, setIsDraggingText] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
+  const [isPlaceholderText, setIsPlaceholderText] = useState(false);
   const [isResizingText, setIsResizingText] = useState(false);
   const [isHoveringTextBox, setIsHoveringTextBox] = useState(false);
   const [altText, setAltText] = useState('');
@@ -109,8 +127,13 @@ export function CreateStoryPage() {
   const [imageScale, setImageScale] = useState(100);
   const [isGrabbing, setIsGrabbing] = useState(false);
   const [contentSize, setContentSize] = useState({ width: 360, height: 640 });
+  const [colorFilter, setColorFilter] = useState<FilterId>('none');
+  const [stickers, setStickers] = useState<StickerItem[]>([]);
+  const [draggingStickerId, setDraggingStickerId] = useState<string | null>(null);
+  const stickerDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
-  const [privacySetting, setPrivacySetting] = useState<'public' | 'friends' | 'custom'>('friends');
+  const [privacySetting, setPrivacySetting] = useState<'public' | 'friends' | 'only_me'>('public');
+  const [isPrivacyDropdownOpen, setIsPrivacyDropdownOpen] = useState(false);
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
   const [selectedBg, setSelectedBg] = useState<BgState>(DEFAULT_BG);
 
@@ -168,7 +191,8 @@ export function CreateStoryPage() {
   const handleCreateTextStory = () => {
     setIsTextStoryMode(true);
     setActiveTool('background');
-    setStoryText('Bắt đầu gõ...');
+    setStoryText('');
+    setIsPlaceholderText(false);
     setTextPosition({ x: 50, y: 50 });
     setSelectedBg(DEFAULT_BG);
   };
@@ -183,7 +207,7 @@ export function CreateStoryPage() {
       return;
     }
 
-    const hasText = storyText.trim().length > 0;
+    const hasText = storyText.trim().length > 0 && !isPlaceholderText;
 
     const remoteImageUrl = !selectedImageFile && selectedImageUrl && !selectedImageUrl.startsWith('blob:')
       ? selectedImageUrl
@@ -387,6 +411,17 @@ export function CreateStoryPage() {
 
   const handleEnableTextEdit = () => {
     if (activeTool !== 'text') return;
+    if (isPlaceholderText) {
+      setStoryText('');
+      setIsPlaceholderText(false);
+      requestAnimationFrame(() => {
+        if (editableTextRef.current) {
+          editableTextRef.current.innerText = '';
+          editableTextRef.current.focus();
+        }
+      });
+      return;
+    }
     setIsEditingText(true);
     requestAnimationFrame(() => {
       editableTextRef.current?.focus();
@@ -394,7 +429,51 @@ export function CreateStoryPage() {
   };
 
   const handleStoryTextInput = (event: React.FormEvent<HTMLDivElement>) => {
-    setStoryText(event.currentTarget.innerText ?? '');
+    const text = event.currentTarget.innerText ?? '';
+    setStoryText(text);
+    setIsPlaceholderText(false);
+  };
+
+  const handleAddSticker = (emoji: string) => {
+    setStickers(prev => [...prev, {
+      id: `sticker-${Date.now()}`,
+      emoji,
+      x: 40 + Math.random() * 20,
+      y: 40 + Math.random() * 20,
+      size: 48,
+    }]);
+  };
+
+  const handleStickerPointerDown = (e: React.PointerEvent, id: string) => {
+    e.stopPropagation();
+    const sticker = stickers.find(s => s.id === id);
+    if (!sticker || !previewFrameRef.current) return;
+    const frame = previewFrameRef.current.getBoundingClientRect();
+    stickerDragRef.current = { startX: e.clientX, startY: e.clientY, origX: sticker.x, origY: sticker.y };
+    setDraggingStickerId(id);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    void frame;
+  };
+
+  const handleStickerPointerMove = (e: React.PointerEvent, id: string) => {
+    if (draggingStickerId !== id || !stickerDragRef.current || !previewFrameRef.current) return;
+    const frame = previewFrameRef.current.getBoundingClientRect();
+    const dx = ((e.clientX - stickerDragRef.current.startX) / frame.width) * 100;
+    const dy = ((e.clientY - stickerDragRef.current.startY) / frame.height) * 100;
+    setStickers(prev => prev.map(s => s.id === id
+      ? { ...s, x: Math.max(5, Math.min(95, stickerDragRef.current!.origX + dx)), y: Math.max(5, Math.min(95, stickerDragRef.current!.origY + dy)) }
+      : s
+    ));
+  };
+
+  const handleStickerPointerUp = (e: React.PointerEvent) => {
+    stickerDragRef.current = null;
+    setDraggingStickerId(null);
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+
+  const handleRemoveSticker = (id: string) => {
+    setStickers(prev => prev.filter(s => s.id !== id));
   };
 
   const handleAddText = () => {
@@ -440,14 +519,6 @@ export function CreateStoryPage() {
               <X className="h-5 w-5" />
             </button>
             <h1 className="text-2xl font-bold text-gray-900">Tin của bạn</h1>
-            <button
-              type="button"
-              onClick={() => setIsPrivacyModalOpen(true)}
-              className="ml-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-gray-100 text-gray-700 transition hover:bg-gray-200"
-              aria-label="Cài đặt"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
           </div>
 
           <div className="px-5 py-4">
@@ -460,6 +531,56 @@ export function CreateStoryPage() {
                 />
               </div>
               <span className="font-medium text-gray-900">{userFullName}</span>
+            </div>
+
+            {/* Privacy selector */}
+            <div className="relative mb-3">
+              <button
+                type="button"
+                onClick={() => setIsPrivacyDropdownOpen(p => !p)}
+                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 transition hover:border-gray-300 hover:bg-gray-50"
+              >
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-colors ${
+                  privacySetting === 'public' ? 'bg-blue-500' :
+                  privacySetting === 'friends' ? 'bg-green-500' : 'bg-gray-400'
+                }`}>
+                  {privacySetting === 'public' && <Globe className="h-4 w-4" />}
+                  {privacySetting === 'friends' && <Users className="h-4 w-4" />}
+                  {privacySetting === 'only_me' && <Lock className="h-4 w-4" />}
+                </div>
+                <span className="flex-1 text-left text-sm font-medium text-gray-800">
+                  {privacySetting === 'public' && 'Công khai'}
+                  {privacySetting === 'friends' && 'Bạn bè'}
+                  {privacySetting === 'only_me' && 'Chỉ mình tôi'}
+                </span>
+                <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isPrivacyDropdownOpen ? 'rotate-90' : ''}`} />
+              </button>
+
+              {isPrivacyDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+                  {([
+                    { value: 'public', label: 'Công khai', sub: 'Tất cả mọi người', icon: <Globe className="h-4 w-4" />, color: 'bg-blue-500' },
+                    { value: 'friends', label: 'Bạn bè', sub: 'Chỉ bạn bè của bạn', icon: <Users className="h-4 w-4" />, color: 'bg-green-500' },
+                    { value: 'only_me', label: 'Chỉ mình tôi', sub: 'Không ai khác nhìn thấy', icon: <Lock className="h-4 w-4" />, color: 'bg-gray-400' },
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => { setPrivacySetting(opt.value); setIsPrivacyDropdownOpen(false); }}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-gray-50 ${privacySetting === opt.value ? 'bg-gray-50' : ''}`}
+                    >
+                      <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white ${opt.color}`}>
+                        {opt.icon}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">{opt.label}</p>
+                        <p className="text-xs text-gray-400">{opt.sub}</p>
+                      </div>
+                      {privacySetting === opt.value && <Check className="h-4 w-4 text-blue-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {isActive && (
@@ -496,24 +617,28 @@ export function CreateStoryPage() {
                     <span className="text-sm font-medium">Phông nền</span>
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setActiveTool('sticker')}
+                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${activeTool === 'sticker' ? 'bg-gray-100' : ''}`}
+                >
+                  <span className="text-lg leading-none">😊</span>
+                  <span className="text-sm font-medium">Sticker</span>
+                </button>
                 {hasSelectedImage && (
                   <>
                     <button
                       type="button"
-                      onClick={() => setActiveTool('alt-text')}
-                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${
-                        activeTool === 'alt-text' ? 'bg-gray-100' : ''
-                      }`}
+                      onClick={() => setActiveTool('filter')}
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${activeTool === 'filter' ? 'bg-gray-100' : ''}`}
                     >
                       <Sparkles className="h-5 w-5" />
-                      <span className="text-sm font-medium">Văn bản thay thế</span>
+                      <span className="text-sm font-medium">Bộ lọc màu</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setActiveTool('image')}
-                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${
-                        activeTool === 'image' ? 'bg-gray-100' : ''
-                      }`}
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 transition hover:bg-gray-100 ${activeTool === 'image' ? 'bg-gray-100' : ''}`}
                     >
                       <Crop className="h-5 w-5" />
                       <span className="text-sm font-medium">Kích thước ảnh</span>
@@ -534,6 +659,62 @@ export function CreateStoryPage() {
                   placeholder="Văn bản thay thế tùy chỉnh"
                   className="h-24 w-full resize-none rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
                 />
+              </div>
+            )}
+
+            {/* Sticker panel */}
+            {activeTool === 'sticker' && (
+              <div className="mt-4">
+                <p className="mb-2 text-xs text-gray-500">Nhấn để thêm vào tin</p>
+                <div className="grid grid-cols-7 gap-1">
+                  {EMOJI_LIST.map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleAddSticker(emoji)}
+                      className="flex items-center justify-center rounded-lg p-1.5 text-2xl transition hover:bg-gray-100 hover:scale-125"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+                {stickers.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setStickers([])}
+                    className="mt-3 w-full rounded-lg border border-gray-200 py-1.5 text-xs text-gray-500 transition hover:bg-gray-50"
+                  >
+                    Xóa tất cả sticker
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Filter panel */}
+            {hasSelectedImage && activeTool === 'filter' && (
+              <div className="mt-4">
+                <p className="mb-2 text-xs text-gray-500">Chọn bộ lọc màu</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {COLOR_FILTERS.map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setColorFilter(f.id)}
+                      className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition hover:bg-gray-100 ${colorFilter === f.id ? 'ring-2 ring-blue-500' : ''}`}
+                    >
+                      <div className="relative h-12 w-full overflow-hidden rounded-md bg-gray-200">
+                        <img src={selectedImageUrl ?? ''} alt="" className="h-full w-full object-cover" />
+                        {f.style && <div className={`absolute inset-0 ${f.style}`} />}
+                        {colorFilter === f.id && (
+                          <div className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500">
+                            <Check className="h-2.5 w-2.5 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-600">{f.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -751,6 +932,37 @@ export function CreateStoryPage() {
                     )}
                   </div>
 
+                  {/* Color filter overlay */}
+                  {colorFilter !== 'none' && (() => {
+                    const f = COLOR_FILTERS.find(f => f.id === colorFilter);
+                    return f ? <div className={`pointer-events-none absolute inset-0 z-10 rounded-md ${f.style}`} /> : null;
+                  })()}
+
+                  {/* Stickers */}
+                  {stickers.map(s => (
+                    <div
+                      key={s.id}
+                      className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 select-none ${draggingStickerId === s.id ? 'cursor-grabbing' : 'cursor-grab'}`}
+                      style={{ left: `${s.x}%`, top: `${s.y}%`, fontSize: `${s.size}px`, lineHeight: 1 }}
+                      onPointerDown={e => handleStickerPointerDown(e, s.id)}
+                      onPointerMove={e => handleStickerPointerMove(e, s.id)}
+                      onPointerUp={handleStickerPointerUp}
+                      onPointerCancel={handleStickerPointerUp}
+                    >
+                      {s.emoji}
+                      {activeTool === 'sticker' && (
+                        <button
+                          type="button"
+                          className="absolute -right-2 -top-2 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow"
+                          onPointerDown={e => e.stopPropagation()}
+                          onClick={() => handleRemoveSticker(s.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
                   {(storyText.length > 0 || isEditingText) && (
                     <div
                       role="presentation"
@@ -761,7 +973,7 @@ export function CreateStoryPage() {
                       onPointerCancel={handleTextPointerUp}
                       onMouseEnter={() => setIsHoveringTextBox(true)}
                       onMouseLeave={() => setIsHoveringTextBox(false)}
-                      style={{ left: `${textPosition.x}%`, top: `${textPosition.y}%`, maxWidth: '324px' }}
+                      style={{ left: `${textPosition.x}%`, top: `${textPosition.y}%` }}
                     >
                       <div
                         ref={editableTextRef}
@@ -770,21 +982,20 @@ export function CreateStoryPage() {
                         onFocus={() => setIsEditingText(true)}
                         onBlur={() => setIsEditingText(false)}
                         onInput={handleStoryTextInput}
-                        className="relative min-w-[32px] w-full px-2 text-center font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] outline-none"
+                        className="relative px-2 text-center font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] outline-none"
                         style={{
                           fontSize: `${textSize}px`,
                           color: textColor,
                           lineHeight: 1.05,
                           minHeight: '1.2em',
                           minWidth: '1ch',
-                          wordBreak: 'break-word',
-                          overflowWrap: 'break-word',
+                          whiteSpace: 'nowrap',
+                          opacity: isPlaceholderText ? 0.45 : 1,
                         }}
                       >
                       </div>
                       {activeTool === 'text' && !isEditingText && !isDraggingText && (isHoveringTextBox || isResizingText) && (
                         <>
-                          <div className="pointer-events-none absolute inset-0 rounded-sm border border-white/90" />
                           <button
                             type="button"
                             className="absolute -top-5 -left-5 z-20 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-white bg-white text-gray-700 shadow hover:bg-gray-100"

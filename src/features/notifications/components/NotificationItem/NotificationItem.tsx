@@ -10,6 +10,7 @@ interface NotificationItemProps {
   onAcceptFriendRequest?: (notificationId: string, friendshipId: string) => void;
   onRejectFriendRequest?: (notificationId: string, friendshipId: string) => void;
   onRead?: (notificationId: string) => void;
+  onClose?: () => void;
 }
 
 export const NotificationItem = ({
@@ -18,7 +19,8 @@ export const NotificationItem = ({
   onRejectInvite,
   onAcceptFriendRequest,
   onRejectFriendRequest,
-  onRead
+  onRead,
+  onClose,
 }: NotificationItemProps) => {
   const navigate = useNavigate();
   const [friendLoading, setFriendLoading] = useState<'accept' | 'reject' | null>(null);
@@ -62,7 +64,14 @@ export const NotificationItem = ({
       onRead(notification.id);
     }
     if (POST_TYPES.has(notification.type) && notification.relatedId) {
+      onClose?.();
       navigate(`/home?post=${notification.relatedId}`);
+    } else if (notification.type === 'group_join_request' && notification.relatedId) {
+      onClose?.();
+      navigate(`/groups/${notification.relatedId}?tab=requests`);
+    } else if (notification.type === 'group_activity' && notification.relatedId) {
+      onClose?.();
+      navigate(`/groups/${notification.relatedId}`);
     }
   };
   return (

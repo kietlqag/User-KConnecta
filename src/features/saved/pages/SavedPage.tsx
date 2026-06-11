@@ -169,15 +169,12 @@ export const SavedPage = () => {
 
         <main className="ml-[360px] flex-1 p-6">
           <div className="max-w-[800px] mx-auto">
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4">
               <h1 className="text-xl font-bold text-gray-900">
                 {activeCollection === 'all'
                   ? 'Tất cả'
                   : collections.find((c) => c.id === activeCollection)?.name ?? 'Bộ sưu tập'}
               </h1>
-              <button className="p-2.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors cursor-pointer">
-                <SlidersHorizontal className="w-5 h-5 text-gray-700" />
-              </button>
             </div>
 
             {(() => {

@@ -46,13 +46,18 @@ export const GroupResult = ({ group, onJoinToggle }: GroupResultProps) => {
         {/* Join Button */}
         <button
           onClick={(e) => { e.stopPropagation(); onJoinToggle(group.id); }}
+          disabled={group.isPending}
           className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer ${
-            group.isMember
+            group.isPending
+              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+              : group.isMember
               ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
         >
-          {group.isMember ? (
+          {group.isPending ? (
+            'Đang chờ duyệt...'
+          ) : group.isMember ? (
             <>
               <Check className="w-4 h-4" />
               Đã tham gia

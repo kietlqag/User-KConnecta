@@ -7,10 +7,12 @@ import { PendingAttachments } from './components/PendingAttachments';
 import { Composer } from './components/Composer';
 import { CameraModal } from './components/CameraModal';
 import { PinnedMessagesModal, type PinnedChatMessage } from './components/PinnedMessagesModal';
+import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { useChatScroll } from './hooks/useChatScroll';
 import { useVoiceRecorder } from './hooks/useVoiceRecorder';
 import { useAttachments } from './hooks/useAttachments';
 import { useCameraCapture } from './hooks/useCameraCapture';
+import { useSpamCounter } from './hooks/useSpamCounter';
 
 const REPLY_PREFIX = '__REPLY__:';
 
@@ -109,6 +111,21 @@ export const ChatWindow = ({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [showPinnedModal, setShowPinnedModal] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const { data: publicPolicy } = usePublicPolicies();
+  const spamMaxMessages = publicPolicy?.chatPolicy?.messagesPerMinute ?? 20;
+  const spamCounterEnabled = publicPolicy?.chatPolicy?.antiSpamEnabled ?? true;
+  const { sentCount: spamSentCount, recordSend: recordSpamSend } = useSpamCounter(
+    spamMaxMessages,
+    spamCounterEnabled
+  );
+
+  const trackAndSendMessage = useCallback(
+    (content: string) => {
+      recordSpamSend();
+      onSendMessage(content);
+    },
+    [onSendMessage, recordSpamSend]
+  );
 
   useEffect(() => {
     if (!rateLimitUntil) {
@@ -143,7 +160,7 @@ export const ChatWindow = ({
     startVoiceRecording,
     stopAndSendVoiceRecording,
     cancelVoiceRecording,
-  } = useVoiceRecorder(connected, onSendMessage, setReportNotice);
+  } = useVoiceRecorder(connected, trackAndSendMessage, setReportNotice);
 
   const {
     pendingImages,
@@ -159,7 +176,7 @@ export const ChatWindow = ({
     removePendingFile,
     sendPendingImages,
     sendPendingFiles,
-  } = useAttachments(connected, onSendMessage, setReportNotice);
+  } = useAttachments(connected, trackAndSendMessage, setReportNotice);
 
   const {
     showCamera,
@@ -201,6 +218,7 @@ export const ChatWindow = ({
           replyPreview: replyToMessage.text.slice(0, 120),
         })}`
       : text;
+    recordSpamSend();
     onSendMessage(payload);
     setInputText('');
     setReplyToMessage(null);
@@ -342,6 +360,9 @@ export const ChatWindow = ({
             onSend={handleSend}
             connected={connected}
             cooldownSeconds={cooldownSeconds}
+            spamSentCount={spamSentCount}
+            spamMaxMessages={spamMaxMessages}
+            spamCounterEnabled={spamCounterEnabled}
             isRecordingVoice={isRecordingVoice}
             isSendingVoice={isSendingVoice}
             isSendingImage={isSendingImage}

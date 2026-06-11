@@ -3,6 +3,7 @@ import { GroupTabEmptyState } from '../GroupTabEmptyState/GroupTabEmptyState';
 interface GroupPlaceholderTabsProps {
   tabId: 'events' | 'media' | 'documents';
   isAdmin?: boolean;
+  isApprovedMember?: boolean;
   onCreateEvent?: () => void;
   onPostWithMedia?: () => void;
 }
@@ -10,6 +11,7 @@ interface GroupPlaceholderTabsProps {
 export function GroupPlaceholderTab({
   tabId,
   isAdmin,
+  isApprovedMember = false,
   onCreateEvent,
   onPostWithMedia,
 }: GroupPlaceholderTabsProps) {
@@ -34,8 +36,8 @@ export function GroupPlaceholderTab({
         icon={Images}
         title="Chưa có ảnh hoặc video"
         description="Ảnh và video đăng trong nhóm sẽ hiển thị tại đây."
-        actionLabel="Đăng bài có ảnh"
-        onAction={onPostWithMedia}
+        actionLabel={isApprovedMember ? 'Đăng bài có ảnh' : undefined}
+        onAction={isApprovedMember ? onPostWithMedia : undefined}
         secondaryHint={comingSoon}
       />
     );

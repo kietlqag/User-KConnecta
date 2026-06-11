@@ -37,6 +37,40 @@ import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidati
 
 import { toApiScheduledAt, debugScheduleLog } from './postScheduleUtils';
 
+const MODERATION_URL = import.meta.env.VITE_MODERATION_URL
+  ?? 'http://localhost:8082/api/v1/internal/moderation/check';
+
+const AI_BLOCK_CATEGORIES = new Set([
+  'sexual/minors',
+  'violence/graphic',
+  'hate/threatening',
+  'illicit/violent',
+  'self-harm/instructions',
+]);
+
+async function checkAiModeration(text: string): Promise<string | null> {
+  try {
+    const res = await fetch(MODERATION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, imageUrl: null }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { flagged: boolean; categories: Record<string, boolean> };
+    if (!data.flagged) return null;
+    const flaggedCats = Object.entries(data.categories).filter(([, v]) => v).map(([k]) => k);
+    const blockedCats = flaggedCats.filter(c => AI_BLOCK_CATEGORIES.has(c));
+    if (blockedCats.length > 0) {
+      return `Nội dung vi phạm nghiêm trọng (${blockedCats.join(', ')}) — không thể đăng bài`;
+    }
+    // Non-critical warning — allow posting but notify
+    toast.warning(`Cảnh báo AI: Nội dung có dấu hiệu ${flaggedCats.join(', ')} — vui lòng cân nhắc trước khi đăng`);
+    return null;
+  } catch {
+    return null; // fail open if moderation API unreachable
+  }
+}
+
 interface ProfileCreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -286,6 +320,15 @@ export function ProfileCreatePostModal({
 
     setIsPosting(true);
     try {
+      // AI moderation check before submitting
+      if (postContent.trim()) {
+        const aiError = await checkAiModeration(postContent.trim());
+        if (aiError) {
+          toast.error(aiError);
+          return;
+        }
+      }
+
       // 1. Collect media — use cached URLs, wait only for still-uploading ones
       const uploadedMedia: CreatePostMediaRequest[] = [];
       if (selectedImages.length > 0) {

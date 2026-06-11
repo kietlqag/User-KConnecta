@@ -8,6 +8,7 @@ export interface GroupApiResponse {
   privacy: 'PUBLIC' | 'PRIVATE';
   memberCount: number;
   role: 'ADMIN' | 'MEMBER' | null;
+  status: 'PENDING' | 'APPROVED' | null;
   updatedAt: string;
 }
 
@@ -68,4 +69,13 @@ export const groupService = {
 
   leaveGroup: (groupId: string, userId: string) =>
     api.delete<void>(`/groups/${groupId}/leave?userId=${userId}`),
+
+  getJoinRequests: (groupId: string) =>
+    api.get<GroupMemberApiResponse[]>(`/groups/${groupId}/requests`),
+
+  approveJoinRequest: (groupId: string, userId: string) =>
+    api.post<void>(`/groups/${groupId}/requests/${userId}/approve`, {}),
+
+  rejectJoinRequest: (groupId: string, userId: string) =>
+    api.post<void>(`/groups/${groupId}/requests/${userId}/reject`, {}),
 };

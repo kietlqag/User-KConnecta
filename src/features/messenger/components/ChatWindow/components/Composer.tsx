@@ -33,6 +33,9 @@ interface ComposerProps {
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   cooldownSeconds?: number;
+  spamSentCount?: number;
+  spamMaxMessages?: number;
+  spamCounterEnabled?: boolean;
 }
 
 export const Composer: React.FC<ComposerProps> = ({
@@ -64,6 +67,9 @@ export const Composer: React.FC<ComposerProps> = ({
   handleFileSelect,
   onPaste,
   cooldownSeconds = 0,
+  spamSentCount = 0,
+  spamMaxMessages = 20,
+  spamCounterEnabled = false,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
@@ -123,8 +129,30 @@ export const Composer: React.FC<ComposerProps> = ({
     });
   };
 
+  const showSpamCounter =
+    spamCounterEnabled && connected && (spamSentCount > 0 || cooldownSeconds > 0);
+  const spamCounterClass =
+    cooldownSeconds > 0 || spamSentCount >= spamMaxMessages
+      ? 'text-red-600'
+      : spamSentCount >= spamMaxMessages - 3
+        ? 'text-orange-600'
+        : 'text-gray-500';
+
   return (
     <div className="p-3 bg-white border-t border-gray-200">
+      {showSpamCounter && (
+        <div className={`mb-2 flex items-center justify-between px-1 text-[11px] font-medium ${spamCounterClass}`}>
+          <span>
+            {cooldownSeconds > 0
+              ? `Tạm dừng gửi tin — thử lại sau ${cooldownSeconds}s`
+              : `Đã gửi ${spamSentCount}/${spamMaxMessages} tin trong 1 phút`}
+          </span>
+          {cooldownSeconds === 0 && spamSentCount >= spamMaxMessages - 3 && (
+            <span className="tabular-nums">Còn {Math.max(0, spamMaxMessages - spamSentCount)} tin</span>
+          )}
+        </div>
+      )}
+
       {replyToMessage && (
         <div className="mb-2 px-3 py-2 bg-gray-50 rounded-xl border-l-4 border-blue-500 flex items-center justify-between group">
           <div className="min-w-0">

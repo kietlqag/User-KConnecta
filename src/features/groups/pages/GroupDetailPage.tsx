@@ -13,6 +13,7 @@ import {
   GroupMembersTab,
   GroupPlaceholderTab,
 } from '../components';
+import { GroupRequestsTab } from '../components/GroupRequestsTab/GroupRequestsTab';
 import {
   DEFAULT_GROUP_TAB,
   isGroupDetailTabId,
@@ -28,7 +29,7 @@ import {
   isInviteSent,
   markInviteSent,
 } from '../utils/groupSetupStorage';
-import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember, useLeaveGroup } from '../hooks/useGroups';
+import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember, useLeaveGroup, useGroupJoinRequests } from '../hooks/useGroups';
 import { groupService } from '@/services/groupService';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
@@ -112,6 +113,8 @@ export const GroupDetailPage = () => {
   const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
   const [inviteSent, setInviteSent] = useState(() => (groupId ? isInviteSent(groupId) : false));
   const isAdmin = group?.role === 'ADMIN';
+  const { data: joinRequests = [] } = useGroupJoinRequests(isAdmin ? groupId : undefined);
+  const pendingCount = joinRequests.length;
 
   const setupProgress = useGroupSetupProgress({
     memberCount: members.length,
@@ -267,8 +270,8 @@ export const GroupDetailPage = () => {
                   onChange={handleFileChange}
                 />
 
-                {/* Bottom-right controls */}
-                {previewUrl ? (
+                {/* Bottom-right controls — admin only */}
+                {isAdmin && (previewUrl ? (
                   <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex gap-2">
                     <button
                       onClick={cancelPreview}
@@ -318,7 +321,7 @@ export const GroupDetailPage = () => {
                       </>
                     )}
                   </div>
-                )}
+                ))}
               </div>
 
               {/* Cover photo error */}
@@ -362,12 +365,12 @@ export const GroupDetailPage = () => {
                   
                   {/* Buttons */}
                   <div className="flex items-center gap-2">
-                    {!group?.role ? (
+                    {!group?.role && (
                       <button
                         onClick={() => {
                           joinGroupMutation.mutate(groupId!, {
                             onSuccess: () => {
-                              toast.success('Đã tham gia nhóm thành công!');
+                              toast.success('Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ quản trị viên phê duyệt!');
                               queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
                             },
                             onError: (err: any) => {
@@ -380,7 +383,16 @@ export const GroupDetailPage = () => {
                       >
                         {joinGroupMutation.isPending ? 'Đang xử lý...' : 'Tham gia nhóm'}
                       </button>
-                    ) : (
+                    )}
+                    {group?.role === 'PENDING' && (
+                      <button
+                        disabled
+                        className="bg-gray-200 text-gray-500 px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-not-allowed"
+                      >
+                        Đang chờ duyệt...
+                      </button>
+                    )}
+                    {(group?.role === 'ADMIN' || group?.role === 'MEMBER') && (
                       <>
                         <button
                           onClick={() => setIsInviteModalOpen(true)}
@@ -407,6 +419,8 @@ export const GroupDetailPage = () => {
                   activeTab={activeTab}
                   onTabChange={setActiveTab}
                   memberCount={members.length}
+                  isAdmin={isAdmin}
+                  pendingCount={pendingCount}
                 />
               </div>
             </div>
@@ -464,19 +478,42 @@ export const GroupDetailPage = () => {
                  />
                )}
 
-               {activeTab === 'discussion' && groupId && (
-                 <GroupFeed
+               {activeTab === 'requests' && groupId && isAdmin && (
+                 <GroupRequestsTab
                    groupId={groupId}
-                   composerOpen={composerOpen}
-                   onComposerOpenChange={setComposerOpen}
-                   onPostsLoaded={setPostCount}
+                   onApproveSuccess={() => queryClient.invalidateQueries({ queryKey: ['groups', 'members', groupId] })}
                  />
+               )}
+
+               {activeTab === 'discussion' && groupId && (
+                 group?.privacy === 'private' && group.role !== 'ADMIN' && group.role !== 'MEMBER' ? (
+                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 flex flex-col items-center justify-center min-h-[350px] text-center">
+                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                       <Lock className="w-8 h-8 text-gray-400" />
+                     </div>
+                     <h3 className="text-lg font-bold text-gray-900 mb-2">Nhóm riêng tư</h3>
+                     <p className="text-gray-500 text-sm max-w-sm leading-relaxed">
+                       {group.role === 'PENDING'
+                         ? 'Yêu cầu tham gia của bạn đang chờ quản trị viên phê duyệt.'
+                         : 'Chỉ thành viên được phê duyệt mới xem được nội dung nhóm này.'}
+                     </p>
+                   </div>
+                 ) : (
+                   <GroupFeed
+                     groupId={groupId}
+                     isApprovedMember={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
+                     composerOpen={composerOpen}
+                     onComposerOpenChange={setComposerOpen}
+                     onPostsLoaded={setPostCount}
+                   />
+                 )
                )}
 
                {(activeTab === 'events' || activeTab === 'media' || activeTab === 'documents') && (
                  <GroupPlaceholderTab
                    tabId={activeTab}
                    isAdmin={isAdmin}
+                   isApprovedMember={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
                    onCreateEvent={() => toast.info('Tạo sự kiện — đang phát triển')}
                    onPostWithMedia={() => {
                      setActiveTab('discussion');

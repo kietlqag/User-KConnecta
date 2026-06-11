@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { MessageSquare, Users, Calendar, Images, FileText } from 'lucide-react';
+import { MessageSquare, Users, Calendar, Images, FileText, UserCheck } from 'lucide-react';
 
 export const GROUP_DETAIL_TABS = [
   {
@@ -14,6 +14,13 @@ export const GROUP_DETAIL_TABS = [
     label: 'Thành viên',
     shortLabel: 'Thành viên',
     icon: Users,
+    ready: true,
+  },
+  {
+    id: 'requests',
+    label: 'Yêu cầu tham gia',
+    shortLabel: 'Yêu cầu',
+    icon: UserCheck,
     ready: true,
   },
   {

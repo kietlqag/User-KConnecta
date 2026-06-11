@@ -18,6 +18,9 @@ import {
   Play,
   Plus,
   X,
+  Link2,
+  Flag,
+  Trash2,
 } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { storyService, type StoryResponse } from '@/services/storyService';
@@ -29,6 +32,7 @@ import logoV2 from '@/assets/LogoKConnecta_V2.png';
 interface StorySlide {
   id: string;
   imageUrl: string | null;
+  altText: string | null;
   backgroundColor: string | null;
   textContent: string | null;
   textColor: string | null;
@@ -69,6 +73,7 @@ function groupStoriesByUser(stories: StoryResponse[]): StoryAuthor[] {
     map.get(s.userId)!.slides.push({
       id: s.id,
       imageUrl: s.imageUrl,
+      altText: s.altText ?? null,
       backgroundColor: s.backgroundColor,
       textContent: s.textContent,
       textColor: s.textColor,
@@ -125,6 +130,9 @@ export function StoryViewerPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [floatingEmojis, setFloatingEmojis] = useState<Array<{ id: number; emoji: string; x: number }>>([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const { sendMessage } = useChatSocket(currentUser?.token ?? null, () => {});
   const emojiIdRef = useRef(0);
@@ -230,6 +238,19 @@ export function StoryViewerPage() {
       if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     };
   }, [currentAuthorIndex, currentSlideIndex, isPaused, goNextSlide, slide]);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current?.contains(e.target as Node)) return;
+      if (menuBtnRef.current?.contains(e.target as Node)) return;
+      setIsMenuOpen(false);
+      setIsPaused(false);
+    };
+    window.addEventListener('mousedown', handler);
+    return () => window.removeEventListener('mousedown', handler);
+  }, [isMenuOpen]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -385,7 +406,7 @@ export function StoryViewerPage() {
           {slide.imageUrl ? (
             <img
               src={slide.imageUrl}
-              alt="story"
+              alt={slide.altText ?? 'story'}
               className="relative z-10 h-full w-full rounded-2xl object-cover"
               draggable={false}
             />
@@ -461,9 +482,62 @@ export function StoryViewerPage() {
               >
                 {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
               </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition cursor-pointer">
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
+              <div className="relative">
+                <button
+                  ref={menuBtnRef}
+                  onClick={(e) => { e.stopPropagation(); setIsMenuOpen((o) => !o); setIsPaused(true); }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition cursor-pointer"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+                {isMenuOpen && (
+                  <div
+                    ref={menuRef}
+                    className="absolute right-0 top-10 z-50 w-52 overflow-hidden rounded-xl bg-white shadow-xl border border-gray-100 animate-in fade-in slide-in-from-top-1 duration-150"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}/stories/${author.userId}`;
+                        navigator.clipboard.writeText(url);
+                        setIsMenuOpen(false);
+                        setIsPaused(false);
+                      }}
+                      className="group flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition-all duration-150 group-hover:bg-gray-200 group-hover:scale-105">
+                        <Link2 className="h-4 w-4" />
+                      </span>
+                      <span className="transition-transform duration-150 group-hover:translate-x-0.5">Sao chép liên kết</span>
+                    </button>
+                    {!isOwnStory && (
+                      <button
+                        type="button"
+                        onClick={() => { setIsMenuOpen(false); setIsPaused(false); }}
+                        className="group flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-500 transition-all duration-150 group-hover:bg-red-100 group-hover:scale-105">
+                          <Flag className="h-4 w-4" />
+                        </span>
+                        <span className="transition-transform duration-150 group-hover:translate-x-0.5">Báo cáo tin</span>
+                      </button>
+                    )}
+                    {isOwnStory && (
+                      <button
+                        type="button"
+                        onClick={() => { setIsMenuOpen(false); navigate('/home'); }}
+                        className="group flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-500 transition-all duration-150 group-hover:bg-red-100 group-hover:scale-105">
+                          <Trash2 className="h-4 w-4" />
+                        </span>
+                        <span className="transition-transform duration-150 group-hover:translate-x-0.5">Xóa tin này</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

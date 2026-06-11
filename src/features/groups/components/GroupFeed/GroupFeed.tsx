@@ -9,6 +9,7 @@ import { mapApiPost, type FeedPost } from '@/utils/postUtils';
 
 interface GroupFeedProps {
   groupId: string;
+  isApprovedMember?: boolean;
   composerOpen?: boolean;
   onComposerOpenChange?: (open: boolean) => void;
   onPostsLoaded?: (count: number) => void;
@@ -16,6 +17,7 @@ interface GroupFeedProps {
 
 export function GroupFeed({
   groupId,
+  isApprovedMember = false,
   composerOpen,
   onComposerOpenChange,
   onPostsLoaded,
@@ -61,8 +63,8 @@ export function GroupFeed({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Create Post Card */}
-      <div id="group-composer" className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 scroll-mt-24">
+      {/* Create Post Card — only for approved members */}
+      {isApprovedMember && <div id="group-composer" className="bg-white rounded-lg shadow-sm p-4 border border-gray-200 scroll-mt-24">
         <div className="flex gap-2 items-center mb-3">
           <CurrentUserAvatar />
           <button
@@ -95,7 +97,7 @@ export function GroupFeed({
             Thăm dò ý kiến
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* Posts */}
       {isLoading && (

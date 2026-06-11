@@ -6,7 +6,7 @@ export interface Group {
   members: number;
   privacy: 'public' | 'private';
   lastActivity?: string;
-  role?: 'ADMIN' | 'MEMBER' | null;
+  role?: 'ADMIN' | 'MEMBER' | 'PENDING' | null;
 }
 
 export interface GroupMember {

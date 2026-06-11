@@ -1,5 +1,5 @@
 import React from 'react';
-import { Settings, Bookmark, Plus, Lock } from 'lucide-react';
+import { Bookmark, Plus, Lock } from 'lucide-react';
 import type { CollectionResponse } from '@/services/collectionService';
 
 interface SavedSidebarProps {
@@ -17,11 +17,8 @@ export const SavedSidebar = ({
 }: SavedSidebarProps) => {
   return (
     <aside className="w-[360px] h-[calc(100vh-56px)] bg-white border-r border-gray-200 flex flex-col fixed left-0 top-14 z-20">
-      <div className="p-4 flex items-center justify-between">
+      <div className="p-4">
         <h1 className="text-2xl font-bold text-gray-900">Đã lưu</h1>
-        <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <Settings className="w-5 h-5 text-gray-600" />
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2">

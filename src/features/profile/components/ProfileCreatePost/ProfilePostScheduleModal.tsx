@@ -10,8 +10,7 @@ function toDatetimeLocalValue(d: Date) {
 }
 
 export function defaultScheduledDatetimeLocal() {
-  const d = new Date(Date.now() + 60 * 60 * 1000);
-  return toDatetimeLocalValue(d);
+  return toDatetimeLocalValue(new Date());
 }
 
 interface ProfilePostScheduleModalProps {
@@ -120,7 +119,10 @@ export function ProfilePostScheduleModal({
 
             <button
               type="button"
-              onClick={() => setMode('scheduled')}
+              onClick={() => {
+                setMode('scheduled');
+                if (!scheduledAtLocal) setScheduledAtLocal(toDatetimeLocalValue(new Date()));
+              }}
               className={`flex w-full items-center gap-3 rounded-lg p-3 transition-colors ${
                 mode === 'scheduled' ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}

@@ -1,7 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
 import { authService } from '@/services/authService';
-import { RealtimeCallProvider } from '@/contexts/RealtimeCallContext';
 
 export function ProtectedRoute() {
   const location = useLocation();
@@ -20,11 +19,7 @@ export function ProtectedRoute() {
     return <Navigate to="/auth/login" replace />;
   }
 
-  return (
-    <RealtimeCallProvider>
-      <Outlet />
-    </RealtimeCallProvider>
-  );
+  return <Outlet />;
 }
 
 export function GuestRoute() {

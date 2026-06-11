@@ -4,22 +4,27 @@ interface GroupTabBarProps {
   activeTab: GroupDetailTabId;
   onTabChange: (tabId: GroupDetailTabId) => void;
   memberCount?: number;
+  pendingCount?: number;
+  isAdmin?: boolean;
 }
 
-export function GroupTabBar({ activeTab, onTabChange, memberCount }: GroupTabBarProps) {
+export function GroupTabBar({ activeTab, onTabChange, memberCount, pendingCount, isAdmin }: GroupTabBarProps) {
   return (
     <div
       role="tablist"
       aria-label="Mục nhóm"
       className="flex items-center gap-1 pt-1 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory -mx-1 px-1"
     >
-      {GROUP_DETAIL_TABS.map(tab => {
+      {GROUP_DETAIL_TABS.filter(tab => tab.id !== 'requests' || isAdmin).map(tab => {
         const isActive = activeTab === tab.id;
         const Icon = tab.icon;
-        const label =
-          tab.id === 'members' && memberCount != null
-            ? `${tab.label} · ${memberCount}`
-            : tab.label;
+        
+        let label = tab.label as string;
+        if (tab.id === 'members' && memberCount != null) {
+          label = `${tab.label} · ${memberCount}`;
+        } else if (tab.id === 'requests' && pendingCount != null && pendingCount > 0) {
+          label = `${tab.label} · ${pendingCount}`;
+        }
 
         return (
           <button

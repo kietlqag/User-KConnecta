@@ -34,8 +34,11 @@ export function GroupSearchPage() {
 
   const joinedIds = new Set([...joinedGroups, ...managedGroups].map(g => g.id));
   const [memberOverrides, setMemberOverrides] = useState<Map<string, boolean>>(new Map());
+  const [pendingOverrides, setPendingOverrides] = useState<Set<string>>(new Set());
 
   const handleJoinToggle = (groupId: string) => {
+    if (pendingOverrides.has(groupId)) return;
+
     const current =
       memberOverrides.get(groupId) ??
       groups.find(g => g.id === groupId)?.isMember ??
@@ -48,8 +51,8 @@ export function GroupSearchPage() {
 
     joinGroupMutation.mutate(groupId, {
       onSuccess: () => {
-        setMemberOverrides(prev => new Map(prev).set(groupId, true));
-        toast.success('Đã tham gia nhóm thành công!');
+        setPendingOverrides(prev => new Set(prev).add(groupId));
+        toast.success('Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ quản trị viên phê duyệt!');
       },
       onError: (err: unknown) => {
         const msg =
@@ -63,6 +66,7 @@ export function GroupSearchPage() {
   const resultCards: SearchResultGroup[] = groups.map(g => ({
     ...toSearchResultGroup(g),
     isMember: memberOverrides.get(g.id) ?? g.isMember ?? joinedIds.has(g.id),
+    isPending: pendingOverrides.has(g.id),
   }));
 
   return (

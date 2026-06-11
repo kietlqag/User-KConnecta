@@ -24,7 +24,7 @@ export function mapApiGroup(g: GroupApiResponse): Group {
     members: g.memberCount,
     privacy: g.privacy === 'PUBLIC' ? 'public' : 'private',
     lastActivity: formatLastActivity(g.updatedAt),
-    role: g.role,
+    role: g.status === 'PENDING' ? 'PENDING' : g.role,
   };
 }
 
@@ -86,9 +86,10 @@ export function useJoinGroup() {
 
   return useMutation({
     mutationFn: (groupId: string) => groupService.joinGroup(groupId, currentUser!.id),
-    onSuccess: () => {
+    onSuccess: (_, groupId) => {
       queryClient.invalidateQueries({ queryKey: ['groups', 'joined'] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'discover'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
     },
   });
 }
@@ -138,6 +139,43 @@ export function useLeaveGroup() {
       groupService.leaveGroup(groupId, currentUser!.id),
     onSuccess: (_, groupId) => {
       queryClient.invalidateQueries({ queryKey: ['groups', 'joined'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
+    },
+  });
+}
+
+export function useGroupJoinRequests(groupId: string | undefined) {
+  return useQuery({
+    queryKey: ['groups', 'requests', groupId],
+    queryFn: async () => {
+      const data = await groupService.getJoinRequests(groupId!);
+      return data;
+    },
+    enabled: !!groupId,
+    staleTime: 30_000,
+  });
+}
+
+export function useApproveJoinRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      groupService.approveJoinRequest(groupId, userId),
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', 'requests', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'members', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
+    },
+  });
+}
+
+export function useRejectJoinRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, userId }: { groupId: string; userId: string }) =>
+      groupService.rejectJoinRequest(groupId, userId),
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', 'requests', groupId] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
     },
   });

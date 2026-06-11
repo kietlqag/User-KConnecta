@@ -16,7 +16,7 @@ export const DiscoverGroupsPage = () => {
   const handleJoinGroup = (groupId: string) => {
     joinGroupMutation.mutate(groupId, {
       onSuccess: () => {
-        toast.success('Đã tham gia nhóm thành công!');
+        toast.success('Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ quản trị viên phê duyệt!');
       },
       onError: (error: any) => {
         toast.error(error?.response?.data?.message || 'Không thể tham gia nhóm. Vui lòng thử lại.');

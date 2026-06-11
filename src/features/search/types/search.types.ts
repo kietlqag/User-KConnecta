@@ -27,6 +27,7 @@ export interface SearchResultGroup {
   privacy: 'public' | 'private';
   memberCount: number;
   isMember: boolean;
+  isPending?: boolean;
 }
 
 export interface SearchResultPost {

@@ -119,6 +119,7 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
                 onAcceptFriendRequest={handleAcceptFriendRequest}
                 onRejectFriendRequest={handleRejectFriendRequest}
                 onRead={markAsRead}
+                onClose={onClose}
               />
             ))
           ) : (

@@ -10,3 +10,4 @@ export { GroupMembersTab } from './GroupMembersTab/GroupMembersTab';
 export { GroupPlaceholderTab } from './GroupPlaceholderTabs/GroupPlaceholderTabs';
 export { GroupTabEmptyState } from './GroupTabEmptyState/GroupTabEmptyState';
 export { GroupSearchDropdown } from './GroupSearchDropdown/GroupSearchDropdown';
+export { GroupRequestsTab } from './GroupRequestsTab/GroupRequestsTab';

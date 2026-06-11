@@ -62,12 +62,22 @@
       outDir: 'build',
     },
     server: {
-      port: 3000,
+      port: process.env.PORT ? Number(process.env.PORT) : 3000,
       open: '/',
       hmr: {
         host: 'localhost',
-        port: 3000,
         protocol: 'ws',
+      },
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8080',
+          changeOrigin: true,
+        },
+        '/ws': {
+          target: 'http://localhost:8080',
+          ws: true,
+          changeOrigin: true,
+        },
       },
     },
   });
