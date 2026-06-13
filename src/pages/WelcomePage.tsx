@@ -1,75 +1,94 @@
-﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
-import logoV1 from '@/assets/LogoKConnecta_V1.png';
+import { ArrowRight, Users, MessageCircle, Star } from 'lucide-react';
+import logoV2 from '@/assets/LogoKConnecta_V2.png';
+
+const gridBg = {
+  backgroundImage:
+    'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+  backgroundSize: '40px 40px',
+} as const;
 
 export function WelcomePage() {
-  const [isContentVisible, setIsContentVisible] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setIsContentVisible(true);
-    }, 1500);
-
-    return () => window.clearTimeout(timer);
-  }, []);
-
   return (
-    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <div className="absolute inset-0">
-        <div className="absolute top-20 left-10 h-72 w-72 animate-blob rounded-full bg-emerald-300 opacity-20 mix-blend-multiply blur-xl"></div>
-        <div className="animation-delay-2000 absolute top-40 right-10 h-72 w-72 animate-blob rounded-full bg-teal-300 opacity-20 mix-blend-multiply blur-xl"></div>
-        <div className="animation-delay-4000 absolute -bottom-8 left-1/2 h-72 w-72 animate-blob rounded-full bg-green-300 opacity-20 mix-blend-multiply blur-xl"></div>
-      </div>
+    <div className="flex min-h-[100dvh] flex-col lg:flex-row">
+      {/* Left panel — dark navy */}
+      <div
+        className="relative flex flex-1 flex-col justify-between overflow-hidden p-10 lg:p-14"
+        style={{ background: '#111126', ...gridBg }}
+      >
+        {/* Emerald radial glow */}
+        <div
+          className="pointer-events-none absolute -bottom-32 -left-32 h-96 w-96 rounded-full opacity-30"
+          style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
+        />
 
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <div className="group relative mb-6 inline-flex items-center justify-center animate-logo-intro">
-            <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 opacity-25 blur-3xl transition-opacity group-hover:opacity-40"></div>
-            <img
-              src={logoV1}
-              alt="KConnecta"
-              className="relative w-56 transform drop-shadow-2xl transition-transform group-hover:scale-105 sm:w-64 lg:w-72"
-            />
-          </div>
+        {/* Logo */}
+        <div className="relative z-10">
+          <img src={logoV2} alt="KConnecta" className="h-10 w-auto" />
+        </div>
 
-          <p
-            className={`mx-auto mb-8 max-w-2xl text-xl text-gray-600 transition-all duration-1000 ease-out sm:mb-12 sm:text-2xl ${
-              isContentVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-            }`}
+        {/* Heading + CTAs */}
+        <div className="relative z-10 max-w-md">
+          <span className="mb-4 inline-flex items-center rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-emerald-400">
+            Mạng xã hội mới
+          </span>
+          <h1
+            className="mb-4 text-4xl font-extrabold leading-tight text-white lg:text-5xl"
+            style={{ letterSpacing: '-0.03em' }}
           >
-            Mạng xã hội kết nối mọi người
-            <br />
-            <span className="text-lg text-gray-500">Chia sẻ khoảnh khắc, kết nối yêu thương</span>
+            Kết nối thật sự.{' '}
+            <span className="text-emerald-400">Chia sẻ thật lòng.</span>
+          </h1>
+          <p className="mb-8 text-base leading-relaxed text-white/60">
+            KConnecta là nơi bạn kết nối với những người quan trọng — không thuật toán, không rác, không phô trương.
           </p>
-
-          <div
-            className={`mx-auto flex max-w-md flex-col items-center justify-center gap-4 transition-all duration-1000 ease-out sm:flex-row ${
-              isContentVisible ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
-            }`}
-          >
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Link
               to="/auth/register"
-              className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 px-8 py-4 font-semibold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-95 sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(16,185,129,0.4)] transition-all hover:bg-emerald-400 hover:shadow-[0_6px_20px_rgba(16,185,129,0.5)] active:scale-95"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 opacity-0 transition-opacity group-hover:opacity-100"></div>
-              <span className="relative flex items-center justify-center gap-2">
-                Bắt đầu ngay
-                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </span>
+              Tạo tài khoản miễn phí
+              <ArrowRight className="h-4 w-4" />
             </Link>
-
             <Link
               to="/auth/login"
-              className="w-full rounded-2xl border-2 border-gray-200 bg-white px-8 py-4 font-semibold text-gray-700 transition-all duration-300 hover:scale-105 hover:border-emerald-300 hover:bg-gray-50 hover:shadow-lg active:scale-95 sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 px-6 py-3 text-sm font-semibold text-white/80 transition-all hover:border-white/40 hover:text-white active:scale-95"
             >
-              Đăng nhập
+              Đã có tài khoản? Đăng nhập
             </Link>
           </div>
         </div>
       </div>
 
+      {/* Right panel — light */}
+      <div className="flex w-full flex-col items-center justify-center gap-6 bg-[#f5f5fa] p-10 lg:w-[420px] lg:p-14">
+        <p className="text-center text-xs font-semibold uppercase tracking-widest text-[#6b6b8a]">
+          Tại sao chọn KConnecta?
+        </p>
+        <div className="flex w-full flex-col gap-4">
+          <div className="rounded-2xl border border-[#e4e4f0] bg-white p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)]">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+              <Users className="h-5 w-5 text-emerald-600" />
+            </div>
+            <p className="text-2xl font-bold text-[#111126]">10,000+</p>
+            <p className="text-sm text-[#6b6b8a]">Người dùng đang hoạt động</p>
+          </div>
+          <div className="rounded-2xl border border-[#e4e4f0] bg-white p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)]">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+              <MessageCircle className="h-5 w-5 text-emerald-600" />
+            </div>
+            <p className="text-2xl font-bold text-[#111126]">500+</p>
+            <p className="text-sm text-[#6b6b8a]">Nhóm cộng đồng</p>
+          </div>
+          <div className="rounded-2xl border border-[#e4e4f0] bg-white p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)]">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+              <Star className="h-5 w-5 text-emerald-600" />
+            </div>
+            <p className="text-2xl font-bold text-[#111126]">4.8 / 5</p>
+            <p className="text-sm text-[#6b6b8a]">Đánh giá từ người dùng</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
