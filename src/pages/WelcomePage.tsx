@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Users, MessageCircle, Star } from 'lucide-react';
+import { ArrowRight, Users, MessageCircle, Star, type LucideIcon } from 'lucide-react';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
 const gridBg = {
@@ -7,6 +7,12 @@ const gridBg = {
     'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
   backgroundSize: '40px 40px',
 } as const;
+
+const stats: { icon: LucideIcon; value: string; label: string }[] = [
+  { icon: Users,         value: '10,000+', label: 'Người dùng đang hoạt động' },
+  { icon: MessageCircle, value: '500+',    label: 'Nhóm cộng đồng' },
+  { icon: Star,          value: '4.8 / 5', label: 'Đánh giá từ người dùng' },
+];
 
 export function WelcomePage() {
   return (
@@ -18,6 +24,7 @@ export function WelcomePage() {
       >
         {/* Emerald radial glow */}
         <div
+          aria-hidden="true"
           className="pointer-events-none absolute -bottom-32 -left-32 h-96 w-96 rounded-full opacity-30"
           style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
         />
@@ -66,27 +73,15 @@ export function WelcomePage() {
           Tại sao chọn KConnecta?
         </p>
         <div className="flex w-full flex-col gap-4">
-          <div className="rounded-2xl border border-[#e4e4f0] bg-white p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)]">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-              <Users className="h-5 w-5 text-emerald-600" />
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-2xl border border-[#e4e4f0] bg-white p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)]">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+                <s.icon className="h-5 w-5 text-emerald-600" />
+              </div>
+              <p className="text-2xl font-bold text-[#111126]">{s.value}</p>
+              <p className="text-sm text-[#6b6b8a]">{s.label}</p>
             </div>
-            <p className="text-2xl font-bold text-[#111126]">10,000+</p>
-            <p className="text-sm text-[#6b6b8a]">Người dùng đang hoạt động</p>
-          </div>
-          <div className="rounded-2xl border border-[#e4e4f0] bg-white p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)]">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-              <MessageCircle className="h-5 w-5 text-emerald-600" />
-            </div>
-            <p className="text-2xl font-bold text-[#111126]">500+</p>
-            <p className="text-sm text-[#6b6b8a]">Nhóm cộng đồng</p>
-          </div>
-          <div className="rounded-2xl border border-[#e4e4f0] bg-white p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)]">
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-              <Star className="h-5 w-5 text-emerald-600" />
-            </div>
-            <p className="text-2xl font-bold text-[#111126]">4.8 / 5</p>
-            <p className="text-sm text-[#6b6b8a]">Đánh giá từ người dùng</p>
-          </div>
+          ))}
         </div>
       </div>
     </div>
