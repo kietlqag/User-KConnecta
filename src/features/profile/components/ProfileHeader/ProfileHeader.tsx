@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Camera, Plus, Edit,
-  X, Loader2, UserPlus, UserCheck, UserX, MessageCircle,
+  X, Loader2, UserPlus, UserCheck, UserX, MessageCircle, UserMinus,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -17,8 +17,6 @@ interface ProfileHeaderProps {
   fullName?: string;
   username?: string;
   friendsCount?: number;
-  location?: string;
-  school?: string;
   isOwnProfile?: boolean;
   /** Pass true while profile data is still fetching to show skeleton instead of defaults */
   loading?: boolean;
@@ -89,6 +87,21 @@ export function ProfileHeader({
       toast.success('Đã hủy lời mời kết bạn');
     } catch {
       toast.error('Không thể hủy lời mời kết bạn');
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
+
+  const handleAcceptFriendRequest = async () => {
+    if (!friendshipStatus?.friendshipId) return;
+    setFriendActionLoading(true);
+    try {
+      const res = await friendService.acceptFriendRequest(friendshipStatus.friendshipId);
+      onFriendshipStatusChange?.({ friendshipId: res.friendshipId, status: 'ACCEPTED', sentByMe: false });
+      window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
+      toast.success('Đã chấp nhận lời mời kết bạn');
+    } catch {
+      toast.error('Không thể chấp nhận lời mời kết bạn');
     } finally {
       setFriendActionLoading(false);
     }
@@ -314,7 +327,7 @@ export function ProfileHeader({
                 <>
                   <button
                     onClick={() => navigate('/stories/create')}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-[15px]"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-[15px]"
                   >
                     <Plus className="w-5 h-5" />
                     Thêm vào tin
@@ -347,11 +360,30 @@ export function ProfileHeader({
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
                       Đã gửi lời mời
                     </button>
+                  ) : friendshipStatus?.status === 'PENDING' && !friendshipStatus.sentByMe ? (
+                    <>
+                      <button
+                        onClick={handleAcceptFriendRequest}
+                        disabled={friendActionLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
+                      >
+                        {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                        Chấp nhận
+                      </button>
+                      <button
+                        onClick={handleCancelFriendRequest}
+                        disabled={friendActionLoading}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
+                      >
+                        {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserMinus className="w-4 h-4" />}
+                        Từ chối
+                      </button>
+                    </>
                   ) : (
                     <button
                       onClick={handleSendFriendRequest}
                       disabled={friendActionLoading}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium disabled:opacity-60"
+                      className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                       Thêm bạn bè
@@ -361,7 +393,7 @@ export function ProfileHeader({
                   {friendshipStatus?.status === 'ACCEPTED' ? (
                     <button
                       onClick={() => navigate(`/messages?with=${profileUserId}`)}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                      className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium"
                     >
                       <MessageCircle className="w-4 h-4" />
                       Nhắn tin
