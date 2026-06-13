@@ -138,7 +138,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
             onClick={() => setViewMode('list')}
             className={`flex items-center justify-center gap-2 px-4 py-3 font-medium transition-colors ${
               viewMode === 'list'
-                ? 'text-blue-600 dark:text-blue-400 border-b-4 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
+                ? 'text-primary dark:text-primary border-b-4 border-primary dark:border-primary bg-primary/5 dark:bg-primary/10'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
@@ -149,7 +149,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
             onClick={() => setViewMode('grid')}
             className={`flex items-center justify-center gap-2 px-4 py-3 font-medium transition-colors ${
               viewMode === 'grid'
-                ? 'text-blue-600 dark:text-blue-400 border-b-4 border-blue-600 dark:border-blue-400 bg-blue-50/50 dark:bg-blue-950/20'
+                ? 'text-primary dark:text-primary border-b-4 border-primary dark:border-primary bg-primary/5 dark:bg-primary/10'
                 : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
