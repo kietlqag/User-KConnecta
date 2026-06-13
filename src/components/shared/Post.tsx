@@ -501,7 +501,7 @@ export function Post({
               (originalPost.mediaList ?? []).some((m) => m.type === 'VIDEO');
             return (
               <div
-                className="mt-1 mb-2 rounded-xl border border-gray-200 bg-gray-50 overflow-hidden cursor-pointer hover:bg-gray-100 transition-colors"
+                className="mt-1 mb-2 rounded-xl border border-border bg-muted overflow-hidden cursor-pointer hover:bg-muted/80 transition-colors"
                 onClick={() => navigate(`/home?post=${originalPost.id}`)}
               >
                 <div className="p-3">
