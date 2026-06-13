@@ -68,18 +68,18 @@ export function WelcomePage() {
       </div>
 
       {/* Right panel — light */}
-      <div className="flex w-full flex-col items-center justify-center gap-6 bg-[#f5f5fa] p-10 lg:w-[420px] lg:p-14">
-        <p className="text-center text-xs font-semibold uppercase tracking-widest text-[#6b6b8a]">
+      <div className="flex w-full flex-col items-center justify-center gap-6 bg-background p-10 lg:w-[420px] lg:p-14">
+        <p className="text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Tại sao chọn KConnecta?
         </p>
         <div className="flex w-full flex-col gap-4">
           {stats.map((s) => (
-            <div key={s.label} className="rounded-2xl border border-[#e4e4f0] bg-white p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)]">
+            <div key={s.label} className="rounded-2xl border border-border bg-surface p-5 shadow-[0_1px_3px_rgba(17,17,38,0.06)] dark:shadow-none">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
                 <s.icon className="h-5 w-5 text-emerald-600" />
               </div>
-              <p className="text-2xl font-bold text-[#111126]">{s.value}</p>
-              <p className="text-sm text-[#6b6b8a]">{s.label}</p>
+              <p className="text-2xl font-bold text-foreground">{s.value}</p>
+              <p className="text-sm text-muted-foreground">{s.label}</p>
             </div>
           ))}
         </div>
