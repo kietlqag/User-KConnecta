@@ -102,7 +102,20 @@ export function RegisterPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden flex-col justify-between bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 p-12 text-white lg:flex">
+      <div
+        className="relative hidden flex-col justify-between p-12 text-white lg:flex"
+        style={{
+          background: '#111126',
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -bottom-32 -left-32 h-96 w-96 rounded-full opacity-25"
+          style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
+        />
         <div className="relative z-20">
           <div className="inline-flex items-center rounded-xl bg-white/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
             <img src={logoV1} alt="KConnecta Logo V1" className="h-9 w-auto" />
