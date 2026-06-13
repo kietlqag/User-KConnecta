@@ -87,6 +87,9 @@ export interface PostProps {
   isSaved?: boolean;
   currentUserReactionType?: ReactionType | null;
   reactionCounts?: PostReactionCountResponse[];
+  // Share-wrapper fields
+  sharedPost?: boolean;
+  originalPost?: PostProps;
   group?: Group;
   commentsData?: Comment[];
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
@@ -116,7 +119,11 @@ export function Post({
   privacy: initialPrivacy = 'PUBLIC',
   onDelete,
   onReactionChange,
+  sharedPost = false,
+  originalPost,
 }: PostProps) {
+  // For share wrappers, all API interactions target the original post
+  const targetPostId = sharedPost && originalPost ? originalPost.id : id;
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(initialIsLiked || !!currentUserReactionType);
   const [likeCount, setLikeCount] = useState(likes);
@@ -140,7 +147,8 @@ export function Post({
   useEffect(() => {
     setCurrentPrivacy(initialPrivacy);
   }, [initialPrivacy, id]);
-  const isOwner = !!currentUser && currentUser.id === author.id;
+  // Share wrappers don't support edit/delete via the post menu
+  const isOwner = !sharedPost && !!currentUser && currentUser.id === author.id;
   const [liveSessionStatus, setLiveSessionStatus] = useState<'LIVE' | 'ENDED' | 'CANCELED' | 'SCHEDULED' | null>(null);
   const isLiveEnded = liveSessionStatus === 'ENDED' || liveSessionStatus === 'CANCELED';
   const [reactionCounts, setReactionCounts] = useState<ReactionCountMap>(() =>
@@ -259,13 +267,13 @@ export function Post({
   const activeReactions = getActiveReactions(reactionCounts);
   const totalReactionCount = getTotalReactionCount(reactionCounts);
   const [liveTitle, liveDescription] = useMemo(() => {
-    const [title, ...rest] = content.split(/\n\s*\n/);
+    const [title, ...rest] = (content || '').split(/\n\s*\n/);
     return [title?.trim() || 'Video trực tiếp', rest.join('\n\n').trim()];
   }, [content]);
 
   const postData = useMemo(
     () => ({
-      id,
+      id: targetPostId,
       author: {
         name: author.name,
         avatar: author.avatar,
@@ -292,6 +300,7 @@ export function Post({
       currentUser?.id,
       galleryItems,
       id,
+      targetPostId,
       isOwner,
       likeCount,
       mediaUrl,
@@ -316,7 +325,7 @@ export function Post({
           return;
         }
 
-        await postService.removeReaction(id, currentUser.id);
+        await postService.removeReaction(targetPostId, currentUser.id);
         setReactionCounts((prev) => ({
           ...prev,
           [selectedReaction.type]: Math.max(0, prev[selectedReaction.type] - 1),
@@ -324,9 +333,9 @@ export function Post({
         setSelectedReaction(null);
         setIsLiked(false);
         setLikeCount((prev) => Math.max(0, prev - 1));
-        onReactionChange?.(id, null);
+        onReactionChange?.(targetPostId, null);
       } else {
-        await postService.addReaction(id, {
+        await postService.addReaction(targetPostId, {
           userId: currentUser.id,
           reactionType: reaction.type as ReactionType,
         });
@@ -339,7 +348,7 @@ export function Post({
           setIsLiked(true);
         }
         setLikeCount((prev) => (selectedReaction?.type ? prev : prev + 1));
-        onReactionChange?.(id, reaction.type as ReactionType);
+        onReactionChange?.(targetPostId, reaction.type as ReactionType);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể thả cảm xúc');
@@ -357,11 +366,11 @@ export function Post({
 
     try {
       if (isSaved) {
-        await postService.unsavePost(currentUser.id, id);
+        await postService.unsavePost(currentUser.id, targetPostId);
         setIsSaved(false);
         toast.success('Đã bỏ lưu bài viết.');
       } else {
-        await postService.savePost(currentUser.id, id);
+        await postService.savePost(currentUser.id, targetPostId);
         setIsSaved(true);
         toast.success('Đã lưu bài viết vào danh sách mục đã lưu.');
       }
@@ -403,7 +412,7 @@ export function Post({
 
   return (
     <>
-      <div id={`post-${id}`} className="bg-white rounded-lg shadow mb-4">
+      <div id={`post-${id}`} className="bg-surface rounded-2xl shadow-[0_1px_3px_rgba(17,17,38,0.06)] dark:shadow-none border border-border mb-4">
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">
@@ -424,16 +433,27 @@ export function Post({
                 )}
               </div>
               <div className="flex flex-col">
-                <h3 
+                <h3
                   className="font-bold text-[15px] text-gray-900 cursor-pointer hover:underline leading-tight"
                   onClick={() => group ? navigate(`/groups/${group.id}`) : navigate(`/profile/${author.id}`)}
                 >
                   {group?.name || author.name}
                 </h3>
-                <div className="flex items-center gap-1 text-[13px] text-gray-500 leading-tight">
-                  {group ? (
+                <div className="flex items-center gap-1 text-[13px] text-gray-500 leading-tight flex-wrap">
+                  {sharedPost && originalPost ? (
                     <>
-                      <span 
+                      <span>đã chia sẻ bài viết của</span>
+                      <span
+                        className="font-semibold text-gray-700 hover:underline cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/profile/${originalPost.author.id}`); }}
+                      >
+                        {originalPost.author.name}
+                      </span>
+                      <span>·</span>
+                    </>
+                  ) : group ? (
+                    <>
+                      <span
                         className="hover:underline cursor-pointer"
                         onClick={() => navigate(`/profile/${author.id}`)}
                       >
@@ -443,13 +463,17 @@ export function Post({
                     </>
                   ) : null}
                   <span>{timestamp}</span>
-                  <span>·</span>
-                  {currentPrivacy === 'PRIVATE' ? (
-                    <Lock className="w-3 h-3" />
-                  ) : currentPrivacy === 'PUBLIC' ? (
-                    <Globe className="w-3 h-3" />
-                  ) : (
-                    <Users className="w-3 h-3" />
+                  {!sharedPost && (
+                    <>
+                      <span>·</span>
+                      {currentPrivacy === 'PRIVATE' ? (
+                        <Lock className="w-3 h-3" />
+                      ) : currentPrivacy === 'PUBLIC' ? (
+                        <Globe className="w-3 h-3" />
+                      ) : (
+                        <Users className="w-3 h-3" />
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -466,10 +490,64 @@ export function Post({
             />
           </div>
 
-          {!isLivePost && <p className="text-gray-900 mb-3 whitespace-pre-wrap">{content}</p>}
+          {!isLivePost && content && (
+            <p className="text-gray-900 mb-3 whitespace-pre-wrap">{content}</p>
+          )}
+
+          {/* Embedded original post card for share wrappers */}
+          {sharedPost && originalPost && (() => {
+            const origMediaUrl = originalPost.media?.url || originalPost.image;
+            const origIsVideo = originalPost.media?.type === 'video' ||
+              (originalPost.mediaList ?? []).some((m) => m.type === 'VIDEO');
+            return (
+              <div
+                className="mt-1 mb-2 rounded-xl border border-gray-200 bg-gray-50 overflow-hidden cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => navigate(`/home?post=${originalPost.id}`)}
+              >
+                <div className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <img
+                      src={originalPost.author.avatar}
+                      alt={originalPost.author.name}
+                      className="w-8 h-8 rounded-full object-cover"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/profile/${originalPost.author.id}`); }}
+                    />
+                    <div className="flex flex-col">
+                      <span
+                        className="text-sm font-semibold text-gray-900 hover:underline cursor-pointer leading-tight"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/profile/${originalPost.author.id}`); }}
+                      >
+                        {originalPost.author.name}
+                      </span>
+                      <span className="text-xs text-gray-500 leading-tight">{originalPost.timestamp}</span>
+                    </div>
+                  </div>
+                  {originalPost.content && (
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap line-clamp-4">{originalPost.content}</p>
+                  )}
+                </div>
+                {origMediaUrl && (
+                  origIsVideo ? (
+                    <video
+                      src={origMediaUrl}
+                      controls
+                      className="w-full max-h-64 object-contain bg-black"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <img
+                      src={origMediaUrl}
+                      alt="Nội dung gốc"
+                      className="w-full max-h-64 object-cover"
+                    />
+                  )
+                )}
+              </div>
+            );
+          })()}
         </div>
 
-        {isLivePost ? (
+        {!sharedPost && isLivePost ? (
           <div className="px-4 pb-4">
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-zinc-950 shadow-sm">
               <button
@@ -496,7 +574,7 @@ export function Post({
                   {liveDescription && <p className="mt-1 line-clamp-2 text-sm text-white/75">{liveDescription}</p>}
                 </div>
               </button>
-              <div className="flex items-center justify-between gap-3 bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-3 bg-surface px-4 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-gray-900">{liveTitle}</p>
                   <p className="text-xs text-gray-500">Nhấn để xem phiên live và tham gia bình luận</p>
@@ -585,7 +663,7 @@ export function Post({
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-muted-foreground transition-colors hover:bg-muted"
           >
             <MessageCircle className="w-5 h-5" />
             <span className="font-medium">Bình luận</span>
@@ -594,7 +672,7 @@ export function Post({
           <button
             type="button"
             onClick={() => setIsShareModalOpen(true)}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-muted-foreground transition-colors hover:bg-muted"
           >
             <Share2 className="w-5 h-5" />
             <span className="font-medium">Chia sẻ</span>
@@ -618,7 +696,7 @@ export function Post({
       <ReactionSummaryDialog
         open={isReactionSummaryOpen}
         onOpenChange={setIsReactionSummaryOpen}
-        postId={id}
+        postId={targetPostId}
         reactionCounts={reactionCounts}
       />
 
@@ -767,9 +845,11 @@ export function Post({
       <PostShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        postId={id}
-        postContent={content}
-        postImage={image || (media?.type === 'image' ? media.url : undefined)}
+        postId={targetPostId}
+        postContent={sharedPost && originalPost ? originalPost.content : content}
+        postImage={sharedPost && originalPost
+          ? (originalPost.image || (originalPost.media?.type === 'image' ? originalPost.media.url : undefined))
+          : (image || (media?.type === 'image' ? media.url : undefined))}
         onShareComplete={(count) => setShareCount(count)}
       />
 
