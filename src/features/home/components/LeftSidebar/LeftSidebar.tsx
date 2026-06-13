@@ -118,7 +118,7 @@ export const LeftSidebar = () => {
 
       <aside
         className={cn(
-          'fixed left-0 top-14 w-72 h-[calc(100vh-56px)] bg-white border-r border-gray-200 overflow-y-auto z-30 sidebar-scrollbar transition-transform duration-300 ease-in-out lg:translate-x-0',
+          'fixed left-0 top-14 w-72 h-[calc(100vh-56px)] bg-surface border-r border-border overflow-y-auto z-30 sidebar-scrollbar transition-transform duration-300 ease-in-out lg:translate-x-0',
           isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         aria-hidden={!isLargeScreen && !isLeftSidebarOpen}
