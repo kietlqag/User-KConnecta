@@ -116,7 +116,7 @@ export function Header() {
               </button>
             )}
             <Link to="/home" className="flex items-center gap-2 hover:bg-muted rounded-full p-2 transition-colors">
-              <img src={logoV2} alt="KConnecta Logo V2" className="w-10 h-10 object-contain" />
+              <img src={logoV2} alt="KConnecta Logo V2" className="w-10 h-10 object-contain dark:drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]" />
             </Link>
             
             <div className="flex-1 relative">
