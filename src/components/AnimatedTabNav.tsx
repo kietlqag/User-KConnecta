@@ -77,7 +77,7 @@ export function AnimatedTabNav({ items }: AnimatedTabNavProps) {
     >
       {/* Animated indicator */}
       <div
-        className="absolute bottom-0 h-1 bg-emerald-600 rounded-t-lg transition-all duration-300 ease-in-out pointer-events-none"
+        className="absolute bottom-0 h-1 bg-primary rounded-t-lg transition-all duration-300 ease-in-out pointer-events-none"
         style={{
           left: `${indicatorStyle.left}px`,
           width: `${indicatorStyle.width}px`,
@@ -95,8 +95,8 @@ export function AnimatedTabNav({ items }: AnimatedTabNavProps) {
             to={item.href}
             className={`relative flex items-center justify-center px-10 py-2 rounded-lg transition-colors ${
               isActive
-                ? 'text-emerald-600'
-                : 'text-gray-500 hover:bg-gray-100'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:bg-muted'
             }`}
             aria-label={item.label}
           >
