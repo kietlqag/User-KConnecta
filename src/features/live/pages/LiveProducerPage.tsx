@@ -21,8 +21,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
-import { liveService, type LiveSessionStatsResponse, type LiveSessionToolStateResponse } from '@/services/liveService';
+import { liveService, type LiveSessionRealtimeEvent, type LiveSessionStatsResponse, type LiveSessionToolStateResponse } from '@/services/liveService';
 import { postService, type PostCommentResponse, type PostResponse } from '@/services/postService';
+import { useLiveSessionSocket } from '../hooks/useLiveSessionSocket';
 
 type MainSection = 'dashboard' | 'details' | 'settings';
 type SettingsSub = 'video';
@@ -52,6 +53,15 @@ const rankCamera = (device: MediaDeviceInfo) => {
   if (name.includes('droidcam') || name.includes('iriun') || name.includes('camo') || name.includes('obs')) return 1;
   if (name.includes('virtual')) return 2;
   return 3;
+};
+
+const getSupportedRecordingMimeType = () => {
+  if (typeof MediaRecorder === 'undefined') return '';
+  return [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm',
+  ].find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
 };
 
 function LiveTimer() {
@@ -106,6 +116,7 @@ export default function LiveProducerPage() {
   const [mediaError, setMediaError] = useState('');
   const [liveStatus, setLiveStatus] = useState(hostToken ? 'Đang kết nối LiveKit...' : 'Thiếu token LiveKit cho phiên live.');
   const [liveError, setLiveError] = useState('');
+  const [isEndingLive, setIsEndingLive] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [liveStats, setLiveStats] = useState<LiveSessionStatsResponse | null>(null);
   const [toolState, setToolState] = useState<LiveSessionToolStateResponse | null>(null);
@@ -133,6 +144,10 @@ export default function LiveProducerPage() {
   const roomRef = useRef<Room | null>(null);
   const publishedTracksRef = useRef<MediaStreamTrack[]>([]);
   const previousTrackStatsRef = useRef<PreviousTrackStats>({});
+  const recordingChunksRef = useRef<BlobPart[]>([]);
+  const liveRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingStartedAtRef = useRef<number | null>(null);
+  const recordingMimeTypeRef = useRef('');
   const commentCount = postMetrics?.commentCount ?? comments.length;
   const shareCount = postMetrics?.shareCount ?? 0;
   const reactionCount = liveStats?.totalReactionCount ?? 0;
@@ -142,6 +157,44 @@ export default function LiveProducerPage() {
     if (!sessionId) return '';
     return `${window.location.origin}/live/viewer?sessionId=${encodeURIComponent(sessionId)}`;
   }, [sessionId]);
+
+  const applyToolState = useCallback((data: LiveSessionToolStateResponse) => {
+    setToolState(data);
+    setPollEnabled(data.pollEnabled);
+    setPollQuestion(data.pollQuestion ?? '');
+    setPollOptions(data.pollOptions.length >= 2 ? data.pollOptions : ['', '']);
+    setFeaturedLinkTitle(data.featuredLinkTitle ?? '');
+    setFeaturedLinkUrl(data.featuredLinkUrl ?? '');
+    setHostNotice(data.hostNotice ?? '');
+  }, []);
+
+  const handleLiveEvent = useCallback((event: LiveSessionRealtimeEvent) => {
+    if (event.session) {
+      setViewerCount(event.session.viewerCount);
+      setLiveStats({
+        sessionId: event.session.id,
+        viewerCount: event.session.viewerCount,
+        peakViewerCount: event.session.peakViewerCount,
+        totalReactionCount: event.session.totalReactionCount,
+      });
+      if (event.type === 'LIVE_ENDED') {
+        setLiveStatus('Live da ket thuc.');
+      }
+    } else if (event.viewerCount != null || event.totalReactionCount != null) {
+      setViewerCount((prev) => event.viewerCount ?? prev);
+      setLiveStats((prev) => ({
+        sessionId,
+        viewerCount: event.viewerCount ?? prev?.viewerCount ?? 0,
+        peakViewerCount: event.peakViewerCount ?? prev?.peakViewerCount ?? 0,
+        totalReactionCount: event.totalReactionCount ?? prev?.totalReactionCount ?? 0,
+      }));
+    }
+    if (event.tools) {
+      applyToolState(event.tools);
+    }
+  }, [applyToolState, sessionId]);
+
+  useLiveSessionSocket(sessionId, currentUser?.token, handleLiveEvent);
 
   useEffect(() => {
     if (!routeState?.sessionId) return;
@@ -159,6 +212,51 @@ export default function LiveProducerPage() {
       }
     };
     await Promise.all([bind(mainVideoRef.current), bind(miniVideoRef.current)]);
+  }, []);
+
+  const startLiveRecording = useCallback((stream: MediaStream) => {
+    if (typeof MediaRecorder === 'undefined') return;
+    if (liveRecorderRef.current && liveRecorderRef.current.state !== 'inactive') return;
+
+    try {
+      const mimeType = getSupportedRecordingMimeType();
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      recordingChunksRef.current = [];
+      recordingStartedAtRef.current = Date.now();
+      recordingMimeTypeRef.current = recorder.mimeType || mimeType || 'video/webm';
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+      recorder.start(1000);
+      liveRecorderRef.current = recorder;
+    } catch {
+      liveRecorderRef.current = null;
+      recordingStartedAtRef.current = null;
+      recordingChunksRef.current = [];
+    }
+  }, []);
+
+  const stopLiveRecording = useCallback(async () => {
+    const recorder = liveRecorderRef.current;
+    if (!recorder) {
+      return null;
+    }
+
+    if (recorder.state !== 'inactive') {
+      await new Promise<void>((resolve) => {
+        recorder.addEventListener('stop', () => resolve(), { once: true });
+        recorder.stop();
+      });
+    }
+
+    liveRecorderRef.current = null;
+    if (recordingChunksRef.current.length === 0) {
+      return null;
+    }
+
+    return new Blob(recordingChunksRef.current, { type: recordingMimeTypeRef.current || 'video/webm' });
   }, []);
 
   useEffect(() => {
@@ -233,6 +331,12 @@ export default function LiveProducerPage() {
       cancelled = true;
     };
   }, [selectedCameraId, selectedMicId, bindStreamToPreview]);
+
+  useEffect(() => {
+    const stream = localStreamRef.current;
+    if (!sessionId || !isMediaReady || !stream) return;
+    startLiveRecording(stream);
+  }, [isMediaReady, localStreamVersion, sessionId, startLiveRecording]);
 
   useEffect(() => {
     if (!livekitUrl || !hostToken) return;
@@ -355,13 +459,7 @@ export default function LiveProducerPage() {
       try {
         const data = await liveService.getTools(sessionId);
         if (cancelled) return;
-        setToolState(data);
-        setPollEnabled(data.pollEnabled);
-        setPollQuestion(data.pollQuestion ?? '');
-        setPollOptions(data.pollOptions.length >= 2 ? data.pollOptions : ['', '']);
-        setFeaturedLinkTitle(data.featuredLinkTitle ?? '');
-        setFeaturedLinkUrl(data.featuredLinkUrl ?? '');
-        setHostNotice(data.hostNotice ?? '');
+        applyToolState(data);
       } catch {
         if (!cancelled) setToolError('Không thể tải công cụ live.');
       }
@@ -372,7 +470,7 @@ export default function LiveProducerPage() {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [sessionId]);
+  }, [applyToolState, sessionId]);
 
   useEffect(() => {
     if (!postId) return;
@@ -543,14 +641,40 @@ export default function LiveProducerPage() {
   };
 
   const handleEndLive = async () => {
+    if (isEndingLive) return;
+    setIsEndingLive(true);
+    setLiveError('');
+
     try {
       if (sessionId) {
-        await liveService.endSession(sessionId);
+        const recording = await stopLiveRecording();
+        roomRef.current?.disconnect();
+        localStreamRef.current?.getTracks().forEach((track) => track.stop());
+
+        if (currentUser?.id) {
+          await liveService.endSessionAsHost(sessionId, currentUser.id);
+        } else {
+          await liveService.endSession(sessionId);
+        }
+
+        if (recording && currentUser?.id) {
+          const startedAt = recordingStartedAtRef.current;
+          const durationSec = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : undefined;
+          try {
+            await liveService.uploadRecording(sessionId, recording, durationSec);
+          } catch (error) {
+            await liveService.markRecordingFailed(
+              sessionId,
+              error instanceof Error ? error.message : 'Cannot upload live recording',
+            ).catch(() => undefined);
+            // Ending the LiveKit session should not be blocked by a failed replay upload.
+          }
+        }
       }
-    } finally {
-      roomRef.current?.disconnect();
-      localStreamRef.current?.getTracks().forEach((track) => track.stop());
       navigate('/live');
+    } catch (error) {
+      setLiveError(error instanceof Error ? error.message : 'Không thể kết thúc phiên live.');
+      setIsEndingLive(false);
     }
   };
 
@@ -631,7 +755,13 @@ export default function LiveProducerPage() {
               <span className="h-2 w-2 rounded-full bg-red-500" />
               <LiveTimer />
             </div>
-            <button onClick={() => void handleEndLive()} className="w-full rounded-xl bg-red-600 text-white font-semibold py-2.5 hover:bg-red-700">Kết thúc video trực tiếp</button>
+            <button
+              onClick={() => void handleEndLive()}
+              disabled={isEndingLive}
+              className="w-full rounded-xl bg-red-600 text-white font-semibold py-2.5 hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+            >
+              {isEndingLive ? 'Đang kết thúc...' : 'Kết thúc video trực tiếp'}
+            </button>
           </div>
         </aside>
 

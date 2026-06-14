@@ -71,6 +71,7 @@ export interface StartLiveResponse {
 }
 
 export type LiveSessionStatus = 'DRAFT' | 'SCHEDULED' | 'LIVE' | 'ENDED' | 'CANCELED';
+export type LiveRecordingStatus = 'NONE' | 'RECORDING' | 'PROCESSING' | 'READY' | 'FAILED';
 
 export interface LiveSessionResponse {
   id: string;
@@ -87,6 +88,11 @@ export interface LiveSessionResponse {
   roomName: string;
   playbackUrl?: string | null;
   thumbnailUrl?: string | null;
+  recordingStatus?: LiveRecordingStatus | null;
+  recordingDurationSec?: number | null;
+  recordingMimeType?: string | null;
+  recordingFileSizeBytes?: number | null;
+  recordingError?: string | null;
   startedAt: string | null;
   endedAt: string | null;
   viewerCount: number;
@@ -128,6 +134,26 @@ export interface LiveSessionToolStateResponse {
   featuredLinkUrl: string | null;
   hostNotice: string | null;
   updatedAt: string | null;
+}
+
+export type LiveSessionRealtimeEventType =
+  | 'LIVE_STARTED'
+  | 'LIVE_ENDED'
+  | 'SESSION_UPDATED'
+  | 'VIEWER_COUNT_UPDATED'
+  | 'REACTION_UPDATED'
+  | 'TOOLS_UPDATED';
+
+export interface LiveSessionRealtimeEvent {
+  type: LiveSessionRealtimeEventType;
+  sessionId: string;
+  status?: LiveSessionStatus | null;
+  viewerCount?: number | null;
+  peakViewerCount?: number | null;
+  totalReactionCount?: number | null;
+  session?: LiveSessionResponse | null;
+  tools?: LiveSessionToolStateResponse | null;
+  emittedAt?: string | null;
 }
 
 export interface UpsertLivePollRequest {
@@ -187,6 +213,18 @@ export const liveService = {
     api.put<LiveSessionToolStateResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/tools/host-notice`, payload),
   endSession: (sessionId: string) =>
     api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/end`, {}),
+  endSessionAsHost: (sessionId: string, userId: string) =>
+    api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/end`, { userId }),
+  uploadRecording: (sessionId: string, file: Blob, durationSec?: number) => {
+    const formData = new FormData();
+    formData.append('file', file, `live-${sessionId}.webm`);
+    if (durationSec != null) {
+      formData.append('durationSec', String(durationSec));
+    }
+    return api.postMultipart<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/recording`, formData);
+  },
+  markRecordingFailed: (sessionId: string, error?: string) =>
+    api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/recording/failed`, { error }),
   joinSession: (sessionId: string, payload: LiveViewerRequest) =>
     api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/viewer/join`, payload),
   heartbeat: (sessionId: string, payload: LiveViewerRequest) =>

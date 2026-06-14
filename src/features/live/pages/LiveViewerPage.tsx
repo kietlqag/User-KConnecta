@@ -1,11 +1,12 @@
 import { MessageCircle, MoreHorizontal, Volume2, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Room, RoomEvent, Track, type RemoteTrack } from 'livekit-client';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
 import { liveService, type LiveSessionResponse, type LiveSessionToolStateResponse, type UpsertLiveReactionRequest } from '@/services/liveService';
 import { postService, type PostCommentResponse } from '@/services/postService';
+import { useLiveSessionSocket } from '../hooks/useLiveSessionSocket';
 
 const reactions: Array<{ label: string; value: NonNullable<UpsertLiveReactionRequest['reactionType']> }> = [
   { label: '👍', value: 'LIKE' },
@@ -15,6 +16,8 @@ const reactions: Array<{ label: string; value: NonNullable<UpsertLiveReactionReq
   { label: '😢', value: 'SAD' },
   { label: '😡', value: 'ANGRY' },
 ];
+
+const isPlayableUrl = (value?: string | null) => /^https?:\/\//i.test(value?.trim() ?? '');
 
 export default function LiveViewerPage() {
   const navigate = useNavigate();
@@ -42,6 +45,33 @@ export default function LiveViewerPage() {
   }, [session]);
 
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
+  const replayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() : '';
+
+  const handleLiveEvent = useCallback((event: import('@/services/liveService').LiveSessionRealtimeEvent) => {
+    if (event.session) {
+      setSession(event.session);
+    } else if (event.viewerCount != null || event.totalReactionCount != null) {
+      setSession((prev) => prev ? {
+        ...prev,
+        viewerCount: event.viewerCount ?? prev.viewerCount,
+        peakViewerCount: event.peakViewerCount ?? prev.peakViewerCount,
+        totalReactionCount: event.totalReactionCount ?? prev.totalReactionCount,
+      } : prev);
+    }
+    if (event.tools) {
+      setToolState(event.tools);
+    }
+    if (event.type === 'LIVE_ENDED') {
+      roomRef.current?.disconnect();
+      setStatus('Live da ket thuc.');
+      setError('');
+      if (currentUserId && sessionId) {
+        void liveService.leaveSession(sessionId, { userId: currentUserId }).catch(() => undefined);
+      }
+    }
+  }, [currentUserId, sessionId]);
+
+  useLiveSessionSocket(sessionId, currentUser?.token, handleLiveEvent);
 
   useEffect(() => {
     if (!sessionId || !currentUserId) {
@@ -73,16 +103,24 @@ export default function LiveViewerPage() {
         const liveSession = await liveService.getSession(sessionId);
         if (cancelled) return;
         setSession(liveSession);
-        if (liveSession.status === 'ENDED' || liveSession.status === 'CANCELED') {
-          setStatus('Live đã kết thúc.');
-          return;
-        }
         if (liveSession.postId) {
           const loadedComments = await postService.getComments(liveSession.postId, 0, 20, currentUserId);
           if (!cancelled) setComments(loadedComments.content);
         }
-
-        await liveService.joinSession(sessionId, { userId: currentUserId });
+        if (liveSession.status === 'ENDED' || liveSession.status === 'CANCELED') {
+          if (liveSession.recordingStatus === 'PROCESSING' && !isPlayableUrl(liveSession.playbackUrl)) {
+            setStatus('Ban ghi live dang duoc xu ly.');
+            return;
+          }
+          if (liveSession.recordingStatus === 'FAILED' && !isPlayableUrl(liveSession.playbackUrl)) {
+            setStatus('Khong the tao ban ghi phat lai cho phien live nay.');
+            return;
+          }
+          setStatus('Live đã kết thúc.');
+          return;
+        }
+        const joinedSession = await liveService.joinSession(sessionId, { userId: currentUserId });
+        if (!cancelled) setSession(joinedSession);
         const token = await liveService.getToken({ sessionId, userId: currentUserId, role: 'VIEWER' });
         await room.connect(token.livekitUrl, token.token);
         if (cancelled) return;
@@ -112,11 +150,25 @@ export default function LiveViewerPage() {
         const updated = await liveService.heartbeat(sessionId, { userId: currentUserId });
         setSession(updated);
       } catch {
-        // The main LiveKit connection handles visible errors.
+        try {
+          const updated = await liveService.getSession(sessionId);
+          setSession(updated);
+        } catch {
+          // The main LiveKit connection handles visible errors.
+        }
       }
     };
     const interval = window.setInterval(() => void sendHeartbeat(), 15000);
     return () => window.clearInterval(interval);
+  }, [currentUserId, isLiveEnded, sessionId]);
+
+  useEffect(() => {
+    if (!isLiveEnded) return;
+    roomRef.current?.disconnect();
+    if (currentUserId && sessionId) {
+      void liveService.leaveSession(sessionId, { userId: currentUserId }).catch(() => undefined);
+    }
+    setStatus('Live da ket thuc.');
   }, [currentUserId, isLiveEnded, sessionId]);
 
   useEffect(() => {
@@ -139,7 +191,7 @@ export default function LiveViewerPage() {
   }, [sessionId]);
 
   const handleReaction = async (reactionType: UpsertLiveReactionRequest['reactionType']) => {
-    if (!sessionId || !currentUserId) return;
+    if (!sessionId || !currentUserId || isLiveEnded) return;
     const nextReaction = activeReaction === reactionType ? null : reactionType;
     setActiveReaction(nextReaction);
     try {
@@ -152,7 +204,7 @@ export default function LiveViewerPage() {
 
   const handleSubmitComment = async () => {
     const content = commentText.trim();
-    if (!content || !currentUserId || !session?.postId || isSendingComment) return;
+    if (!content || !currentUserId || !session?.postId || isSendingComment || isLiveEnded) return;
     setIsSendingComment(true);
     try {
       const saved = await postService.addComment(session.postId, { userId: currentUserId, content });
@@ -212,13 +264,21 @@ export default function LiveViewerPage() {
             <X className="w-8 h-8" />
           </button>
 
-          <div className="absolute top-4 right-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</div>
+          {!isLiveEnded && (
+            <div className="absolute top-4 right-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</div>
+          )}
 
           <div className="h-[calc(100vh-160px)] flex items-center justify-center">
-            <video ref={videoRef} autoPlay playsInline className="h-full w-full object-contain" />
-            <audio ref={audioRef} autoPlay />
+            {replayUrl ? (
+              <video src={replayUrl} controls autoPlay playsInline className="h-full w-full object-contain" />
+            ) : (
+              <>
+                <video ref={videoRef} autoPlay playsInline className="h-full w-full object-contain" />
+                <audio ref={audioRef} autoPlay />
+              </>
+            )}
             {(error || status !== 'Đang xem trực tiếp.') && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 px-5 text-center text-white/80">
+              <div className={`${replayUrl ? 'hidden ' : ''}absolute inset-0 flex items-center justify-center bg-black/50 px-5 text-center text-white/80`}>
                 <div>
                   <p className="text-lg font-semibold">{error || status}</p>
                   {isLiveEnded && <p className="mt-2 text-sm text-white/70">Bạn có thể quay lại bài viết để xem tương tác của buổi live.</p>}
@@ -244,8 +304,9 @@ export default function LiveViewerPage() {
                 <button
                   key={reaction.value}
                   type="button"
+                  disabled={isLiveEnded}
                   onClick={() => void handleReaction(reaction.value)}
-                  className={`rounded-full px-1 transition-transform hover:scale-110 ${activeReaction === reaction.value ? 'bg-white/20' : ''}`}
+                  className={`rounded-full px-1 transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-40 ${activeReaction === reaction.value ? 'bg-white/20' : ''}`}
                   aria-label={`Bày tỏ cảm xúc ${reaction.value}`}
                 >
                   {reaction.label}
@@ -334,16 +395,17 @@ export default function LiveViewerPage() {
             <div className="h-10 w-10 rounded-full bg-gray-200" />
             <input
               value={commentText}
+              disabled={isLiveEnded}
               onChange={(event) => setCommentText(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') void handleSubmitComment();
               }}
-              className="flex-1 rounded-full bg-gray-100 px-4 py-2.5 outline-none"
+              className="flex-1 rounded-full bg-gray-100 px-4 py-2.5 outline-none disabled:cursor-not-allowed disabled:text-gray-400"
               placeholder="Viết bình luận..."
             />
             <button
               type="button"
-              disabled={!commentText.trim() || isSendingComment}
+              disabled={!commentText.trim() || isSendingComment || isLiveEnded}
               onClick={() => void handleSubmitComment()}
               className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-gray-300"
             >

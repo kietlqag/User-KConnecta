@@ -24,7 +24,7 @@ export default function LiveVideoPage() {
       setIsLoadingActive(true);
       try {
         const data = await liveService.listActiveSessions();
-        if (!cancelled) setActiveSessions(data);
+        if (!cancelled) setActiveSessions(data.filter((session) => session.status === 'LIVE'));
       } catch {
         if (!cancelled) setActiveSessions([]);
       } finally {
