@@ -28,11 +28,32 @@ services:
 
   livekit:
     image: livekit/livekit-server:latest
-    command: --dev --bind 0.0.0.0
+    command: --config /etc/livekit.yaml --bind 0.0.0.0
     ports:
       - "7880:7880"
       - "7881:7881"
       - "7882:7882/udp"
+    volumes:
+      - ./livekit.dev.yaml:/etc/livekit.yaml:ro
+
+  livekit-egress:
+    image: livekit/egress:latest
+    depends_on:
+      redis:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+    environment:
+      EGRESS_CONFIG_BODY: |
+        api_key: ${LIVEKIT_API_KEY:-devkey}
+        api_secret: ${LIVEKIT_API_SECRET:-secret}
+        ws_url: ws://livekit:7880
+        insecure: true
+        redis:
+          address: redis:6379
+        backup_storage: /out
+    volumes:
+      - livekit_egress_data:/out
 
   redis:
     image: redis:alpine
@@ -48,3 +69,4 @@ services:
 
 volumes:
   redis_data:
+  livekit_egress_data:

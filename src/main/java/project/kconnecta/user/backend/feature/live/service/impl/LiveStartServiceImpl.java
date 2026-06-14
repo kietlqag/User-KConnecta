@@ -9,6 +9,7 @@ import project.kconnecta.user.backend.feature.live.dto.request.StartLiveRequest;
 import project.kconnecta.user.backend.feature.live.dto.response.LiveKitTokenResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.StartLiveResponse;
 import project.kconnecta.user.backend.feature.live.entity.LiveSession;
+import project.kconnecta.user.backend.feature.live.entity.enums.LiveRecordingStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
@@ -74,7 +75,7 @@ public class LiveStartServiceImpl implements LiveStartService {
                 .status(status)
                 .streamKey(roomName)
                 .roomName(roomName)
-                .playbackUrl(roomName)
+                .recordingStatus(status == LiveSessionStatus.LIVE ? LiveRecordingStatus.RECORDING : LiveRecordingStatus.NONE)
                 .viewerCount(0)
                 .peakViewerCount(0)
                 .totalReactionCount(0)

@@ -13,6 +13,7 @@ import project.kconnecta.user.backend.feature.live.entity.LiveSession;
 import project.kconnecta.user.backend.feature.live.entity.LiveSessionToolState;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionToolStateRepository;
+import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionToolService;
 
 import java.util.Arrays;
@@ -26,6 +27,7 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
 
     private final LiveSessionRepository liveSessionRepository;
     private final LiveSessionToolStateRepository liveSessionToolStateRepository;
+    private final LiveSessionRealtimePublisher realtimePublisher;
 
     @Override
     @Transactional(readOnly = true)
@@ -45,7 +47,9 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
         state.setPollEnabled(request.isEnabled());
         state.setPollQuestion(question);
         state.setPollOptions(String.join("\n", options));
-        return toResponse(liveSessionToolStateRepository.save(state));
+        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state));
+        realtimePublisher.publishToolsUpdated(response);
+        return response;
     }
 
     @Override
@@ -61,14 +65,18 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
         }
         state.setFeaturedLinkTitle(title);
         state.setFeaturedLinkUrl(url);
-        return toResponse(liveSessionToolStateRepository.save(state));
+        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state));
+        realtimePublisher.publishToolsUpdated(response);
+        return response;
     }
 
     @Override
     public LiveSessionToolStateResponse upsertHostNotice(UUID sessionId, UpsertLiveHostNoticeRequest request) {
         LiveSessionToolState state = findOrNew(findSession(sessionId));
         state.setHostNotice(clean(request.getNotice()));
-        return toResponse(liveSessionToolStateRepository.save(state));
+        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state));
+        realtimePublisher.publishToolsUpdated(response);
+        return response;
     }
 
     private LiveSession findSession(UUID sessionId) {

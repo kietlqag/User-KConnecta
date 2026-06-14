@@ -2,15 +2,20 @@ package project.kconnecta.user.backend.feature.live.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.live.dto.request.session.CreateLiveSessionRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.LiveViewerRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveReactionRequest;
@@ -19,6 +24,7 @@ import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSess
 import project.kconnecta.user.backend.feature.live.service.LiveSessionService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -39,8 +45,40 @@ public class LiveSessionController {
     }
 
     @PostMapping("/{sessionId}/end")
-    public ResponseEntity<LiveSessionResponse> endLive(@PathVariable UUID sessionId) {
-        return ResponseEntity.ok(liveSessionService.endLive(sessionId));
+    public ResponseEntity<LiveSessionResponse> endLive(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.endLive(sessionId, principal.getUserId()));
+    }
+
+    @PostMapping(value = "/{sessionId}/recording", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<LiveSessionResponse> uploadRecording(
+            @PathVariable UUID sessionId,
+            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "durationSec", required = false) Integer durationSec,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.saveRecording(sessionId, principal.getUserId(), file, durationSec));
+    }
+
+    @PostMapping("/{sessionId}/recording/failed")
+    public ResponseEntity<LiveSessionResponse> markRecordingFailed(
+            @PathVariable UUID sessionId,
+            @RequestBody(required = false) Map<String, String> request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        String error = request == null ? null : request.get("error");
+        return ResponseEntity.ok(liveSessionService.markRecordingFailed(sessionId, principal.getUserId(), error));
     }
 
     @PutMapping("/{sessionId}/viewer/join")

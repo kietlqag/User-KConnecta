@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
+import project.kconnecta.user.backend.feature.live.entity.enums.LiveRecordingStatus;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
@@ -79,6 +80,22 @@ public class LiveSession {
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recording_status", nullable = false, length = 20)
+    private LiveRecordingStatus recordingStatus;
+
+    @Column(name = "recording_duration_sec")
+    private Integer recordingDurationSec;
+
+    @Column(name = "recording_mime_type", length = 120)
+    private String recordingMimeType;
+
+    @Column(name = "recording_file_size_bytes")
+    private Long recordingFileSizeBytes;
+
+    @Column(name = "recording_error", length = 500)
+    private String recordingError;
+
     @Column(name = "started_at")
     private LocalDateTime startedAt;
 
@@ -116,6 +133,9 @@ public class LiveSession {
         }
         if (totalReactionCount < 0) {
             totalReactionCount = 0;
+        }
+        if (recordingStatus == null) {
+            recordingStatus = LiveRecordingStatus.NONE;
         }
     }
 

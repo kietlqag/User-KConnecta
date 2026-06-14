@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
+import project.kconnecta.user.backend.feature.live.entity.enums.LiveRecordingStatus;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 
 import java.time.LocalDateTime;
@@ -26,6 +27,11 @@ public class LiveSessionResponse {
     private String roomName;
     private String playbackUrl;
     private String thumbnailUrl;
+    private LiveRecordingStatus recordingStatus;
+    private Integer recordingDurationSec;
+    private String recordingMimeType;
+    private Long recordingFileSizeBytes;
+    private String recordingError;
     private LocalDateTime startedAt;
     private LocalDateTime endedAt;
     private int viewerCount;

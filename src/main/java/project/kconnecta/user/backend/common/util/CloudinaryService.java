@@ -129,6 +129,22 @@ public class CloudinaryService {
         }
     }
 
+    public String uploadLiveRecording(MultipartFile file, String sessionId) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/live-recordings",
+                            "resource_type", "video",
+                            "public_id", "live-" + sessionId + "-" + System.currentTimeMillis()
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload live recording failed", e);
+        }
+    }
+
     public String uploadVoiceMessage(MultipartFile file) {
         try {
             Map<?, ?> result = cloudinary.uploader().upload(

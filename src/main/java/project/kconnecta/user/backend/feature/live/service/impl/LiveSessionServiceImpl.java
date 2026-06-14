@@ -3,6 +3,10 @@ package project.kconnecta.user.backend.feature.live.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.common.util.CloudinaryService;
+import project.kconnecta.user.backend.exception.BadRequestException;
+import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.live.dto.request.session.CreateLiveSessionRequest;
@@ -13,11 +17,13 @@ import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSess
 import project.kconnecta.user.backend.feature.live.entity.LiveSession;
 import project.kconnecta.user.backend.feature.live.entity.LiveSessionReaction;
 import project.kconnecta.user.backend.feature.live.entity.LiveSessionViewer;
+import project.kconnecta.user.backend.feature.live.entity.enums.LiveRecordingStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionReactionRepository;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionViewerRepository;
+import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
@@ -32,11 +38,14 @@ import java.util.UUID;
 public class LiveSessionServiceImpl implements LiveSessionService {
 
     private static final long VIEWER_HEARTBEAT_TIMEOUT_SECONDS = 45;
+    private static final long MAX_RECORDING_SIZE_BYTES = 100L * 1024L * 1024L;
 
     private final LiveSessionRepository liveSessionRepository;
     private final LiveSessionViewerRepository liveSessionViewerRepository;
     private final LiveSessionReactionRepository liveSessionReactionRepository;
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
+    private final LiveSessionRealtimePublisher realtimePublisher;
 
     @Override
     public LiveSessionResponse createSession(CreateLiveSessionRequest request) {
@@ -62,6 +71,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .roomName("live_" + UUID.randomUUID().toString().replace("-", ""))
                 .playbackUrl(request.getPlaybackUrl())
                 .thumbnailUrl(request.getThumbnailUrl())
+                .recordingStatus(LiveRecordingStatus.NONE)
                 .viewerCount(0)
                 .peakViewerCount(0)
                 .totalReactionCount(0)
@@ -79,26 +89,77 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }
 
         session.setStatus(LiveSessionStatus.LIVE);
+        session.setRecordingStatus(LiveRecordingStatus.RECORDING);
+        session.setRecordingError(null);
         if (session.getStartedAt() == null) {
             session.setStartedAt(LocalDateTime.now());
         }
 
-        return toResponse(liveSessionRepository.save(session));
+        LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
+        realtimePublisher.publishSessionEvent("LIVE_STARTED", response);
+        return response;
     }
 
     @Override
-    public LiveSessionResponse endLive(UUID sessionId) {
+    public LiveSessionResponse endLive(UUID sessionId, UUID requesterUserId) {
         LiveSession session = findSession(sessionId);
+        validateHost(session, requesterUserId);
 
         if (session.getStatus() == LiveSessionStatus.ENDED) {
-            return toResponse(session);
+            LiveSessionResponse response = toResponse(session);
+            realtimePublisher.publishSessionEvent("LIVE_ENDED", response);
+            return response;
         }
 
         session.setStatus(LiveSessionStatus.ENDED);
         session.setEndedAt(LocalDateTime.now());
         session.setViewerCount(0);
+        if (isBlank(session.getPlaybackUrl()) && session.getRecordingStatus() != LiveRecordingStatus.READY) {
+            session.setRecordingStatus(LiveRecordingStatus.PROCESSING);
+        }
 
-        return toResponse(liveSessionRepository.save(session));
+        LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
+        realtimePublisher.publishSessionEvent("LIVE_ENDED", response);
+        return response;
+    }
+
+    @Override
+    public LiveSessionResponse saveRecording(UUID sessionId, UUID hostUserId, MultipartFile file, Integer durationSec) {
+        LiveSession session = findSession(sessionId);
+        validateHost(session, hostUserId);
+        validateRecordingFile(file);
+
+        String playbackUrl = cloudinaryService.uploadLiveRecording(file, sessionId.toString());
+        session.setPlaybackUrl(playbackUrl);
+        session.setRecordingStatus(LiveRecordingStatus.READY);
+        session.setRecordingDurationSec(durationSec == null ? null : Math.max(0, durationSec));
+        session.setRecordingMimeType(file.getContentType());
+        session.setRecordingFileSizeBytes(file.getSize());
+        session.setRecordingError(null);
+        boolean endedByRecording = false;
+        if (session.getStatus() != LiveSessionStatus.ENDED && session.getStatus() != LiveSessionStatus.CANCELED) {
+            session.setStatus(LiveSessionStatus.ENDED);
+            session.setEndedAt(LocalDateTime.now());
+            session.setViewerCount(0);
+            endedByRecording = true;
+        }
+
+        LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
+        realtimePublisher.publishSessionEvent(endedByRecording ? "LIVE_ENDED" : "SESSION_UPDATED", response);
+        return response;
+    }
+
+    @Override
+    public LiveSessionResponse markRecordingFailed(UUID sessionId, UUID hostUserId, String error) {
+        LiveSession session = findSession(sessionId);
+        validateHost(session, hostUserId);
+        if (session.getRecordingStatus() != LiveRecordingStatus.READY) {
+            session.setRecordingStatus(LiveRecordingStatus.FAILED);
+            session.setRecordingError(trimToLength(error, 500));
+        }
+        LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
+        realtimePublisher.publishSessionEvent("SESSION_UPDATED", response);
+        return response;
     }
 
     @Override
@@ -113,7 +174,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         liveSessionViewerRepository.save(viewer);
         refreshViewerCount(session);
 
-        return toResponse(session);
+        LiveSessionResponse response = toResponse(session);
+        realtimePublisher.publishSessionEvent("VIEWER_COUNT_UPDATED", response);
+        return response;
     }
 
     @Override
@@ -128,7 +191,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         liveSessionViewerRepository.save(viewer);
         refreshViewerCount(session);
 
-        return toResponse(session);
+        LiveSessionResponse response = toResponse(session);
+        realtimePublisher.publishSessionEvent("VIEWER_COUNT_UPDATED", response);
+        return response;
     }
 
     @Override
@@ -141,7 +206,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 });
         refreshViewerCount(session);
 
-        return toResponse(session);
+        LiveSessionResponse response = toResponse(session);
+        realtimePublisher.publishSessionEvent("VIEWER_COUNT_UPDATED", response);
+        return response;
     }
 
     @Override
@@ -167,7 +234,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
 
         session.setTotalReactionCount(liveSessionReactionRepository.countBySessionId(sessionId));
         liveSessionRepository.save(session);
-        return toResponse(session);
+        LiveSessionResponse response = toResponse(session);
+        realtimePublisher.publishSessionEvent("REACTION_UPDATED", response);
+        return response;
     }
 
     @Override
@@ -208,6 +277,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         if (session.getStatus() == LiveSessionStatus.LIVE) {
             cleanupStaleViewers(session);
             refreshViewerCount(session);
+            realtimePublisher.publishSessionEvent("VIEWER_COUNT_UPDATED", toResponse(session));
         }
         return LiveSessionStatsResponse.builder()
                 .sessionId(session.getId())
@@ -246,6 +316,40 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
     }
 
+    private void validateHost(LiveSession session, UUID requesterUserId) {
+        if (requesterUserId == null) {
+            return;
+        }
+        if (!session.getHost().getId().equals(requesterUserId)) {
+            throw new ForbiddenException("Only the host can update this live session");
+        }
+    }
+
+    private void validateRecordingFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Recording file is required");
+        }
+        if (file.getSize() > MAX_RECORDING_SIZE_BYTES) {
+            throw new BadRequestException("Recording file is too large");
+        }
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.startsWith("video/")) {
+            throw new BadRequestException("Unsupported recording content type");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private String trimToLength(String value, int maxLength) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
+    }
+
     private void cleanupStaleViewers(LiveSession session) {
         liveSessionViewerRepository.deleteStaleBySessionId(
                 session.getId(),
@@ -280,6 +384,11 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .roomName(session.getRoomName())
                 .playbackUrl(session.getPlaybackUrl())
                 .thumbnailUrl(session.getThumbnailUrl())
+                .recordingStatus(session.getRecordingStatus())
+                .recordingDurationSec(session.getRecordingDurationSec())
+                .recordingMimeType(session.getRecordingMimeType())
+                .recordingFileSizeBytes(session.getRecordingFileSizeBytes())
+                .recordingError(session.getRecordingError())
                 .startedAt(session.getStartedAt())
                 .endedAt(session.getEndedAt())
                 .viewerCount(session.getViewerCount())
