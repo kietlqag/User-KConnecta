@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { NotificationItem } from '../NotificationItem';
 import { NotificationFilter } from '../../types/notifications.types';
 import { notificationService } from '../../../../services/notificationService';
@@ -14,48 +15,61 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>('all');
   const currentUser = authService.getCurrentUser();
 
-  const { notifications, isLoading, markAsRead, markAllAsRead, updateNotification } = useNotifications();
+  const { notifications, isLoading, markAsRead, markAllAsRead, updateNotification, updateNotificationsByRelatedId } = useNotifications();
 
   const handleAcceptInvite = async (notificationId: string, relatedId: string) => {
     try {
       await notificationService.acceptGroupInvite(relatedId, notificationId, currentUser?.id as string);
-      updateNotification(notificationId, { isActioned: true, isUnread: false });
+      updateNotificationsByRelatedId(relatedId, { isActioned: true, isUnread: false });
       window.dispatchEvent(new Event('notification:refresh'));
-    } catch (error) {
-      console.error('Failed to accept invite:', error);
+      toast.success('Đã tham gia nhóm');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể chấp nhận lời mời vào nhóm');
     }
   };
 
   const handleRejectInvite = async (notificationId: string, relatedId: string) => {
     try {
       await notificationService.rejectGroupInvite(relatedId, notificationId);
-      updateNotification(notificationId, { isActioned: true, isUnread: false });
+      updateNotificationsByRelatedId(relatedId, { isActioned: true, isUnread: false });
       window.dispatchEvent(new Event('notification:refresh'));
-    } catch (error) {
-      console.error('Failed to reject invite:', error);
+      toast.success('Đã từ chối lời mời vào nhóm');
+    } catch (error: any) {
+      toast.error(error?.message || 'Không thể từ chối lời mời vào nhóm');
     }
   };
 
   const handleAcceptFriendRequest = async (notificationId: string, friendshipId: string) => {
     try {
       await friendService.acceptFriendRequest(friendshipId);
-      updateNotification(notificationId, { isActioned: true, isUnread: false });
+      updateNotificationsByRelatedId(friendshipId, { isActioned: true, isUnread: false });
       window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
-    } catch (error) {
-      console.error('Failed to accept friend request:', error);
+      toast.success('Đã chấp nhận lời mời kết bạn');
+    } catch (error: any) {
+      if (error?.status === 404) {
+        updateNotificationsByRelatedId(friendshipId, { isActioned: true, isUnread: false });
+        return;
+      }
+      toast.error(error?.message || 'Không thể chấp nhận lời mời kết bạn');
     }
   };
 
   const handleRejectFriendRequest = async (notificationId: string, friendshipId: string) => {
     try {
       await friendService.deleteFriendship(friendshipId);
-      updateNotification(notificationId, { isActioned: true, isUnread: false });
-    } catch (error) {
-      console.error('Failed to reject friend request:', error);
+      updateNotificationsByRelatedId(friendshipId, { isActioned: true, isUnread: false });
+      toast.success('Đã từ chối lời mời kết bạn');
+    } catch (error: any) {
+      if (error?.status === 404) {
+        updateNotificationsByRelatedId(friendshipId, { isActioned: true, isUnread: false });
+        return;
+      }
+      toast.error(error?.message || 'Không thể từ chối lời mời kết bạn');
     }
   };
 
   const filteredNotifications = notifications.filter((n) => {
+    if (n.type === 'friend_removed') return false;
     if (activeFilter === 'unread') return n.isUnread;
     return true;
   });
@@ -64,11 +78,11 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
-      <div className="fixed top-14 right-4 w-[360px] bg-white rounded-lg shadow-2xl z-50 max-h-[calc(100vh-80px)] flex flex-col">
+      <div className="fixed top-14 right-4 w-[360px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl z-50 max-h-[calc(100vh-80px)] flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-bold">Thông báo</h2>
+            <h2 className="text-xl font-bold dark:text-white">Thông báo</h2>
             <div className="flex items-center gap-2">
               {notifications.some((n) => n.isUnread) && (
                 <button
@@ -130,9 +144,12 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-gray-200">
-          <button className="w-full text-center text-blue-600 hover:bg-gray-100 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer">
-            Xem tất cả thông báo
+        <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={onClose}
+            className="w-full text-center text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-700 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          >
+            Đóng
           </button>
         </div>
       </div>

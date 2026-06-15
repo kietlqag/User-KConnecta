@@ -48,7 +48,9 @@ axiosInstance.interceptors.response.use(
         (typeof data === 'object' && data !== null && 'message' in data ? (data as { message?: string }).message : null)
         || error.message
         || 'Có lỗi xảy ra';
-      return Promise.reject(new Error(message));
+      const err = new Error(message) as Error & { status?: number };
+      err.status = status;
+      return Promise.reject(err);
     }
     return Promise.reject(error);
   },

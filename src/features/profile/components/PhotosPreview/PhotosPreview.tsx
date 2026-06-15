@@ -29,9 +29,10 @@ export function PhotosPreview({ userId, photos }: PhotosPreviewProps) {
 
       <div className="grid grid-cols-3 gap-2">
         {displayPhotos.map((photo, index) => (
-          <div
+          <Link
             key={photo.id}
-            className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg"
+            to={`/profile/${userId}/photos`}
+            className="group relative aspect-square overflow-hidden rounded-lg"
           >
             <ImageWithFallback
               src={photo.url}
@@ -43,7 +44,7 @@ export function PhotosPreview({ userId, photos }: PhotosPreviewProps) {
                 <span className="text-2xl font-bold text-white">+{remainingCount}</span>
               </div>
             )}
-          </div>
+          </Link>
         ))}
       </div>
     </div>

@@ -8,6 +8,7 @@ import { FriendSuggestions } from '../FriendSuggestions';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { type PaginatedResponse, type PostResponse } from '@/services/postService';
 import { mapApiPost } from '@/utils/postUtils';
+import { getSeenPostIds, markPostsSeen } from '@/utils/seenPosts';
 import { POSTS_FEED_KEY, useHighlightedPost, usePostsFeed } from '../../hooks/usePosts';
 
 export function NewsFeed() {
@@ -18,6 +19,8 @@ export function NewsFeed() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const hasNextPageRef = useRef(false);
   const isFetchingNextPageRef = useRef(false);
+  // Snapshot of seen post IDs at mount — used to surface new posts above already-seen ones on refresh
+  const seenAtMount = useRef(getSeenPostIds());
   const fetchNextPageRef = useRef<() => void>(() => {});
 
   // Synchronize currentUser and invalidate feed on auth change
@@ -54,17 +57,35 @@ export function NewsFeed() {
     currentUser?.id
   );
 
-  // Flatten all pages and move/prepend the highlighted post to the top
+  // Flatten all pages: on the first page, surface unseen posts above seen ones so
+  // returning users see fresh content first. Subsequent pages append in score order.
   const posts = useMemo(() => {
-    const flat = data?.pages.flatMap((p) => p.content.filter((item) => item.status === 'PUBLISHED').map(mapApiPost)) ?? [];
-    if (!highlightedPostId) return flat;
+    if (!data) return [];
+    const allPosts = data.pages.flatMap((page, pageIndex) => {
+      const pagePosts = page.content.map(mapApiPost);
+      if (pageIndex === 0 && seenAtMount.current.size > 0) {
+        const unseen = pagePosts.filter((p) => !seenAtMount.current.has(p.id));
+        const seen = pagePosts.filter((p) => seenAtMount.current.has(p.id));
+        return [...unseen, ...seen];
+      }
+      return pagePosts;
+    });
 
-    const withoutHighlight = flat.filter((p) => p.id !== highlightedPostId);
+    if (!highlightedPostId) return allPosts;
+
+    const withoutHighlight = allPosts.filter((p) => p.id !== highlightedPostId);
     const highlight =
-      flat.find((p) => p.id === highlightedPostId) ??
+      allPosts.find((p) => p.id === highlightedPostId) ??
       (highlightedPostData ? mapApiPost(highlightedPostData) : null);
     return highlight ? [highlight, ...withoutHighlight] : withoutHighlight;
   }, [data, highlightedPostId, highlightedPostData]);
+
+  // Mark rendered posts as seen so next session surfaces newer content first
+  useEffect(() => {
+    if (posts.length > 0) {
+      markPostsSeen(posts.map((p) => p.id));
+    }
+  }, [posts]);
 
   // Re-attach observer when feed grows so we fetch the next page if sentinel is already visible
   useEffect(() => {

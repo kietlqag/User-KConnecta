@@ -41,7 +41,7 @@ export function NotFoundPage() {
               <Button
                 variant="default"
                 onClick={handleHomeClick}
-                className="my-5 bg-green-600 hover:bg-green-700 text-white px-8 h-11"
+                className="my-5 px-8 h-11"
               >
                 Về trang chủ
               </Button>

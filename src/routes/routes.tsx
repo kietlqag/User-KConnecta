@@ -34,6 +34,7 @@ import SearchResultsPage from '../features/search/pages/SearchResultsPage';
 import MessengerPage from '../features/messenger/pages/MessengerPage';
 import { SavedPage } from '../features/saved/pages/SavedPage';
 import SettingsPage from '../features/settings/pages/SettingsPage';
+import MyReportsPage from '../features/reports/pages/MyReportsPage';
 import CommunityPoliciesPage from '../features/policies/pages/CommunityPoliciesPage';
 import { GuestRoute, ProtectedRoute } from './RouteGuards';
 import { RealtimeCallProvider } from '../contexts/RealtimeCallContext';
@@ -149,6 +150,10 @@ export const router = createBrowserRouter([
           {
             path: '/settings',
             Component: SettingsPage,
+          },
+          {
+            path: '/my-reports',
+            Component: MyReportsPage,
           },
           {
             path: '/stories/create',

@@ -246,9 +246,9 @@ export function Post({
                   {activeReactions.slice(0, 3).map((reaction) => (
                     <span
                       key={reaction.type}
-                      className="flex h-4 w-4 items-center justify-center rounded-full border border-white bg-white text-sm leading-none"
+                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white leading-none"
                     >
-                      {reaction.emoji}
+                      <img src={reaction.emoji} alt={reaction.label} width={15} height={15} draggable={false} />
                     </span>
                   ))}
                 </div>

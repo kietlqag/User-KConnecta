@@ -78,6 +78,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const latestPresenceByUserRef = useRef<Record<string, IncomingPresenceStatus>>({});
   const callSignalHandlerRef = useRef<(signal: IncomingCallSignal) => void>(() => {});
   const callErrorHandlerRef = useRef<(error: IncomingCallError) => void>(() => {});
+  const connectCountRef = useRef(0);
   const desktopNotificationRef = useRef<Notification | null>(null);
   const notifiedCallIdRef = useRef<string | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -115,9 +116,11 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
 
   const handleIncomingNotificationEvent = useCallback((event: IncomingNotificationEvent) => {
     notificationEventListenersRef.current.forEach((listener) => listener(event));
-    if (event.notificationType === 'FRIEND_REQUEST') {
+    if (event.notificationType === 'FRIEND_REQUEST' || event.notificationType === 'FRIEND_ACCEPTED' || event.notificationType === 'FRIEND_REMOVED') {
       window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
     }
+    // Trigger notification list refresh immediately (panel if open + badge count)
+    window.dispatchEvent(new Event('notification:refresh'));
   }, []);
 
   const closeDesktopNotification = useCallback(() => {
@@ -258,6 +261,15 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     currentUserId: currentUser?.id,
     sendCallSignal,
   });
+
+  // Refresh notifications after reconnect to catch any missed while offline
+  useEffect(() => {
+    if (!connected) return;
+    connectCountRef.current += 1;
+    if (connectCountRef.current > 1) {
+      window.dispatchEvent(new Event('notification:refresh'));
+    }
+  }, [connected]);
 
   useEffect(() => {
     callSignalHandlerRef.current = (signal: IncomingCallSignal) => {

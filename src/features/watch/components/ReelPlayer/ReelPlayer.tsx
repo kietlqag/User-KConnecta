@@ -4,7 +4,7 @@ import { Reel, ReelComment } from '../../types/watch.types';
 import { ReelOverlay } from '../ReelOverlay';
 import { ReelInteractionPanel } from '../ReelInteractionPanel';
 import { CommentsPanel } from '../CommentsPanel';
-import { ShareModal } from '../ShareModal/ShareModal';
+import { PostShareModal } from '@/components/posts/PostShareModal';
 import { ReelNavigation } from '../ReelNavigation';
 import { authService } from '@/services/authService';
 import { postService, SAVED_POSTS_CHANGED_EVENT, type ReactionType } from '@/services/postService';
@@ -127,21 +127,6 @@ export const ReelPlayer = ({
     setIsShareModalOpen(true);
   };
 
-  const performShare = async () => {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
-      toast.error('Bạn cần đăng nhập để chia sẻ');
-      return;
-    }
-
-    try {
-      await postService.sharePost(reel.id, { userId: currentUser.id });
-      setShareCount(prev => prev + 1);
-      toast.success('Đã chia sẻ bài viết');
-    } catch (error) {
-      toast.error('Không thể chia sẻ bài viết');
-    }
-  };
 
   const toggleMute = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -217,7 +202,7 @@ export const ReelPlayer = ({
   };
 
   return (
-    <div className="flex items-center justify-center h-full px-8 relative">
+    <div className={`flex items-center justify-center h-full px-8 relative transition-[padding] duration-200 ${showComments ? 'pr-[424px]' : ''}`}>
       <div className="flex items-center gap-6">
         {/* Video Container */}
         <div className="relative w-full max-w-[500px] h-[calc(100vh-120px)] bg-black rounded-lg overflow-hidden group flex-shrink-0">
@@ -322,7 +307,7 @@ export const ReelPlayer = ({
           />
         </div>
 
-        {/* Navigation Buttons - Between interaction and comments when comments are open */}
+        {/* Navigation - inline when comments open to avoid overlapping interaction buttons */}
         {showComments && (
           <div className="flex-shrink-0 flex items-center">
             <ReelNavigation
@@ -333,22 +318,9 @@ export const ReelPlayer = ({
             />
           </div>
         )}
-
-        {/* Comments Panel - Far right when open */}
-        {showComments && (
-          <div className="flex-shrink-0 h-[calc(100vh-120px)]">
-            <CommentsPanel 
-              postId={reel.id} 
-              onClose={() => setShowComments(false)}
-              onCommentCountChange={(delta) => {
-                setCommentCount(prev => prev + delta);
-              }} 
-            />
-          </div>
-        )}
       </div>
 
-      {/* Navigation Buttons - Far right when comments are closed */}
+      {/* Navigation - far right when comments closed */}
       {!showComments && (
         <div className="fixed right-6 top-1/2 -translate-y-1/2 z-10">
           <ReelNavigation
@@ -360,11 +332,26 @@ export const ReelPlayer = ({
         </div>
       )}
 
-      <ShareModal
+      {/* Comments Panel - Fixed full-height right corner */}
+      {showComments && (
+        <div className="fixed right-0 top-14 h-[calc(100vh-56px)] z-20">
+          <CommentsPanel
+            postId={reel.id}
+            onClose={() => setShowComments(false)}
+            onCommentCountChange={(delta) => {
+              setCommentCount(prev => prev + delta);
+            }}
+          />
+        </div>
+      )}
+
+      <PostShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        onShare={performShare}
-        reel={reel}
+        postId={reel.id}
+        postContent={reel.caption}
+        postImage={reel.thumbnail}
+        onShareComplete={(newCount) => setShareCount(newCount)}
       />
     </div>
   );

@@ -238,7 +238,7 @@ export function ProfileHeader({
         </div>
 
         {/* ── Profile info row ── */}
-        <div className="px-4 pb-4 pt-1">
+        <div className="relative px-4 pb-4 pt-1">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-4 -mt-8 md:-mt-12 lg:-mt-16">
 
             {/* ── Avatar ── */}

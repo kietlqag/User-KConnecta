@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Notification } from '../../types/notifications.types';
 
 interface NotificationItemProps {
@@ -75,13 +76,16 @@ export const NotificationItem = ({
     } else if (notification.type === 'event' && notification.relatedId) {
       onClose?.();
       navigate(`/home?post=${notification.relatedId}`);
+    } else if (notification.type === 'friend_accepted' && notification.user.id) {
+      onClose?.();
+      navigate(`/profile/${notification.user.id}`);
     }
   };
   return (
-    <div 
+    <div
       onClick={handleClick}
-      className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-100 transition-colors cursor-pointer ${
-        notification.isUnread ? 'bg-blue-50' : ''
+      className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
+        notification.isUnread ? 'bg-blue-50 dark:bg-blue-900/20' : ''
       }`}
     >
       {/* Avatar */}
@@ -96,23 +100,25 @@ export const NotificationItem = ({
 
       {/* Content */}
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-sm text-gray-900 leading-snug mb-1">
+        <p className="text-sm text-gray-900 dark:text-gray-100 leading-snug mb-1">
           <span
             onClick={handleViewProfile}
             className={`font-semibold ${notification.user.id ? 'cursor-pointer hover:underline' : ''}`}
           >{notification.user.name}</span>{' '}
           {notification.text}
         </p>
-        <span className="text-xs text-blue-600 font-medium">{formatDate(notification.timestamp)}</span>
+        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">{formatDate(notification.timestamp)}</span>
 
         {/* Group Invite Actions */}
         {notification.type === 'group_invite' && !notification.isActioned && (
           <div className="flex items-center gap-2 mt-2">
             <button
+              type="button"
               disabled={inviteLoading !== null}
               onClick={async (e) => {
                 e.stopPropagation();
-                if (!notification.relatedId || !onAcceptInvite) return;
+                if (!notification.relatedId) { toast.error('Thông tin lời mời không hợp lệ'); return; }
+                if (!onAcceptInvite) return;
                 setInviteLoading('accept');
                 try {
                   await onAcceptInvite(notification.id, notification.relatedId);
@@ -126,10 +132,12 @@ export const NotificationItem = ({
               Chấp nhận
             </button>
             <button
+              type="button"
               disabled={inviteLoading !== null}
               onClick={async (e) => {
                 e.stopPropagation();
-                if (!notification.relatedId || !onRejectInvite) return;
+                if (!notification.relatedId) { toast.error('Thông tin lời mời không hợp lệ'); return; }
+                if (!onRejectInvite) return;
                 setInviteLoading('reject');
                 try {
                   await onRejectInvite(notification.id, notification.relatedId);
@@ -149,10 +157,12 @@ export const NotificationItem = ({
         {notification.type === 'friend_request' && !notification.isActioned && (
           <div className="flex items-center gap-2 mt-2">
             <button
+              type="button"
               disabled={friendLoading !== null}
               onClick={async (e) => {
                 e.stopPropagation();
-                if (!notification.relatedId || !onAcceptFriendRequest) return;
+                if (!notification.relatedId) { toast.error('Thông tin lời mời kết bạn không hợp lệ'); return; }
+                if (!onAcceptFriendRequest) return;
                 setFriendLoading('accept');
                 try {
                   await onAcceptFriendRequest(notification.id, notification.relatedId);
@@ -166,10 +176,12 @@ export const NotificationItem = ({
               Chấp nhận
             </button>
             <button
+              type="button"
               disabled={friendLoading !== null}
               onClick={async (e) => {
                 e.stopPropagation();
-                if (!notification.relatedId || !onRejectFriendRequest) return;
+                if (!notification.relatedId) { toast.error('Thông tin lời mời kết bạn không hợp lệ'); return; }
+                if (!onRejectFriendRequest) return;
                 setFriendLoading('reject');
                 try {
                   await onRejectFriendRequest(notification.id, notification.relatedId);

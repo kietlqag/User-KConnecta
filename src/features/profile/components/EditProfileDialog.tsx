@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
-import { User, MapPin, Heart, Loader2, Camera, Briefcase } from 'lucide-react';
+import { User, MapPin, Heart, Loader2, Camera, Briefcase, X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { authService } from '@/services/authService';
+import { authService, type AuthUser } from '@/services/authService';
 
 interface EditProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSaved?: (updatedUser: AuthUser) => void;
   initialData: {
     fullName: string;
     location?: string;
@@ -34,7 +35,7 @@ interface EditProfileDialogProps {
   };
 }
 
-export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfileDialogProps) {
+export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: EditProfileDialogProps) {
   const [isLoading, setIsLoading] = React.useState(false);
   const currentUser = authService.getCurrentUser();
   const [avatarPreview, setAvatarPreview] = React.useState(initialData.avatarUrl);
@@ -109,19 +110,26 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
   const onSubmit = async (formData: any) => {
     if (!currentUser) return;
 
+    // Validate birthday: must be fully filled or fully empty
+    const { day, month, year } = formData;
+    const filledCount = [day, month, year].filter(Boolean).length;
+    if (filledCount > 0 && filledCount < 3) {
+      toast.error('Vui lòng chọn đầy đủ ngày, tháng và năm sinh');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // Upload avatar if a new file was selected
       if (avatarFile) {
-        await authService.uploadAvatar(currentUser.id, avatarFile);
+        const res = await authService.uploadAvatar(currentUser.id, avatarFile);
+        authService.saveCurrentUser(res);
       }
 
-      // Upload cover photo if a new file was selected
       if (coverFile) {
-        await authService.uploadCoverPhoto(currentUser.id, coverFile);
+        const res = await authService.uploadCoverPhoto(currentUser.id, coverFile);
+        authService.saveCurrentUser(res);
       }
 
-      // Update other profile fields
       const updateData = {
         fullName: formData.fullName,
         bio: formData.bio,
@@ -131,18 +139,17 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
         workplace: formData.workplace,
         jobTitle: formData.jobTitle,
         relationshipStatus: formData.relationship,
-        dateOfBirth: formData.year && formData.month && formData.day
-          ? `${formData.year}-${formData.month.padStart(2, '0')}-${formData.day.padStart(2, '0')}`
+        dateOfBirth: day && month && year
+          ? `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
           : undefined,
       };
 
       const updatedUser = await authService.updateProfile(currentUser.id, updateData);
-
       authService.saveCurrentUser(updatedUser);
 
       toast.success('Cập nhật thông tin thành công');
       onOpenChange(false);
-      window.location.reload();
+      onSaved?.(authService.getCurrentUser()!);
     } catch (error: any) {
       toast.error(error.message || 'Có lỗi xảy ra khi cập nhật thông tin');
     } finally {
@@ -171,9 +178,8 @@ export function EditProfileDialog({ open, onOpenChange, initialData }: EditProfi
               onClick={() => onOpenChange(false)}
               className="rounded-full w-10 h-10 p-0"
             >
-              <Loader2 className="w-5 h-5 opacity-0" /> {/* Spacer */}
+              <X className="w-5 h-5" />
               <span className="sr-only">Đóng</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </Button>
           </div>
         </div>

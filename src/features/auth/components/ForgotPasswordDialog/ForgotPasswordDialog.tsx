@@ -132,7 +132,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
   const canSubmitReset = hasAllRequiredChecks && isResetConfirmMatched && !loading;
 
   const inputClass = 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm';
-  const btnClass = 'w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
+  const btnClass = 'w-full py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">

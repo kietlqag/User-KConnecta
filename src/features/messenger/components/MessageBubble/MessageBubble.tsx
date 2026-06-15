@@ -186,6 +186,16 @@ export const MessageBubble = ({
     return url.replace('/upload/', '/upload/fl_attachment/');
   };
 
+  // Only allow http/https URLs to prevent javascript:/data: XSS via window.open
+  const isSafeUrl = (url: string): boolean => {
+    try {
+      const { protocol } = new URL(url);
+      return protocol === 'http:' || protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
   const downloadFile = async (url: string, filename?: string) => {
     try {
       const response = await axios.get<Blob>(url, { responseType: 'blob' });
@@ -199,7 +209,7 @@ export const MessageBubble = ({
       link.remove();
       URL.revokeObjectURL(objectUrl);
     } catch {
-      window.open(getDownloadUrl(url), '_blank', 'noopener,noreferrer');
+      if (isSafeUrl(url)) window.open(getDownloadUrl(url), '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -555,7 +565,7 @@ export const MessageBubble = ({
               ) : message.fileUrl && !message.deleted ? (
               <button
                 type="button"
-                onClick={() => window.open(message.fileUrl, '_blank', 'noopener,noreferrer')} className="flex min-w-0 w-[min(280px,68vw)] max-w-full items-center gap-3"
+                onClick={() => message.fileUrl && isSafeUrl(message.fileUrl) && window.open(message.fileUrl, '_blank', 'noopener,noreferrer')} className="flex min-w-0 w-[min(280px,68vw)] max-w-full items-center gap-3"
                 title="Mở file"
               >
                 <span

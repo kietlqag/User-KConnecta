@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation, useParams, useOutletContext } from 'r
 import { Header } from '../../home/components/Header';
 import { EditProfileDialog, ProfileHeader, ProfileTabs } from '../components';
 import { authService, type AuthUser } from '@/services/authService';
-import { friendService, type FriendshipStatusResponse } from '@/services/friendService';
+import { friendService, FRIENDSHIP_CHANGED_EVENT, type FriendshipStatusResponse } from '@/services/friendService';
 import {
   buildEditProfileInitialData,
   buildProfileDisplay,
@@ -101,6 +101,25 @@ export function ProfileLayout() {
     return () => { cancelled = true; };
   }, [userId, currentUser?.id]);
 
+  // Re-fetch friendship status whenever any friend action fires (accept/reject/unfriend from anywhere)
+  React.useEffect(() => {
+    if (!currentUser?.id || !resolvedId || isOwnProfile) return;
+    const refetch = async () => {
+      try {
+        const [statusRes, friendsRes] = await Promise.all([
+          friendService.getStatus(currentUser.id, resolvedId),
+          friendService.getFriends(resolvedId),
+        ]);
+        setFriendshipStatus(statusRes);
+        setFriendsCount(friendsRes.length);
+      } catch {
+        // ignore — stale UI is better than crashing
+      }
+    };
+    window.addEventListener(FRIENDSHIP_CHANGED_EVENT, refetch);
+    return () => window.removeEventListener(FRIENDSHIP_CHANGED_EVENT, refetch);
+  }, [currentUser?.id, resolvedId, isOwnProfile]);
+
   const handleAvatarUpload = async (file: File) => {
     if (!currentUser) return;
     const updatedUser = await authService.uploadAvatar(currentUser.id, file);
@@ -145,8 +164,6 @@ export function ProfileLayout() {
           fullName={getProfileHeaderName(userProfile)}
           username={userProfile.username}
           friendsCount={friendsCount}
-          location={userProfile.location}
-          school={userProfile.school}
           isOwnProfile={isOwnProfile}
           loading={loading}
           profileUserId={userProfile.id}
@@ -164,6 +181,7 @@ export function ProfileLayout() {
           open={isEditOpen}
           onOpenChange={setIsEditOpen}
           initialData={buildEditProfileInitialData(profile)}
+          onSaved={(updatedUser) => setProfile(updatedUser)}
         />
       )}
     </div>

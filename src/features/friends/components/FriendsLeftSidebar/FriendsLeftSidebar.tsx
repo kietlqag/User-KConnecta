@@ -1,6 +1,6 @@
 import { Users, UserPlus, Sparkles, Cake, List, Settings } from 'lucide-react';
 
-export type FriendsTab = 'home' | 'requests' | 'suggestions' | 'all-friends';
+export type FriendsTab = 'home' | 'requests' | 'suggestions' | 'all-friends' | 'birthdays';
 
 interface SidebarItem {
   id: FriendsTab;

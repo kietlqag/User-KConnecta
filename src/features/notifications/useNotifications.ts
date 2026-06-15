@@ -111,5 +111,9 @@ export function useNotifications() {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, ...patch } : n)));
   }, []);
 
-  return { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, updateNotification };
+  const updateNotificationsByRelatedId = useCallback((relatedId: string, patch: Partial<Notification>) => {
+    setNotifications((prev) => prev.map((n) => (n.relatedId === relatedId ? { ...n, ...patch } : n)));
+  }, []);
+
+  return { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, updateNotification, updateNotificationsByRelatedId };
 }

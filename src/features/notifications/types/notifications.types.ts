@@ -3,6 +3,8 @@ export type NotificationType =
   | 'comment'
   | 'share'
   | 'friend_request'
+  | 'friend_accepted'
+  | 'friend_removed'
   | 'group_activity'
   | 'group_invite'
   | 'group_join_request'

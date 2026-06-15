@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FriendsLeftSidebar, FriendCard, FriendRequestCard } from '../components';
+import { SuggestionsSidebar } from '../components/SuggestionsSidebar';
+import { ProfilePreviewPanel } from '../components/ProfilePreviewPanel';
+import { BirthdayTab } from '../components/BirthdayTab';
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
 import { MainLayout } from '../../../layouts';
 import { friendService, FRIENDSHIP_CHANGED_EVENT } from '../../../services/friendService';
@@ -16,6 +19,7 @@ export const FriendsPage = () => {
   const [searchParams] = useSearchParams();
   const initialTab = (searchParams.get('tab') as FriendsTab) || 'home';
   const [activeTab, setActiveTab] = useState<FriendsTab>(initialTab);
+  const [selectedSuggestionUserId, setSelectedSuggestionUserId] = useState<string | null>(null);
   const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
   const [hiddenSuggestionIds, setHiddenSuggestionIds] = useState<Set<string>>(() => new Set());
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -53,6 +57,7 @@ export const FriendsPage = () => {
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
+    setSelectedSuggestionUserId(null);
   }, [activeTab]);
 
   const handleAcceptRequest = async (id: string) => {
@@ -161,6 +166,10 @@ export const FriendsPage = () => {
       );
     }
 
+    if (activeTab === 'birthdays') {
+      return <BirthdayTab />;
+    }
+
     if (activeTab === 'all-friends') {
       const visible = friends.slice(0, visibleCount);
       const hasMore = visibleCount < friends.length;
@@ -261,6 +270,43 @@ export const FriendsPage = () => {
       </>
     );
   };
+
+  // Suggestions tab uses a dedicated 2-panel layout
+  if (activeTab === 'suggestions') {
+    const selectedSuggestion = visibleSuggestions.find(
+      (s) => s.userId === selectedSuggestionUserId,
+    );
+    return (
+      <MainLayout>
+        <div className="mx-auto h-[calc(100vh-3.5rem)] max-w-[1920px] overflow-hidden">
+          <div className="flex h-full min-w-0">
+            <SuggestionsSidebar
+              suggestions={visibleSuggestions}
+              loading={loading}
+              selectedUserId={selectedSuggestionUserId}
+              pendingRequests={pendingRequests}
+              hiddenIds={hiddenSuggestionIds}
+              onSelect={setSelectedSuggestionUserId}
+              onAddFriend={handleAddFriend}
+              onCancelFriendRequest={handleCancelFriendRequest}
+              onRemove={handleRemoveSuggestion}
+              onBack={() => setActiveTab('home')}
+            />
+            <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-gray-100">
+              <ProfilePreviewPanel
+                userId={selectedSuggestionUserId}
+                isPending={selectedSuggestionUserId ? !!pendingRequests[selectedSuggestionUserId] : false}
+                isFriend={false}
+                mutualFriends={selectedSuggestion?.mutualFriends ?? 0}
+                onAddFriend={handleAddFriend}
+                onCancelFriendRequest={handleCancelFriendRequest}
+              />
+            </main>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

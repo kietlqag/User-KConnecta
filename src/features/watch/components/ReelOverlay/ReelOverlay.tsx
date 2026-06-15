@@ -1,4 +1,5 @@
 import { Music, CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ReelOverlayProps {
   creator: {
@@ -15,6 +16,11 @@ interface ReelOverlayProps {
 }
 
 export const ReelOverlay = ({ creator, caption, music }: ReelOverlayProps) => {
+  const navigate = useNavigate();
+  const goToProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/profile/${creator.id}`);
+  };
   return (
     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-6 pt-24">
       {/* Creator Info */}
@@ -22,17 +28,21 @@ export const ReelOverlay = ({ creator, caption, music }: ReelOverlayProps) => {
         <img
           src={creator.avatar}
           alt={creator.name}
-          className="w-12 h-12 rounded-full object-cover border-2 border-white"
+          onClick={goToProfile}
+          className="w-12 h-12 rounded-full object-cover border-2 border-white cursor-pointer hover:opacity-90 transition-opacity"
         />
         <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-white text-lg">
+          <h3
+            onClick={goToProfile}
+            className="font-semibold text-white text-lg cursor-pointer hover:underline"
+          >
             {creator.name}
           </h3>
           {creator.verified && (
             <CheckCircle className="w-5 h-5 text-blue-500 fill-blue-500" />
           )}
         </div>
-        <button className="ml-2 px-6 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-full transition-colors cursor-pointer">
+        <button className="ml-2 px-6 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full transition-colors cursor-pointer">
           Theo dõi
         </button>
       </div>

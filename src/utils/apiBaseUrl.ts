@@ -15,10 +15,11 @@ export function getApiBaseUrl() {
   return `${normalizeOrigin(import.meta.env.VITE_API_URL)}/api`;
 }
 
-/** ws://localhost:8080 hoặc wss://... tuỳ môi trường */
+/** ws:// pointing to the same host as the page when no VITE_API_URL (goes through Vite proxy /ws) */
 export function getWsBaseUrl() {
   if (!import.meta.env.VITE_API_URL) {
-    return `ws://localhost:8080`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}`;
   }
   return normalizeOrigin(import.meta.env.VITE_API_URL).replace(/^http/, 'ws');
 }

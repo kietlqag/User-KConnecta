@@ -151,7 +151,7 @@ export function ProfileIntro({
             </div>
             <div className="flex-1">
               <p className="font-semibold text-gray-900 dark:text-white">{school}</p>
-              <button className="text-sm text-gray-600 dark:text-gray-400 hover:underline mt-1">
+              <button onClick={onEditClick} className="text-sm text-gray-600 dark:text-gray-400 hover:underline mt-1">
                 Xem thêm học vấn
               </button>
             </div>
@@ -192,7 +192,7 @@ export function ProfileIntro({
           </div>
 
           {isOwnProfile && (
-            <button className="w-full mt-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-white font-medium transition-colors">
+            <button onClick={onEditClick} className="w-full mt-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-white font-medium transition-colors">
               Chỉnh sửa tin nổi bật
             </button>
           )}

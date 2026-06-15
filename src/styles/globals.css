@@ -1,9 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
-
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-sans: 'Geist', system-ui, sans-serif;
+  --font-sans: 'Geist Variable', 'Geist', system-ui, sans-serif;
   --font-size: 16px;
   --background: #f5f5fa;
   --foreground: oklch(0.145 0 0);
@@ -157,6 +155,36 @@
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* Reaction animations */
+@keyframes reaction-entrance {
+  0%   { transform: scale(0.1) translateY(14px); opacity: 0; }
+  65%  { transform: scale(1.2) translateY(-5px);  opacity: 1; }
+  100% { transform: scale(1) translateY(0);        opacity: 1; }
+}
+
+@keyframes reaction-pop {
+  0%   { transform: scale(1); }
+  22%  { transform: scale(1.65) rotate(-8deg); }
+  50%  { transform: scale(0.82) rotate(4deg); }
+  78%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+@keyframes like-thump {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.3); }
+  62%  { transform: scale(0.88); }
+  100% { transform: scale(1); }
+}
+
+@keyframes reaction-picker-out {
+  to { opacity: 0; transform: translateY(6px) scale(0.93); }
+}
+
+@keyframes reaction-label-in {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.85); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
 
 @layer utilities {
   .animate-logo-intro {
@@ -165,11 +193,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-logo-intro {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
+  .animate-logo-intro { animation: none; opacity: 1; transform: none; }
+  @keyframes reaction-entrance { 0%, 100% { opacity: 1; transform: none; } }
+  @keyframes reaction-pop      { 0%, 100% { transform: scale(1); } }
+  @keyframes like-thump        { 0%, 100% { transform: scale(1); } }
 }
 
 /**

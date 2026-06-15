@@ -65,7 +65,7 @@ export function ProfileScheduledPage() {
         <div className="flex items-center gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
           <Calendar className="w-5 h-5 text-blue-600" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Bài viết đã lên lịch</h2>
-          <span className="ml-auto text-sm text-gray-500 dark:text-gray-400 font-medium">{posts.length} bài</span>
+          {!loading && <span className="ml-auto text-sm text-gray-500 dark:text-gray-400 font-medium">{posts.length} bài</span>}
         </div>
 
         {loading ? (

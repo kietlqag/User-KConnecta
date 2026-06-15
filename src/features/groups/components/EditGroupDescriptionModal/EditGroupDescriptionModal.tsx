@@ -80,7 +80,7 @@ export function EditGroupDescriptionModal({
             type="button"
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
-            className="flex-1 py-2.5 rounded-lg bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
             {mutation.isPending ? 'Đang lưu...' : 'Lưu'}

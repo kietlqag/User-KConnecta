@@ -22,19 +22,26 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
-import { postService } from '@/services/postService';
+import { postService, type ReportCategory } from '@/services/postService';
+
+const REPORT_CATEGORIES: { value: ReportCategory; label: string }[] = [
+  { value: 'SPAM',           label: 'Spam / Quảng cáo' },
+  { value: 'VIOLENCE',       label: 'Bạo lực' },
+  { value: 'HATE_SPEECH',    label: 'Ngôn ngữ thù địch' },
+  { value: 'NUDITY',         label: 'Nội dung khiêu dâm' },
+  { value: 'MISINFORMATION', label: 'Thông tin sai lệch' },
+  { value: 'OTHER',          label: 'Lý do khác' },
+];
 
 export type Privacy = 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
 
@@ -70,6 +77,8 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   const [updating, setUpdating] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<ReportCategory | null>(null);
+  const [reportReason, setReportReason] = useState('');
   const queryClient = useQueryClient();
 
   const handleAction = (action: string) => {
@@ -106,15 +115,17 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
       toast.error('Vui lòng đăng nhập để báo cáo bài viết.');
       return;
     }
+    setSelectedCategory(null);
+    setReportReason('');
     setReportDialogOpen(true);
   };
 
   const handleReportPost = async () => {
-    if (reporting || !currentUserId) return;
+    if (reporting || !currentUserId || !selectedCategory) return;
 
     setReporting(true);
     try {
-      await postService.reportPost(postId, currentUserId, 'reported-from-post-menu');
+      await postService.reportPost(postId, currentUserId, selectedCategory, reportReason);
       setReportDialogOpen(false);
       toast.success('Đã gửi báo cáo bài viết tới quản trị viên.');
     } catch (error) {
@@ -261,31 +272,73 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
       </DropdownMenuContent>
     </DropdownMenu>
 
-    <AlertDialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
-      <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Báo cáo bài viết</AlertDialogTitle>
-          <AlertDialogDescription>
-            Bạn có chắc muốn báo cáo bài viết?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="cursor-pointer" disabled={reporting}>
-            Không
-          </AlertDialogCancel>
-          <AlertDialogAction
-            className="cursor-pointer bg-red-600 text-white hover:bg-red-700"
+    <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="w-5 h-5" />
+            Báo cáo bài viết
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <p className="text-sm text-gray-600">Chọn lý do báo cáo bài viết này:</p>
+          <div className="space-y-2">
+            {REPORT_CATEGORIES.map((cat) => (
+              <label
+                key={cat.value}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selectedCategory === cat.value
+                    ? 'border-red-400 bg-red-50'
+                    : 'border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="reportCategory"
+                  value={cat.value}
+                  checked={selectedCategory === cat.value}
+                  onChange={() => setSelectedCategory(cat.value)}
+                  className="accent-red-600"
+                />
+                <span className="text-sm font-medium">{cat.label}</span>
+              </label>
+            ))}
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-600 mb-1 block">
+              Mô tả thêm <span className="text-gray-400">(tuỳ chọn)</span>
+            </label>
+            <textarea
+              className="w-full rounded-md border border-gray-200 p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+              rows={3}
+              placeholder="Mô tả chi tiết vi phạm..."
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              maxLength={500}
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
             disabled={reporting}
-            onClick={(event) => {
-              event.preventDefault();
-              void handleReportPost();
-            }}
+            onClick={() => setReportDialogOpen(false)}
           >
-            {reporting ? 'Đang gửi...' : 'Có'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            Hủy
+          </Button>
+          <Button
+            className="bg-red-600 hover:bg-red-700 text-white"
+            disabled={reporting || !selectedCategory}
+            onClick={() => void handleReportPost()}
+          >
+            {reporting ? 'Đang gửi...' : 'Gửi báo cáo'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 };

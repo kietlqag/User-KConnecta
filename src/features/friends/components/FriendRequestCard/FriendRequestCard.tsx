@@ -71,7 +71,7 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
           <button
             onClick={handleAccept}
             disabled={loading !== null}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-emerald-500 px-4 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading === 'accept' && <Loader2 className="h-4 w-4 animate-spin" />}
             Xác nhận

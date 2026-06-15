@@ -34,9 +34,26 @@ export interface CreateCommentPayload {
 export interface SharePostPayload {
   userId: string;
   sharedContent?: string;
+  privacy?: 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
 }
 
 export type ReactionType = 'LIKE' | 'LOVE' | 'HAHA' | 'WOW' | 'SAD' | 'ANGRY';
+
+export type ReportCategory = 'SPAM' | 'VIOLENCE' | 'HATE_SPEECH' | 'NUDITY' | 'MISINFORMATION' | 'OTHER';
+export type ReportStatus = 'PENDING' | 'REVIEWED' | 'RESOLVED';
+
+export interface PostReportResponse {
+  id: string;
+  postId: string;
+  reporterId: string;
+  reporterUsername: string;
+  category?: ReportCategory | null;
+  reason?: string | null;
+  status: ReportStatus;
+  aiAnalysis?: string | null;
+  aiSeverity?: string | null;
+  createdAt: string;
+}
 
 export interface PostReactionCountResponse {
   reactionType: ReactionType;
@@ -77,7 +94,7 @@ export interface PostResponse {
   authorUsername: string;
   authorFullName: string;
   authorAvatarUrl?: string | null;
-  content: string;
+  content?: string | null;
   imageUrl?: string | null;
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT' | 'HIDDEN' | 'DELETED';
@@ -97,6 +114,10 @@ export interface PostResponse {
   taggedUserIds: string[];
   createdAt: string;
   updatedAt: string;
+  // Set to true when this is a share-wrapper entry (post-in-post)
+  sharedPost?: boolean;
+  // The embedded original post (only present when sharedPost is true)
+  originalPost?: PostResponse;
 }
 
 export interface PaginatedResponse<T> {
@@ -287,9 +308,12 @@ export const postService = {
     const params = new URLSearchParams({ userId, privacy });
     return api.patch<PostResponse>(`/posts/${postId}/privacy?${params.toString()}`);
   },
-  reportPost: (postId: string, reporterId: string, reason?: string) =>
+  reportPost: (postId: string, reporterId: string, category?: ReportCategory, reason?: string) =>
     api.post<void>(`/posts/${postId}/reports`, {
       reporterId,
+      category: category ?? null,
       reason: reason?.trim() || null,
     }),
+  getMyReports: () =>
+    api.get<PostReportResponse[]>('/posts/reports/my'),
 };

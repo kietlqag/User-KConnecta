@@ -127,7 +127,7 @@ export function ReactionSummaryDialog({
                     : 'border-transparent text-gray-500 hover:text-gray-800',
                 )}
               >
-                <span className="text-[20px] leading-none">{reaction.emoji}</span>
+                <img src={reaction.emoji} alt={reaction.label} width={20} height={20} draggable={false} />
                 <span>{resolvedCounts[reaction.type]}</span>
               </button>
             ))}
@@ -173,8 +173,8 @@ export function ReactionSummaryDialog({
                             {user.fullName.slice(0, 1).toUpperCase()}
                           </div>
                         )}
-                        <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white text-sm leading-none">
-                          {reaction?.emoji}
+                        <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white leading-none">
+                          {reaction?.emoji && <img src={reaction.emoji} alt={reaction.label} width={14} height={14} draggable={false} />}
                         </span>
                       </div>
 

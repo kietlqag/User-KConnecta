@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Link2, MessageCircle, Users, Share2, Newspaper, Facebook, Twitter, ArrowLeft, Search } from 'lucide-react';
+import { Send, Link2, MessageCircle, Users, Newspaper, ArrowLeft, Search, Globe, Lock, Smile, ChevronDown } from 'lucide-react';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +16,14 @@ import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
 
 const POST_SHARE_PREFIX = '__POST_SHARE__:';
+
+type Privacy = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
+
+const PRIVACY_OPTIONS: { value: Privacy; label: string; icon: React.ReactNode }[] = [
+  { value: 'PUBLIC', label: 'Công khai', icon: <Globe className="w-4 h-4" /> },
+  { value: 'FRIENDS', label: 'Bạn bè', icon: <Users className="w-4 h-4" /> },
+  { value: 'PRIVATE', label: 'Chỉ mình tôi', icon: <Lock className="w-4 h-4" /> },
+];
 
 interface PostShareModalProps {
   isOpen: boolean;
@@ -33,11 +43,22 @@ export function PostShareModal({
   onShareComplete,
 }: PostShareModalProps) {
   const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
   const [isSharingNow, setIsSharingNow] = useState(false);
   const [showFriendPicker, setShowFriendPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [caption, setCaption] = useState('');
+  const [privacy, setPrivacy] = useState<Privacy>('PUBLIC');
+  const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const privacyRef = useRef<HTMLDivElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
+
   const { conversations, loading: loadingFriends } = useFriendConversations();
-  const token = authService.getCurrentUser()?.token;
+  const token = currentUser?.token;
+
+  const selectedPrivacy = PRIVACY_OPTIONS.find((o) => o.value === privacy)!;
 
   const filteredConversations = useMemo(
     () =>
@@ -49,39 +70,88 @@ export function PostShareModal({
     [conversations, searchQuery],
   );
 
-  const { sendMessage } = useChatSocket(
-    token,
-    () => {},
-    () => {},
-    () => {},
-    () => {},
-  );
+  const { sendMessage } = useChatSocket(token, () => {}, () => {}, () => {}, () => {});
 
-  const handleSendToFriend = (userId: string, userName: string) => {
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (privacyRef.current && !privacyRef.current.contains(e.target as Node)) {
+        setShowPrivacyMenu(false);
+      }
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleClose = () => {
+    setShowFriendPicker(false);
+    setSearchQuery('');
+    setCaption('');
+    setPrivacy('PUBLIC');
+    setShowPrivacyMenu(false);
+    setShowEmojiPicker(false);
+    onClose();
+  };
+
+  const handleEmojiSelect = (emoji: { native: string }) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setCaption((prev) => prev + emoji.native);
+      return;
+    }
+    const start = ta.selectionStart ?? caption.length;
+    const end = ta.selectionEnd ?? caption.length;
+    const next = caption.slice(0, start) + emoji.native + caption.slice(end);
+    setCaption(next);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + emoji.native.length, start + emoji.native.length);
+    }, 0);
+  };
+
+  const handleSendToFriend = async (userId: string, userName: string) => {
     const shareContent = `${POST_SHARE_PREFIX}${JSON.stringify({
       id: postId,
       content: postContent,
       image: postImage,
     })}`;
     sendMessage(userId, shareContent);
+
+    if (currentUser) {
+      try {
+        const response = await postService.sharePost(postId, {
+          userId: currentUser.id,
+          sharedContent: caption.trim() || undefined,
+          privacy,
+        });
+        onShareComplete?.(response.shareCount);
+      } catch {
+        // Non-fatal: messenger message already sent
+      }
+    }
+
     toast.success(`Đã gửi cho ${userName}`);
-    setShowFriendPicker(false);
-    setSearchQuery('');
-    onClose();
+    handleClose();
   };
 
   const handleShareNow = async () => {
-    const currentUser = authService.getCurrentUser();
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để chia sẻ');
       return;
     }
     try {
       setIsSharingNow(true);
-      const response = await postService.sharePost(postId, { userId: currentUser.id });
+      const response = await postService.sharePost(postId, {
+        userId: currentUser.id,
+        sharedContent: caption.trim() || undefined,
+        privacy,
+      });
       onShareComplete?.(response.shareCount);
       toast.success('Đã chia sẻ bài viết');
-      onClose();
+      handleClose();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể chia sẻ bài viết');
     } finally {
@@ -92,70 +162,12 @@ export function PostShareModal({
   const handleCopyLink = () => {
     navigator.clipboard.writeText(`${window.location.origin}/posts/${postId}`);
     toast.success('Đã sao chép liên kết vào bộ nhớ tạm');
-    onClose();
+    handleClose();
   };
 
-  const shareOptions = [
-    {
-      icon: <Send className="w-5 h-5" />,
-      label: isSharingNow ? 'Đang chia sẻ...' : 'Chia sẻ ngay (Công khai)',
-      onClick: handleShareNow,
-      color: 'bg-emerald-100 text-emerald-600',
-      disabled: isSharingNow,
-    },
-    {
-      icon: <Newspaper className="w-5 h-5" />,
-      label: 'Chia sẻ lên tin',
-      onClick: () => {
-        onClose();
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-          postService.sharePost(postId, { userId: currentUser.id }).then((res) => {
-            onShareComplete?.(res.shareCount);
-          }).catch(() => {});
-        }
-        navigate('/stories/create', {
-          state: {
-            sharedImageUrl: postImage || null,
-            sharedText: postImage ? null : (postContent || null),
-          },
-        });
-      },
-      color: 'bg-blue-100 text-blue-600',
-      disabled: false,
-    },
-    {
-      icon: <MessageCircle className="w-5 h-5" />,
-      label: 'Gửi qua Messenger',
-      onClick: () => setShowFriendPicker(true),
-      color: 'bg-indigo-100 text-indigo-600',
-      disabled: false,
-    },
-    {
-      icon: <Users className="w-5 h-5" />,
-      label: 'Chia sẻ vào Nhóm',
-      onClick: () => { toast.info('Tính năng đang được phát triển'); onClose(); },
-      color: 'bg-orange-100 text-orange-600',
-      disabled: false,
-    },
-    {
-      icon: <Link2 className="w-5 h-5" />,
-      label: 'Sao chép liên kết',
-      onClick: handleCopyLink,
-      color: 'bg-gray-100 text-gray-600',
-      disabled: false,
-    },
-  ];
-
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) {
-        setShowFriendPicker(false);
-        setSearchQuery('');
-        onClose();
-      }
-    }}>
-      <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden bg-white rounded-2xl border-none shadow-2xl">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent className="sm:max-w-[500px] p-0 overflow-visible bg-white rounded-2xl border-none shadow-2xl">
         {showFriendPicker ? (
           <>
             <DialogHeader className="p-4 border-b">
@@ -182,7 +194,6 @@ export function PostShareModal({
                   className="w-full rounded-full bg-gray-100 py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
                 />
               </div>
-
               <div className="overflow-y-auto flex-1" style={{ maxHeight: '45vh' }}>
                 {loadingFriends ? (
                   <div className="flex flex-col gap-2">
@@ -196,23 +207,14 @@ export function PostShareModal({
                   </div>
                 ) : filteredConversations.length > 0 ? (
                   filteredConversations.map((conv) => (
-                    <div
-                      key={conv.id}
-                      className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors"
-                    >
+                    <div key={conv.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors">
                       <div className="relative shrink-0">
-                        <img
-                          src={conv.user.avatar}
-                          alt={conv.user.name}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
+                        <img src={conv.user.avatar} alt={conv.user.name} className="w-12 h-12 rounded-full object-cover" />
                         {conv.user.isOnline && (
                           <div className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                         )}
                       </div>
-                      <span className="flex-1 text-sm font-semibold text-gray-800 truncate">
-                        {conv.user.name}
-                      </span>
+                      <span className="flex-1 text-sm font-semibold text-gray-800 truncate">{conv.user.name}</span>
                       <button
                         type="button"
                         onClick={() => handleSendToFriend(conv.user.id, conv.user.name)}
@@ -236,43 +238,156 @@ export function PostShareModal({
               <DialogTitle className="text-center text-xl font-bold">Chia sẻ</DialogTitle>
             </DialogHeader>
 
-            <div className="p-4">
-              <div className="mb-6">
-                <h3 className="text-xs font-bold text-gray-500 mb-4 px-2 uppercase tracking-widest">
-                  Gửi trong Messenger
+            <div className="p-4 flex flex-col gap-4">
+              {/* User info + privacy */}
+              <div className="flex items-center gap-3">
+                <img
+                  src={
+                    currentUser?.avatarUrl ||
+                    `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(currentUser?.fullName || 'User')}`
+                  }
+                  alt={currentUser?.fullName}
+                  className="w-10 h-10 rounded-full object-cover shrink-0"
+                />
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-gray-900 leading-tight">
+                    {currentUser?.fullName}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                      Bảng feed
+                    </span>
+                    {/* Privacy dropdown */}
+                    <div className="relative" ref={privacyRef}>
+                      <button
+                        type="button"
+                        onClick={() => setShowPrivacyMenu((v) => !v)}
+                        className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer"
+                      >
+                        {selectedPrivacy.icon}
+                        <span>{selectedPrivacy.label}</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                      {showPrivacyMenu && (
+                        <div className="absolute left-0 top-full mt-1 z-50 w-44 rounded-xl border border-gray-100 bg-white shadow-xl py-1">
+                          {PRIVACY_OPTIONS.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => { setPrivacy(opt.value); setShowPrivacyMenu(false); }}
+                              className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 transition-colors cursor-pointer ${privacy === opt.value ? 'font-semibold text-blue-600' : 'text-gray-700'}`}
+                            >
+                              {opt.icon}
+                              {opt.label}
+                              {privacy === opt.value && <span className="ml-auto text-blue-500">✓</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Caption input */}
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Hãy nói gì đó về nội dung này..."
+                  rows={3}
+                  maxLength={1000}
+                  className="w-full resize-none rounded-xl border-none bg-transparent px-0 py-1 text-base text-gray-800 outline-none placeholder:text-gray-400"
+                />
+                {/* Emoji button */}
+                <div className="relative" ref={emojiRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker((v) => !v)}
+                    className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-yellow-500 transition-colors cursor-pointer"
+                  >
+                    <Smile className="w-5 h-5" />
+                  </button>
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-10 right-0 z-50">
+                      <Picker
+                        data={data}
+                        onEmojiSelect={handleEmojiSelect}
+                        locale="vi"
+                        theme="light"
+                        previewPosition="none"
+                        skinTonePosition="none"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Share now button */}
+              <button
+                type="button"
+                onClick={handleShareNow}
+                disabled={isSharingNow}
+                className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              >
+                {isSharingNow ? 'Đang chia sẻ...' : 'Chia sẻ ngay'}
+              </button>
+
+              <div className="h-px bg-gray-100" />
+
+              {/* Messenger quick-send */}
+              <div>
+                <h3 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">
+                  Gửi bằng Messenger
                 </h3>
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide min-h-[100px] items-center">
+                <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide min-h-[90px] items-center">
                   {loadingFriends ? (
-                    <div className="flex gap-4 w-full px-2">
+                    <div className="flex gap-3 w-full">
                       {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="flex flex-col items-center gap-2 min-w-[70px] animate-pulse">
+                        <div key={i} className="flex flex-col items-center gap-1.5 min-w-[64px] animate-pulse">
                           <div className="w-14 h-14 rounded-full bg-gray-200" />
-                          <div className="h-2 w-12 bg-gray-200 rounded" />
+                          <div className="h-2 w-10 bg-gray-200 rounded" />
                         </div>
                       ))}
                     </div>
                   ) : conversations.length > 0 ? (
-                    conversations.slice(0, 8).map((conv) => (
-                      <button
-                        key={conv.id}
-                        onClick={() => handleSendToFriend(conv.user.id, conv.user.name)}
-                        className="flex flex-col items-center gap-2 min-w-[80px] hover:bg-gray-50 p-2 rounded-xl transition-colors cursor-pointer group"
-                      >
-                        <div className="relative">
-                          <img
-                            src={conv.user.avatar}
-                            alt={conv.user.name}
-                            className="w-14 h-14 rounded-full border-2 border-white shadow-sm object-cover group-hover:scale-105 transition-transform"
-                          />
-                          {conv.user.isOnline && (
-                            <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
-                          )}
-                        </div>
-                        <span className="text-[11px] text-gray-700 font-semibold text-center line-clamp-1 w-full">
-                          {conv.user.name.split(' ').pop()}
-                        </span>
-                      </button>
-                    ))
+                    <>
+                      {conversations.slice(0, 7).map((conv) => (
+                        <button
+                          key={conv.id}
+                          type="button"
+                          onClick={() => handleSendToFriend(conv.user.id, conv.user.name)}
+                          className="flex flex-col items-center gap-1.5 min-w-[64px] hover:opacity-80 transition-opacity cursor-pointer group"
+                        >
+                          <div className="relative">
+                            <img
+                              src={conv.user.avatar}
+                              alt={conv.user.name}
+                              className="w-14 h-14 rounded-full border-2 border-white shadow-sm object-cover group-hover:scale-105 transition-transform"
+                            />
+                            {conv.user.isOnline && (
+                              <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
+                            )}
+                          </div>
+                          <span className="text-[11px] text-gray-700 font-medium text-center line-clamp-1 w-full">
+                            {conv.user.name.split(' ').pop()}
+                          </span>
+                        </button>
+                      ))}
+                      {conversations.length > 7 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowFriendPicker(true)}
+                          className="flex flex-col items-center gap-1.5 min-w-[64px] hover:opacity-80 cursor-pointer"
+                        >
+                          <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
+                            <span className="text-xl text-gray-500">›</span>
+                          </div>
+                          <span className="text-[11px] text-gray-500">Xem thêm</span>
+                        </button>
+                      )}
+                    </>
                   ) : (
                     <div className="text-center w-full py-4 text-gray-400 text-sm">
                       Chưa có cuộc hội thoại nào
@@ -281,33 +396,48 @@ export function PostShareModal({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2">
-                {shareOptions.map((option, index) => (
-                  <button
-                    key={index}
-                    onClick={option.onClick}
-                    disabled={option.disabled}
-                    className="flex items-center gap-4 p-3 w-full hover:bg-gray-50 rounded-xl transition-all cursor-pointer group disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <div className={`w-10 h-10 rounded-full ${option.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                      {option.icon}
-                    </div>
-                    <span className="text-gray-700 font-medium">{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+              <div className="h-px bg-gray-100" />
 
-            <div className="bg-gray-50 p-4 border-t flex justify-center gap-6">
-              <button className="text-blue-600 hover:scale-110 transition-transform cursor-pointer">
-                <Facebook className="w-6 h-6" />
-              </button>
-              <button className="text-sky-500 hover:scale-110 transition-transform cursor-pointer">
-                <Twitter className="w-6 h-6" />
-              </button>
-              <button className="text-emerald-500 hover:scale-110 transition-transform cursor-pointer">
-                <Share2 className="w-6 h-6" />
-              </button>
+              {/* Secondary options */}
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleClose();
+                    navigate('/stories/create', {
+                      state: { sharedPostId: postId, sharedImageUrl: postImage || null, sharedText: postImage ? null : (postContent || null) },
+                    });
+                  }}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Newspaper className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium text-center leading-tight">Chia sẻ lên tin</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowFriendPicker(true)}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <MessageCircle className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium text-center leading-tight">Messenger</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Link2 className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <span className="text-xs text-gray-600 font-medium text-center leading-tight">Sao chép liên kết</span>
+                </button>
+              </div>
             </div>
           </>
         )}

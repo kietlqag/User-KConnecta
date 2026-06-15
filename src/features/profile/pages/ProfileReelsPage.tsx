@@ -27,8 +27,8 @@ function extractReels(posts: any[]): Reel[] {
           videoUrl: post.imageUrl,
         }];
       }
-      return videos.map((m: any) => ({
-        id: `${post.id}-${m.id ?? Math.random()}`,
+      return videos.map((m: any, i: number) => ({
+        id: `${post.id}-${m.id ?? i}`,
         title: post.content || 'Thước phim',
         videoUrl: m.mediaUrl || m.fileUrl || '',
       }));

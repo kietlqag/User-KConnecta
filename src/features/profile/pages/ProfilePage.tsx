@@ -128,7 +128,7 @@ export function ProfilePage() {
       posts.flatMap(post =>
         (post.mediaList || [])
           .filter(m => m.type === 'IMAGE')
-          .map(m => ({ id: `${post.id}-${Math.random()}`, url: m.url })),
+          .map((m, i) => ({ id: `${post.id}-${i}`, url: m.url })),
       ),
     [posts],
   );

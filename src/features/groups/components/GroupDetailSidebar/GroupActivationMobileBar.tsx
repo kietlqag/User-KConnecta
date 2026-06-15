@@ -22,14 +22,14 @@ export function GroupActivationMobileBar({ progress, onContinue }: GroupActivati
         <button
           type="button"
           onClick={onContinue}
-          className="shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-semibold rounded-lg"
+          className="shrink-0 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-[13px] font-semibold rounded-lg"
         >
           Tiếp tục
         </button>
       </div>
       <div className="h-1 bg-blue-200 rounded-full mt-2 overflow-hidden">
         <div
-          className="h-full bg-blue-600 rounded-full transition-all"
+          className="h-full bg-primary rounded-full transition-all"
           style={{ width: `${progress.progressPercent}%` }}
         />
       </div>

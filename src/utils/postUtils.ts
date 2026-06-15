@@ -4,7 +4,7 @@ export interface FeedPost {
   id: string;
   author: { id: string; name: string; avatar: string };
   timestamp: string;
-  content: string;
+  content: string; // empty string when share wrapper has no caption
   image?: string;
   media?: { type: 'image' | 'video'; url: string };
   likes: number;
@@ -18,6 +18,9 @@ export interface FeedPost {
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
   isLivePost?: boolean;
   privacy: PostResponse['privacy'];
+  // Share-wrapper fields
+  sharedPost?: boolean;
+  originalPost?: FeedPost;
 }
 
 export function formatPostTimestamp(dateString?: string | null): string {
@@ -84,5 +87,7 @@ export function mapApiPost(item: PostResponse): FeedPost {
     })),
     isLivePost,
     privacy: item.privacy ?? 'PUBLIC',
+    sharedPost: item.sharedPost ?? false,
+    originalPost: item.originalPost ? mapApiPost(item.originalPost) : undefined,
   };
 }

@@ -1,4 +1,4 @@
-﻿import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { ThumbsUp } from 'lucide-react';
 import type { ReactionType } from '@/services/postService';
 
@@ -9,13 +9,15 @@ export interface ReactionOption {
   color: string;
 }
 
+const CDN = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg';
+
 export const reactions: ReactionOption[] = [
-  { type: 'LIKE', emoji: '👍', label: 'Thích', color: 'text-blue-500' },
-  { type: 'LOVE', emoji: '❤️', label: 'Yêu thích', color: 'text-red-500' },
-  { type: 'HAHA', emoji: '😆', label: 'Haha', color: 'text-yellow-500' },
-  { type: 'WOW', emoji: '😮', label: 'Wow', color: 'text-yellow-500' },
-  { type: 'SAD', emoji: '😢', label: 'Buồn', color: 'text-yellow-500' },
-  { type: 'ANGRY', emoji: '😡', label: 'Phẫn nộ', color: 'text-orange-500' },
+  { type: 'LIKE',  emoji: `${CDN}/1f44d.svg`,   label: 'Thích',     color: 'text-blue-500'   },
+  { type: 'LOVE',  emoji: `${CDN}/2764.svg`,     label: 'Yêu thích', color: 'text-red-500'    },
+  { type: 'HAHA',  emoji: `${CDN}/1f606.svg`,    label: 'Haha',      color: 'text-yellow-500' },
+  { type: 'WOW',   emoji: `${CDN}/1f62e.svg`,    label: 'Wow',       color: 'text-yellow-500' },
+  { type: 'SAD',   emoji: `${CDN}/1f622.svg`,    label: 'Buồn',      color: 'text-yellow-500' },
+  { type: 'ANGRY', emoji: `${CDN}/1f621.svg`,    label: 'Phẫn nộ',  color: 'text-orange-500' },
 ];
 
 interface ReactionButtonProps {
@@ -24,16 +26,20 @@ interface ReactionButtonProps {
   className?: string;
   buttonClassName?: string;
   disabled?: boolean;
-  /** Vertical icon + count layout for Watch / Reels */
   variant?: 'default' | 'reel';
   count?: number;
+  compact?: boolean;
 }
 
 function formatReelCount(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+  if (count >= 1_000)     return `${(count / 1_000).toFixed(1)}K`;
   return count.toString();
 }
+
+// Total time for all entrance animations to finish: last delay + duration
+const ENTRANCE_TOTAL_MS = (reactions.length - 1) * 25 + 280;
+const STAGGER_MS = 25;
 
 export function ReactionButton({
   initialReaction = null,
@@ -43,91 +49,176 @@ export function ReactionButton({
   disabled = false,
   variant = 'default',
   count = 0,
+  compact = false,
 }: ReactionButtonProps) {
-  const [selectedReaction, setSelectedReaction] = useState<ReactionOption | null>(initialReaction);
-  const [showReactions, setShowReactions] = useState(false);
-  const [hoveredReaction, setHoveredReaction] = useState<number | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [selectedReaction, setSelectedReaction]   = useState<ReactionOption | null>(initialReaction);
+  const [showReactions, setShowReactions]         = useState(false);
+  const [isClosing, setIsClosing]                 = useState(false);
+  const [hasEntered, setHasEntered]               = useState(false);
+  const [hoveredReaction, setHoveredReaction]     = useState<number | null>(null);
+  const [selectingIndex, setSelectingIndex]       = useState<number | null>(null);
+  const [isLikeAnimating, setIsLikeAnimating]     = useState(false);
 
-  useEffect(() => {
-    setSelectedReaction(initialReaction);
-  }, [initialReaction]);
+  const hoverTimerRef   = useRef<NodeJS.Timeout | null>(null);
+  const closeTimerRef   = useRef<NodeJS.Timeout | null>(null);
+  const entryTimerRef   = useRef<NodeJS.Timeout | null>(null);
+  const selectTimerRef  = useRef<NodeJS.Timeout | null>(null);
+  const likeTimerRef    = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => { setSelectedReaction(initialReaction); }, [initialReaction]);
+
+  const clearTimer = (ref: React.MutableRefObject<NodeJS.Timeout | null>) => {
+    if (ref.current) { clearTimeout(ref.current); ref.current = null; }
+  };
+
+  const openPicker = useCallback(() => {
+    if (disabled) return;
+    clearTimer(closeTimerRef);
+    clearTimer(entryTimerRef);
+    setIsClosing(false);
+    setHasEntered(false);
+    setShowReactions(true);
+    entryTimerRef.current = setTimeout(() => setHasEntered(true), ENTRANCE_TOTAL_MS);
+  }, [disabled]);
+
+  const startClose = useCallback(() => {
+    clearTimer(entryTimerRef);
+    setIsClosing(true);
+    setHasEntered(false);
+    closeTimerRef.current = setTimeout(() => {
+      setShowReactions(false);
+      setIsClosing(false);
+      setHoveredReaction(null);
+    }, 180);
+  }, []);
 
   const handleMouseEnter = () => {
     if (disabled) return;
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    setShowReactions(true);
+    clearTimer(hoverTimerRef);
+    openPicker();
   };
 
   const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setShowReactions(false);
-      setHoveredReaction(null);
-    }, 300);
+    hoverTimerRef.current = setTimeout(startClose, 200);
   };
 
-  const applyReaction = (reaction: ReactionOption | null) => {
+  const triggerLikeAnim = () => {
+    clearTimer(likeTimerRef);
+    setIsLikeAnimating(true);
+    likeTimerRef.current = setTimeout(() => setIsLikeAnimating(false), 420);
+  };
+
+  const applyReaction = (reaction: ReactionOption | null, index?: number) => {
+    if (index !== undefined) {
+      clearTimer(selectTimerRef);
+      setSelectingIndex(index);
+      selectTimerRef.current = setTimeout(() => setSelectingIndex(null), 420);
+    }
+    triggerLikeAnim();
     setSelectedReaction(reaction);
     onReactionChange?.(reaction);
-    setShowReactions(false);
+    // Brief delay so pop animation plays before picker closes
+    setTimeout(() => {
+      setShowReactions(false);
+      setIsClosing(false);
+      setHasEntered(false);
+    }, 160);
   };
 
   const handleButtonClick = () => {
     if (disabled) return;
+    triggerLikeAnim();
     if (selectedReaction) {
-      applyReaction(null);
-      return;
+      setSelectedReaction(null);
+      onReactionChange?.(null);
+    } else {
+      setSelectedReaction(reactions[0]);
+      onReactionChange?.(reactions[0]);
     }
-    applyReaction(reactions[0]);
   };
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
+  useEffect(() => () => {
+    clearTimer(hoverTimerRef);
+    clearTimer(closeTimerRef);
+    clearTimer(entryTimerRef);
+    clearTimer(selectTimerRef);
+    clearTimer(likeTimerRef);
   }, []);
+
+  // Per-emoji animation style
+  const getEmojiStyle = (index: number): React.CSSProperties => {
+    if (selectingIndex === index) {
+      return { animation: 'reaction-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) both' };
+    }
+    if (hasEntered) {
+      // Switch to pure transition after entrance — no keyframe conflict
+      return {
+        transform: hoveredReaction === index ? 'scale(1.48) translateY(-9px)' : 'scale(1) translateY(0)',
+        transition: 'transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      };
+    }
+    return {
+      animation: `reaction-entrance 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * STAGGER_MS}ms both`,
+    };
+  };
 
   const pickerPositionClass =
     variant === 'reel'
       ? 'absolute right-full top-1/2 -translate-y-1/2 mr-3'
       : 'absolute bottom-full left-0 mb-2';
 
-  const picker = (
+  const picker = showReactions ? (
     <div
-      className={`${pickerPositionClass} transition-all duration-200 ease-out ${
-        showReactions
-          ? 'opacity-100 translate-y-0 pointer-events-auto'
-          : variant === 'reel'
-            ? 'opacity-0 translate-x-2 pointer-events-none'
-            : 'opacity-0 translate-y-2 pointer-events-none'
-      }`}
+      className={`${pickerPositionClass} z-50`}
+      style={isClosing ? { animation: 'reaction-picker-out 0.18s ease-in forwards' } : undefined}
     >
-      <div className="bg-white rounded-full shadow-lg border border-gray-200 px-2 py-2 flex items-center gap-1">
+      <div
+        className="flex items-center gap-0.5 rounded-full border border-border bg-surface px-2 py-1.5"
+        style={{ boxShadow: '0 8px 28px rgba(0,0,0,0.13), 0 2px 6px rgba(0,0,0,0.07)' }}
+      >
         {reactions.map((reaction, index) => (
           <button
             key={reaction.type}
+            type="button"
+            aria-label={reaction.label}
             onClick={() =>
-              applyReaction(selectedReaction?.type === reaction.type ? null : reaction)
+              applyReaction(selectedReaction?.type === reaction.type ? null : reaction, index)
             }
             onMouseEnter={() => setHoveredReaction(index)}
             onMouseLeave={() => setHoveredReaction(null)}
-            className={`text-2xl transition-all duration-150 ease-out hover:scale-125 ${
-              hoveredReaction === index ? 'scale-125 -translate-y-1' : 'scale-100'
-            }`}
-            style={{ padding: '4px' }}
-            aria-label={reaction.label}
-            type="button"
+            className="relative cursor-pointer"
+            style={{
+              lineHeight: 1,
+              padding: '4px 5px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              ...getEmojiStyle(index),
+            }}
           >
-            {reaction.emoji}
+            <img src={reaction.emoji} alt={reaction.label} draggable={false} style={{ width: 28, height: 28, flexShrink: 0 }} />
+
+            {/* Label tooltip */}
+            {hoveredReaction === index && hasEntered && (
+              <span
+                className="pointer-events-none absolute -top-8 left-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-0.5 text-[10px] font-bold text-white dark:bg-gray-700"
+                style={{
+                  transform: 'translateX(-50%)',
+                  animation: 'reaction-label-in 0.18s ease-out both',
+                }}
+              >
+                {reaction.label}
+              </span>
+            )}
           </button>
         ))}
       </div>
     </div>
-  );
+  ) : null;
+
+  const likeAnimStyle: React.CSSProperties = isLikeAnimating
+    ? { animation: 'like-thump 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' }
+    : {};
 
   if (variant === 'reel') {
     return (
@@ -140,20 +231,19 @@ export function ReactionButton({
         <button
           onClick={handleButtonClick}
           disabled={disabled}
-          className={`flex flex-col items-center gap-1 group transition-transform hover:scale-110 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${buttonClassName}`}
           type="button"
+          className={`flex flex-col items-center gap-1 group cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${buttonClassName}`}
+          style={likeAnimStyle}
         >
           <div
-            className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center transition-colors ${
-              selectedReaction
-                ? 'bg-emerald-600'
-                : 'bg-gray-800/50 group-hover:bg-emerald-600'
+            className={`flex h-12 w-12 items-center justify-center rounded-full bg-gray-800/50 backdrop-blur-sm transition-colors group-hover:bg-gray-700/80 ${
+              selectedReaction ? 'ring-2 ring-white/30' : ''
             }`}
           >
             {selectedReaction ? (
-              <span className="text-2xl leading-none">{selectedReaction.emoji}</span>
+              <img src={selectedReaction.emoji} alt={selectedReaction.label} width={24} height={24} draggable={false} />
             ) : (
-              <ThumbsUp className="w-6 h-6 text-white" />
+              <ThumbsUp className="h-6 w-6 text-white" />
             )}
           </div>
           <span className="text-sm font-semibold text-white">{formatReelCount(count)}</span>
@@ -173,19 +263,26 @@ export function ReactionButton({
       <button
         onClick={handleButtonClick}
         disabled={disabled}
-        className={`flex w-full items-center justify-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-60 ${
-          selectedReaction ? selectedReaction.color : 'text-gray-600'
-        } ${buttonClassName}`}
         type="button"
+        className={`flex items-center justify-center gap-2 rounded-lg transition-colors hover:bg-muted disabled:opacity-60 ${
+          compact ? 'px-3 py-1 text-sm' : 'w-full px-4 py-2'
+        } ${selectedReaction ? selectedReaction.color : 'text-muted-foreground'} ${buttonClassName}`}
+        style={likeAnimStyle}
       >
         {selectedReaction ? (
           <>
-            <span className="text-xl">{selectedReaction.emoji}</span>
+            <img
+              src={selectedReaction.emoji}
+              alt={selectedReaction.label}
+              width={20} height={20}
+              draggable={false}
+              style={isLikeAnimating ? { animation: 'reaction-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' } : {}}
+            />
             <span className="font-medium">{selectedReaction.label}</span>
           </>
         ) : (
           <>
-            <ThumbsUp className="w-5 h-5" />
+            <ThumbsUp className="h-5 w-5" />
             <span className="font-medium">Thích</span>
           </>
         )}
@@ -193,4 +290,3 @@ export function ReactionButton({
     </div>
   );
 }
-
