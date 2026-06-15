@@ -27,6 +27,7 @@ import { WatchPage } from '../features/watch/pages';
 import { MarketplacePage } from '../features/marketplace/pages';
 import LiveVideoPage from '../features/live/pages/LiveVideoPage';
 import LiveSetupPage from '../features/live/pages/LiveSetupPage';
+import LiveEventPage from '../features/live/pages/LiveEventPage';
 import LiveProducerPage from '../features/live/pages/LiveProducerPage';
 import LiveViewerPage from '../features/live/pages/LiveViewerPage';
 import SearchResultsPage from '../features/search/pages/SearchResultsPage';
@@ -120,6 +121,10 @@ export const router = createBrowserRouter([
           {
             path: '/live/setup',
             Component: LiveSetupPage,
+          },
+          {
+            path: '/live/event',
+            Component: LiveEventPage,
           },
           {
             path: '/live/producer',

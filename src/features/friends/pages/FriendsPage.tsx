@@ -10,7 +10,7 @@ import { useFriendsPageData } from '../hooks/useFriendsPageData';
 
 const PAGE_SIZE = 8;
 const FRIEND_GRID_CLASS =
-  'grid grid-cols-[repeat(auto-fill,minmax(min(190px,100%),1fr))] gap-3 sm:gap-4';
+  'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5';
 
 export const FriendsPage = () => {
   const [searchParams] = useSearchParams();

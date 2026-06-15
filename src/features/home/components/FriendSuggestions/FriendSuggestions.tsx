@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { UserPlus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
+import { UserAvatar } from '@/components/shared';
 import { friendService, type FriendApiResponse } from '@/services/friendService';
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
@@ -80,24 +80,20 @@ export const FriendSuggestions = () => {
               {suggestions.map((user) => (
                 <div 
                   key={user.userId}
-                  className="min-w-[180px] w-[180px] flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow relative"
+                  className="min-w-[180px] w-[180px] flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
                 >
-                  <button 
-                    onClick={() => handleRemoveSuggestion(user.userId)}
-                    className="absolute top-2 right-2 z-10 p-1.5 bg-black/40 hover:bg-black/60 rounded-full text-white transition-colors cursor-pointer"
+                  <div
+                    className="h-[180px] overflow-hidden cursor-pointer"
+                    onClick={() => navigate(`/profile/${user.userId}`)}
                   >
-                    <X size={16} />
-                  </button>
-                  
-                  <div className="h-[180px] overflow-hidden cursor-pointer" onClick={() => navigate(`/profile/${user.userId}`)}>
-                    <ImageWithFallback
-                      src={user.avatarUrl || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(user.fullName)}`}
-                      alt={user.fullName}
-                      className="w-full h-full object-cover"
+                    <UserAvatar
+                      name={user.fullName}
+                      avatarUrl={user.avatarUrl}
+                      userId={user.userId}
                     />
                   </div>
 
-                  <div className="p-3 flex-1 flex flex-col justify-between">
+                  <div className="p-3 flex-1 flex flex-col justify-between gap-3">
                     <div>
                       <h4
                         className="font-bold text-[15px] text-gray-900 line-clamp-1 hover:underline cursor-pointer"
@@ -105,18 +101,27 @@ export const FriendSuggestions = () => {
                       >
                         {user.fullName}
                       </h4>
-                      <p className="text-xs text-gray-500 mb-2">
+                      <p className="text-xs text-gray-500 mt-1">
                         {user.mutualFriends > 0 ? `${user.mutualFriends} bạn chung` : 'Gợi ý cho bạn'}
                       </p>
                     </div>
-                    
-                    <button 
-                      onClick={() => handleAddFriend(user.userId, user.fullName)}
-                      className="w-full py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-md flex items-center justify-center gap-2 font-semibold text-sm transition-colors cursor-pointer"
-                    >
-                      <UserPlus size={16} />
-                      Thêm bạn bè
-                    </button>
+
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleAddFriend(user.userId, user.fullName)}
+                        className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md bg-emerald-600 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 cursor-pointer"
+                      >
+                        <UserPlus size={16} className="shrink-0" />
+                        <span className="truncate">Thêm bạn bè</span>
+                      </button>
+                      <button
+                        onClick={() => handleRemoveSuggestion(user.userId)}
+                        className="flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 cursor-pointer"
+                      >
+                        <X size={16} />
+                        Xóa
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

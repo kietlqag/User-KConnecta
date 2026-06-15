@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { FriendRequest } from '../../types/friends.types';
+import { UserAvatar } from '@/components/shared';
 
 interface FriendRequestCardProps {
   request: FriendRequest;
@@ -34,10 +35,10 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
     <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md">
       <div className="relative">
         <Link to={`/profile/${request.userId}`} className="block aspect-square overflow-hidden bg-gray-100">
-          <img
-            src={request.avatar}
-            alt={request.name}
-            className="h-full w-full object-cover transition-transform hover:scale-105"
+          <UserAvatar
+            name={request.name}
+            avatarUrl={request.avatar}
+            userId={request.userId}
           />
         </Link>
         <button
@@ -78,7 +79,7 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
           <button
             onClick={handleDelete}
             disabled={loading !== null}
-            className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gray-200 px-4 font-semibold text-gray-900 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-red-50 px-4 font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading === 'delete' && <Loader2 className="h-4 w-4 animate-spin" />}
             Xóa
