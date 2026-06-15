@@ -175,6 +175,8 @@ export interface PostCommentResponse {
   isLikedByCurrentUser: boolean;
   isDeleted: boolean;
   content: string | null;
+  moderationStatus?: string | null;
+  moderationFailReason?: string | null;
   createdAt: string;
   updatedAt: string;
 }

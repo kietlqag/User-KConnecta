@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { UserPlus, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserAvatar } from '@/components/shared';
@@ -6,26 +6,51 @@ import { friendService, type FriendApiResponse } from '@/services/friendService'
 import { authService } from '@/services/authService';
 import { toast } from 'sonner';
 
+const CARD_WIDTH = 172;
+const CARD_GAP = 12;
+const SCROLL_STEP = (CARD_WIDTH + CARD_GAP) * 2;
+
 export const FriendSuggestions = () => {
   const navigate = useNavigate();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [suggestions, setSuggestions] = useState<FriendApiResponse[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const currentUser = authService.getCurrentUser();
+
+  const updateScrollButtons = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft < maxScroll - 4);
+  }, []);
 
   useEffect(() => {
     if (!currentUser?.id) return;
 
     setLoading(true);
-    friendService.getSuggestions(currentUser.id)
-      .then((data) => {
-        setSuggestions(data);
-      })
+    friendService
+      .getSuggestions(currentUser.id)
+      .then(setSuggestions)
       .catch((err) => {
         console.error('Failed to fetch suggestions:', err);
       })
       .finally(() => setLoading(false));
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    updateScrollButtons();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', updateScrollButtons, { passive: true });
+    window.addEventListener('resize', updateScrollButtons);
+    return () => {
+      el.removeEventListener('scroll', updateScrollButtons);
+      window.removeEventListener('resize', updateScrollButtons);
+    };
+  }, [suggestions, loading, updateScrollButtons]);
 
   const handleAddFriend = async (targetId: string, name: string) => {
     if (!currentUser?.id) return;
@@ -33,7 +58,7 @@ export const FriendSuggestions = () => {
       await friendService.sendFriendRequest(currentUser.id, targetId);
       toast.success(`Đã gửi lời mời kết bạn đến ${name}`);
       setSuggestions((prev) => prev.filter((s) => s.userId !== targetId));
-    } catch (error) {
+    } catch {
       toast.error('Không thể gửi lời mời kết bạn. Vui lòng thử lại sau.');
     }
   };
@@ -42,108 +67,116 @@ export const FriendSuggestions = () => {
     setSuggestions((prev) => prev.filter((s) => s.userId !== targetId));
   };
 
-  const scrollLeft = () => {
-    setCurrentIndex((prev) => Math.max(0, prev - 1));
-  };
-
-  const scrollRight = () => {
-    setCurrentIndex((prev) => Math.min(suggestions.length - 1, prev + 1));
+  const scrollBy = (direction: -1 | 1) => {
+    scrollRef.current?.scrollBy({ left: direction * SCROLL_STEP, behavior: 'smooth' });
   };
 
   if (!loading && suggestions.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-lg shadow mb-4 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-gray-900 font-bold text-lg">Bạn bè có thể biết</h3>
+    <div className="mb-4 rounded-lg bg-white p-4 shadow">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-lg font-bold text-gray-900">Bạn bè có thể biết</h3>
         <button
-          className="text-blue-600 text-sm font-medium hover:underline cursor-pointer"
+          type="button"
+          className="cursor-pointer text-sm font-semibold text-blue-600 hover:underline"
           onClick={() => navigate('/friends?tab=suggestions')}
         >
           Xem tất cả
         </button>
       </div>
 
-      <div className="relative group">
-        <div className="flex gap-2 overflow-hidden scroll-smooth">
-          {loading ? (
-            <div className="flex gap-2 w-full">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="min-w-[180px] h-[320px] bg-gray-100 rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div 
-              className="flex gap-2 transition-transform duration-300 ease-in-out" 
-              style={{ transform: `translateX(-${currentIndex * 188}px)` }}
-            >
-              {suggestions.map((user) => (
-                <div 
+      <div className="group/carousel relative">
+        <div
+          ref={scrollRef}
+          className="flex gap-3 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {loading
+            ? [1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="h-[308px] shrink-0 animate-pulse rounded-lg bg-gray-100"
+                  style={{ width: CARD_WIDTH }}
+                />
+              ))
+            : suggestions.map((user) => (
+                <article
                   key={user.userId}
-                  className="min-w-[180px] w-[180px] flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                  className="flex shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+                  style={{ width: CARD_WIDTH }}
                 >
-                  <div
-                    className="h-[180px] overflow-hidden cursor-pointer"
+                  <button
+                    type="button"
+                    className="block h-[172px] w-full cursor-pointer overflow-hidden"
                     onClick={() => navigate(`/profile/${user.userId}`)}
+                    aria-label={`Xem trang cá nhân của ${user.fullName}`}
                   >
                     <UserAvatar
                       name={user.fullName}
                       avatarUrl={user.avatarUrl}
                       userId={user.userId}
+                      className="h-full w-full"
                     />
-                  </div>
+                  </button>
 
-                  <div className="p-3 flex-1 flex flex-col justify-between gap-3">
-                    <div>
-                      <h4
-                        className="font-bold text-[15px] text-gray-900 line-clamp-1 hover:underline cursor-pointer"
+                  <div className="flex flex-1 flex-col gap-2.5 p-3">
+                    <div className="min-h-[52px]">
+                      <button
+                        type="button"
+                        title={user.fullName}
+                        className="line-clamp-2 text-left text-[15px] font-bold leading-snug text-gray-900 hover:underline"
                         onClick={() => navigate(`/profile/${user.userId}`)}
                       >
                         {user.fullName}
-                      </h4>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {user.mutualFriends > 0 ? `${user.mutualFriends} bạn chung` : 'Gợi ý cho bạn'}
+                      </button>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {user.mutualFriends > 0
+                          ? `${user.mutualFriends} bạn chung`
+                          : 'Gợi ý cho bạn'}
                       </p>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button 
+                    <div className="mt-auto flex flex-col gap-1.5">
+                      <button
+                        type="button"
                         onClick={() => handleAddFriend(user.userId, user.fullName)}
-                        className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md bg-emerald-600 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 cursor-pointer"
+                        className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-2 text-[13px] font-semibold text-white transition-colors hover:bg-emerald-700"
                       >
-                        <UserPlus size={16} className="shrink-0" />
-                        <span className="truncate">Thêm bạn bè</span>
+                        <UserPlus className="h-4 w-4 shrink-0" />
+                        Thêm bạn bè
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleRemoveSuggestion(user.userId)}
-                        className="flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 cursor-pointer"
+                        className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md bg-gray-200 px-2 text-[13px] font-semibold text-gray-800 transition-colors hover:bg-gray-300"
                       >
-                        <X size={16} />
+                        <X className="h-4 w-4 shrink-0" />
                         Xóa
                       </button>
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
-            </div>
-          )}
         </div>
 
-        {/* Scroll Buttons */}
-        {!loading && currentIndex > 0 && (
-          <button 
-            onClick={scrollLeft}
-            className="absolute left-[-12px] top-1/2 -translate-y-1/2 p-2 bg-white rounded-full shadow-lg border border-gray-100 text-gray-600 hover:bg-gray-50 z-20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+        {!loading && canScrollLeft && (
+          <button
+            type="button"
+            onClick={() => scrollBy(-1)}
+            className="absolute left-0 top-[calc(50%-18px)] z-10 flex h-9 w-9 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-md opacity-0 transition-opacity hover:bg-gray-50 group-hover/carousel:opacity-100"
+            aria-label="Cuộn trái"
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft className="h-5 w-5" />
           </button>
         )}
-        {!loading && suggestions.length > 3 && currentIndex < suggestions.length - 3 && (
-          <button 
-            onClick={scrollRight}
-            className="absolute right-[-12px] top-1/2 -translate-y-1/2 p-2 bg-white rounded-full shadow-lg border border-gray-100 text-gray-600 hover:bg-gray-50 z-20 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+        {!loading && canScrollRight && (
+          <button
+            type="button"
+            onClick={() => scrollBy(1)}
+            className="absolute right-0 top-[calc(50%-18px)] z-10 flex h-9 w-9 translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 shadow-md opacity-0 transition-opacity hover:bg-gray-50 group-hover/carousel:opacity-100"
+            aria-label="Cuộn phải"
           >
-            <ChevronRight size={24} />
+            <ChevronRight className="h-5 w-5" />
           </button>
         )}
       </div>

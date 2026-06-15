@@ -73,7 +73,7 @@ function PanelCommentRow({
     if (!replyText.trim() || !currentUser) return;
     setIsSubmittingReply(true);
     try {
-      await postService.addComment(postId, {
+      const response = await postService.addComment(postId, {
         userId: currentUser.id,
         content: replyText.trim(),
         parentCommentId: comment.id,
@@ -84,10 +84,14 @@ function PanelCommentRow({
       setReplies(data);
       setRepliesLoaded(true);
       setShowReplies(true);
-      setComment(prev => ({ ...prev, replyCount: (prev.replyCount ?? 0) + 1 }));
-      onCommentCountChange?.(1);
-    } catch {
-      toast.error('Không thể gửi trả lời');
+      if (response.moderationStatus === 'PENDING') {
+        toast.info('Phản hồi đang chờ kiểm duyệt. Chỉ bạn thấy cho đến khi được duyệt.');
+      } else {
+        setComment(prev => ({ ...prev, replyCount: (prev.replyCount ?? 0) + 1 }));
+        onCommentCountChange?.(1);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể gửi trả lời');
     } finally {
       setIsSubmittingReply(false);
     }
@@ -182,6 +186,14 @@ function PanelCommentRow({
 
             <div className="bg-[#2a2d31] rounded-2xl px-3 py-2 pr-8 w-full">
               <h4 className="text-white font-semibold text-sm leading-tight">{comment.userFullName}</h4>
+              {comment.moderationStatus === 'PENDING' && (
+                <p className="mt-1 text-[11px] font-medium text-amber-400">Đang chờ kiểm duyệt</p>
+              )}
+              {comment.moderationStatus === 'REJECTED' && (
+                <p className="mt-1 text-[11px] font-medium text-red-400">
+                  {comment.moderationFailReason || 'Bình luận không được duyệt'}
+                </p>
+              )}
               <p className="text-gray-200 text-sm mt-0.5 break-words">{comment.content}</p>
             </div>
           </div>
@@ -297,11 +309,15 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
         content: newComment.trim(),
       });
       setComments(prev => [...prev, response]);
-      setTotalElements(n => n + 1);
       setNewComment('');
-      onCommentCountChange?.(1);
-    } catch {
-      toast.error('Không thể gửi bình luận');
+      if (response.moderationStatus === 'PENDING') {
+        toast.info('Bình luận đang chờ kiểm duyệt. Chỉ bạn thấy cho đến khi được duyệt.');
+      } else {
+        setTotalElements(n => n + 1);
+        onCommentCountChange?.(1);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể gửi bình luận');
     } finally {
       setIsSubmitting(false);
     }

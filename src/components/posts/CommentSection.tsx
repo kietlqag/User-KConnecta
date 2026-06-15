@@ -117,8 +117,12 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
       };
 
       setComments((prev) => [...prev, newComment]);
-      setTotalElements((n) => n + 1);
-      onCommentAdded?.();
+      if (response.moderationStatus === 'PENDING') {
+        toast.info('Bình luận đang chờ kiểm duyệt. Chỉ bạn thấy cho đến khi được duyệt.');
+      } else {
+        setTotalElements((n) => n + 1);
+        onCommentAdded?.();
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể gửi bình luận');
     } finally {
@@ -142,18 +146,28 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
       return;
     }
 
-    await postService.addComment(postId, {
-      userId: currentUser.id,
-      content,
-      parentCommentId,
-    });
+    try {
+      const response = await postService.addComment(postId, {
+        userId: currentUser.id,
+        content,
+        parentCommentId,
+      });
 
-    // Update replyCount on the parent comment so the button label stays correct
-    setComments((prev) =>
-      prev.map((c) =>
-        c.id === parentCommentId ? { ...c, replyCount: c.replyCount + 1 } : c,
-      ),
-    );
+      if (response.moderationStatus === 'PENDING') {
+        toast.info('Phản hồi đang chờ kiểm duyệt. Chỉ bạn thấy cho đến khi được duyệt.');
+        return;
+      }
+
+      // Update replyCount on the parent comment so the button label stays correct
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === parentCommentId ? { ...c, replyCount: c.replyCount + 1 } : c,
+        ),
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể gửi trả lời');
+      throw error;
+    }
   };
 
   return (

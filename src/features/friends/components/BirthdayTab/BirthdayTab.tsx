@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { authService } from '../../../../services/authService';
 import { useFriendBirthdays, type BirthdayFriend } from '../../hooks/useFriendBirthdays';
+import { BirthdayNameHoverCard } from './BirthdayNameHoverCard';
 
 function getAge(birthDate: string): number {
   const birth = new Date(birthDate);
@@ -16,6 +17,11 @@ function getAge(birthDate: string): number {
 function formatBirthDate(birthDate: string): string {
   const d = new Date(birthDate);
   return `${d.getDate()} tháng ${d.getMonth() + 1} ${d.getFullYear()}`;
+}
+
+function formatBirthdayHoverText(birthDate: string, name: string): string {
+  const d = new Date(birthDate);
+  return `${d.getDate()} Tháng ${d.getMonth() + 1} là sinh nhật của ${name}`;
 }
 
 function getMonthName(month: number): string {
@@ -102,9 +108,11 @@ const UpcomingCard = ({ friend }: UpcomingCardProps) => (
         </div>
       </Link>
       <div>
-        <Link to={`/profile/${friend.userId}`}>
-          <p className="font-semibold text-gray-900 hover:underline">{friend.name}</p>
-        </Link>
+        <BirthdayNameHoverCard friend={friend}>
+          <Link to={`/profile/${friend.userId}`} className="inline-block">
+            <p className="font-semibold text-gray-900 hover:underline">{friend.name}</p>
+          </Link>
+        </BirthdayNameHoverCard>
         <p className="text-sm text-gray-500">
           {formatBirthDate(friend.birthDate)} · {getAge(friend.birthDate)} tuổi
         </p>
@@ -126,20 +134,32 @@ interface MonthSectionProps {
 }
 
 const MonthSection = ({ month, friends }: MonthSectionProps) => (
-  <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+  <div className="overflow-visible rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
     <h3 className="mb-1 text-base font-bold text-gray-900">{getMonthName(month)}</h3>
     <p className="mb-3 text-sm text-gray-500">{formatGroupLabel(friends)}</p>
     <div className="flex flex-wrap gap-2">
       {friends.map((f) => (
-        <Link key={f.id} to={`/profile/${f.userId}`} title={f.name}>
-          <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-white shadow-sm transition-transform hover:scale-105">
-            <ImageWithFallback
-              src={f.avatar}
-              alt={f.name}
-              className="h-full w-full object-cover"
+        <div key={f.id} className="group/avatar relative">
+          <Link to={`/profile/${f.userId}`} aria-label={formatBirthdayHoverText(f.birthDate, f.name)}>
+            <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-white shadow-sm transition-transform group-hover/avatar:scale-105">
+              <ImageWithFallback
+                src={f.avatar}
+                alt={f.name}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </Link>
+          <div
+            role="tooltip"
+            className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-max max-w-[min(280px,calc(100vw-2rem))] -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-center text-sm font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/avatar:opacity-100"
+          >
+            {formatBirthdayHoverText(f.birthDate, f.name)}
+            <span
+              aria-hidden
+              className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-gray-900"
             />
           </div>
-        </Link>
+        </div>
       ))}
     </div>
   </div>
