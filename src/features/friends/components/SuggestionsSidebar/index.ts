@@ -1,0 +1,1 @@
+export { SuggestionsSidebar } from './SuggestionsSidebar';
