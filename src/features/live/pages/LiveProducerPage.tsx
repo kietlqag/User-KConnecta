@@ -21,8 +21,17 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
-import { liveService, type LiveSessionRealtimeEvent, type LiveSessionStatsResponse, type LiveSessionToolStateResponse } from '@/services/liveService';
-import { postService, type PostCommentResponse, type PostResponse } from '@/services/postService';
+import { liveService, type LiveSessionRealtimeEvent, type LiveSessionResponse, type LiveSessionStatsResponse, type LiveSessionToolStateResponse } from '@/services/liveService';
+import { postService, type PostResponse } from '@/services/postService';
+import { LiveCommentPanel } from '../components/LiveCommentPanel';
+import {
+  buildProducerStateForHost,
+  getLiveViewerPreviewUrl,
+  isLiveSessionHost,
+  LIVE_PRODUCER_STATE_KEY,
+  persistProducerState,
+  type ProducerLocationState,
+} from '../utils/navigateToLiveSession';
 import { useLiveSessionSocket } from '../hooks/useLiveSessionSocket';
 
 type MainSection = 'dashboard' | 'details' | 'settings';
@@ -35,17 +44,6 @@ type MediaStats = {
   height: number | null;
 };
 type PreviousTrackStats = Record<string, { timestamp: number; bytesSent: number; framesEncoded?: number }>;
-interface ProducerLocationState {
-  postId?: string;
-  sessionId?: string;
-  roomName?: string;
-  livekitUrl?: string | null;
-  hostToken?: string | null;
-  title?: string;
-  description?: string;
-  selectedCameraId?: string;
-  selectedMicId?: string;
-}
 
 const rankCamera = (device: MediaDeviceInfo) => {
   const name = (device.label || '').toLowerCase();
@@ -64,21 +62,36 @@ const getSupportedRecordingMimeType = () => {
   ].find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
 };
 
-function LiveTimer() {
-  const [seconds, setSeconds] = useState(0);
+function LiveTimer({ startedAt }: { startedAt?: string | null }) {
+  const formatted = useMemo(() => {
+    if (!startedAt) return '00:00:00';
+    const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+    const hours = Math.floor(elapsedSec / 3600);
+    const minutes = Math.floor((elapsedSec % 3600) / 60);
+    const seconds = elapsedSec % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }, [startedAt]);
+
+  const [display, setDisplay] = useState(formatted);
 
   useEffect(() => {
-    const timer = setInterval(() => setSeconds((prev) => prev + 1), 1000);
+    const tick = () => {
+      if (!startedAt) {
+        setDisplay('00:00:00');
+        return;
+      }
+      const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+      const hours = Math.floor(elapsedSec / 3600);
+      const minutes = Math.floor((elapsedSec % 3600) / 60);
+      const seconds = elapsedSec % 60;
+      setDisplay(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [startedAt]);
 
-  const formatted = useMemo(() => {
-    const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
-    const ss = String(seconds % 60).padStart(2, '0');
-    return `00:${mm}:${ss}`;
-  }, [seconds]);
-
-  return <span>{formatted}</span>;
+  return <span>{display}</span>;
 }
 
 export default function LiveProducerPage() {
@@ -90,7 +103,7 @@ export default function LiveProducerPage() {
   const routeState = (location.state as ProducerLocationState | null) ?? null;
   const storedProducerState = useMemo<ProducerLocationState | null>(() => {
     try {
-      const raw = window.sessionStorage.getItem('kconnecta.liveProducerState');
+      const raw = window.sessionStorage.getItem(LIVE_PRODUCER_STATE_KEY);
       return raw ? (JSON.parse(raw) as ProducerLocationState) : null;
     } catch {
       return null;
@@ -100,6 +113,7 @@ export default function LiveProducerPage() {
   const querySessionId = new URLSearchParams(location.search).get('sessionId')?.trim() || '';
   const preferredCameraId = producerState?.selectedCameraId?.trim() || '';
   const preferredMicId = producerState?.selectedMicId?.trim() || '';
+  const preferredVideoSourceMode = producerState?.videoSourceMode ?? 'camera';
   const sessionId = producerState?.sessionId?.trim() || querySessionId;
   const postId = producerState?.postId?.trim() || '';
   const livekitUrl = producerState?.livekitUrl?.trim() || '';
@@ -112,11 +126,14 @@ export default function LiveProducerPage() {
   const [microphones, setMicrophones] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState(preferredCameraId);
   const [selectedMicId, setSelectedMicId] = useState(preferredMicId);
+  const [videoSourceMode, setVideoSourceMode] = useState<'camera' | 'screen'>(preferredVideoSourceMode);
+  const [isStartingScreenShare, setIsStartingScreenShare] = useState(false);
   const [isMediaReady, setIsMediaReady] = useState(false);
   const [mediaError, setMediaError] = useState('');
   const [liveStatus, setLiveStatus] = useState(hostToken ? 'Đang kết nối LiveKit...' : 'Thiếu token LiveKit cho phiên live.');
   const [liveError, setLiveError] = useState('');
   const [isEndingLive, setIsEndingLive] = useState(false);
+  const [isRecoveringSession, setIsRecoveringSession] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const [liveStats, setLiveStats] = useState<LiveSessionStatsResponse | null>(null);
   const [toolState, setToolState] = useState<LiveSessionToolStateResponse | null>(null);
@@ -129,6 +146,8 @@ export default function LiveProducerPage() {
   const [featuredLinkUrl, setFeaturedLinkUrl] = useState('');
   const [hostNotice, setHostNotice] = useState('');
   const [postMetrics, setPostMetrics] = useState<PostResponse | null>(null);
+  const [sessionStartedAt, setSessionStartedAt] = useState<string | null>(null);
+  const [sessionPrivacy, setSessionPrivacy] = useState<LiveSessionResponse['privacy']>('PUBLIC');
   const [mediaStats, setMediaStats] = useState<MediaStats>({
     videoBitrateKbps: null,
     audioBitrateKbps: null,
@@ -136,7 +155,6 @@ export default function LiveProducerPage() {
     width: null,
     height: null,
   });
-  const [comments, setComments] = useState<PostCommentResponse[]>([]);
   const [localStreamVersion, setLocalStreamVersion] = useState(0);
   const mainVideoRef = useRef<HTMLVideoElement | null>(null);
   const miniVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -148,7 +166,7 @@ export default function LiveProducerPage() {
   const liveRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordingMimeTypeRef = useRef('');
-  const commentCount = postMetrics?.commentCount ?? comments.length;
+  const commentCount = postMetrics?.commentCount ?? 0;
   const shareCount = postMetrics?.shareCount ?? 0;
   const reactionCount = liveStats?.totalReactionCount ?? 0;
   const peakViewerCount = liveStats?.peakViewerCount ?? viewerCount;
@@ -178,7 +196,13 @@ export default function LiveProducerPage() {
         totalReactionCount: event.session.totalReactionCount,
       });
       if (event.type === 'LIVE_ENDED') {
-        setLiveStatus('Live da ket thuc.');
+        setLiveStatus('Live đã kết thúc.');
+      }
+      if (event.session.startedAt) {
+        setSessionStartedAt(event.session.startedAt);
+      }
+      if (event.session.privacy) {
+        setSessionPrivacy(event.session.privacy);
       }
     } else if (event.viewerCount != null || event.totalReactionCount != null) {
       setViewerCount((prev) => event.viewerCount ?? prev);
@@ -197,9 +221,58 @@ export default function LiveProducerPage() {
   useLiveSessionSocket(sessionId, currentUser?.token, handleLiveEvent);
 
   useEffect(() => {
+    if (!sessionId) {
+      navigate('/live/setup', { replace: true });
+      return;
+    }
+    void liveService.getSession(sessionId)
+      .then((session) => {
+        setSessionStartedAt(session.startedAt);
+        setSessionPrivacy(session.privacy);
+      })
+      .catch(() => undefined);
+  }, [navigate, sessionId]);
+
+  useEffect(() => {
     if (!routeState?.sessionId) return;
-    window.sessionStorage.setItem('kconnecta.liveProducerState', JSON.stringify(routeState));
+    persistProducerState(routeState);
   }, [routeState]);
+
+  useEffect(() => {
+    if (hostToken || !sessionId || !currentUser?.id) return;
+
+    let cancelled = false;
+    const recoverHostSession = async () => {
+      setIsRecoveringSession(true);
+      try {
+        const session = await liveService.getSession(sessionId);
+        if (cancelled || !isLiveSessionHost(session, currentUser.id)) return;
+
+        const recoveredState = await buildProducerStateForHost(session, currentUser.id, {
+          selectedCameraId: preferredCameraId || undefined,
+          selectedMicId: preferredMicId || undefined,
+        });
+        if (cancelled) return;
+
+        persistProducerState(recoveredState);
+        navigate(`/live/producer?sessionId=${encodeURIComponent(sessionId)}`, {
+          state: recoveredState,
+          replace: true,
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setLiveError(error instanceof Error ? error.message : 'Không thể khôi phục phiên live của host.');
+        }
+      } finally {
+        if (!cancelled) setIsRecoveringSession(false);
+      }
+    };
+
+    void recoverHostSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id, hostToken, navigate, preferredCameraId, preferredMicId, sessionId]);
 
   const bindStreamToPreview = useCallback(async (stream: MediaStream) => {
     const bind = async (el: HTMLVideoElement | null) => {
@@ -303,14 +376,34 @@ export default function LiveProducerPage() {
 
   useEffect(() => {
     if (!navigator.mediaDevices?.getUserMedia) return;
-    if (!selectedCameraId && !selectedMicId) return;
+    if (videoSourceMode === 'camera' && !selectedCameraId && !selectedMicId) return;
     let cancelled = false;
     const applyStream = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
-          audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
-        });
+        let stream: MediaStream;
+        if (videoSourceMode === 'screen') {
+          if (!navigator.mediaDevices?.getDisplayMedia) {
+            setMediaError('Trình duyệt không hỗ trợ chia sẻ màn hình.');
+            return;
+          }
+          const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+          const audioStream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+          });
+          screenStream.getVideoTracks()[0]?.addEventListener('ended', () => {
+            if (!cancelled) setVideoSourceMode('camera');
+          });
+          stream = new MediaStream([
+            ...screenStream.getVideoTracks(),
+            ...audioStream.getAudioTracks(),
+          ]);
+        } else {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: selectedCameraId ? { deviceId: { exact: selectedCameraId } } : true,
+            audio: selectedMicId ? { deviceId: { exact: selectedMicId } } : true,
+          });
+        }
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -323,14 +416,19 @@ export default function LiveProducerPage() {
         await bindStreamToPreview(stream);
       } catch {
         setIsMediaReady(false);
-        setMediaError('Không thể mở camera/microphone đã chọn.');
+        setMediaError(videoSourceMode === 'screen'
+          ? 'Không thể chia sẻ màn hình. Vui lòng thử lại hoặc chọn camera.'
+          : 'Không thể mở camera/microphone đã chọn.');
+        if (videoSourceMode === 'screen') {
+          setVideoSourceMode('camera');
+        }
       }
     };
     void applyStream();
     return () => {
       cancelled = true;
     };
-  }, [selectedCameraId, selectedMicId, bindStreamToPreview]);
+  }, [selectedCameraId, selectedMicId, videoSourceMode, bindStreamToPreview]);
 
   useEffect(() => {
     const stream = localStreamRef.current;
@@ -393,8 +491,15 @@ export default function LiveProducerPage() {
 
         const tracks = [...stream.getVideoTracks(), ...stream.getAudioTracks()];
         for (const track of tracks) {
+          const isScreenVideo = track.kind === 'video' && (
+            videoSourceMode === 'screen' || Boolean(track.getSettings().displaySurface)
+          );
           await room.localParticipant.publishTrack(track, {
-            source: track.kind === 'video' ? Track.Source.Camera : Track.Source.Microphone,
+            source: isScreenVideo
+              ? Track.Source.ScreenShare
+              : track.kind === 'video'
+                ? Track.Source.Camera
+                : Track.Source.Microphone,
           });
           publishedTracksRef.current.push(track);
         }
@@ -405,31 +510,12 @@ export default function LiveProducerPage() {
     };
 
     void publish();
-  }, [localStreamVersion, liveStatus]);
+  }, [localStreamVersion, liveStatus, videoSourceMode]);
 
   useEffect(() => {
     if (!localStreamRef.current) return;
     void bindStreamToPreview(localStreamRef.current);
   }, [mainSection, bindStreamToPreview]);
-
-  useEffect(() => {
-    if (!postId) return;
-    let cancelled = false;
-    const loadComments = async () => {
-      try {
-        const data = await postService.getComments(postId, 0, 30, currentUser?.id);
-        if (!cancelled) setComments(data.content);
-      } catch {
-        if (!cancelled) setComments([]);
-      }
-    };
-    void loadComments();
-    const interval = window.setInterval(() => void loadComments(), 5000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [currentUser?.id, postId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -601,12 +687,17 @@ export default function LiveProducerPage() {
 
   const handleClearPoll = async () => {
     if (!sessionId) return;
-    const data = await liveService.upsertPoll(sessionId, { enabled: false, question: null, options: [] });
-    setToolState(data);
-    setPollEnabled(false);
-    setPollQuestion('');
-    setPollOptions(['', '']);
-    showToolMessage('Đã xóa cuộc thăm dò ý kiến.');
+    try {
+      const data = await liveService.upsertPoll(sessionId, { enabled: false, question: null, options: [] });
+      setToolState(data);
+      setPollEnabled(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      showToolMessage('Đã xóa cuộc thăm dò ý kiến.');
+    } catch (err) {
+      setToolMessage('');
+      setToolError(err instanceof Error ? err.message : 'Không thể xóa thăm dò.');
+    }
   };
 
   const handleSaveFeaturedLink = async () => {
@@ -626,18 +717,28 @@ export default function LiveProducerPage() {
 
   const handleClearFeaturedLink = async () => {
     if (!sessionId) return;
-    const data = await liveService.upsertFeaturedLink(sessionId, { title: null, url: null });
-    setToolState(data);
-    setFeaturedLinkTitle('');
-    setFeaturedLinkUrl('');
-    showToolMessage('Đã xóa liên kết đáng chú ý.');
+    try {
+      const data = await liveService.upsertFeaturedLink(sessionId, { title: null, url: null });
+      setToolState(data);
+      setFeaturedLinkTitle('');
+      setFeaturedLinkUrl('');
+      showToolMessage('Đã xóa liên kết đáng chú ý.');
+    } catch (err) {
+      setToolMessage('');
+      setToolError(err instanceof Error ? err.message : 'Không thể xóa liên kết.');
+    }
   };
 
   const handleSaveHostNotice = async () => {
     if (!sessionId) return;
-    const data = await liveService.upsertHostNotice(sessionId, { notice: hostNotice });
-    setToolState(data);
-    showToolMessage('Đã lưu thông báo host.');
+    try {
+      const data = await liveService.upsertHostNotice(sessionId, { notice: hostNotice });
+      setToolState(data);
+      showToolMessage('Đã lưu thông báo host.');
+    } catch (err) {
+      setToolMessage('');
+      setToolError(err instanceof Error ? err.message : 'Không thể lưu thông báo.');
+    }
   };
 
   const handleEndLive = async () => {
@@ -651,11 +752,7 @@ export default function LiveProducerPage() {
         roomRef.current?.disconnect();
         localStreamRef.current?.getTracks().forEach((track) => track.stop());
 
-        if (currentUser?.id) {
-          await liveService.endSessionAsHost(sessionId, currentUser.id);
-        } else {
-          await liveService.endSession(sessionId);
-        }
+        await liveService.endSession(sessionId);
 
         if (recording && currentUser?.id) {
           const startedAt = recordingStartedAtRef.current;
@@ -682,8 +779,8 @@ export default function LiveProducerPage() {
     <div className="min-h-screen bg-gray-100">
       <Header />
 
-      <div className="pt-14 flex">
-        <aside className="w-[340px] shrink-0 border-r border-gray-200 bg-white h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
+      <div className="pt-14 flex min-w-0">
+        <aside className="w-[300px] shrink-0 border-r border-gray-200 bg-white h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
           <div className="p-4 border-b border-gray-200">
             <h2 className="text-2xl font-bold text-gray-900 leading-tight">Bảng điều khiển phát trực tiếp</h2>
             <p className="mt-3 text-sm text-gray-600">
@@ -753,7 +850,7 @@ export default function LiveProducerPage() {
           <div className="p-4 mt-2 border-t border-gray-200 sticky bottom-0 bg-white">
             <div className="flex items-center gap-2 text-red-500 font-semibold text-sm mb-3">
               <span className="h-2 w-2 rounded-full bg-red-500" />
-              <LiveTimer />
+              <LiveTimer startedAt={sessionStartedAt} />
             </div>
             <button
               onClick={() => void handleEndLive()}
@@ -765,18 +862,20 @@ export default function LiveProducerPage() {
           </div>
         </aside>
 
-        <main className="flex-1 p-6">
-          {(toolMessage || toolError) && (
-            <div className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${toolError ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-              {toolError || toolMessage}
+        <main className="flex-1 min-w-0 p-5 xl:p-6">
+          {(toolMessage || toolError || isRecoveringSession) && (
+            <div className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
+              toolError ? 'bg-red-50 text-red-700' : isRecoveringSession ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
+            }`}>
+              {toolError || (isRecoveringSession ? 'Đang khôi phục phiên live của host...' : toolMessage)}
             </div>
           )}
 
           {mainSection === 'dashboard' && (
-            <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_1fr] gap-4 items-start">
-              <div className="space-y-4">
-                <section className="rounded-2xl border border-gray-200 bg-white p-3">
-                  <div className="relative h-[520px] rounded-xl bg-black overflow-hidden">
+            <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-2 xl:items-start">
+              <div className="min-w-0 space-y-4">
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="relative aspect-video rounded-xl bg-black overflow-hidden">
                     <video ref={mainVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
                     <span className="absolute top-4 left-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</span>
                     {!isMediaReady && (
@@ -790,99 +889,99 @@ export default function LiveProducerPage() {
                       </div>
                     )}
                   </div>
-                  <div className="mt-3 text-xl font-semibold flex items-center gap-2"><MessageCircle className="w-6 h-6 text-gray-700" /> {liveStatus}</div>
+                  <div className="mt-3 text-base font-semibold flex items-center gap-2"><MessageCircle className="w-5 h-5 text-gray-700" /> {liveStatus}</div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold">Hoạt động trong Live</h3>
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Hoạt động trong Live</h3>
+                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-gray-100 p-3">
-                      <p className="text-sm text-gray-600">Số người đang xem</p>
-                      <p className="text-4xl font-bold mt-1">{viewerCount}</p>
+                    <div className="rounded-xl bg-gray-100 p-3 text-center">
+                      <p className="text-xs text-gray-600">Số người đang xem</p>
+                      <p className="text-2xl font-bold mt-1">{viewerCount}</p>
                     </div>
-                    <div className="rounded-xl bg-gray-100 p-3">
-                      <p className="text-sm text-gray-600">Số bình luận hiện tại</p>
-                      <p className="text-4xl font-bold mt-1">{commentCount}</p>
+                    <div className="rounded-xl bg-gray-100 p-3 text-center">
+                      <p className="text-xs text-gray-600">Số bình luận hiện tại</p>
+                      <p className="text-2xl font-bold mt-1">{commentCount}</p>
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold">Thông tin chi tiết</h3>
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <MoreHorizontal className="w-5 h-5" />
-                      <ChevronDown className="w-5 h-5" />
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Thông tin chi tiết</h3>
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <MoreHorizontal className="w-4 h-4" />
+                      <ChevronDown className="w-4 h-4" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-4">
-                    <div className="flex items-start gap-3">
-                      <Eye className="w-5 h-5 text-gray-500 mt-1" />
-                      <div>
-                        <p className="text-3xl font-bold leading-none">{viewerCount}</p>
-                        <p className="text-gray-600">Người xem</p>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+                      <Eye className="w-4 h-4 text-gray-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xl font-bold leading-none">{viewerCount}</p>
+                        <p className="text-xs text-gray-600 truncate">Người xem</p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <MessageCircle className="w-5 h-5 text-green-600 mt-1" />
-                      <div>
-                        <p className="text-3xl font-bold leading-none">{commentCount}</p>
-                        <p className="text-gray-600">Bình luận</p>
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+                      <MessageCircle className="w-4 h-4 text-green-600 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xl font-bold leading-none">{commentCount}</p>
+                        <p className="text-xs text-gray-600 truncate">Bình luận</p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <ThumbsUp className="w-5 h-5 text-blue-600 mt-1" />
-                      <div>
-                        <p className="text-3xl font-bold leading-none">{reactionCount}</p>
-                        <p className="text-gray-600">Cảm xúc</p>
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+                      <ThumbsUp className="w-4 h-4 text-blue-600 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xl font-bold leading-none">{reactionCount}</p>
+                        <p className="text-xs text-gray-600 truncate">Cảm xúc</p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3">
-                      <Share2 className="w-5 h-5 text-blue-600 mt-1" />
-                      <div>
-                        <p className="text-3xl font-bold leading-none">{shareCount}</p>
-                        <p className="text-gray-600">Lượt chia sẻ</p>
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+                      <Share2 className="w-4 h-4 text-blue-600 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xl font-bold leading-none">{shareCount}</p>
+                        <p className="text-xs text-gray-600 truncate">Lượt chia sẻ</p>
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => setMainSection('details')} className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Xem thông tin chi tiết</button>
+                  <button onClick={() => setMainSection('details')} className="w-full rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold py-2">Xem thông tin chi tiết</button>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold">Số liệu về video đang phát</h3>
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Số liệu về video đang phát</h3>
+                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
                   </div>
-                  <div className="space-y-4">
-                    <div className="rounded-xl bg-gray-100 p-4">
-                      <p className="text-sm text-gray-600">Tốc độ bit của video</p>
-                      <p className="mt-1 text-3xl font-bold">{mediaStats.videoBitrateKbps == null ? 'Đang đo' : `${mediaStats.videoBitrateKbps} Kbps`}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="rounded-xl bg-gray-100 p-3">
+                      <p className="text-xs text-gray-600">Tốc độ bit video</p>
+                      <p className="mt-1 text-lg font-bold">{mediaStats.videoBitrateKbps == null ? 'Đang đo' : `${mediaStats.videoBitrateKbps} Kbps`}</p>
                       <p className="mt-1 text-xs text-gray-500">
                         {mediaStats.width && mediaStats.height ? `${mediaStats.width}×${mediaStats.height}` : 'Chưa có độ phân giải'}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-gray-100 p-4">
-                      <p className="text-sm text-gray-600">Tỷ lệ khung hình</p>
-                      <p className="mt-1 text-3xl font-bold">{mediaStats.fps == null ? 'Đang đo' : `${mediaStats.fps} fps`}</p>
-                      <p className="mt-1 text-xs text-gray-500">Lấy từ WebRTC sender stats hoặc camera settings</p>
+                    <div className="rounded-xl bg-gray-100 p-3">
+                      <p className="text-xs text-gray-600">Tỷ lệ khung hình</p>
+                      <p className="mt-1 text-lg font-bold">{mediaStats.fps == null ? 'Đang đo' : `${mediaStats.fps} fps`}</p>
+                      <p className="mt-1 text-xs text-gray-500">WebRTC / camera</p>
                     </div>
-                    <div className="rounded-xl bg-gray-100 p-4">
-                      <p className="text-sm text-gray-600">Tốc độ bit của âm thanh</p>
-                      <p className="mt-1 text-3xl font-bold">{mediaStats.audioBitrateKbps == null ? 'Đang đo' : `${mediaStats.audioBitrateKbps} Kbps`}</p>
-                      <p className="mt-1 text-xs text-gray-500">Cập nhật khoảng mỗi 2 giây khi đang publish</p>
+                    <div className="rounded-xl bg-gray-100 p-3 sm:col-span-1">
+                      <p className="text-xs text-gray-600">Tốc độ bit âm thanh</p>
+                      <p className="mt-1 text-lg font-bold">{mediaStats.audioBitrateKbps == null ? 'Đang đo' : `${mediaStats.audioBitrateKbps} Kbps`}</p>
+                      <p className="mt-1 text-xs text-gray-500">Cập nhật ~2 giây</p>
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold">Quản lý trên thiết bị thứ hai</h3>
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Quản lý trên thiết bị thứ hai</h3>
+                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
                   </div>
-                  <p className="text-gray-700 mb-3">Chia sẻ liên kết của video trực tiếp với người kiểm duyệt. Liên kết này sẽ mở trong Live Producer để dễ dàng truy cập.</p>
+                  <p className="text-sm text-gray-700 mb-3">Chia sẻ liên kết video trực tiếp với người kiểm duyệt.</p>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem live'}</div>
                     <button onClick={() => void handleCopyViewerUrl()} disabled={!viewerUrl} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2 disabled:text-gray-400 disabled:cursor-not-allowed">Sao chép</button>
@@ -890,31 +989,21 @@ export default function LiveProducerPage() {
                 </section>
               </div>
 
-              <div className="space-y-4">
-                <section className="rounded-2xl border border-gray-200 bg-white p-5 min-h-[520px]">
-                  <h3 className="text-2xl font-bold mb-4">Bình luận</h3>
-                  <div className="rounded-xl bg-gray-100 p-4 text-gray-700 min-h-[320px] max-h-[420px] overflow-y-auto">
-                    {comments.length === 0 ? (
-                      <div className="flex min-h-[280px] flex-col justify-center text-center text-gray-500">
-                        <MessageCircle className="w-7 h-7 mx-auto mb-2" />
-                        <p className="font-semibold">Chưa có bình luận</p>
-                        <p className="text-sm">Bình luận của đối tượng sẽ hiển thị ở đây.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {comments.map((comment) => (
-                          <div key={comment.id} className="rounded-xl bg-white px-3 py-2 shadow-sm">
-                            <p className="text-sm font-semibold text-gray-900">{comment.userFullName || comment.username || 'Người dùng'}</p>
-                            <p className="text-sm text-gray-700">{comment.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+              <div className="min-w-0 space-y-4">
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <h3 className="text-lg font-bold mb-3">Bình luận</h3>
+                  <LiveCommentPanel
+                    postId={postId || undefined}
+                    sessionId={sessionId}
+                    hostUserId={currentUser?.id}
+                    isHost
+                    toolState={toolState}
+                    onToolStateChange={setToolState}
+                  />
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Chi tiết bài viết</h3>
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">Chi tiết bài viết</h3>
 
                   <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-slate-50 to-white p-4">
                     <div className="flex items-start gap-3">
@@ -930,24 +1019,24 @@ export default function LiveProducerPage() {
                         <div className="mt-1 flex items-center gap-2">
                           <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-700">
                             <Globe className="mr-1.5 h-3.5 w-3.5 text-gray-500" />
-                            Công khai
+                            {sessionPrivacy === 'PRIVATE' ? 'Chỉ mình tôi' : sessionPrivacy === 'FRIENDS' ? 'Bạn bè' : sessionPrivacy === 'FRIENDS_EXCEPT' ? 'Bạn bè trừ...' : 'Công khai'}
                           </div>
                           <p className="text-xs text-gray-500">Đang phát trực tiếp</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-4">
-                      <p className="text-xl font-semibold text-gray-900 leading-tight">{liveTitle}</p>
-                      {liveDescription && <p className="mt-1.5 text-lg text-gray-700 leading-tight">{liveDescription}</p>}
+                    <div className="mt-3">
+                      <p className="text-base font-semibold text-gray-900 leading-tight">{liveTitle}</p>
+                      {liveDescription && <p className="mt-1 text-sm text-gray-700 leading-snug">{liveDescription}</p>}
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold">Cuộc thăm dò ý kiến</h3>
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Cuộc thăm dò ý kiến</h3>
+                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="space-y-3">
                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
@@ -980,17 +1069,37 @@ export default function LiveProducerPage() {
                       <button onClick={() => void handleSavePoll()} className="rounded-xl bg-blue-600 text-white py-2.5 font-semibold">Lưu thăm dò</button>
                     </div>
                     {toolState?.pollEnabled && (
-                      <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">
-                        Thăm dò đang bật: {toolState.pollQuestion}
+                      <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800 space-y-2">
+                        <p>Thăm dò đang bật: {toolState.pollQuestion}</p>
+                        {toolState.pollOptionCounts && toolState.pollOptions.length > 0 && (
+                          <div className="space-y-2">
+                            {toolState.pollOptions.map((option, index) => {
+                              const count = toolState.pollOptionCounts?.[index] ?? 0;
+                              const total = toolState.pollOptionCounts?.reduce((sum, value) => sum + value, 0) ?? 0;
+                              const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                              return (
+                                <div key={`${option}-${index}`} className="rounded-lg bg-white px-3 py-2 text-gray-800">
+                                  <div className="flex items-center justify-between text-sm font-medium">
+                                    <span>{option}</span>
+                                    <span>{percent}% ({count})</span>
+                                  </div>
+                                  <div className="mt-1 h-2 rounded-full bg-gray-200">
+                                    <div className="h-2 rounded-full bg-blue-600" style={{ width: `${percent}%` }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold">Thông báo</h3>
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Thông báo</h3>
+                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="space-y-3">
                     <textarea
@@ -1003,10 +1112,10 @@ export default function LiveProducerPage() {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold">Liên kết đáng chú ý</h3>
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Liên kết đáng chú ý</h3>
+                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
                   </div>
                   <div className="space-y-3">
                     <input
@@ -1033,15 +1142,15 @@ export default function LiveProducerPage() {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-2xl font-bold">Liên kết xem trước</h3>
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-bold">Liên kết xem trước</h3>
+                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
                   </div>
-                  <p className="text-gray-700 mb-3">Nhấp vào liên kết bên dưới để xem những gì người xem nhìn thấy</p>
+                  <p className="text-sm text-gray-700 mb-3">Xem trước giao diện người xem (không tính vào lượt xem).</p>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem trước'}</div>
-                    <button onClick={() => navigate(`/live/viewer?sessionId=${encodeURIComponent(sessionId)}`)} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Xem bài viết</button>
+                    <button onClick={() => navigate(getLiveViewerPreviewUrl(sessionId))} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Xem như người xem</button>
                   </div>
                 </section>
               </div>
@@ -1064,7 +1173,7 @@ export default function LiveProducerPage() {
           )}
 
           {mainSection === 'settings' && settingsSub === 'video' && (
-            <div className="grid grid-cols-1 xl:grid-cols-[1.15fr_1fr] gap-4">
+            <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-2">
               <section className="rounded-2xl border border-gray-200 bg-white p-5">
                 <h3 className="text-2xl font-bold mb-4">Cài đặt phát trực tiếp</h3>
                 <p className="font-semibold mb-1">Độ trễ của video trực tiếp</p>
@@ -1111,6 +1220,26 @@ export default function LiveProducerPage() {
                       ))}
                     </select>
                   </div>
+                  <button
+                    type="button"
+                    disabled={isStartingScreenShare}
+                    onClick={() => {
+                      setIsStartingScreenShare(true);
+                      if (videoSourceMode === 'screen') {
+                        setVideoSourceMode('camera');
+                        setIsStartingScreenShare(false);
+                        return;
+                      }
+                      setVideoSourceMode('screen');
+                      setIsStartingScreenShare(false);
+                    }}
+                    className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold ${
+                      videoSourceMode === 'screen' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    <Monitor className="h-4 w-4" />
+                    {videoSourceMode === 'screen' ? 'Đang chia sẻ màn hình — chuyển về camera' : 'Chia sẻ màn hình'}
+                  </button>
                   {!!mediaError && <p className="text-sm text-red-600">{mediaError}</p>}
                 </div>
               </section>

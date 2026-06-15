@@ -1,11 +1,14 @@
-import { MessageCircle, MoreHorizontal, Volume2, X } from 'lucide-react';
+import { MoreHorizontal, Volume2, VolumeX, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Room, RoomEvent, Track, type RemoteTrack } from 'livekit-client';
+import { toast } from 'sonner';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
-import { liveService, type LiveSessionResponse, type LiveSessionToolStateResponse, type UpsertLiveReactionRequest } from '@/services/liveService';
-import { postService, type PostCommentResponse } from '@/services/postService';
+import { liveService, type LiveSessionRealtimeEvent, type LiveSessionResponse, type LiveSessionToolStateResponse, type UpsertLiveReactionRequest } from '@/services/liveService';
+import { LiveCommentPanel } from '../components/LiveCommentPanel';
+import { LiveFloatingReactions, useLiveReactionBursts } from '../components/LiveFloatingReactions';
+import { isLiveSessionHost, navigateToLiveSession } from '../utils/navigateToLiveSession';
 import { useLiveSessionSocket } from '../hooks/useLiveSessionSocket';
 
 const reactions: Array<{ label: string; value: NonNullable<UpsertLiveReactionRequest['reactionType']> }> = [
@@ -19,10 +22,23 @@ const reactions: Array<{ label: string; value: NonNullable<UpsertLiveReactionReq
 
 const isPlayableUrl = (value?: string | null) => /^https?:\/\//i.test(value?.trim() ?? '');
 
+function formatLiveElapsed(startedAt?: string | null) {
+  if (!startedAt) return '00:00';
+  const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+  const hours = Math.floor(elapsedSec / 3600);
+  const minutes = Math.floor((elapsedSec % 3600) / 60);
+  const seconds = elapsedSec % 60;
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export default function LiveViewerPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const sessionId = params.get('sessionId') ?? '';
+  const isViewerPreview = params.get('preview') === '1';
   const currentUser = authService.getCurrentUser();
   const currentUserId = currentUser?.id ?? '';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -31,10 +47,12 @@ export default function LiveViewerPage() {
   const [error, setError] = useState('');
   const [activeReaction, setActiveReaction] = useState<UpsertLiveReactionRequest['reactionType']>(null);
   const [toolState, setToolState] = useState<LiveSessionToolStateResponse | null>(null);
-  const [comments, setComments] = useState<PostCommentResponse[]>([]);
-  const [commentText, setCommentText] = useState('');
-  const [isSendingComment, setIsSendingComment] = useState(false);
-  const [showControls, setShowControls] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [liveElapsed, setLiveElapsed] = useState('00:00');
+  const [isReacting, setIsReacting] = useState(false);
+  const [isVotingPoll, setIsVotingPoll] = useState(false);
+  const { bursts, pushBurst } = useLiveReactionBursts();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const roomRef = useRef<Room | null>(null);
@@ -47,7 +65,7 @@ export default function LiveViewerPage() {
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
   const replayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() : '';
 
-  const handleLiveEvent = useCallback((event: import('@/services/liveService').LiveSessionRealtimeEvent) => {
+  const handleLiveEvent = useCallback((event: LiveSessionRealtimeEvent) => {
     if (event.session) {
       setSession(event.session);
     } else if (event.viewerCount != null || event.totalReactionCount != null) {
@@ -58,18 +76,26 @@ export default function LiveViewerPage() {
         totalReactionCount: event.totalReactionCount ?? prev.totalReactionCount,
       } : prev);
     }
+    if (event.type === 'REACTION_UPDATED') {
+      if (event.reactedUserId === currentUserId) {
+        setActiveReaction(event.reactionType ?? null);
+      }
+      if (event.reactionType) {
+        pushBurst(event.reactionType);
+      }
+    }
     if (event.tools) {
       setToolState(event.tools);
     }
     if (event.type === 'LIVE_ENDED') {
       roomRef.current?.disconnect();
-      setStatus('Live da ket thuc.');
+      setStatus('Live đã kết thúc.');
       setError('');
-      if (currentUserId && sessionId) {
-        void liveService.leaveSession(sessionId, { userId: currentUserId }).catch(() => undefined);
+      if (!isViewerPreview && currentUserId && sessionId) {
+        void liveService.leaveSession(sessionId).catch(() => undefined);
       }
     }
-  }, [currentUserId, sessionId]);
+  }, [currentUserId, isViewerPreview, pushBurst, sessionId]);
 
   useLiveSessionSocket(sessionId, currentUser?.token, handleLiveEvent);
 
@@ -102,25 +128,37 @@ export default function LiveViewerPage() {
       try {
         const liveSession = await liveService.getSession(sessionId);
         if (cancelled) return;
-        setSession(liveSession);
-        if (liveSession.postId) {
-          const loadedComments = await postService.getComments(liveSession.postId, 0, 20, currentUserId);
-          if (!cancelled) setComments(loadedComments.content);
+        if (!isViewerPreview && isLiveSessionHost(liveSession, currentUserId)) {
+          await navigateToLiveSession(liveSession, currentUserId, navigate);
+          return;
         }
+        setSession(liveSession);
         if (liveSession.status === 'ENDED' || liveSession.status === 'CANCELED') {
           if (liveSession.recordingStatus === 'PROCESSING' && !isPlayableUrl(liveSession.playbackUrl)) {
-            setStatus('Ban ghi live dang duoc xu ly.');
+            setStatus('Bản ghi live đang được xử lý.');
             return;
           }
           if (liveSession.recordingStatus === 'FAILED' && !isPlayableUrl(liveSession.playbackUrl)) {
-            setStatus('Khong the tao ban ghi phat lai cho phien live nay.');
+            setStatus('Không thể tạo bản ghi phát lại cho phiên live này.');
             return;
           }
           setStatus('Live đã kết thúc.');
           return;
         }
-        const joinedSession = await liveService.joinSession(sessionId, { userId: currentUserId });
-        if (!cancelled) setSession(joinedSession);
+        if (liveSession.status === 'SCHEDULED') {
+          setStatus('Live đã được lên lịch. Chờ host bắt đầu phát.');
+          return;
+        }
+        if (!isViewerPreview) {
+          const joinedSession = await liveService.joinSession(sessionId);
+          if (!cancelled) setSession(joinedSession);
+        }
+        try {
+          const reaction = await liveService.getReaction(sessionId);
+          if (!cancelled) setActiveReaction(reaction.reactionType ?? null);
+        } catch {
+          // Reaction state is optional on first load.
+        }
         const token = await liveService.getToken({ sessionId, userId: currentUserId, role: 'VIEWER' });
         await room.connect(token.livekitUrl, token.token);
         if (cancelled) return;
@@ -139,15 +177,17 @@ export default function LiveViewerPage() {
       cancelled = true;
       room.disconnect();
       roomRef.current = null;
-      void liveService.leaveSession(sessionId, { userId: currentUserId }).catch(() => undefined);
+      if (!isViewerPreview) {
+        void liveService.leaveSession(sessionId).catch(() => undefined);
+      }
     };
-  }, [currentUserId, sessionId]);
+  }, [currentUser?.token, currentUserId, isViewerPreview, navigate, sessionId]);
 
   useEffect(() => {
-    if (!sessionId || !currentUserId || isLiveEnded) return;
+    if (!sessionId || !currentUserId || isLiveEnded || isViewerPreview) return;
     const sendHeartbeat = async () => {
       try {
-        const updated = await liveService.heartbeat(sessionId, { userId: currentUserId });
+        const updated = await liveService.heartbeat(sessionId);
         setSession(updated);
       } catch {
         try {
@@ -160,16 +200,13 @@ export default function LiveViewerPage() {
     };
     const interval = window.setInterval(() => void sendHeartbeat(), 15000);
     return () => window.clearInterval(interval);
-  }, [currentUserId, isLiveEnded, sessionId]);
+  }, [currentUserId, isLiveEnded, isViewerPreview, sessionId]);
 
   useEffect(() => {
     if (!isLiveEnded) return;
     roomRef.current?.disconnect();
-    if (currentUserId && sessionId) {
-      void liveService.leaveSession(sessionId, { userId: currentUserId }).catch(() => undefined);
-    }
-    setStatus('Live da ket thuc.');
-  }, [currentUserId, isLiveEnded, sessionId]);
+    setStatus('Live đã kết thúc.');
+  }, [isLiveEnded]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -190,29 +227,55 @@ export default function LiveViewerPage() {
     };
   }, [sessionId]);
 
-  const handleReaction = async (reactionType: UpsertLiveReactionRequest['reactionType']) => {
-    if (!sessionId || !currentUserId || isLiveEnded) return;
+  useEffect(() => {
+    if (!session?.startedAt || isLiveEnded) return;
+    const updateElapsed = () => setLiveElapsed(formatLiveElapsed(session.startedAt));
+    updateElapsed();
+    const interval = window.setInterval(updateElapsed, 1000);
+    return () => window.clearInterval(interval);
+  }, [isLiveEnded, session?.startedAt]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = isMuted;
+    }
+  }, [isMuted]);
+
+  const handleReaction = async (reactionType: NonNullable<UpsertLiveReactionRequest['reactionType']>) => {
+    if (!sessionId || !currentUserId || isLiveEnded || isReacting) return;
+    const previousReaction = activeReaction;
     const nextReaction = activeReaction === reactionType ? null : reactionType;
     setActiveReaction(nextReaction);
+    setIsReacting(true);
     try {
-      const updated = await liveService.react(sessionId, { userId: currentUserId, reactionType: nextReaction });
+      const updated = await liveService.react(sessionId, { reactionType: nextReaction });
       setSession(updated);
-    } catch {
-      setActiveReaction(activeReaction);
+      if (nextReaction) {
+        pushBurst(nextReaction);
+      }
+    } catch (err) {
+      setActiveReaction(previousReaction);
+      toast.error(err instanceof Error ? err.message : 'Không thể gửi cảm xúc live.');
+    } finally {
+      setIsReacting(false);
     }
   };
 
-  const handleSubmitComment = async () => {
-    const content = commentText.trim();
-    if (!content || !currentUserId || !session?.postId || isSendingComment || isLiveEnded) return;
-    setIsSendingComment(true);
+  const handleVotePoll = async (optionIndex: number) => {
+    if (!sessionId || isViewerPreview || isLiveEnded || !currentUserId) return;
+    setIsVotingPoll(true);
     try {
-      const saved = await postService.addComment(session.postId, { userId: currentUserId, content });
-      setComments((prev) => [...prev, saved]);
-      setCommentText('');
+      const updated = await liveService.votePoll(sessionId, { optionIndex });
+      setToolState(updated);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Không thể bình chọn.');
     } finally {
-      setIsSendingComment(false);
+      setIsVotingPoll(false);
     }
+  };
+
+  const handleToggleMute = () => {
+    setIsMuted((prev) => !prev);
   };
 
   const handleCopyLiveLink = async () => {
@@ -287,27 +350,40 @@ export default function LiveViewerPage() {
             )}
           </div>
 
-          <div
-            className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4 transition-opacity duration-200 ${
-              showControls ? 'opacity-100' : 'pointer-events-none opacity-0'
-            }`}
-          >
-            <div className="flex items-center gap-3 text-white text-sm mb-2">
+          <LiveFloatingReactions bursts={bursts} />
+
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+            <div
+              className={`mb-2 flex items-center gap-3 text-sm text-white transition-opacity duration-200 ${
+                showControls ? 'opacity-100' : 'pointer-events-none opacity-0'
+              }`}
+            >
               <span>{status}</span>
-              <div className="flex-1 h-1 rounded bg-white/30 overflow-hidden">
-                <div className="h-full w-full bg-blue-500" />
+              <div className="flex-1 overflow-hidden rounded bg-white/30">
+                <div className="h-1 w-full bg-blue-500" />
               </div>
-              <Volume2 className="w-5 h-5" />
+              <span className="min-w-[44px] text-right text-xs text-white/80">{liveElapsed}</span>
+              <button
+                type="button"
+                onClick={handleToggleMute}
+                className="rounded-full p-1 hover:bg-white/10"
+                aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+              >
+                {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              </button>
             </div>
             <div className="flex items-center gap-2 text-3xl">
               {reactions.map((reaction) => (
                 <button
                   key={reaction.value}
                   type="button"
-                  disabled={isLiveEnded}
+                  disabled={isLiveEnded || isReacting}
                   onClick={() => void handleReaction(reaction.value)}
-                  className={`rounded-full px-1 transition-transform hover:scale-110 disabled:cursor-not-allowed disabled:opacity-40 ${activeReaction === reaction.value ? 'bg-white/20' : ''}`}
+                  className={`rounded-full px-1 transition-transform hover:scale-125 disabled:cursor-not-allowed disabled:opacity-40 ${
+                    activeReaction === reaction.value ? 'bg-white/25 ring-2 ring-white/60 scale-110' : ''
+                  }`}
                   aria-label={`Bày tỏ cảm xúc ${reaction.value}`}
+                  aria-pressed={activeReaction === reaction.value}
                 >
                   {reaction.label}
                 </button>
@@ -361,57 +437,68 @@ export default function LiveViewerPage() {
                 <div className="rounded-xl bg-gray-100 p-3">
                   <p className="font-semibold text-gray-900">{toolState.pollQuestion}</p>
                   <div className="mt-2 space-y-2">
-                    {toolState.pollOptions.map((option) => (
-                      <button key={option} className="w-full rounded-lg bg-white px-3 py-2 text-left text-sm font-medium text-gray-800 hover:bg-blue-50">
-                        {option}
-                      </button>
-                    ))}
+                    {toolState.pollOptions.map((option, index) => {
+                      const count = toolState.pollOptionCounts?.[index] ?? 0;
+                      const totalVotes = toolState.pollOptionCounts?.reduce((sum, value) => sum + value, 0) ?? 0;
+                      const percent = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+                      const isSelected = toolState.myPollOptionIndex === index;
+                      const canVote = !isViewerPreview && !isLiveEnded && Boolean(currentUserId);
+                      return (
+                        <button
+                          key={`${option}-${index}`}
+                          type="button"
+                          disabled={!canVote || isVotingPoll}
+                          onClick={() => void handleVotePoll(index)}
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
+                            isSelected
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-800 hover:bg-blue-50'
+                          } ${!canVote ? 'cursor-default' : ''}`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span>{option}</span>
+                            {totalVotes > 0 && (
+                              <span className={isSelected ? 'text-blue-100' : 'text-gray-500'}>
+                                {percent}% ({count})
+                              </span>
+                            )}
+                          </div>
+                          {totalVotes > 0 && (
+                            <div className={`mt-1 h-1.5 rounded-full ${isSelected ? 'bg-blue-400' : 'bg-gray-200'}`}>
+                              <div
+                                className={`h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-blue-600'}`}
+                                style={{ width: `${percent}%` }}
+                              />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
+                  {isLiveEnded && !isViewerPreview && (
+                    <p className="mt-2 text-xs text-gray-500">Thăm dò đã đóng cùng phiên live.</p>
+                  )}
+                  {isViewerPreview && (
+                    <p className="mt-2 text-xs text-gray-500">Chế độ xem trước — không thể bình chọn.</p>
+                  )}
+                  {!currentUserId && !isViewerPreview && !isLiveEnded && (
+                    <p className="mt-2 text-xs text-gray-500">Đăng nhập để tham gia bình chọn.</p>
+                  )}
                 </div>
               )}
             </div>
           )}
 
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-xl bg-gray-100 p-4 text-gray-700">
-            {comments.length === 0 ? (
-              <div className="p-5 text-center text-gray-500">
-                <MessageCircle className="w-7 h-7 mx-auto mb-2" />
-                <p className="font-semibold">Chưa có bình luận</p>
-                <p className="text-sm">Bình luận đầu tiên sẽ hiển thị tại đây.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="rounded-xl bg-white px-3 py-2 shadow-sm">
-                    <p className="text-sm font-semibold text-gray-900">{comment.userFullName || comment.username || 'Người dùng'}</p>
-                    <p className="text-sm text-gray-700">{comment.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="mt-auto pt-4 border-t border-gray-200 flex items-center gap-2">
-            <div className="h-10 w-10 rounded-full bg-gray-200" />
-            <input
-              value={commentText}
-              disabled={isLiveEnded}
-              onChange={(event) => setCommentText(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') void handleSubmitComment();
-              }}
-              className="flex-1 rounded-full bg-gray-100 px-4 py-2.5 outline-none disabled:cursor-not-allowed disabled:text-gray-400"
-              placeholder="Viết bình luận..."
-            />
-            <button
-              type="button"
-              disabled={!commentText.trim() || isSendingComment || isLiveEnded}
-              onClick={() => void handleSubmitComment()}
-              className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-gray-300"
-            >
-              Gửi
-            </button>
-          </div>
+          <LiveCommentPanel
+            postId={session?.postId ?? undefined}
+            sessionId={sessionId}
+            hostUserId={session?.hostUserId}
+            isHost={Boolean(currentUserId && session?.hostUserId === currentUserId)}
+            disabled={isLiveEnded}
+            toolState={toolState}
+            onToolStateChange={setToolState}
+            className="mt-4 min-h-0 flex-1"
+          />
         </aside>
       </div>
     </div>

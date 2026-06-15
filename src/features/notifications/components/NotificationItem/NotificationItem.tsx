@@ -72,6 +72,9 @@ export const NotificationItem = ({
     } else if (notification.type === 'group_activity' && notification.relatedId) {
       onClose?.();
       navigate(`/groups/${notification.relatedId}`);
+    } else if (notification.type === 'event' && notification.relatedId) {
+      onClose?.();
+      navigate(`/home?post=${notification.relatedId}`);
     }
   };
   return (

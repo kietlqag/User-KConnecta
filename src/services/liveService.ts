@@ -45,6 +45,7 @@ export interface UpsertLivePinnedCommentRequest {
 export interface StartLiveRequest {
   userId: string;
   groupId?: string;
+  pageId?: string;
   title: string;
   description: string;
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'SPECIFIC_FRIENDS' | 'PRIVATE';
@@ -77,6 +78,7 @@ export interface LiveSessionResponse {
   id: string;
   hostUserId: string;
   groupId?: string | null;
+  pageId?: string | null;
   postId?: string | null;
   title: string;
   description?: string | null;
@@ -100,6 +102,8 @@ export interface LiveSessionResponse {
   totalReactionCount: number;
   createdAt: string;
   updatedAt: string;
+  subscriptionCount?: number | null;
+  subscribedByCurrentUser?: boolean | null;
 }
 
 export interface LiveKitTokenRequest {
@@ -130,9 +134,12 @@ export interface LiveSessionToolStateResponse {
   pollEnabled: boolean;
   pollQuestion: string | null;
   pollOptions: string[];
+  pollOptionCounts?: number[] | null;
+  myPollOptionIndex?: number | null;
   featuredLinkTitle: string | null;
   featuredLinkUrl: string | null;
   hostNotice: string | null;
+  pinnedCommentId: string | null;
   updatedAt: string | null;
 }
 
@@ -144,6 +151,12 @@ export type LiveSessionRealtimeEventType =
   | 'REACTION_UPDATED'
   | 'TOOLS_UPDATED';
 
+export interface LiveSessionReactionResponse {
+  sessionId: string;
+  userId: string;
+  reactionType: UpsertLiveReactionRequest['reactionType'];
+}
+
 export interface LiveSessionRealtimeEvent {
   type: LiveSessionRealtimeEventType;
   sessionId: string;
@@ -151,6 +164,8 @@ export interface LiveSessionRealtimeEvent {
   viewerCount?: number | null;
   peakViewerCount?: number | null;
   totalReactionCount?: number | null;
+  reactedUserId?: string | null;
+  reactionType?: UpsertLiveReactionRequest['reactionType'];
   session?: LiveSessionResponse | null;
   tools?: LiveSessionToolStateResponse | null;
   emittedAt?: string | null;
@@ -162,6 +177,10 @@ export interface UpsertLivePollRequest {
   options?: string[];
 }
 
+export interface VoteLivePollRequest {
+  optionIndex: number;
+}
+
 export interface UpsertLiveFeaturedLinkRequest {
   title?: string | null;
   url?: string | null;
@@ -171,13 +190,36 @@ export interface UpsertLiveHostNoticeRequest {
   notice?: string | null;
 }
 
-export interface LiveViewerRequest {
-  userId: string;
+export interface UpsertLiveSessionPinnedCommentRequest {
+  commentId?: string | null;
+}
+
+export interface GoLiveResponse {
+  session: LiveSessionResponse;
+  livekitUrl: string;
+  hostToken: string;
 }
 
 export interface UpsertLiveReactionRequest {
-  userId: string;
   reactionType: 'LIKE' | 'LOVE' | 'HAHA' | 'WOW' | 'SAD' | 'ANGRY' | null;
+}
+
+export interface LiveEventSubscriptionStatusResponse {
+  subscribed: boolean;
+  subscriptionCount: number;
+}
+
+export interface LiveEventSubscriberResponse {
+  userId: string;
+  username: string;
+  fullName?: string | null;
+  avatarUrl?: string | null;
+  subscribedAt: string;
+}
+
+export interface LiveEventSubscribersResponse {
+  total: number;
+  subscribers: LiveEventSubscriberResponse[];
 }
 
 export const liveService = {
@@ -201,20 +243,24 @@ export const liveService = {
     api.get<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}`),
   getSessionByPost: (postId: string) =>
     api.get<LiveSessionResponse>(`/live/sessions/by-post/${encodeURIComponent(postId)}`),
+  goLive: (sessionId: string) =>
+    api.post<GoLiveResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/go-live`, {}),
   getStats: (sessionId: string) =>
     api.get<LiveSessionStatsResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/stats`),
   getTools: (sessionId: string) =>
     api.get<LiveSessionToolStateResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/tools`),
   upsertPoll: (sessionId: string, payload: UpsertLivePollRequest) =>
     api.put<LiveSessionToolStateResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/tools/poll`, payload),
+  votePoll: (sessionId: string, payload: VoteLivePollRequest) =>
+    api.put<LiveSessionToolStateResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/tools/poll/vote`, payload),
   upsertFeaturedLink: (sessionId: string, payload: UpsertLiveFeaturedLinkRequest) =>
     api.put<LiveSessionToolStateResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/tools/featured-link`, payload),
   upsertHostNotice: (sessionId: string, payload: UpsertLiveHostNoticeRequest) =>
     api.put<LiveSessionToolStateResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/tools/host-notice`, payload),
+  upsertSessionPinnedComment: (sessionId: string, payload: UpsertLiveSessionPinnedCommentRequest) =>
+    api.put<LiveSessionToolStateResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/tools/pinned-comment`, payload),
   endSession: (sessionId: string) =>
     api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/end`, {}),
-  endSessionAsHost: (sessionId: string, userId: string) =>
-    api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/end`, { userId }),
   uploadRecording: (sessionId: string, file: Blob, durationSec?: number) => {
     const formData = new FormData();
     formData.append('file', file, `live-${sessionId}.webm`);
@@ -225,12 +271,22 @@ export const liveService = {
   },
   markRecordingFailed: (sessionId: string, error?: string) =>
     api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/recording/failed`, { error }),
-  joinSession: (sessionId: string, payload: LiveViewerRequest) =>
-    api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/viewer/join`, payload),
-  heartbeat: (sessionId: string, payload: LiveViewerRequest) =>
-    api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/viewer/heartbeat`, payload),
-  leaveSession: (sessionId: string, payload: LiveViewerRequest) =>
-    api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/viewer/leave`, payload),
+  joinSession: (sessionId: string) =>
+    api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/viewer/join`, {}),
+  heartbeat: (sessionId: string) =>
+    api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/viewer/heartbeat`, {}),
+  leaveSession: (sessionId: string) =>
+    api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/viewer/leave`, {}),
   react: (sessionId: string, payload: UpsertLiveReactionRequest) =>
     api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/reaction`, payload),
+  getReaction: (sessionId: string) =>
+    api.get<LiveSessionReactionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/reaction`),
+  subscribeToEvent: (sessionId: string) =>
+    api.post<LiveEventSubscriptionStatusResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/subscribe`, {}),
+  unsubscribeFromEvent: (sessionId: string) =>
+    api.delete<LiveEventSubscriptionStatusResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/subscribe`),
+  getEventSubscriptionStatus: (sessionId: string) =>
+    api.get<LiveEventSubscriptionStatusResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/subscription`),
+  getEventSubscribers: (sessionId: string) =>
+    api.get<LiveEventSubscribersResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/subscribers`),
 };

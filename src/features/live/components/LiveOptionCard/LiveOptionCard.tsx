@@ -21,7 +21,7 @@ export const LiveOptionCard = ({
     <div className="bg-white rounded-lg shadow-md p-8 flex flex-col items-center text-center hover:shadow-lg transition-shadow">
       {/* Icon */}
       <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${
-        buttonVariant === 'primary' ? 'bg-blue-100' : 'bg-gray-100'
+        buttonVariant === 'primary' ? 'bg-green-100' : 'bg-gray-100'
       }`}>
         {icon}
       </div>
@@ -37,7 +37,7 @@ export const LiveOptionCard = ({
         onClick={onClick}
         className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
           buttonVariant === 'primary'
-            ? 'bg-blue-600 text-white hover:bg-blue-700'
+            ? 'bg-green-600 text-white hover:bg-green-700'
             : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
         }`}
       >

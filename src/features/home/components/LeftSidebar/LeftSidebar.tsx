@@ -6,7 +6,7 @@ import {
   Users,
   Clock,
   Bookmark,
-  UsersRound,
+  Shapes,
   Video,
   Store,
   Rss,
@@ -90,7 +90,7 @@ export const LeftSidebar = () => {
     },
     {
       id: 'groups',
-      icon: <UsersRound className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
+      icon: <Shapes className="w-9 h-9 p-2 rounded-full bg-emerald-100 text-emerald-600" />,
       label: 'Nhóm',
       href: '/groups',
     },

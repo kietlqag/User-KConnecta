@@ -26,10 +26,10 @@
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
-import { liveService, type LiveDestinationItem, type LiveStartMode } from '@/services/liveService';
+import { liveService, type LiveDestinationItem } from '@/services/liveService';
 import { friendService, type FriendApiResponse } from '@/services/friendService';
 import { locationService, type Province, type Ward } from '@/services/locationService';
 import { postService, type CheckInSuggestionResponse } from '@/services/postService';
@@ -69,6 +69,13 @@ const privacyOptions = [
 
 export default function LiveSetupPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('flow') === 'event') {
+      navigate('/live/event', { replace: true });
+    }
+  }, [navigate, searchParams]);
   const [isDestinationOpen, setIsDestinationOpen] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<(typeof destinationOptions)[number]['id']>('profile');
   const [selectedPages, setSelectedPages] = useState<LiveDestinationItem[]>([]);
@@ -106,12 +113,6 @@ export default function LiveSetupPage() {
   const [selectedCheckInSuggestion, setSelectedCheckInSuggestion] = useState('');
   const [isCheckInSuggestionsOpen, setIsCheckInSuggestionsOpen] = useState(false);
   const [checkInSuggestionSearch, setCheckInSuggestionSearch] = useState('');
-  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [startMode, setStartMode] = useState<LiveStartMode>('NOW');
-  const [scheduledAt, setScheduledAt] = useState('');
-  const [isSavingSchedule, setIsSavingSchedule] = useState(false);
-  const [scheduleError, setScheduleError] = useState('');
-  const [scheduleSuccess, setScheduleSuccess] = useState('');
   const [pinnedEnabled, setPinnedEnabled] = useState(false);
   const [pinnedCommentText, setPinnedCommentText] = useState('Đây là một bình luận ghim sẵn. Bạn có thể nhấp vào nút Chỉnh sửa bên dưới để thêm bình luận.');
   const [isPinnedLoading, setIsPinnedLoading] = useState(false);
@@ -419,23 +420,6 @@ export default function LiveSetupPage() {
       }
     };
     void loadFriends();
-  }, [currentUserId]);
-
-  useEffect(() => {
-    if (!currentUserId) return;
-    const loadSchedule = async () => {
-      try {
-        const data = await liveService.getSchedule(currentUserId);
-        // Keep default as "Bây giờ" for setup flow.
-        // We still load scheduledAt only for optional reference/edit later.
-        setStartMode('NOW');
-        setScheduledAt(data.scheduledAt ? data.scheduledAt.slice(0, 16) : '');
-      } catch {
-        setStartMode('NOW');
-        setScheduledAt('');
-      }
-    };
-    void loadSchedule();
   }, [currentUserId]);
 
   useEffect(() => {
@@ -995,29 +979,6 @@ export default function LiveSetupPage() {
     }
   };
 
-  const saveSchedule = async (nextMode: LiveStartMode, nextScheduledAt?: string) => {
-    if (!currentUserId || isSavingSchedule) return;
-    setScheduleSuccess('');
-    setScheduleError('');
-    setIsSavingSchedule(true);
-    try {
-      await liveService.upsertSchedule({
-        userId: currentUserId,
-        startMode: nextMode,
-        scheduledAt: nextMode === 'SCHEDULED' ? (nextScheduledAt || null) : null,
-      });
-      if (nextMode === 'SCHEDULED') {
-        setScheduleSuccess('Đã lưu lịch phát.');
-      }
-      return true;
-    } catch {
-      setScheduleError('Không thể lưu lịch phát. Vui lòng thử lại.');
-      return false;
-    } finally {
-      setIsSavingSchedule(false);
-    }
-  };
-
   const savePinnedComment = async (enabled: boolean, commentText: string) => {
     if (!currentUserId) return false;
     setPinnedError('');
@@ -1050,26 +1011,17 @@ export default function LiveSetupPage() {
 
   const handleGoLive = async () => {
     if (!canGoLive || isCreatingLivePost || !currentUserId) return;
-    if (selectedDestination === 'page') {
-      setCreateLiveError('Hiện chưa hỗ trợ phát trực tiếp lên Trang. Vui lòng chọn Trang cá nhân hoặc Nhóm.');
-      return;
-    }
     setCreateLiveError('');
     setIsCreatingLivePost(true);
     try {
-      const normalizedScheduledAt =
-        startMode === 'SCHEDULED' && scheduledAt
-          ? (scheduledAt.length === 16 ? `${scheduledAt}:00` : scheduledAt)
-          : null;
-
       const started = await liveService.startLive({
         userId: currentUserId,
         groupId: selectedDestination === 'group' ? selectedGroups[0]?.id : undefined,
+        pageId: selectedDestination === 'page' ? selectedPages[0]?.id : undefined,
         title: postTitle.trim(),
         description: postDescription.trim(),
         privacy: mapPrivacyToPostApi(),
-        startMode,
-        ...(normalizedScheduledAt ? { scheduledAt: normalizedScheduledAt } : {}),
+        startMode: 'NOW',
         ...(checkInLocation.trim() ? { locationText: checkInLocation.trim() } : {}),
         ...(selectedPrivacy === 'FRIENDS_EXCEPT' && excludedFriendIds.length > 0
           ? { excludedUserIds: excludedFriendIds }
@@ -1089,7 +1041,9 @@ export default function LiveSetupPage() {
         locationText: checkInLocation.trim() || null,
         selectedCameraId,
         selectedMicId,
+        videoSourceMode: isScreenSharing ? 'screen' as const : 'camera' as const,
       };
+
       window.sessionStorage.setItem('kconnecta.liveProducerState', JSON.stringify(producerState));
       navigate('/live/producer', { state: producerState });
     } catch (err) {
@@ -1105,20 +1059,7 @@ export default function LiveSetupPage() {
     selectedDestination === 'profile' ||
     (selectedDestination === 'page' && selectedPages.length > 0) ||
     (selectedDestination === 'group' && selectedGroups.length > 0);
-  const hasValidScheduledAt = Boolean(scheduledAt) && !Number.isNaN(new Date(scheduledAt).getTime());
-  const scheduledDisplay = useMemo(() => {
-    if (startMode !== 'SCHEDULED' || !hasValidScheduledAt) return '';
-    const value = new Date(scheduledAt);
-    return new Intl.DateTimeFormat('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    }).format(value);
-  }, [startMode, hasValidScheduledAt, scheduledAt]);
-  const isStartModeValid = startMode === 'NOW' || (startMode === 'SCHEDULED' && hasValidScheduledAt);
-  const canGoLive = isSourceConnected && isPostDetailsCompleted && isDestinationSelectionValid && isStartModeValid;
+  const canGoLive = isSourceConnected && isPostDetailsCompleted && isDestinationSelectionValid;
 
   const checklist = useMemo(
     () => [
@@ -1137,7 +1078,8 @@ export default function LiveSetupPage() {
       <Header />
 
       <div className="pt-14 flex">
-        <aside className="w-[340px] shrink-0 border-r border-gray-200 bg-white p-4 h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
+        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-gray-200 bg-white">
+          <div className="flex-1 overflow-y-auto p-4">
           <div className="mb-5 border-b border-gray-200 pb-4">
             <h1 className="text-2xl leading-tight font-bold text-gray-900 mb-2">Tạo video trực tiếp</h1>
             <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
@@ -1291,69 +1233,6 @@ export default function LiveSetupPage() {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsScheduleOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-left bg-white hover:bg-gray-50"
-              >
-                <p className="text-sm text-gray-500">Khi nào bạn sẽ phát trực tiếp?</p>
-                <div className="flex items-center justify-between text-base font-semibold text-gray-900">
-                  <span>{startMode === 'NOW' ? 'Bây giờ' : scheduledDisplay ? `Hẹn lịch • ${scheduledDisplay}` : 'Hẹn lịch'}</span>
-                  <ChevronDown className={`w-6 h-6 transition-transform ${isScheduleOpen ? 'rotate-180' : ''}`} />
-                </div>
-              </button>
-              {isScheduleOpen && (
-                <div className="absolute top-full left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 bg-white shadow-sm p-3 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStartMode('NOW');
-                      setScheduleSuccess('');
-                      setScheduleError('');
-                      setIsScheduleOpen(false);
-                    }}
-                    className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                      startMode === 'NOW' ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 text-gray-800'
-                    }`}
-                  >
-                    Bây giờ
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStartMode('SCHEDULED')}
-                    className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                      startMode === 'SCHEDULED' ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 text-gray-800'
-                    }`}
-                  >
-                    Hẹn lịch
-                  </button>
-                  {startMode === 'SCHEDULED' && (
-                    <div className="space-y-2 px-1 py-1">
-                      <input
-                        type="datetime-local"
-                        value={scheduledAt}
-                        onChange={(e) => setScheduledAt(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-400"
-                      />
-                      <button
-                        type="button"
-                        disabled={!scheduledAt || isSavingSchedule}
-                        onClick={async () => {
-                          await saveSchedule('SCHEDULED', scheduledAt);
-                        }}
-                        className="w-full rounded-lg bg-green-600 py-2 text-sm font-semibold text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      >
-                        {isSavingSchedule ? 'Đang lưu...' : 'Lưu lịch'}
-                      </button>
-                    </div>
-                  )}
-                  {scheduleSuccess && <p className="text-xs text-green-600 px-1">{scheduleSuccess}</p>}
-                  {scheduleError && <p className="text-xs text-red-600 px-1">{scheduleError}</p>}
-                </div>
-              )}
-            </div>
-
-            <div className="relative">
-              <button
-                type="button"
                 onClick={() => setIsPrivacyOpen((prev) => !prev)}
                 className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-left bg-white hover:bg-gray-50"
               >
@@ -1496,9 +1375,17 @@ export default function LiveSetupPage() {
               );
             })}
           </div>
+          </div>
 
-          <div className="mt-6 flex items-center gap-3">
-            <button className="flex-1 rounded-xl bg-gray-200 py-2.5 text-base font-semibold text-gray-900">Quay lại</button>
+          <div className="shrink-0 border-t border-gray-200 bg-white p-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate('/live/video')}
+              className="flex-1 rounded-xl bg-gray-200 py-2.5 text-base font-semibold text-gray-900"
+            >
+              Quay lại
+            </button>
             <button
               onClick={() => void handleGoLive()}
               disabled={!canGoLive || isCreatingLivePost}
@@ -1510,6 +1397,7 @@ export default function LiveSetupPage() {
             </button>
           </div>
           {createLiveError && <p className="mt-2 text-xs text-red-600">{createLiveError}</p>}
+          </div>
         </aside>
 
         <main className="flex-1 p-6">

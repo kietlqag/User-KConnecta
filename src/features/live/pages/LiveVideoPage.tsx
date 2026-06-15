@@ -4,6 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '../../home/components';
 import { LiveSidebar, LiveOptionCard } from '../components';
 import { liveService, type LiveSessionResponse } from '@/services/liveService';
+import { authService } from '@/services/authService';
+import { navigateToLiveSession } from '../utils/navigateToLiveSession';
+import { toast } from 'sonner';
 
 export default function LiveVideoPage() {
   const navigate = useNavigate();
@@ -15,7 +18,12 @@ export default function LiveVideoPage() {
   };
 
   const handleCreateEvent = () => {
-    navigate('/live/setup');
+    navigate('/live/event');
+  };
+
+  const handleViewScheduled = () => {
+    const userId = authService.getCurrentUser()?.id;
+    navigate(userId ? `/profile/${userId}/scheduled` : '/home');
   };
 
   useEffect(() => {
@@ -25,8 +33,11 @@ export default function LiveVideoPage() {
       try {
         const data = await liveService.listActiveSessions();
         if (!cancelled) setActiveSessions(data.filter((session) => session.status === 'LIVE'));
-      } catch {
-        if (!cancelled) setActiveSessions([]);
+      } catch (err) {
+        if (!cancelled) {
+          setActiveSessions([]);
+          toast.error(err instanceof Error ? err.message : 'Không thể tải danh sách live đang phát.');
+        }
       } finally {
         if (!cancelled) setIsLoadingActive(false);
       }
@@ -55,7 +66,7 @@ export default function LiveVideoPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <LiveOptionCard
-                icon={<Video className="w-10 h-10 text-blue-600" />}
+                icon={<Video className="w-10 h-10 text-green-600" />}
                 title="Phát trực tiếp"
                 description="Phát trực tiếp một mình hoặc cùng với người khác"
                 buttonText="Thiết lập phát trực tuyến"
@@ -74,9 +85,11 @@ export default function LiveVideoPage() {
             </div>
 
             <div className="mt-8 flex items-center justify-center gap-6 text-sm">
-              <button className="text-blue-600 hover:underline font-medium">Đang phát trực tiếp</button>
+              <button type="button" className="text-green-600 hover:underline font-medium">Đang phát trực tiếp</button>
               <span className="text-gray-300">•</span>
-              <button className="text-blue-600 hover:underline font-medium">Buổi phát trực tiếp theo lịch</button>
+              <button type="button" onClick={handleViewScheduled} className="text-green-600 hover:underline font-medium">
+                Buổi phát trực tiếp theo lịch
+              </button>
             </div>
 
             <div className="mt-12 bg-white rounded-lg shadow-sm p-6">
@@ -91,8 +104,12 @@ export default function LiveVideoPage() {
                     <button
                       key={session.id}
                       type="button"
-                      onClick={() => navigate(`/live/viewer?sessionId=${encodeURIComponent(session.id)}`)}
-                      className="rounded-lg border border-gray-200 p-4 text-left hover:border-blue-400 hover:bg-blue-50"
+                      onClick={() => {
+                        void navigateToLiveSession(session, authService.getCurrentUser()?.id, navigate).catch((error) => {
+                          toast.error(error instanceof Error ? error.message : 'Không thể mở phiên live');
+                        });
+                      }}
+                      className="rounded-lg border border-gray-200 p-4 text-left hover:border-green-400 hover:bg-green-50"
                     >
                       <div className="mb-2 inline-flex rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">LIVE</div>
                       <p className="font-semibold text-gray-900">{session.title}</p>

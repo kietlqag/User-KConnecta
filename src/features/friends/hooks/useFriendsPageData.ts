@@ -4,14 +4,12 @@ import { friendService, FRIENDSHIP_CHANGED_EVENT, type FriendApiResponse } from 
 import { Friend, FriendRequest } from '../types/friends.types';
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
 
-const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=random&name=User';
-
 function mapRequest(r: FriendApiResponse): FriendRequest {
   return {
     id: r.friendshipId!,
     userId: r.userId,
     name: r.fullName,
-    avatar: r.avatarUrl ?? DEFAULT_AVATAR,
+    avatar: r.avatarUrl || '',
     mutualFriends: r.mutualFriends,
     timestamp: r.createdAt ? new Date(r.createdAt).toLocaleDateString('vi-VN') : '',
   };
@@ -22,7 +20,7 @@ function mapSuggestion(s: FriendApiResponse): Friend {
     id: s.userId,
     userId: s.userId,
     name: s.fullName,
-    avatar: s.avatarUrl ?? DEFAULT_AVATAR,
+    avatar: s.avatarUrl || '',
     mutualFriends: s.mutualFriends,
     isFriend: false,
   };
@@ -33,7 +31,7 @@ function mapFriend(f: FriendApiResponse): Friend {
     id: f.friendshipId!,
     userId: f.userId,
     name: f.fullName,
-    avatar: f.avatarUrl ?? DEFAULT_AVATAR,
+    avatar: f.avatarUrl || '',
     mutualFriends: f.mutualFriends,
     isFriend: true,
   };
