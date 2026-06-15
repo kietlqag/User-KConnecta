@@ -16,6 +16,7 @@ public class LiveSessionResponse {
     private UUID id;
     private UUID hostUserId;
     private UUID groupId;
+    private UUID pageId;
     private UUID postId;
     private String title;
     private String description;
@@ -39,4 +40,6 @@ public class LiveSessionResponse {
     private long totalReactionCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long subscriptionCount;
+    private Boolean subscribedByCurrentUser;
 }

@@ -14,8 +14,11 @@ public class LiveSessionToolStateResponse {
     private boolean pollEnabled;
     private String pollQuestion;
     private List<String> pollOptions;
+    private List<Long> pollOptionCounts;
+    private Integer myPollOptionIndex;
     private String featuredLinkTitle;
     private String featuredLinkUrl;
     private String hostNotice;
+    private UUID pinnedCommentId;
     private LocalDateTime updatedAt;
 }

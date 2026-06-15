@@ -21,4 +21,8 @@ public interface LiveSessionViewerRepository extends JpaRepository<LiveSessionVi
               AND COALESCE(v.lastSeenAt, v.joinedAt) < :cutoff
             """)
     int deleteStaleBySessionId(@Param("sessionId") UUID sessionId, @Param("cutoff") LocalDateTime cutoff);
+
+    @Modifying
+    @Query("DELETE FROM LiveSessionViewer v WHERE v.session.id = :sessionId")
+    void deleteAllBySessionId(@Param("sessionId") UUID sessionId);
 }

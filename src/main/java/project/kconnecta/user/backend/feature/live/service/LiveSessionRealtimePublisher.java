@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionRealtimeEvent;
+import project.kconnecta.user.backend.feature.live.entity.enums.LiveReactionType;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionToolStateResponse;
 
@@ -27,6 +28,24 @@ public class LiveSessionRealtimePublisher {
                 .viewerCount(session.getViewerCount())
                 .peakViewerCount(session.getPeakViewerCount())
                 .totalReactionCount(session.getTotalReactionCount())
+                .session(session)
+                .emittedAt(LocalDateTime.now())
+                .build());
+    }
+
+    public void publishReactionUpdated(LiveSessionResponse session, UUID reactedUserId, LiveReactionType reactionType) {
+        if (session == null || session.getId() == null) {
+            return;
+        }
+        publish(session.getId(), LiveSessionRealtimeEvent.builder()
+                .type("REACTION_UPDATED")
+                .sessionId(session.getId())
+                .status(session.getStatus())
+                .viewerCount(session.getViewerCount())
+                .peakViewerCount(session.getPeakViewerCount())
+                .totalReactionCount(session.getTotalReactionCount())
+                .reactedUserId(reactedUserId)
+                .reactionType(reactionType)
                 .session(session)
                 .emittedAt(LocalDateTime.now())
                 .build());

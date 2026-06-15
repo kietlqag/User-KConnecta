@@ -18,6 +18,8 @@ public class StartLiveRequest {
 
     private UUID groupId;
 
+    private UUID pageId;
+
     @NotBlank
     @Size(min = 5, max = 255)
     private String title;

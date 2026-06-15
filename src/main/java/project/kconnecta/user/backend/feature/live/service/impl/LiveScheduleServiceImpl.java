@@ -70,7 +70,7 @@ public class LiveScheduleServiceImpl implements LiveScheduleService {
                 throw new ValidationException("scheduledAt is required when startMode is SCHEDULED");
             }
             if (!request.getScheduledAt().isAfter(now)) {
-                throw new ValidationException("scheduledAt must be in the future");
+                throw new ValidationException("Thời gian phát phải ở tương lai");
             }
         }
     }

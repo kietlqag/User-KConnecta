@@ -8,6 +8,7 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import project.kconnecta.user.backend.config.websocket.LiveTopicSubscribeInterceptor;
 import project.kconnecta.user.backend.config.websocket.WebSocketAuthInterceptor;
 
 import java.util.Arrays;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
+    private final LiveTopicSubscribeInterceptor liveTopicSubscribeInterceptor;
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000,https://user-k-connecta.vercel.app}")
     private String allowedOrigins;
@@ -40,6 +42,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void configureClientInboundChannel(@org.springframework.lang.NonNull ChannelRegistration registration) {
         // Đăng ký interceptor — xác thực JWT khi client gửi STOMP CONNECT
-        registration.interceptors(webSocketAuthInterceptor);
+        registration.interceptors(webSocketAuthInterceptor, liveTopicSubscribeInterceptor);
     }
 }

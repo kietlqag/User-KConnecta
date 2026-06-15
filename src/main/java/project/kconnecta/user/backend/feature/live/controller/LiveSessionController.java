@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,10 +18,14 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.live.dto.request.session.CreateLiveSessionRequest;
-import project.kconnecta.user.backend.feature.live.dto.request.session.LiveViewerRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveReactionRequest;
+import project.kconnecta.user.backend.feature.live.dto.response.session.GoLiveResponse;
+import project.kconnecta.user.backend.feature.live.dto.response.session.LiveEventSubscribersResponse;
+import project.kconnecta.user.backend.feature.live.dto.response.session.LiveEventSubscriptionStatusResponse;
+import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionReactionResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionStatsResponse;
+import project.kconnecta.user.backend.feature.live.service.LiveEventSubscriptionService;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionService;
 
 import java.util.List;
@@ -33,15 +38,28 @@ import java.util.UUID;
 public class LiveSessionController {
 
     private final LiveSessionService liveSessionService;
+    private final LiveEventSubscriptionService liveEventSubscriptionService;
 
     @PostMapping
-    public ResponseEntity<LiveSessionResponse> create(@Valid @RequestBody CreateLiveSessionRequest request) {
-        return ResponseEntity.ok(liveSessionService.createSession(request));
+    public ResponseEntity<LiveSessionResponse> create(
+            @Valid @RequestBody CreateLiveSessionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.createSession(request, principal.getUserId()));
     }
 
     @PostMapping("/{sessionId}/go-live")
-    public ResponseEntity<LiveSessionResponse> goLive(@PathVariable UUID sessionId) {
-        return ResponseEntity.ok(liveSessionService.goLive(sessionId));
+    public ResponseEntity<GoLiveResponse> goLive(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.goLive(sessionId, principal.getUserId()));
     }
 
     @PostMapping("/{sessionId}/end")
@@ -82,47 +100,144 @@ public class LiveSessionController {
     }
 
     @PutMapping("/{sessionId}/viewer/join")
-    public ResponseEntity<LiveSessionResponse> join(@PathVariable UUID sessionId, @Valid @RequestBody LiveViewerRequest request) {
-        return ResponseEntity.ok(liveSessionService.join(sessionId, request));
+    public ResponseEntity<LiveSessionResponse> join(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.join(sessionId, principal.getUserId()));
     }
 
     @PutMapping("/{sessionId}/viewer/heartbeat")
-    public ResponseEntity<LiveSessionResponse> heartbeat(@PathVariable UUID sessionId, @Valid @RequestBody LiveViewerRequest request) {
-        return ResponseEntity.ok(liveSessionService.heartbeat(sessionId, request));
+    public ResponseEntity<LiveSessionResponse> heartbeat(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.heartbeat(sessionId, principal.getUserId()));
     }
 
     @PutMapping("/{sessionId}/viewer/leave")
-    public ResponseEntity<LiveSessionResponse> leave(@PathVariable UUID sessionId, @Valid @RequestBody LiveViewerRequest request) {
-        return ResponseEntity.ok(liveSessionService.leave(sessionId, request));
+    public ResponseEntity<LiveSessionResponse> leave(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.leave(sessionId, principal.getUserId()));
     }
 
     @PutMapping("/{sessionId}/reaction")
-    public ResponseEntity<LiveSessionResponse> react(@PathVariable UUID sessionId, @Valid @RequestBody UpsertLiveReactionRequest request) {
-        return ResponseEntity.ok(liveSessionService.react(sessionId, request));
+    public ResponseEntity<LiveSessionResponse> react(
+            @PathVariable UUID sessionId,
+            @Valid @RequestBody UpsertLiveReactionRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.react(sessionId, principal.getUserId(), request));
+    }
+
+    @GetMapping("/{sessionId}/reaction")
+    public ResponseEntity<LiveSessionReactionResponse> getReaction(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.getReaction(sessionId, principal.getUserId()));
     }
 
     @GetMapping("/{sessionId}")
-    public ResponseEntity<LiveSessionResponse> getById(@PathVariable UUID sessionId) {
-        return ResponseEntity.ok(liveSessionService.getById(sessionId));
+    public ResponseEntity<LiveSessionResponse> getById(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(liveSessionService.getById(sessionId, principal == null ? null : principal.getUserId()));
     }
 
     @GetMapping("/by-post/{postId}")
-    public ResponseEntity<LiveSessionResponse> getByPostId(@PathVariable UUID postId) {
-        return ResponseEntity.ok(liveSessionService.getByPostId(postId));
+    public ResponseEntity<LiveSessionResponse> getByPostId(
+            @PathVariable UUID postId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(liveSessionService.getByPostId(postId, principal == null ? null : principal.getUserId()));
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<LiveSessionResponse>> listActive() {
-        return ResponseEntity.ok(liveSessionService.listActive());
+    public ResponseEntity<List<LiveSessionResponse>> listActive(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(liveSessionService.listActive(principal == null ? null : principal.getUserId()));
     }
 
     @GetMapping
-    public ResponseEntity<List<LiveSessionResponse>> listByHost(@RequestParam UUID hostUserId) {
-        return ResponseEntity.ok(liveSessionService.listByHost(hostUserId));
+    public ResponseEntity<List<LiveSessionResponse>> listByHost(
+            @RequestParam UUID hostUserId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.listByHost(hostUserId, principal.getUserId()));
     }
 
     @GetMapping("/{sessionId}/stats")
-    public ResponseEntity<LiveSessionStatsResponse> stats(@PathVariable UUID sessionId) {
-        return ResponseEntity.ok(liveSessionService.getStats(sessionId));
+    public ResponseEntity<LiveSessionStatsResponse> stats(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(liveSessionService.getStats(sessionId, principal == null ? null : principal.getUserId()));
+    }
+
+    @PostMapping("/{sessionId}/subscribe")
+    public ResponseEntity<LiveEventSubscriptionStatusResponse> subscribe(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveEventSubscriptionService.subscribe(sessionId, principal.getUserId()));
+    }
+
+    @DeleteMapping("/{sessionId}/subscribe")
+    public ResponseEntity<LiveEventSubscriptionStatusResponse> unsubscribe(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveEventSubscriptionService.unsubscribe(sessionId, principal.getUserId()));
+    }
+
+    @GetMapping("/{sessionId}/subscription")
+    public ResponseEntity<LiveEventSubscriptionStatusResponse> getSubscriptionStatus(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveEventSubscriptionService.getStatus(sessionId, principal.getUserId()));
+    }
+
+    @GetMapping("/{sessionId}/subscribers")
+    public ResponseEntity<LiveEventSubscribersResponse> listSubscribers(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveEventSubscriptionService.listSubscribers(sessionId, principal.getUserId()));
     }
 }

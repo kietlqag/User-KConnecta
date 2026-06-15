@@ -8,16 +8,26 @@ import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveFeaturedLinkRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveHostNoticeRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLivePollRequest;
+import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveSessionPinnedCommentRequest;
+import project.kconnecta.user.backend.feature.live.dto.request.session.VoteLivePollRequest;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionToolStateResponse;
 import project.kconnecta.user.backend.feature.live.entity.LiveSession;
+import project.kconnecta.user.backend.feature.live.entity.LiveSessionPollVote;
 import project.kconnecta.user.backend.feature.live.entity.LiveSessionToolState;
+import project.kconnecta.user.backend.feature.live.repository.LiveSessionPollVoteRepository;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionToolStateRepository;
+import project.kconnecta.user.backend.feature.live.service.LiveAccessService;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionToolService;
+import project.kconnecta.user.backend.feature.post.repository.PostCommentRepository;
+import project.kconnecta.user.backend.feature.user.entity.User;
+import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -27,18 +37,28 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
 
     private final LiveSessionRepository liveSessionRepository;
     private final LiveSessionToolStateRepository liveSessionToolStateRepository;
+    private final LiveSessionPollVoteRepository liveSessionPollVoteRepository;
+    private final PostCommentRepository postCommentRepository;
     private final LiveSessionRealtimePublisher realtimePublisher;
+    private final LiveAccessService liveAccessService;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional(readOnly = true)
-    public LiveSessionToolStateResponse get(UUID sessionId) {
+    public LiveSessionToolStateResponse get(UUID sessionId, UUID viewerUserId) {
         LiveSession session = findSession(sessionId);
-        return toResponse(findOrNew(session));
+        liveAccessService.requireCanView(session, viewerUserId);
+        return toResponse(findOrNew(session), viewerUserId);
     }
 
     @Override
-    public LiveSessionToolStateResponse upsertPoll(UUID sessionId, UpsertLivePollRequest request) {
-        LiveSessionToolState state = findOrNew(findSession(sessionId));
+    public LiveSessionToolStateResponse upsertPoll(UUID sessionId, UUID hostUserId, UpsertLivePollRequest request) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireHost(session, hostUserId);
+        LiveSessionToolState state = findOrNew(session);
+        boolean wasEnabled = state.isPollEnabled();
+        String oldQuestion = state.getPollQuestion();
+        String oldOptions = state.getPollOptions();
         List<String> options = sanitizeOptions(request.getOptions());
         String question = clean(request.getQuestion());
         if (request.isEnabled() && (question == null || options.size() < 2)) {
@@ -47,14 +67,47 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
         state.setPollEnabled(request.isEnabled());
         state.setPollQuestion(question);
         state.setPollOptions(String.join("\n", options));
-        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state));
+        boolean configChanged = wasEnabled != request.isEnabled()
+                || !Objects.equals(oldQuestion, question)
+                || !Objects.equals(oldOptions, state.getPollOptions());
+        if (!request.isEnabled() || configChanged) {
+            liveSessionPollVoteRepository.deleteAllBySessionId(session.getId());
+        }
+        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state), hostUserId);
         realtimePublisher.publishToolsUpdated(response);
         return response;
     }
 
     @Override
-    public LiveSessionToolStateResponse upsertFeaturedLink(UUID sessionId, UpsertLiveFeaturedLinkRequest request) {
-        LiveSessionToolState state = findOrNew(findSession(sessionId));
+    public LiveSessionToolStateResponse votePoll(UUID sessionId, UUID userId, VoteLivePollRequest request) {
+        liveAccessService.requireAuthenticated(userId);
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireCanView(session, userId);
+        LiveSessionToolState state = findOrNew(session);
+        if (!state.isPollEnabled()) {
+            throw new ValidationException("Poll is not enabled for this session");
+        }
+        List<String> options = parseOptions(state.getPollOptions());
+        int optionIndex = request.getOptionIndex();
+        if (optionIndex < 0 || optionIndex >= options.size()) {
+            throw new ValidationException("Invalid poll option");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        LiveSessionPollVote vote = liveSessionPollVoteRepository.findBySessionIdAndUserId(sessionId, userId)
+                .orElseGet(() -> LiveSessionPollVote.builder().session(session).user(user).build());
+        vote.setOptionIndex(optionIndex);
+        liveSessionPollVoteRepository.save(vote);
+        LiveSessionToolStateResponse response = toResponse(state, userId);
+        realtimePublisher.publishToolsUpdated(response);
+        return response;
+    }
+
+    @Override
+    public LiveSessionToolStateResponse upsertFeaturedLink(UUID sessionId, UUID hostUserId, UpsertLiveFeaturedLinkRequest request) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireHost(session, hostUserId);
+        LiveSessionToolState state = findOrNew(session);
         String title = clean(request.getTitle());
         String url = clean(request.getUrl());
         if ((title == null) != (url == null)) {
@@ -65,16 +118,40 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
         }
         state.setFeaturedLinkTitle(title);
         state.setFeaturedLinkUrl(url);
-        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state));
+        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state), hostUserId);
         realtimePublisher.publishToolsUpdated(response);
         return response;
     }
 
     @Override
-    public LiveSessionToolStateResponse upsertHostNotice(UUID sessionId, UpsertLiveHostNoticeRequest request) {
-        LiveSessionToolState state = findOrNew(findSession(sessionId));
+    public LiveSessionToolStateResponse upsertHostNotice(UUID sessionId, UUID hostUserId, UpsertLiveHostNoticeRequest request) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireHost(session, hostUserId);
+        LiveSessionToolState state = findOrNew(session);
         state.setHostNotice(clean(request.getNotice()));
-        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state));
+        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state), hostUserId);
+        realtimePublisher.publishToolsUpdated(response);
+        return response;
+    }
+
+    @Override
+    public LiveSessionToolStateResponse upsertPinnedComment(UUID sessionId, UUID hostUserId, UpsertLiveSessionPinnedCommentRequest request) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireHost(session, hostUserId);
+        UUID commentId = request.getCommentId();
+        if (commentId != null) {
+            if (session.getPostId() == null) {
+                throw new ValidationException("This live session is not linked to a post");
+            }
+            var comment = postCommentRepository.findById(commentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Comment not found: " + commentId));
+            if (!comment.getPost().getId().equals(session.getPostId())) {
+                throw new ValidationException("Comment does not belong to this live post");
+            }
+        }
+        LiveSessionToolState state = findOrNew(session);
+        state.setPinnedCommentId(commentId);
+        LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state), hostUserId);
         realtimePublisher.publishToolsUpdated(response);
         return response;
     }
@@ -119,15 +196,32 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
                 .toList();
     }
 
-    private LiveSessionToolStateResponse toResponse(LiveSessionToolState state) {
+    private LiveSessionToolStateResponse toResponse(LiveSessionToolState state, UUID viewerUserId) {
+        List<String> options = parseOptions(state.getPollOptions());
+        List<Long> counts = new ArrayList<>();
+        Integer myPollOptionIndex = null;
+        if (state.isPollEnabled() && !options.isEmpty()) {
+            UUID sessionId = state.getSession().getId();
+            for (int index = 0; index < options.size(); index++) {
+                counts.add(liveSessionPollVoteRepository.countBySessionIdAndOptionIndex(sessionId, index));
+            }
+            if (viewerUserId != null) {
+                myPollOptionIndex = liveSessionPollVoteRepository.findBySessionIdAndUserId(sessionId, viewerUserId)
+                        .map(LiveSessionPollVote::getOptionIndex)
+                        .orElse(null);
+            }
+        }
         return LiveSessionToolStateResponse.builder()
                 .sessionId(state.getSession().getId())
                 .pollEnabled(state.isPollEnabled())
                 .pollQuestion(state.getPollQuestion())
-                .pollOptions(parseOptions(state.getPollOptions()))
+                .pollOptions(options)
+                .pollOptionCounts(counts.isEmpty() ? null : counts)
+                .myPollOptionIndex(myPollOptionIndex)
                 .featuredLinkTitle(state.getFeaturedLinkTitle())
                 .featuredLinkUrl(state.getFeaturedLinkUrl())
                 .hostNotice(state.getHostNotice())
+                .pinnedCommentId(state.getPinnedCommentId())
                 .updatedAt(state.getUpdatedAt())
                 .build();
     }

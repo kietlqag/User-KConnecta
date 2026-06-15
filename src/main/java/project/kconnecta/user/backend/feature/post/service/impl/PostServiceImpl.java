@@ -42,6 +42,7 @@ import project.kconnecta.user.backend.feature.search.redis.RedisSearchIndexer;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
+import project.kconnecta.user.backend.feature.page.repository.PageRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -79,6 +80,7 @@ public class PostServiceImpl implements PostService {
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final PageRepository pageRepository;
     private final CloudinaryService cloudinaryService;
     private final NotificationEventPublisher notificationEventPublisher;
     private final ActivityLogService activityLogService;
@@ -117,8 +119,12 @@ public class PostServiceImpl implements PostService {
             status = PostStatus.SCHEDULED;
         }
 
-        log.info("create post: authorId={}, status={}, scheduledAt={}, groupId={}",
-                request.getAuthorId(), status, request.getScheduledAt(), request.getGroupId());
+        log.info("create post: authorId={}, status={}, scheduledAt={}, groupId={}, pageId={}",
+                request.getAuthorId(), status, request.getScheduledAt(), request.getGroupId(), request.getPageId());
+
+        if (request.getGroupId() != null && request.getPageId() != null) {
+            throw new ValidationException("Cannot post to both a group and a page");
+        }
 
         if (privacy != PostPrivacy.FRIENDS_EXCEPT && request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
             throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
@@ -152,9 +158,30 @@ public class PostServiceImpl implements PostService {
             }
         }
 
+        project.kconnecta.user.backend.feature.page.entity.Page userPage = null;
+        if (request.getPageId() != null) {
+            userPage = pageRepository.findById(request.getPageId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Page not found: " + request.getPageId()));
+
+            if (!userPage.getCreatedBy().getId().equals(author.getId())) {
+                throw new ValidationException("Only page owner can post on this page");
+            }
+
+            if (privacy != PostPrivacy.PUBLIC) {
+                privacy = PostPrivacy.PUBLIC;
+            }
+            if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
+                throw new ValidationException("Audience exclusions are not supported for page posts");
+            }
+            if (request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
+                throw new ValidationException("Audience allowances are not supported for page posts");
+            }
+        }
+
         Post post = Post.builder()
                 .author(author)
                 .group(group)
+                .page(userPage)
                 .content(trimToNull(request.getContent()))
                 .privacy(privacy)
                 .status(status)
@@ -811,6 +838,9 @@ public class PostServiceImpl implements PostService {
                 .groupId(post.getGroup() != null ? post.getGroup().getId() : null)
                 .groupName(post.getGroup() != null ? post.getGroup().getName() : null)
                 .groupIconUrl(post.getGroup() != null ? post.getGroup().getCoverPhotoUrl() : null)
+                .pageId(post.getPage() != null ? post.getPage().getId() : null)
+                .pageName(post.getPage() != null ? post.getPage().getName() : null)
+                .pageAvatarUrl(post.getPage() != null ? post.getPage().getAvatarUrl() : null)
                 .authorUsername(post.getAuthor().getUsername())
                 .authorFullName(post.getAuthor().getFullName())
                 .authorAvatarUrl(post.getAuthor().getAvatarUrl())

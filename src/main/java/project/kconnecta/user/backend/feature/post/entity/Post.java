@@ -6,6 +6,7 @@ import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import org.hibernate.annotations.BatchSize;
 import project.kconnecta.user.backend.feature.group.entity.Group;
+import project.kconnecta.user.backend.feature.page.entity.Page;
 import project.kconnecta.user.backend.feature.search.redis.PostSearchListener;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
@@ -35,6 +36,10 @@ public class Post {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
     private Group group;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "page_id")
+    private Page page;
 
     @Column(columnDefinition = "TEXT")
     private String content;

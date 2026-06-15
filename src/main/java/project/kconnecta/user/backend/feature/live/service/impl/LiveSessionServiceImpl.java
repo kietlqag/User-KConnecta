@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.feature.live.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -9,48 +10,71 @@ import project.kconnecta.user.backend.exception.BadRequestException;
 import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.feature.live.dto.request.LiveKitTokenRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.CreateLiveSessionRequest;
-import project.kconnecta.user.backend.feature.live.dto.request.session.LiveViewerRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveReactionRequest;
+import project.kconnecta.user.backend.feature.live.dto.response.LiveKitTokenResponse;
+import project.kconnecta.user.backend.feature.live.dto.response.session.GoLiveResponse;
+import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionReactionResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionStatsResponse;
 import project.kconnecta.user.backend.feature.live.entity.LiveSession;
 import project.kconnecta.user.backend.feature.live.entity.LiveSessionReaction;
 import project.kconnecta.user.backend.feature.live.entity.LiveSessionViewer;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveRecordingStatus;
+import project.kconnecta.user.backend.feature.live.entity.enums.LiveReactionType;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionReactionRepository;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionViewerRepository;
+import project.kconnecta.user.backend.feature.live.service.LiveAccessService;
+import project.kconnecta.user.backend.feature.live.service.LiveEventSubscriptionService;
+import project.kconnecta.user.backend.feature.live.service.LiveKitTokenService;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionService;
+import project.kconnecta.user.backend.feature.post.entity.Post;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.repository.PostRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class LiveSessionServiceImpl implements LiveSessionService {
 
     private static final long VIEWER_HEARTBEAT_TIMEOUT_SECONDS = 45;
     private static final long MAX_RECORDING_SIZE_BYTES = 100L * 1024L * 1024L;
+    private static final DateTimeFormatter SCHEDULED_AT_DISPLAY_FORMAT =
+            DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
 
     private final LiveSessionRepository liveSessionRepository;
     private final LiveSessionViewerRepository liveSessionViewerRepository;
     private final LiveSessionReactionRepository liveSessionReactionRepository;
     private final UserRepository userRepository;
+    private final PostRepository postRepository;
     private final CloudinaryService cloudinaryService;
     private final LiveSessionRealtimePublisher realtimePublisher;
+    private final LiveAccessService liveAccessService;
+    private final LiveKitTokenService liveKitTokenService;
+    private final LiveEventSubscriptionService liveEventSubscriptionService;
 
     @Override
-    public LiveSessionResponse createSession(CreateLiveSessionRequest request) {
-        User host = userRepository.findById(request.getHostUserId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + request.getHostUserId()));
+    public LiveSessionResponse createSession(CreateLiveSessionRequest request, UUID hostUserId) {
+        liveAccessService.requireAuthenticated(hostUserId);
+        if (!request.getHostUserId().equals(hostUserId)) {
+            throw new ForbiddenException("Cannot create a live session for another user");
+        }
+
+        User host = userRepository.findById(hostUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + hostUserId));
 
         validateScheduleRule(request.getStartMode(), request.getScheduledAt());
 
@@ -58,17 +82,20 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 ? LiveSessionStatus.SCHEDULED
                 : LiveSessionStatus.DRAFT;
 
+        String roomName = "live_" + UUID.randomUUID().toString().replace("-", "");
+
         LiveSession session = LiveSession.builder()
                 .host(host)
                 .groupId(request.getGroupId())
+                .pageId(request.getPageId())
                 .title(request.getTitle().trim())
                 .description(request.getDescription() == null ? null : request.getDescription().trim())
                 .privacy(request.getPrivacy())
                 .startMode(request.getStartMode())
                 .scheduledAt(request.getStartMode() == LiveStartMode.SCHEDULED ? request.getScheduledAt() : null)
                 .status(initialStatus)
-                .streamKey("live_" + UUID.randomUUID().toString().replace("-", ""))
-                .roomName("live_" + UUID.randomUUID().toString().replace("-", ""))
+                .streamKey(roomName)
+                .roomName(roomName)
                 .playbackUrl(request.getPlaybackUrl())
                 .thumbnailUrl(request.getThumbnailUrl())
                 .recordingStatus(LiveRecordingStatus.NONE)
@@ -81,12 +108,24 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     }
 
     @Override
-    public LiveSessionResponse goLive(UUID sessionId) {
+    public GoLiveResponse goLive(UUID sessionId, UUID hostUserId) {
         LiveSession session = findSession(sessionId);
+        liveAccessService.requireHost(session, hostUserId);
 
         if (session.getStatus() == LiveSessionStatus.ENDED || session.getStatus() == LiveSessionStatus.CANCELED) {
             throw new ValidationException("Cannot start a finished live session");
         }
+
+        if (session.getStatus() == LiveSessionStatus.SCHEDULED
+                && session.getScheduledAt() != null
+                && session.getScheduledAt().isAfter(LocalDateTime.now())) {
+            throw new ValidationException(
+                    "Chưa đến giờ phát. Vui lòng chờ đến "
+                            + session.getScheduledAt().format(SCHEDULED_AT_DISPLAY_FORMAT)
+            );
+        }
+
+        publishLinkedPostIfNeeded(session);
 
         session.setStatus(LiveSessionStatus.LIVE);
         session.setRecordingStatus(LiveRecordingStatus.RECORDING);
@@ -95,15 +134,27 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             session.setStartedAt(LocalDateTime.now());
         }
 
-        LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
+        LiveSessionResponse response = toResponse(liveSessionRepository.save(session), hostUserId);
         realtimePublisher.publishSessionEvent("LIVE_STARTED", response);
-        return response;
+        liveEventSubscriptionService.notifyLiveStarted(session);
+
+        LiveKitTokenRequest tokenRequest = new LiveKitTokenRequest();
+        tokenRequest.setUserId(hostUserId);
+        tokenRequest.setSessionId(sessionId);
+        tokenRequest.setRole(LiveKitTokenRequest.LiveKitParticipantRole.HOST);
+        LiveKitTokenResponse hostToken = liveKitTokenService.createToken(tokenRequest);
+
+        return GoLiveResponse.builder()
+                .session(response)
+                .livekitUrl(hostToken.getLivekitUrl())
+                .hostToken(hostToken.getToken())
+                .build();
     }
 
     @Override
     public LiveSessionResponse endLive(UUID sessionId, UUID requesterUserId) {
         LiveSession session = findSession(sessionId);
-        validateHost(session, requesterUserId);
+        liveAccessService.requireHost(session, requesterUserId);
 
         if (session.getStatus() == LiveSessionStatus.ENDED) {
             LiveSessionResponse response = toResponse(session);
@@ -114,6 +165,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         session.setStatus(LiveSessionStatus.ENDED);
         session.setEndedAt(LocalDateTime.now());
         session.setViewerCount(0);
+        liveSessionViewerRepository.deleteAllBySessionId(sessionId);
         if (isBlank(session.getPlaybackUrl()) && session.getRecordingStatus() != LiveRecordingStatus.READY) {
             session.setRecordingStatus(LiveRecordingStatus.PROCESSING);
         }
@@ -126,7 +178,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     @Override
     public LiveSessionResponse saveRecording(UUID sessionId, UUID hostUserId, MultipartFile file, Integer durationSec) {
         LiveSession session = findSession(sessionId);
-        validateHost(session, hostUserId);
+        liveAccessService.requireHost(session, hostUserId);
         validateRecordingFile(file);
 
         String playbackUrl = cloudinaryService.uploadLiveRecording(file, sessionId.toString());
@@ -141,6 +193,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             session.setStatus(LiveSessionStatus.ENDED);
             session.setEndedAt(LocalDateTime.now());
             session.setViewerCount(0);
+            liveSessionViewerRepository.deleteAllBySessionId(sessionId);
             endedByRecording = true;
         }
 
@@ -152,7 +205,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     @Override
     public LiveSessionResponse markRecordingFailed(UUID sessionId, UUID hostUserId, String error) {
         LiveSession session = findSession(sessionId);
-        validateHost(session, hostUserId);
+        liveAccessService.requireHost(session, hostUserId);
         if (session.getRecordingStatus() != LiveRecordingStatus.READY) {
             session.setRecordingStatus(LiveRecordingStatus.FAILED);
             session.setRecordingError(trimToLength(error, 500));
@@ -163,9 +216,14 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     }
 
     @Override
-    public LiveSessionResponse join(UUID sessionId, LiveViewerRequest request) {
+    public LiveSessionResponse join(UUID sessionId, UUID userId) {
         LiveSession session = findLiveSession(sessionId);
-        User user = findUser(request.getUserId());
+        liveAccessService.requireCanView(session, userId);
+        if (session.getHost().getId().equals(userId)) {
+            return toResponse(session);
+        }
+
+        User user = findUser(userId);
         cleanupStaleViewers(session);
 
         LiveSessionViewer viewer = liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, user.getId())
@@ -180,9 +238,14 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     }
 
     @Override
-    public LiveSessionResponse heartbeat(UUID sessionId, LiveViewerRequest request) {
+    public LiveSessionResponse heartbeat(UUID sessionId, UUID userId) {
         LiveSession session = findLiveSession(sessionId);
-        User user = findUser(request.getUserId());
+        liveAccessService.requireCanView(session, userId);
+        if (session.getHost().getId().equals(userId)) {
+            return toResponse(session);
+        }
+
+        User user = findUser(userId);
         cleanupStaleViewers(session);
 
         LiveSessionViewer viewer = liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, user.getId())
@@ -191,35 +254,34 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         liveSessionViewerRepository.save(viewer);
         refreshViewerCount(session);
 
-        LiveSessionResponse response = toResponse(session);
-        realtimePublisher.publishSessionEvent("VIEWER_COUNT_UPDATED", response);
-        return response;
+        return toResponse(session);
     }
 
     @Override
-    public LiveSessionResponse leave(UUID sessionId, LiveViewerRequest request) {
+    public LiveSessionResponse leave(UUID sessionId, UUID userId) {
         LiveSession session = findSession(sessionId);
 
-        liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, request.getUserId())
-                .ifPresent(viewer -> {
-                    liveSessionViewerRepository.delete(viewer);
-                });
-        refreshViewerCount(session);
-
-        LiveSessionResponse response = toResponse(session);
-        realtimePublisher.publishSessionEvent("VIEWER_COUNT_UPDATED", response);
-        return response;
+        liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, userId)
+                .ifPresent(liveSessionViewerRepository::delete);
+        if (session.getStatus() == LiveSessionStatus.LIVE) {
+            refreshViewerCount(session);
+            LiveSessionResponse response = toResponse(session);
+            realtimePublisher.publishSessionEvent("VIEWER_COUNT_UPDATED", response);
+            return response;
+        }
+        return toResponse(session);
     }
 
     @Override
-    public LiveSessionResponse react(UUID sessionId, UpsertLiveReactionRequest request) {
+    public LiveSessionResponse react(UUID sessionId, UUID userId, UpsertLiveReactionRequest request) {
         LiveSession session = findLiveSession(sessionId);
-        User user = findUser(request.getUserId());
+        liveAccessService.requireCanView(session, userId);
+        User user = findUser(userId);
 
         var existingOpt = liveSessionReactionRepository.findBySessionIdAndUserId(sessionId, user.getId());
 
         if (request.getReactionType() == null) {
-            existingOpt.ifPresent(reaction -> liveSessionReactionRepository.delete(reaction));
+            existingOpt.ifPresent(liveSessionReactionRepository::delete);
         } else if (existingOpt.isPresent()) {
             LiveSessionReaction existing = existingOpt.get();
             existing.setReactionType(request.getReactionType());
@@ -235,36 +297,59 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         session.setTotalReactionCount(liveSessionReactionRepository.countBySessionId(sessionId));
         liveSessionRepository.save(session);
         LiveSessionResponse response = toResponse(session);
-        realtimePublisher.publishSessionEvent("REACTION_UPDATED", response);
+        realtimePublisher.publishReactionUpdated(response, user.getId(), request.getReactionType());
         return response;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public LiveSessionResponse getById(UUID sessionId) {
-        return toResponse(findSession(sessionId));
+    public LiveSessionReactionResponse getReaction(UUID sessionId, UUID userId) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireCanView(session, userId);
+        LiveReactionType reactionType = liveSessionReactionRepository.findBySessionIdAndUserId(sessionId, userId)
+                .map(LiveSessionReaction::getReactionType)
+                .orElse(null);
+        return LiveSessionReactionResponse.builder()
+                .sessionId(sessionId)
+                .userId(userId)
+                .reactionType(reactionType)
+                .build();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public LiveSessionResponse getByPostId(UUID postId) {
-        return liveSessionRepository.findByPostId(postId)
-                .map(this::toResponse)
+    public LiveSessionResponse getById(UUID sessionId, UUID viewerUserId) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireCanView(session, viewerUserId);
+        return toResponse(session, viewerUserId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LiveSessionResponse getByPostId(UUID postId, UUID viewerUserId) {
+        LiveSession session = liveSessionRepository.findByPostId(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Live session not found for post: " + postId));
+        liveAccessService.requireCanView(session, viewerUserId);
+        return toResponse(session, viewerUserId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<LiveSessionResponse> listActive() {
+    public List<LiveSessionResponse> listActive(UUID viewerUserId) {
         return liveSessionRepository.findAllByStatusOrderByCreatedAtDesc(LiveSessionStatus.LIVE)
                 .stream()
+                .filter(session -> liveAccessService.canView(session, viewerUserId))
                 .map(this::toResponse)
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<LiveSessionResponse> listByHost(UUID hostUserId) {
+    public List<LiveSessionResponse> listByHost(UUID hostUserId, UUID requesterUserId) {
+        liveAccessService.requireAuthenticated(requesterUserId);
+        if (!hostUserId.equals(requesterUserId)) {
+            throw new ForbiddenException("Cannot list live sessions for another user");
+        }
         return liveSessionRepository.findAllByHostIdOrderByCreatedAtDesc(hostUserId)
                 .stream()
                 .map(this::toResponse)
@@ -272,12 +357,13 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     }
 
     @Override
-    public LiveSessionStatsResponse getStats(UUID sessionId) {
+    @Transactional(readOnly = true)
+    public LiveSessionStatsResponse getStats(UUID sessionId, UUID viewerUserId) {
         LiveSession session = findSession(sessionId);
+        liveAccessService.requireCanView(session, viewerUserId);
         if (session.getStatus() == LiveSessionStatus.LIVE) {
             cleanupStaleViewers(session);
             refreshViewerCount(session);
-            realtimePublisher.publishSessionEvent("VIEWER_COUNT_UPDATED", toResponse(session));
         }
         return LiveSessionStatsResponse.builder()
                 .sessionId(session.getId())
@@ -285,6 +371,20 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .peakViewerCount(session.getPeakViewerCount())
                 .totalReactionCount(session.getTotalReactionCount())
                 .build();
+    }
+
+    private void publishLinkedPostIfNeeded(LiveSession session) {
+        if (session.getPostId() == null) {
+            return;
+        }
+        postRepository.findById(session.getPostId()).ifPresent(post -> {
+            if (post.getStatus() == PostStatus.SCHEDULED) {
+                LocalDateTime now = LocalDateTime.now();
+                post.setStatus(PostStatus.PUBLISHED);
+                post.setPublishedAt(now);
+                postRepository.save(post);
+            }
+        });
     }
 
     private void validateScheduleRule(LiveStartMode startMode, LocalDateTime scheduledAt) {
@@ -296,6 +396,23 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 throw new ValidationException("scheduledAt must be in the future");
             }
         }
+    }
+
+    @Override
+    public int activateDueScheduledSessions() {
+        LocalDateTime now = LocalDateTime.now();
+        List<LiveSession> dueSessions = liveSessionRepository
+                .findAllByStatusAndScheduledAtLessThanEqual(LiveSessionStatus.SCHEDULED, now);
+        int activated = 0;
+        for (LiveSession session : dueSessions) {
+            try {
+                goLive(session.getId(), session.getHost().getId());
+                activated++;
+            } catch (Exception ex) {
+                log.warn("Failed to auto go-live for session {}: {}", session.getId(), ex.getMessage());
+            }
+        }
+        return activated;
     }
 
     private LiveSession findSession(UUID sessionId) {
@@ -314,15 +431,6 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     private User findUser(UUID userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
-    }
-
-    private void validateHost(LiveSession session, UUID requesterUserId) {
-        if (requesterUserId == null) {
-            return;
-        }
-        if (!session.getHost().getId().equals(requesterUserId)) {
-            throw new ForbiddenException("Only the host can update this live session");
-        }
     }
 
     private void validateRecordingFile(MultipartFile file) {
@@ -369,10 +477,15 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     }
 
     private LiveSessionResponse toResponse(LiveSession session) {
-        return LiveSessionResponse.builder()
+        return toResponse(session, null);
+    }
+
+    private LiveSessionResponse toResponse(LiveSession session, UUID viewerUserId) {
+        LiveSessionResponse.LiveSessionResponseBuilder builder = LiveSessionResponse.builder()
                 .id(session.getId())
                 .hostUserId(session.getHost().getId())
                 .groupId(session.getGroupId())
+                .pageId(session.getPageId())
                 .postId(session.getPostId())
                 .title(session.getTitle())
                 .description(session.getDescription())
@@ -395,7 +508,15 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .peakViewerCount(session.getPeakViewerCount())
                 .totalReactionCount(session.getTotalReactionCount())
                 .createdAt(session.getCreatedAt())
-                .updatedAt(session.getUpdatedAt())
-                .build();
+                .updatedAt(session.getUpdatedAt());
+
+        if (session.getStatus() == LiveSessionStatus.SCHEDULED) {
+            builder.subscriptionCount(liveEventSubscriptionService.countBySessionId(session.getId()));
+            if (viewerUserId != null) {
+                builder.subscribedByCurrentUser(liveEventSubscriptionService.isSubscribed(session.getId(), viewerUserId));
+            }
+        }
+
+        return builder.build();
     }
 }

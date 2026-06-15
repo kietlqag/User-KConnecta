@@ -21,6 +21,8 @@ public class CreatePostRequest {
 
     private UUID groupId;
 
+    private UUID pageId;
+
     private String content;
     private String imageUrl;
 

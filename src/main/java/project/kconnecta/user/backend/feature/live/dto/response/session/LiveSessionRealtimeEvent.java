@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.live.dto.response.session;
 
 import lombok.Builder;
 import lombok.Getter;
+import project.kconnecta.user.backend.feature.live.entity.enums.LiveReactionType;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 
 import java.time.LocalDateTime;
@@ -16,6 +17,8 @@ public class LiveSessionRealtimeEvent {
     private Integer viewerCount;
     private Integer peakViewerCount;
     private Long totalReactionCount;
+    private UUID reactedUserId;
+    private LiveReactionType reactionType;
     private LiveSessionResponse session;
     private LiveSessionToolStateResponse tools;
     private LocalDateTime emittedAt;

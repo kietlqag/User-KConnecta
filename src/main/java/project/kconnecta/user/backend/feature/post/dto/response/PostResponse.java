@@ -18,6 +18,9 @@ public class PostResponse {
     private UUID groupId;
     private String groupName;
     private String groupIconUrl;
+    private UUID pageId;
+    private String pageName;
+    private String pageAvatarUrl;
     private String authorUsername;
     private String authorFullName;
     private String authorAvatarUrl;

@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS public.live_sessions (
     id UUID PRIMARY KEY,
     host_user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     group_id UUID,
+    page_id UUID REFERENCES public.user_pages(id) ON DELETE SET NULL,
     post_id UUID,
     title VARCHAR(255) NOT NULL,
     description VARCHAR(5000),
@@ -186,6 +187,7 @@ CREATE TABLE IF NOT EXISTS public.live_session_viewers (
     session_id UUID NOT NULL REFERENCES public.live_sessions(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uk_live_session_viewer UNIQUE (session_id, user_id)
 );
 
@@ -420,6 +422,36 @@ CREATE TABLE IF NOT EXISTS public.post_comments (
 CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON public.post_comments(post_id);
 CREATE INDEX IF NOT EXISTS idx_post_comments_parent_comment_id ON public.post_comments(parent_comment_id);
 
+CREATE TABLE IF NOT EXISTS public.live_session_tool_states (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL UNIQUE REFERENCES public.live_sessions(id) ON DELETE CASCADE,
+    poll_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    poll_question VARCHAR(500),
+    poll_options VARCHAR(2000),
+    featured_link_title VARCHAR(255),
+    featured_link_url VARCHAR(1000),
+    host_notice VARCHAR(1000),
+    pinned_comment_id UUID,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE public.live_session_tool_states
+    ADD COLUMN IF NOT EXISTS pinned_comment_id UUID;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'fk_live_session_tool_states_pinned_comment'
+    ) THEN
+        ALTER TABLE public.live_session_tool_states
+            ADD CONSTRAINT fk_live_session_tool_states_pinned_comment
+            FOREIGN KEY (pinned_comment_id) REFERENCES public.post_comments(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
 CREATE TABLE IF NOT EXISTS public.post_shares (
     id UUID PRIMARY KEY,
     post_id UUID NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
@@ -482,3 +514,41 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON public.notifications(recipient_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_group_members_group_id ON public.group_members(group_id);
+
+CREATE TABLE IF NOT EXISTS public.live_session_poll_votes (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES public.live_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    option_index INTEGER NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_live_session_poll_vote UNIQUE (session_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_session_poll_votes_session_id
+    ON public.live_session_poll_votes(session_id);
+
+CREATE TABLE IF NOT EXISTS public.live_event_subscriptions (
+    id UUID PRIMARY KEY,
+    session_id UUID NOT NULL REFERENCES public.live_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reminder_sent_at TIMESTAMP,
+    live_started_notified_at TIMESTAMP,
+    CONSTRAINT uk_live_event_subscription UNIQUE (session_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_event_subs_session_id
+    ON public.live_event_subscriptions(session_id);
+
+CREATE INDEX IF NOT EXISTS idx_live_event_subs_user_id
+    ON public.live_event_subscriptions(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_live_sessions_scheduled
+    ON public.live_sessions(status, scheduled_at);
+
+ALTER TABLE public.posts
+    ADD COLUMN IF NOT EXISTS page_id UUID REFERENCES public.user_pages(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_posts_page_id ON public.posts(page_id);
+CREATE INDEX IF NOT EXISTS idx_live_sessions_page_id ON public.live_sessions(page_id);

@@ -41,3 +41,9 @@ cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:local}
   api-key: ${CLOUDINARY_API_KEY:local}
   api-secret: ${CLOUDINARY_API_SECRET:local}
+
+# Match docker-compose + livekit.dev.yaml when LiveKit container runs on localhost:7880
+livekit:
+  url: ${LIVEKIT_URL:ws://localhost:7880}
+  api-key: ${LIVEKIT_API_KEY:devkey}
+  api-secret: ${LIVEKIT_API_SECRET:secret}

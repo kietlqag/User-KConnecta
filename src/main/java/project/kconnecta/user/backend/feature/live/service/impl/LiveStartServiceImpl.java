@@ -8,12 +8,14 @@ import project.kconnecta.user.backend.feature.live.dto.request.LiveKitTokenReque
 import project.kconnecta.user.backend.feature.live.dto.request.StartLiveRequest;
 import project.kconnecta.user.backend.feature.live.dto.response.LiveKitTokenResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.StartLiveResponse;
+import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionResponse;
 import project.kconnecta.user.backend.feature.live.entity.LiveSession;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveRecordingStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
 import project.kconnecta.user.backend.feature.live.service.LiveKitTokenService;
+import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveStartService;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
@@ -34,6 +36,7 @@ public class LiveStartServiceImpl implements LiveStartService {
     private final UserRepository userRepository;
     private final LiveSessionRepository liveSessionRepository;
     private final LiveKitTokenService liveKitTokenService;
+    private final LiveSessionRealtimePublisher realtimePublisher;
 
     @Override
     public StartLiveResponse startLive(StartLiveRequest request) {
@@ -44,6 +47,7 @@ public class LiveStartServiceImpl implements LiveStartService {
         CreatePostRequest createPostRequest = new CreatePostRequest();
         createPostRequest.setAuthorId(request.getUserId());
         createPostRequest.setGroupId(request.getGroupId());
+        createPostRequest.setPageId(request.getPageId());
         createPostRequest.setContent(buildContent(request.getTitle(), request.getDescription()));
         createPostRequest.setPrivacy(request.getPrivacy());
         createPostRequest.setStatus(request.getStartMode() == LiveStartMode.SCHEDULED ? PostStatus.SCHEDULED : PostStatus.PUBLISHED);
@@ -66,6 +70,7 @@ public class LiveStartServiceImpl implements LiveStartService {
         LiveSession session = liveSessionRepository.save(LiveSession.builder()
                 .host(host)
                 .groupId(request.getGroupId())
+                .pageId(request.getPageId())
                 .postId(post.getId())
                 .title(request.getTitle().trim())
                 .description(request.getDescription() == null ? null : request.getDescription().trim())
@@ -81,6 +86,10 @@ public class LiveStartServiceImpl implements LiveStartService {
                 .totalReactionCount(0)
                 .startedAt(status == LiveSessionStatus.LIVE ? now : null)
                 .build());
+
+        if (status == LiveSessionStatus.LIVE) {
+            realtimePublisher.publishSessionEvent("LIVE_STARTED", toResponse(session));
+        }
 
         LiveKitTokenResponse hostToken = null;
         if (status == LiveSessionStatus.LIVE) {
@@ -116,5 +125,37 @@ public class LiveStartServiceImpl implements LiveStartService {
         if (safeTitle.isBlank()) return safeDescription;
         if (safeDescription.isBlank()) return safeTitle;
         return safeTitle + "\n\n" + safeDescription;
+    }
+
+    private LiveSessionResponse toResponse(LiveSession session) {
+        return LiveSessionResponse.builder()
+                .id(session.getId())
+                .hostUserId(session.getHost().getId())
+                .groupId(session.getGroupId())
+                .pageId(session.getPageId())
+                .postId(session.getPostId())
+                .title(session.getTitle())
+                .description(session.getDescription())
+                .privacy(session.getPrivacy())
+                .startMode(session.getStartMode())
+                .scheduledAt(session.getScheduledAt())
+                .status(session.getStatus())
+                .streamKey(session.getStreamKey())
+                .roomName(session.getRoomName())
+                .playbackUrl(session.getPlaybackUrl())
+                .thumbnailUrl(session.getThumbnailUrl())
+                .recordingStatus(session.getRecordingStatus())
+                .recordingDurationSec(session.getRecordingDurationSec())
+                .recordingMimeType(session.getRecordingMimeType())
+                .recordingFileSizeBytes(session.getRecordingFileSizeBytes())
+                .recordingError(session.getRecordingError())
+                .startedAt(session.getStartedAt())
+                .endedAt(session.getEndedAt())
+                .viewerCount(session.getViewerCount())
+                .peakViewerCount(session.getPeakViewerCount())
+                .totalReactionCount(session.getTotalReactionCount())
+                .createdAt(session.getCreatedAt())
+                .updatedAt(session.getUpdatedAt())
+                .build();
     }
 }

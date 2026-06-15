@@ -25,6 +25,9 @@ public class LiveScheduleController {
     public ResponseEntity<LiveScheduleResponse> upsertSchedule(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpsertLiveScheduleRequest request) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
         request.setUserId(principal.getUserId());
         return ResponseEntity.ok(liveScheduleService.upsertSchedule(request));
     }
@@ -32,6 +35,9 @@ public class LiveScheduleController {
     @GetMapping("/schedule")
     public ResponseEntity<LiveScheduleResponse> getSchedule(
             @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
         return ResponseEntity.ok(liveScheduleService.getSchedule(principal.getUserId()));
     }
 }

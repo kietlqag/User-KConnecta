@@ -1,28 +1,62 @@
 package project.kconnecta.user.backend.feature.live.service;
 
+
+
 import project.kconnecta.user.backend.feature.live.dto.request.session.CreateLiveSessionRequest;
-import project.kconnecta.user.backend.feature.live.dto.request.session.LiveViewerRequest;
+
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveReactionRequest;
+
+import project.kconnecta.user.backend.feature.live.dto.response.session.GoLiveResponse;
+
+import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionReactionResponse;
+
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionResponse;
+
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionStatsResponse;
+
 import org.springframework.web.multipart.MultipartFile;
 
+
+
 import java.util.List;
+
 import java.util.UUID;
 
+
+
 public interface LiveSessionService {
-    LiveSessionResponse createSession(CreateLiveSessionRequest request);
-    LiveSessionResponse goLive(UUID sessionId);
+
+    LiveSessionResponse createSession(CreateLiveSessionRequest request, UUID hostUserId);
+
+    GoLiveResponse goLive(UUID sessionId, UUID hostUserId);
+
     LiveSessionResponse endLive(UUID sessionId, UUID requesterUserId);
+
     LiveSessionResponse saveRecording(UUID sessionId, UUID hostUserId, MultipartFile file, Integer durationSec);
+
     LiveSessionResponse markRecordingFailed(UUID sessionId, UUID hostUserId, String error);
-    LiveSessionResponse join(UUID sessionId, LiveViewerRequest request);
-    LiveSessionResponse heartbeat(UUID sessionId, LiveViewerRequest request);
-    LiveSessionResponse leave(UUID sessionId, LiveViewerRequest request);
-    LiveSessionResponse react(UUID sessionId, UpsertLiveReactionRequest request);
-    LiveSessionResponse getById(UUID sessionId);
-    LiveSessionResponse getByPostId(UUID postId);
-    List<LiveSessionResponse> listActive();
-    List<LiveSessionResponse> listByHost(UUID hostUserId);
-    LiveSessionStatsResponse getStats(UUID sessionId);
+
+    LiveSessionResponse join(UUID sessionId, UUID userId);
+
+    LiveSessionResponse heartbeat(UUID sessionId, UUID userId);
+
+    LiveSessionResponse leave(UUID sessionId, UUID userId);
+
+    LiveSessionResponse react(UUID sessionId, UUID userId, UpsertLiveReactionRequest request);
+
+    LiveSessionReactionResponse getReaction(UUID sessionId, UUID userId);
+
+    LiveSessionResponse getById(UUID sessionId, UUID viewerUserId);
+
+    LiveSessionResponse getByPostId(UUID postId, UUID viewerUserId);
+
+    List<LiveSessionResponse> listActive(UUID viewerUserId);
+
+    List<LiveSessionResponse> listByHost(UUID hostUserId, UUID requesterUserId);
+
+    LiveSessionStatsResponse getStats(UUID sessionId, UUID viewerUserId);
+
+    int activateDueScheduledSessions();
+
 }
+

@@ -44,6 +44,9 @@ public class LiveSession {
     @Column(name = "group_id")
     private UUID groupId;
 
+    @Column(name = "page_id")
+    private UUID pageId;
+
     @Column(name = "post_id")
     private UUID postId;
 
