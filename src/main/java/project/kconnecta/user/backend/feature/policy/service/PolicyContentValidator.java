@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import project.kconnecta.user.backend.exception.ChatValidationException;
 import project.kconnecta.user.backend.exception.ValidationException;
 
+import java.text.Normalizer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -47,8 +48,39 @@ public class PolicyContentValidator {
             throw new ValidationException("Tối đa " + maxImages + " ảnh/video mỗi bài");
         }
 
-        checkKeywords(text, config);
+        checkKeywords(text, config, true);
         checkRateLimit(authorId, postsPerMinute, postTimestamps, "đăng bài");
+    }
+
+    /**
+     * Cheap, AI-free pre-filter: returns true when a comment looks risky enough to
+     * warrant async AI review (a "watchlist" keyword or any link). Hard-blocked
+     * keywords are handled separately by {@link #validateComment}; this only flags
+     * the grey zone. Recall of the whole moderation pipeline is bounded by this filter.
+     */
+    public boolean isSuspect(String content) {
+        if (content == null || content.isBlank()) {
+            return false;
+        }
+        if (URL_PATTERN.matcher(content).find()) {
+            return true;
+        }
+        String lower = content.toLowerCase(Locale.ROOT);
+        String norm = normalizeForMatch(content);
+        JsonNode keywords = policyService.getConfigJson().path("keywords");
+        if (!keywords.isArray()) {
+            return false;
+        }
+        for (JsonNode kw : keywords) {
+            if (!"watchlist".equals(kw.path("category").asText(""))) {
+                continue;
+            }
+            String value = kw.path("value").asText("");
+            if (!value.isBlank() && keywordMatches(lower, norm, value)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void validateComment(String content) {
@@ -58,7 +90,11 @@ public class PolicyContentValidator {
         if (text.length() > maxLength) {
             throw new ValidationException("Bình luận quá dài");
         }
-        checkKeywords(text, config);
+        // Watchlist (vùng xám) KHÔNG chặn cứng ở đây — để isSuspect đẩy sang PENDING cho AI duyệt.
+        // Blacklist chặn ngay. blocked_domain chặn cả khi không phải URL đầy đủ (vd: "casino", "bit.ly/phish").
+        checkKeywords(text, config, false);
+        checkBlockedDomainsInText(text, config);
+        checkBlockedLinks(text, config);
     }
 
     public void validateChatMessage(UUID senderId, String content, UUID conversationId, String messageClientId) {
@@ -73,7 +109,7 @@ public class PolicyContentValidator {
         }
 
         try {
-            checkKeywords(text, config);
+            checkKeywords(text, config, true);
         } catch (ValidationException e) {
             throw new ChatValidationException("CHAT_BLOCKED_KEYWORD",
                     "Tin nhắn chứa nội dung không phù hợp nên không thể gửi.", null, convId, messageClientId);
@@ -89,17 +125,18 @@ public class PolicyContentValidator {
         }
     }
 
-    private void checkKeywords(String text, JsonNode config) {
+    private void checkKeywords(String text, JsonNode config, boolean blockWatchlist) {
         if (text.isBlank()) {
             return;
         }
-        String normalized = text.toLowerCase(Locale.ROOT);
+        String lower = text.toLowerCase(Locale.ROOT);
+        String norm = normalizeForMatch(text);
         JsonNode keywords = config.path("keywords");
         if (!keywords.isArray()) {
             return;
         }
         for (JsonNode kw : keywords) {
-            String value = kw.path("value").asText("").toLowerCase(Locale.ROOT);
+            String value = kw.path("value").asText("");
             String category = kw.path("category").asText("");
             if (value.isBlank()) {
                 continue;
@@ -107,8 +144,74 @@ public class PolicyContentValidator {
             if ("blocked_domain".equals(category)) {
                 continue;
             }
-            if (normalized.contains(value)) {
+            // Khi gọi từ comment, watchlist là vùng xám → bỏ qua chặn cứng, nhường cho isSuspect + AI.
+            if (!blockWatchlist && "watchlist".equals(category)) {
+                continue;
+            }
+            if (keywordMatches(lower, norm, value)) {
                 throw new ValidationException("Nội dung chứa từ khóa không được phép");
+            }
+        }
+    }
+
+    /**
+     * Khớp từ khóa trên CẢ hai dạng: bản gốc (giữ dấu) và bản chuẩn hóa né-kiểm-duyệt.
+     * Nhờ vậy "con cho"→"con chó", "tao se giet may"→"giết", "cac"→"cặc", "vay tien"→"vay tiền"
+     * đều bị bắt. Watchlist chỉ đẩy comment sang PENDING (AI duyệt lại), nên dương tính giả
+     * kiểu "các"/"Nguyễn" sẽ được AI gỡ — không chặn oan.
+     */
+    private boolean keywordMatches(String lowerText, String normText, String keyword) {
+        String lowerKw = keyword.toLowerCase(Locale.ROOT);
+        if (lowerText.contains(lowerKw)) {
+            return true;
+        }
+        String normKw = normalizeForMatch(keyword);
+        return !normKw.isBlank() && normText.contains(normKw);
+    }
+
+    // Ký tự thường dùng để né kiểm duyệt (leetspeak / thay thế) → chữ gốc.
+    private static final Map<Character, Character> LEET_MAP = Map.ofEntries(
+            Map.entry('0', 'o'), Map.entry('1', 'i'), Map.entry('3', 'e'),
+            Map.entry('4', 'a'), Map.entry('5', 's'), Map.entry('6', 'g'),
+            Map.entry('7', 't'), Map.entry('8', 'b'), Map.entry('9', 'g'),
+            Map.entry('@', 'a'), Map.entry('$', 's'), Map.entry('|', 'i')
+    );
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+
+    /**
+     * Chuẩn hóa để so khớp: lowercase + trim + gom khoảng trắng + bỏ dấu tiếng Việt (đ→d)
+     * + map ký tự né (c0n→con, v4y→vay...). Dùng cho cả nội dung lẫn từ khóa.
+     */
+    private static String normalizeForMatch(String s) {
+        String lower = s.toLowerCase(Locale.ROOT).trim();
+        String noAccent = Normalizer.normalize(lower, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .replace('đ', 'd');
+        StringBuilder sb = new StringBuilder(noAccent.length());
+        for (int i = 0; i < noAccent.length(); i++) {
+            char c = noAccent.charAt(i);
+            sb.append(LEET_MAP.getOrDefault(c, c));
+        }
+        return WHITESPACE.matcher(sb).replaceAll(" ");
+    }
+
+    private void checkBlockedDomainsInText(String text, JsonNode config) {
+        if (text.isBlank()) {
+            return;
+        }
+        String lower = text.toLowerCase(Locale.ROOT);
+        String norm = normalizeForMatch(text);
+        JsonNode keywords = config.path("keywords");
+        if (!keywords.isArray()) {
+            return;
+        }
+        for (JsonNode kw : keywords) {
+            if (!"blocked_domain".equals(kw.path("category").asText(""))) {
+                continue;
+            }
+            String value = kw.path("value").asText("");
+            if (!value.isBlank() && keywordMatches(lower, norm, value)) {
+                throw new ValidationException("Nội dung chứa liên kết hoặc từ khóa không được phép");
             }
         }
     }

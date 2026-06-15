@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 
 import java.util.UUID;
 
@@ -16,4 +17,6 @@ public class SharePostRequest {
 
     @Size(max = 1000)
     private String sharedContent;
+
+    private PostPrivacy privacy;
 }

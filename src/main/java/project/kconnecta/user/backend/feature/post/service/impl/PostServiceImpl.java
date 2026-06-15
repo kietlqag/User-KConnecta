@@ -17,12 +17,14 @@ import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PendingCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostMediaResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionCountResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionUserResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.entity.*;
@@ -39,6 +41,8 @@ import project.kconnecta.user.backend.feature.post.repository.*;
 import project.kconnecta.user.backend.feature.policy.service.PolicyContentValidator;
 import project.kconnecta.user.backend.feature.post.service.PostService;
 import project.kconnecta.user.backend.feature.search.redis.RedisSearchIndexer;
+import project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus;
+import project.kconnecta.user.backend.feature.friend.repository.FriendshipRepository;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
@@ -51,16 +55,21 @@ import project.kconnecta.user.backend.exception.ForbiddenException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 @Slf4j
@@ -88,6 +97,8 @@ public class PostServiceImpl implements PostService {
     private final PolicyContentValidator policyContentValidator;
     private final RedisSearchIndexer redisSearchIndexer;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final project.kconnecta.user.backend.feature.ai.GeminiModerationService geminiModerationService;
+    private final FriendshipRepository friendshipRepository;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -103,6 +114,15 @@ public class PostServiceImpl implements PostService {
                 request.getContent(),
                 mediaRequests.size()
         );
+
+        if (request.getContent() != null && !request.getContent().isBlank()) {
+            geminiModerationService.moderate(request.getContent()).ifPresent(moderation -> {
+                if (!moderation.safe()) {
+                    throw new project.kconnecta.user.backend.exception.ValidationException(
+                            "Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderation.reason());
+                }
+            });
+        }
 
         PostStatus status = request.getStatus() == null ? PostStatus.PUBLISHED : request.getStatus();
         PostPrivacy privacy = request.getPrivacy() == null ? PostPrivacy.PUBLIC : request.getPrivacy();
@@ -223,6 +243,20 @@ public class PostServiceImpl implements PostService {
         for (Post post : due) {
             log.info("scheduler publish: postId={}, scheduledAt={}, now={}",
                     post.getId(), post.getScheduledAt(), now);
+
+            // Re-moderate content at publish time — catches cases where the API key
+            // was missing at creation time or policy has since changed.
+            if (post.getContent() != null && !post.getContent().isBlank()) {
+                var moderation = geminiModerationService.moderate(post.getContent());
+                if (moderation.isPresent() && !moderation.get().safe()) {
+                    post.setStatus(PostStatus.REJECTED);
+                    post.setModerationFailReason(moderation.get().reason());
+                    postRepository.save(post);
+                    log.warn("scheduler reject: postId={}, reason={}", post.getId(), moderation.get().reason());
+                    continue;
+                }
+            }
+
             post.setStatus(PostStatus.PUBLISHED);
             post.setPublishedAt(now);
             Post saved = postRepository.save(post);
@@ -233,6 +267,85 @@ public class PostServiceImpl implements PostService {
             count++;
         }
         return count;
+    }
+
+    /** Max comments AI-moderated per scheduler tick — keeps headroom under the shared 15 RPM / 500 RPD Gemini quota. */
+    private static final int COMMENT_MODERATION_BATCH = 8;
+    /** After this many failed AI attempts a comment drops out of the queue (stays PENDING for admin), so it can't starve newer ones. */
+    private static final int MAX_MODERATION_ATTEMPTS = 3;
+
+    @Override
+    public int moderatePendingComments() {
+        Page<PostComment> pending = postCommentRepository.findByStatusAndModerationAttemptsLessThanOrderByCreatedAtAsc(
+                CommentStatus.PENDING, MAX_MODERATION_ATTEMPTS, PageRequest.of(0, COMMENT_MODERATION_BATCH));
+        if (pending.isEmpty()) {
+            return 0;
+        }
+
+        int resolved = 0;
+        for (PostComment comment : pending.getContent()) {
+            try {
+                var moderation = geminiModerationService.moderate(comment.getContent());
+                if (moderation.isEmpty()) {
+                    // Hết quota / mọi model fail → fail-closed: giữ PENDING (ẩn) cho admin duyệt tay.
+                    comment.setModerationAttempts(comment.getModerationAttempts() + 1);
+                    postCommentRepository.save(comment);
+                    continue;
+                }
+                if (moderation.get().safe()) {
+                    comment.setStatus(CommentStatus.APPROVED);
+                    comment.setModerationFailReason(null);
+                    postCommentRepository.save(comment);
+                    publishCommentNotification(comment);
+                } else {
+                    comment.setStatus(CommentStatus.REJECTED);
+                    comment.setModerationFailReason(moderation.get().reason());
+                    postCommentRepository.save(comment);
+                    log.warn("comment moderation reject: commentId={}, reason={}", comment.getId(), moderation.get().reason());
+                }
+                resolved++;
+            } catch (Exception e) {
+                log.warn("comment moderation error: commentId={}, error={}", comment.getId(), e.getMessage());
+            }
+        }
+        return resolved;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PendingCommentResponse> listPendingComments(Pageable pageable) {
+        return postCommentRepository.findByStatusOrderByCreatedAtAsc(CommentStatus.PENDING, pageable)
+                .map(c -> PendingCommentResponse.builder()
+                        .id(c.getId())
+                        .postId(c.getPost().getId())
+                        .userId(c.getUser().getId())
+                        .username(c.getUser().getUsername())
+                        .content(c.getContent())
+                        .moderationAttempts(c.getModerationAttempts())
+                        .createdAt(c.getCreatedAt())
+                        .build());
+    }
+
+    @Override
+    public void approveComment(UUID commentId) {
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        boolean wasHidden = comment.getStatus() != CommentStatus.APPROVED;
+        comment.setStatus(CommentStatus.APPROVED);
+        comment.setModerationFailReason(null);
+        postCommentRepository.save(comment);
+        if (wasHidden) {
+            publishCommentNotification(comment);
+        }
+    }
+
+    @Override
+    public void rejectComment(UUID commentId, String reason) {
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        comment.setStatus(CommentStatus.REJECTED);
+        comment.setModerationFailReason(reason);
+        postCommentRepository.save(comment);
     }
 
     private static final String UPLOAD_OWNERSHIP_PREFIX = "post:upload:";
@@ -270,7 +383,41 @@ public class PostServiceImpl implements PostService {
         Page<Post> postPage = postRepository.findHomeFeedPostsWithScoring(currentUserId, pageable);
         List<Post> diversified = applyAuthorDiversity(postPage.getContent(), 3);
         List<PostResponse> responses = processPostsBulk(diversified, currentUserId);
-        return new PageImpl<>(responses, pageable, postPage.getTotalElements());
+
+        // Only adjust total when the DB itself returned a short page (true last page).
+        long dbPageSize = postPage.getContent().size();
+        long adjustedTotal = dbPageSize < pageable.getPageSize()
+                ? pageable.getOffset() + diversified.size()
+                : postPage.getTotalElements();
+
+        // On page 0, inject recent shares from the current user + friends (last 7 days, at most 5 items)
+        if (pageable.getPageNumber() == 0 && currentUserId != null) {
+            List<UUID> friendIds = friendshipRepository.findFriendIdsByUserIdAndStatus(currentUserId, FriendshipStatus.ACCEPTED);
+            List<UUID> shareUserIds = new ArrayList<>(friendIds);
+            shareUserIds.add(currentUserId); // include user's own shares
+            int shareLimit = Math.min(5, Math.max(1, pageable.getPageSize() / 2));
+            List<PostShare> recentShares = postShareRepository.findRecentSharesByUserIds(
+                    shareUserIds,
+                    LocalDateTime.now().minusDays(7),
+                    org.springframework.data.domain.PageRequest.of(0, shareLimit)
+            );
+            if (!recentShares.isEmpty()) {
+                List<PostResponse> shareWrappers = toShareWrappers(recentShares, currentUserId);
+                if (!shareWrappers.isEmpty()) {
+                    // Trim regular posts to keep total count = pageSize
+                    int postsToKeep = Math.max(0, pageable.getPageSize() - shareWrappers.size());
+                    List<PostResponse> trimmedPosts = responses.subList(0, Math.min(responses.size(), postsToKeep));
+                    List<PostResponse> merged = Stream.concat(trimmedPosts.stream(), shareWrappers.stream())
+                            .sorted(Comparator.comparing(
+                                    r -> r.getCreatedAt() != null ? r.getCreatedAt() : LocalDateTime.MIN,
+                                    Comparator.reverseOrder()))
+                            .toList();
+                    return new PageImpl<>(merged, pageable, adjustedTotal + shareWrappers.size());
+                }
+            }
+        }
+
+        return new PageImpl<>(responses, pageable, adjustedTotal);
     }
 
     private List<Post> applyAuthorDiversity(List<Post> posts, int maxPerAuthor) {
@@ -299,9 +446,24 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable) {
-        Page<Post> postPage = postRepository.findByAuthorIdWithPrivacy(authorId, currentUserId, pageable);
-        List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
-        return new PageImpl<>(responses, pageable, postPage.getTotalElements());
+        // Load all accessible posts for this author (privacy-filtered), then merge with shares in memory.
+        Page<Post> allPostsPage = postRepository.findByAuthorIdWithPrivacy(authorId, currentUserId, Pageable.unpaged());
+        List<PostResponse> postResponses = processPostsBulk(allPostsPage.getContent(), currentUserId);
+
+        List<PostShare> shares = postShareRepository.findSharesWithPostByUserId(authorId);
+        List<PostResponse> shareWrappers = toShareWrappers(shares, currentUserId);
+
+        List<PostResponse> merged = Stream.concat(postResponses.stream(), shareWrappers.stream())
+                .sorted(Comparator.comparing(
+                        r -> r.getCreatedAt() != null ? r.getCreatedAt() : LocalDateTime.MIN,
+                        Comparator.reverseOrder()))
+                .toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), merged.size());
+        List<PostResponse> page = start >= merged.size() ? Collections.emptyList() : new ArrayList<>(merged.subList(start, end));
+
+        return new PageImpl<>(page, pageable, merged.size());
     }
 
     @Override
@@ -368,7 +530,6 @@ public class PostServiceImpl implements PostService {
         final Set<UUID> finalSavedPostIds = savedPostIds;
 
         return posts.stream()
-                .filter(p -> p.getStatus() == PostStatus.PUBLISHED)
                 .map(post -> mapToResponseOptimized(post, currentUserId,
                         finalReactionCounts.getOrDefault(post.getId(), Collections.emptyMap()),
                         finalCommentCounts.getOrDefault(post.getId(), 0L),
@@ -459,23 +620,40 @@ public class PostServiceImpl implements PostService {
     }
 
     private PostCommentResponse toCommentResponse(PostComment comment, UUID parentCommentId, UUID currentUserId) {
-        boolean deleted = comment.isDeleted();
+        boolean isAuthor = currentUserId != null && comment.getUser().getId().equals(currentUserId);
+        // Ẩn nội dung nếu: đã xóa, HOẶC chưa duyệt (PENDING/REJECTED) và người xem không phải tác giả.
+        boolean masked = comment.isDeleted()
+                || (comment.getStatus() != CommentStatus.APPROVED && !isAuthor);
         return PostCommentResponse.builder()
                 .id(comment.getId())
                 .postId(comment.getPost().getId())
-                .userId(deleted ? null : comment.getUser().getId())
-                .username(deleted ? null : comment.getUser().getUsername())
-                .userFullName(deleted ? null : comment.getUser().getFullName())
-                .userAvatarUrl(deleted ? null : comment.getUser().getAvatarUrl())
+                .userId(masked ? null : comment.getUser().getId())
+                .username(masked ? null : comment.getUser().getUsername())
+                .userFullName(masked ? null : comment.getUser().getFullName())
+                .userAvatarUrl(masked ? null : comment.getUser().getAvatarUrl())
                 .parentCommentId(parentCommentId)
-                .isDeleted(deleted)
+                .isDeleted(comment.isDeleted())
                 .replyCount(postCommentRepository.countByParentCommentId(comment.getId()))
-                .likeCount(deleted ? 0 : postCommentLikeRepository.countByCommentId(comment.getId()))
-                .isLikedByCurrentUser(!deleted && currentUserId != null && postCommentLikeRepository.existsByCommentIdAndUserId(comment.getId(), currentUserId))
-                .content(deleted ? null : comment.getContent())
+                .likeCount(masked ? 0 : postCommentLikeRepository.countByCommentId(comment.getId()))
+                .isLikedByCurrentUser(!masked && currentUserId != null && postCommentLikeRepository.existsByCommentIdAndUserId(comment.getId(), currentUserId))
+                .content(masked ? null : comment.getContent())
+                // Trạng thái kiểm duyệt chỉ lộ cho chính tác giả (để hiện nhãn "đang chờ duyệt" / lý do từ chối).
+                .moderationStatus(isAuthor ? comment.getStatus().name() : null)
+                .moderationFailReason(isAuthor ? comment.getModerationFailReason() : null)
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .build();
+    }
+
+    /** Push COMMENT event → Queue → Listener creates notification FIFO. */
+    private void publishCommentNotification(PostComment comment) {
+        notificationEventPublisher.publish(
+                comment.getUser().getId(),
+                comment.getPost().getAuthor().getId(),
+                NotificationType.COMMENT,
+                comment.getUser().getFullName() + " đã bình luận về bài viết của bạn.",
+                comment.getPost().getId()
+        );
     }
 
     @Override
@@ -483,7 +661,7 @@ public class PostServiceImpl implements PostService {
     public Page<PostCommentResponse> getComments(UUID postId, UUID currentUserId, Pageable pageable) {
         getPost(postId);
         return postCommentRepository
-                .findTopLevelVisible(postId, pageable)
+                .findTopLevelVisible(postId, currentUserId, pageable)
                 .map(comment -> toCommentResponse(comment, null, currentUserId));
     }
 
@@ -492,7 +670,7 @@ public class PostServiceImpl implements PostService {
     public List<PostCommentResponse> getReplies(UUID commentId, UUID currentUserId) {
         postCommentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
-        return postCommentRepository.findVisibleReplies(commentId)
+        return postCommentRepository.findVisibleReplies(commentId, currentUserId)
                 .stream()
                 .map(comment -> toCommentResponse(comment, commentId, currentUserId))
                 .toList();
@@ -514,24 +692,25 @@ public class PostServiceImpl implements PostService {
 
         policyContentValidator.validateComment(request.getContent());
 
+        // Tiền lọc rẻ (không AI): comment nghi ngờ → PENDING (ẩn) + chờ job nền gọi Gemini.
+        CommentStatus status = policyContentValidator.isSuspect(request.getContent())
+                ? CommentStatus.PENDING : CommentStatus.APPROVED;
+
         PostComment saved = postCommentRepository.save(PostComment.builder()
                 .post(post)
                 .user(user)
                 .parentComment(parentComment)
                 .content(request.getContent().trim())
+                .status(status)
                 .build());
 
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.COMMENT_ADDED,
                 "{\"postId\":\"" + postId + "\"}");
 
-        // Push COMMENT event → Queue → Listener creates notification FIFO
-        notificationEventPublisher.publish(
-                user.getId(),
-                post.getAuthor().getId(),
-                NotificationType.COMMENT,
-                user.getFullName() + " đã bình luận về bài viết của bạn.",
-                post.getId()
-        );
+        // Hoãn notification cho comment PENDING — chỉ báo khi đã được duyệt (job nền sẽ gửi).
+        if (status == CommentStatus.APPROVED) {
+            publishCommentNotification(saved);
+        }
 
         return toCommentResponse(saved, saved.getParentComment() == null ? null : saved.getParentComment().getId(), request.getUserId());
     }
@@ -543,7 +722,17 @@ public class PostServiceImpl implements PostService {
         if (!comment.getUser().getId().equals(userId)) {
             throw new ForbiddenException("Bạn không có quyền chỉnh sửa bình luận này");
         }
+        // Sửa comment cũng phải qua kiểm duyệt (trước đây bị bỏ sót hoàn toàn).
+        policyContentValidator.validateComment(request.getContent());
         comment.setContent(request.getContent().trim());
+
+        if (policyContentValidator.isSuspect(request.getContent())) {
+            comment.setStatus(CommentStatus.PENDING);
+        } else {
+            comment.setStatus(CommentStatus.APPROVED);
+            comment.setModerationFailReason(null);
+            comment.setModerationAttempts(0);
+        }
         PostComment saved = postCommentRepository.save(comment);
         return toCommentResponse(saved, saved.getParentComment() == null ? null : saved.getParentComment().getId(), userId);
     }
@@ -596,19 +785,45 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional
     public PostShareResponse sharePost(UUID postId, SharePostRequest request) {
         Post post = getPost(postId);
         User user = getUser(request.getUserId(), "Share user not found");
 
+        // Privacy guard: PRIVATE posts cannot be shared by anyone but the author
+        if (post.getPrivacy() == PostPrivacy.PRIVATE && !post.getAuthor().getId().equals(user.getId())) {
+            throw new ValidationException("Bạn không có quyền chia sẻ bài viết này");
+        }
+        // FRIENDS / FRIENDS_EXCEPT posts require an accepted friendship
+        if ((post.getPrivacy() == PostPrivacy.FRIENDS || post.getPrivacy() == PostPrivacy.FRIENDS_EXCEPT)
+                && !post.getAuthor().getId().equals(user.getId())) {
+            boolean isFriend = friendshipRepository.findBetweenUsers(user.getId(), post.getAuthor().getId())
+                    .map(f -> f.getStatus() == FriendshipStatus.ACCEPTED)
+                    .orElse(false);
+            if (!isFriend) {
+                throw new ValidationException("Bạn không có quyền chia sẻ bài viết này");
+            }
+        }
+
         if (!postShareRepository.existsByPostIdAndUserId(postId, request.getUserId())) {
+            PostPrivacy sharePrivacy = request.getPrivacy() != null ? request.getPrivacy() : PostPrivacy.PUBLIC;
             postShareRepository.save(PostShare.builder()
                     .post(post)
                     .user(user)
                     .sharedContent(trimToNull(request.getSharedContent()))
+                    .privacy(sharePrivacy)
                     .build());
 
             activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.POST_SHARED,
                     "{\"postId\":\"" + postId + "\"}");
+
+            notificationEventPublisher.publish(
+                    user.getId(),
+                    post.getAuthor().getId(),
+                    NotificationType.SHARE,
+                    user.getFullName() + " đã chia sẻ bài viết của bạn.",
+                    post.getId()
+            );
         }
 
         long shareCount = postShareRepository.countByPostId(postId);
@@ -693,11 +908,19 @@ public class PostServiceImpl implements PostService {
             throw new ValidationException("Bạn đã báo cáo bài viết này");
         }
 
+        var analysis = geminiModerationService.analyzeReport(
+                post.getContent(),
+                request.getCategory() != null ? request.getCategory().name() : null,
+                request.getReason()
+        );
+
         postReportRepository.save(PostReport.builder()
                 .post(post)
                 .reporter(reporter)
                 .reason(trimToNull(request.getReason()))
-                .createdAt(LocalDateTime.now())
+                .category(request.getCategory())
+                .aiAnalysis(analysis.map(a -> a.analysis()).orElse("Không thể phân tích tự động"))
+                .aiSeverity(analysis.map(a -> a.severity()).orElse("NONE"))
                 .build());
 
         adminPostReportNotificationClient.notifyPostReport(
@@ -706,6 +929,25 @@ public class PostServiceImpl implements PostService {
                 reporter.getUsername(),
                 request.getReason()
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse> getMyReports(UUID userId) {
+        return postReportRepository.findByReporterIdOrderByCreatedAtDesc(userId).stream()
+                .map(r -> project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse.builder()
+                        .id(r.getId())
+                        .postId(r.getPost().getId())
+                        .reporterId(r.getReporter().getId())
+                        .reporterUsername(r.getReporter().getUsername())
+                        .category(r.getCategory())
+                        .reason(r.getReason())
+                        .status(r.getStatus())
+                        .aiAnalysis(r.getAiAnalysis())
+                        .aiSeverity(r.getAiSeverity())
+                        .createdAt(r.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -873,6 +1115,54 @@ public class PostServiceImpl implements PostService {
                         PostReactionRepository.ReactionCountProjection::getReactionType,
                         PostReactionRepository.ReactionCountProjection::getCount
                 ));
+    }
+
+    /**
+     * Converts a batch of PostShare records into PostResponse "share wrapper" objects.
+     * Each wrapper uses the sharer as author, shareTime as createdAt, and embeds the
+     * original PostResponse so the frontend can render a post-in-post card.
+     */
+    private List<PostResponse> toShareWrappers(List<PostShare> shares, UUID currentUserId) {
+        if (shares.isEmpty()) return Collections.emptyList();
+
+        List<Post> originalPosts = shares.stream().map(PostShare::getPost).toList();
+        List<PostResponse> originals = processPostsBulk(originalPosts, currentUserId);
+        Map<UUID, PostResponse> byPostId = originals.stream()
+                .collect(Collectors.toMap(PostResponse::getId, r -> r));
+
+        return shares.stream()
+                .map(share -> {
+                    PostResponse original = byPostId.get(share.getPost().getId());
+                    if (original == null) return null;
+                    User sharer = share.getUser();
+                    return PostResponse.builder()
+                            .id(share.getId())
+                            .authorId(sharer.getId())
+                            .authorUsername(sharer.getUsername())
+                            .authorFullName(sharer.getFullName())
+                            .authorAvatarUrl(sharer.getAvatarUrl())
+                            .content(share.getSharedContent())
+                            .createdAt(share.getCreatedAt())
+                            .updatedAt(share.getCreatedAt())
+                            .publishedAt(share.getCreatedAt())
+                            .privacy(share.getPrivacy() != null ? share.getPrivacy() : PostPrivacy.PUBLIC)
+                            .status(PostStatus.PUBLISHED)
+                            // Carry original post's engagement so action buttons show real numbers
+                            .reactionCount(original.getReactionCount())
+                            .reactionCounts(original.getReactionCounts())
+                            .currentUserReactionType(original.getCurrentUserReactionType())
+                            .savedByCurrentUser(original.isSavedByCurrentUser())
+                            .commentCount(original.getCommentCount())
+                            .shareCount(original.getShareCount())
+                            .media(Collections.emptyList())
+                            .excludedUserIds(Collections.emptyList())
+                            .taggedUserIds(Collections.emptyList())
+                            .sharedPost(true)
+                            .originalPost(original)
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     private String trimToNull(String value) {

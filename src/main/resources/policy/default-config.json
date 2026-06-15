@@ -11,7 +11,21 @@
   "keywords": [
     {"id":"kw-1","value":"từ tục","category":"blacklist"},
     {"id":"kw-2","value":"casino","category":"blocked_domain"},
-    {"id":"kw-3","value":"bit.ly/phish","category":"blocked_domain"}
+    {"id":"kw-3","value":"bit.ly/phish","category":"blocked_domain"},
+    {"id":"wl-1","value":"đm","category":"watchlist"},
+    {"id":"wl-2","value":"địt","category":"watchlist"},
+    {"id":"wl-3","value":"lồn","category":"watchlist"},
+    {"id":"wl-4","value":"cặc","category":"watchlist"},
+    {"id":"wl-5","value":"đụ","category":"watchlist"},
+    {"id":"wl-6","value":"thằng chó","category":"watchlist"},
+    {"id":"wl-7","value":"con chó","category":"watchlist"},
+    {"id":"wl-8","value":"óc chó","category":"watchlist"},
+    {"id":"wl-9","value":"ngu","category":"watchlist"},
+    {"id":"wl-10","value":"súc vật","category":"watchlist"},
+    {"id":"wl-11","value":"giết","category":"watchlist"},
+    {"id":"wl-12","value":"đe dọa","category":"watchlist"},
+    {"id":"wl-13","value":"lừa đảo","category":"watchlist"},
+    {"id":"wl-14","value":"mua bán","category":"watchlist"}
   ],
   "violationPolicies": [{"id":"default","label":"Mặc định","steps":[{"offense":1,"action":"warning"},{"offense":2,"action":"lock_temp","lockDays":3},{"offense":3,"action":"ban_permanent"}]}],
   "aiModeration": {"enabled":true,"sensitivity":72,"detect":{"toxic":true,"spam":true,"nsfw":true,"hateSpeech":true,"scam":true},"autoHidePost":true,"autoWarning":true,"autoBan":false},

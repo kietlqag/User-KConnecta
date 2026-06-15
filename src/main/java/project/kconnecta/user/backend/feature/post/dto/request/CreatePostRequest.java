@@ -16,7 +16,6 @@ import java.util.UUID;
 @Setter
 public class CreatePostRequest {
 
-    @NotNull
     private UUID authorId;
 
     private UUID groupId;

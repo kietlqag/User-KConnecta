@@ -21,6 +21,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostCommentRespo
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.service.PostService;
@@ -213,6 +214,12 @@ public class PostController {
         request.setReporterId(principal.getUserId());
         postService.reportPost(id, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/reports/my")
+    public ResponseEntity<List<PostReportResponse>> getMyReports(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(postService.getMyReports(principal.getUserId()));
     }
 
     @DeleteMapping("/{id}")

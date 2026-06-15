@@ -28,8 +28,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(@org.springframework.lang.NonNull StompEndpointRegistry registry) {
         String[] origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new);
-        registry.addEndpoint("/ws")
-                .setAllowedOrigins(origins);
+        boolean hasPattern = Arrays.stream(origins).anyMatch(o -> o.contains("*"));
+        var endpoint = registry.addEndpoint("/ws");
+        if (hasPattern) {
+            endpoint.setAllowedOriginPatterns(origins);
+        } else {
+            endpoint.setAllowedOrigins(origins);
+        }
     }
 
     @Override

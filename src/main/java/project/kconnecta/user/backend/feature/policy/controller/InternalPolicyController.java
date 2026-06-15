@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import java.security.MessageDigest;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,7 +47,9 @@ public class InternalPolicyController {
     }
 
     private void validateKey(String key) {
-        if (!internalApiKey.equals(key)) {
+        if (!MessageDigest.isEqual(
+                internalApiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                key.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal key");
         }
     }

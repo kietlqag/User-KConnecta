@@ -44,4 +44,9 @@ public class PostResponse {
     private List<UUID> taggedUserIds;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Set to true when this PostResponse is a share wrapper (not an original post)
+    private boolean sharedPost;
+    // Embedded original post (non-null only when sharedPost == true)
+    private PostResponse originalPost;
 }

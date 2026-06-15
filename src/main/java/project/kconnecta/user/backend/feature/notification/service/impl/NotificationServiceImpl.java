@@ -31,7 +31,13 @@ public class NotificationServiceImpl implements NotificationService {
     public NotificationResponse createNotification(UUID recipientId, UUID senderId, NotificationType type, String content, UUID relatedId) {
         User recipient = userRepository.findById(recipientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipient not found: " + recipientId));
-        
+
+        if (type == NotificationType.FRIEND_REMOVED) {
+            // Silent event: push WebSocket only, no DB record
+            pushUnreadCountUpdate(recipient, type);
+            return null;
+        }
+
         User sender = null;
         if (senderId != null) {
             sender = userRepository.findById(senderId)

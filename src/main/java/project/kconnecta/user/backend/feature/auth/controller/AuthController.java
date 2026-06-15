@@ -53,7 +53,12 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
+        String ip = resolveClientIp(httpRequest);
+        if (rateLimitService.isRateLimited("register", ip, 10, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
+        }
         return ResponseEntity.ok(authService.register(request));
     }
 
@@ -92,12 +97,22 @@ public class AuthController {
     }
 
     @GetMapping("/check-email")
-    public ResponseEntity<?> checkEmail(@RequestParam String email) {
+    public ResponseEntity<?> checkEmail(@RequestParam String email, HttpServletRequest httpRequest) {
+        String ip = resolveClientIp(httpRequest);
+        if (rateLimitService.isRateLimited("check-email", ip, 30, Duration.ofMinutes(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
+        }
         return ResponseEntity.ok(Map.of("exists", authService.emailExists(email)));
     }
 
     @GetMapping("/check-username")
-    public ResponseEntity<?> checkUsername(@RequestParam String username) {
+    public ResponseEntity<?> checkUsername(@RequestParam String username, HttpServletRequest httpRequest) {
+        String ip = resolveClientIp(httpRequest);
+        if (rateLimitService.isRateLimited("check-username", ip, 30, Duration.ofMinutes(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
+        }
         return ResponseEntity.ok(Map.of("exists", authService.usernameExists(username)));
     }
 
@@ -108,7 +123,12 @@ public class AuthController {
     }
 
     @PostMapping("/request-account-review")
-    public ResponseEntity<?> requestAccountReview(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> requestAccountReview(@RequestBody Map<String, String> body, HttpServletRequest httpRequest) {
+        String ip = resolveClientIp(httpRequest);
+        if (rateLimitService.isRateLimited("account-review", ip, 3, Duration.ofHours(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
+        }
         String reason = body.get("reason");
         if (reason != null && reason.length() > 500) {
             return ResponseEntity.badRequest().body(Map.of("message", "Ly do khong duoc vuot qua 500 ky tu"));

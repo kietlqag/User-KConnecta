@@ -8,10 +8,12 @@ import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PendingCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import org.springframework.web.multipart.MultipartFile;
@@ -49,9 +51,22 @@ public interface PostService {
     List<CheckInSuggestionResponse> getCheckInSuggestions(UUID currentUserId, String province, String ward);
     PostResponse updatePrivacy(UUID postId, UUID userId, PostPrivacy privacy);
     void reportPost(UUID postId, ReportPostRequest request);
+    List<PostReportResponse> getMyReports(UUID userId);
 
     List<PostResponse> getPostsByIds(List<UUID> postIds, UUID currentUserId);
 
     /** Publishes all SCHEDULED posts with scheduledAt <= now. Returns number published. */
     int publishDueScheduledPosts();
+
+    /** Runs AI moderation on a bounded batch of PENDING comments. Returns number resolved. */
+    int moderatePendingComments();
+
+    /** Comments stuck in PENDING (e.g. AI quota exhausted), for manual admin review. */
+    Page<PendingCommentResponse> listPendingComments(Pageable pageable);
+
+    /** Manually approve a comment (admin), making it visible and notifying the post author. */
+    void approveComment(UUID commentId);
+
+    /** Manually reject a comment (admin) with a reason. */
+    void rejectComment(UUID commentId, String reason);
 }

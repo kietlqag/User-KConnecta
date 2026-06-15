@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.friend.dto.request.FriendRequestBody;
+import project.kconnecta.user.backend.feature.friend.dto.response.FriendBirthdayResponse;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendResponse;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendshipStatusResponse;
 import project.kconnecta.user.backend.feature.friend.service.FriendService;
@@ -25,6 +26,11 @@ public class FriendController {
     @GetMapping("/{userId}")
     public ResponseEntity<List<FriendResponse>> getFriends(@PathVariable UUID userId) {
         return ResponseEntity.ok(friendService.getFriends(userId));
+    }
+
+    @GetMapping("/{userId}/birthdays")
+    public ResponseEntity<List<FriendBirthdayResponse>> getFriendBirthdays(@PathVariable UUID userId) {
+        return ResponseEntity.ok(friendService.getFriendBirthdays(userId));
     }
 
     @GetMapping("/requests")
@@ -59,8 +65,10 @@ public class FriendController {
     }
 
     @DeleteMapping("/{friendshipId}")
-    public ResponseEntity<Void> deleteFriendship(@PathVariable UUID friendshipId) {
-        friendService.deleteFriendship(friendshipId);
+    public ResponseEntity<Void> deleteFriendship(
+            @PathVariable UUID friendshipId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        friendService.deleteFriendship(friendshipId, principal.getUserId());
         return ResponseEntity.noContent().build();
     }
 }

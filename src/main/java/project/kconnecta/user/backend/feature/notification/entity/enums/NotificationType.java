@@ -5,6 +5,8 @@ public enum NotificationType {
     COMMENT,
     SHARE,
     FRIEND_REQUEST,
+    FRIEND_ACCEPTED,
+    FRIEND_REMOVED,
     GROUP_ACTIVITY,
     GROUP_INVITE,
     GROUP_JOIN_REQUEST,

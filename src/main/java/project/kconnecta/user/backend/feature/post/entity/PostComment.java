@@ -44,6 +44,18 @@ public class PostComment {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private CommentStatus status = CommentStatus.APPROVED;
+
+    @Column(name = "moderation_fail_reason", columnDefinition = "TEXT")
+    private String moderationFailReason;
+
+    @Builder.Default
+    @Column(name = "moderation_attempts", nullable = false)
+    private int moderationAttempts = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

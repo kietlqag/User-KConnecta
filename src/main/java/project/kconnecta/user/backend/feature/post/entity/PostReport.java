@@ -2,6 +2,8 @@ package project.kconnecta.user.backend.feature.post.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import project.kconnecta.user.backend.feature.post.entity.enums.ReportCategory;
+import project.kconnecta.user.backend.feature.post.entity.enums.ReportStatus;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -42,6 +44,21 @@ public class PostReport {
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", length = 30)
+    private ReportCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private ReportStatus status = ReportStatus.PENDING;
+
+    @Column(name = "ai_analysis", columnDefinition = "TEXT")
+    private String aiAnalysis;
+
+    @Column(name = "ai_severity", length = 20)
+    private String aiSeverity;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -49,6 +66,9 @@ public class PostReport {
     public void prePersist() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (status == null) {
+            status = ReportStatus.PENDING;
         }
     }
 }

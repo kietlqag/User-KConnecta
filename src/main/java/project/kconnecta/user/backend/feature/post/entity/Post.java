@@ -70,6 +70,9 @@ public class Post {
     @Column(name = "is_promoted", nullable = false)
     private boolean promoted;
 
+    @Column(name = "moderation_fail_reason", columnDefinition = "TEXT")
+    private String moderationFailReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

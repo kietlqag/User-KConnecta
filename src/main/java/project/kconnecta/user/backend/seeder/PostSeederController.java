@@ -2,11 +2,15 @@ package project.kconnecta.user.backend.seeder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import java.security.MessageDigest;
 import project.kconnecta.user.backend.feature.post.entity.Post;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
@@ -26,6 +30,9 @@ import java.util.Random;
 @RequestMapping("/api/internal/seed")
 @RequiredArgsConstructor
 public class PostSeederController {
+
+    @Value("${internal.api.key}")
+    private String internalApiKey;
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
@@ -176,7 +183,13 @@ public class PostSeederController {
     @PostMapping("/posts")
     @Transactional
     public ResponseEntity<Map<String, Object>> seedPosts(
+            @RequestHeader("X-Internal-Key") String key,
             @RequestParam(defaultValue = "false") boolean force) {
+        if (!MessageDigest.isEqual(
+                internalApiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                key.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal key");
+        }
 
         long existing = postRepository.count();
 

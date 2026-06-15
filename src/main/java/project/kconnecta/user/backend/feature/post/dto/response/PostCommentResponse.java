@@ -21,6 +21,8 @@ public class PostCommentResponse {
     private long likeCount;
     private boolean isLikedByCurrentUser;
     private String content;
+    private String moderationStatus;
+    private String moderationFailReason;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

@@ -8,6 +8,7 @@ import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
 import project.kconnecta.user.backend.feature.activity.service.ActivityLogService;
+import project.kconnecta.user.backend.feature.friend.dto.response.FriendBirthdayResponse;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendResponse;
 import project.kconnecta.user.backend.feature.friend.dto.response.FriendshipStatusResponse;
 import project.kconnecta.user.backend.feature.friend.entity.Friendship;
@@ -24,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -43,6 +45,29 @@ public class FriendServiceImpl implements FriendService {
         return friendshipRepository.findAllByUserIdAndStatusWithUsers(userId, FriendshipStatus.ACCEPTED)
                 .stream()
                 .map(f -> mapToResponse(f, userId))
+                .toList();
+    }
+
+    @Override
+    public List<FriendBirthdayResponse> getFriendBirthdays(UUID userId) {
+        return friendshipRepository.findAllByUserIdAndStatusWithUsers(userId, FriendshipStatus.ACCEPTED)
+                .stream()
+                .map(f -> {
+                    User other = f.getRequester().getId().equals(userId)
+                            ? f.getAddressee()
+                            : f.getRequester();
+                    if (other.getDateOfBirth() == null) {
+                        return null;
+                    }
+                    return FriendBirthdayResponse.builder()
+                            .friendshipId(f.getId())
+                            .userId(other.getId())
+                            .fullName(other.getFullName())
+                            .avatarUrl(other.getAvatarUrl())
+                            .dateOfBirth(other.getDateOfBirth())
+                            .build();
+                })
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -189,7 +214,7 @@ public class FriendServiceImpl implements FriendService {
         notificationEventPublisher.publish(
                 addressee.getId(),
                 requester.getId(),
-                NotificationType.FRIEND_REQUEST,
+                NotificationType.FRIEND_ACCEPTED,
                 addressee.getFullName() + " đã chấp nhận lời mời kết bạn của bạn",
                 saved.getId()
         );
@@ -197,10 +222,20 @@ public class FriendServiceImpl implements FriendService {
     }
 
     @Override
-    public void deleteFriendship(UUID friendshipId) {
+    public void deleteFriendship(UUID friendshipId, UUID currentUserId) {
         Friendship friendship = friendshipRepository.findById(friendshipId)
                 .orElseThrow(() -> new ResourceNotFoundException("Friendship not found: " + friendshipId));
+        UUID otherUserId = friendship.getRequester().getId().equals(currentUserId)
+                ? friendship.getAddressee().getId()
+                : friendship.getRequester().getId();
         friendshipRepository.delete(friendship);
+        notificationEventPublisher.publish(
+                currentUserId,
+                otherUserId,
+                NotificationType.FRIEND_REMOVED,
+                null,
+                null
+        );
     }
 
     @Override

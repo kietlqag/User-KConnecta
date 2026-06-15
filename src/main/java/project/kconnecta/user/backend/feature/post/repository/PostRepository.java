@@ -55,6 +55,16 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     @org.springframework.data.jpa.repository.Query(value =
         "SELECT p.* FROM posts p " +
         "LEFT JOIN user_groups g ON p.group_id = g.id " +
+        "LEFT JOIN (SELECT post_id, COUNT(*) AS cnt FROM post_reactions GROUP BY post_id) pr_agg ON pr_agg.post_id = p.id " +
+        "LEFT JOIN (SELECT post_id, COUNT(*) AS cnt FROM post_comments GROUP BY post_id) pc_agg ON pc_agg.post_id = p.id " +
+        "LEFT JOIN (SELECT post_id, COUNT(*) AS cnt FROM post_shares  GROUP BY post_id) ps_agg ON ps_agg.post_id = p.id " +
+        // Count how many times currentUser has reacted to each author's posts → proxy for "close friend"
+        "LEFT JOIN (" +
+        "  SELECT p2.author_id, COUNT(*) AS cnt FROM post_reactions pr2 " +
+        "  JOIN posts p2 ON pr2.post_id = p2.id " +
+        "  WHERE (:currentUserId IS NOT NULL AND pr2.user_id = CAST(:currentUserId AS uuid)) " +
+        "  GROUP BY p2.author_id" +
+        ") ui ON ui.author_id = p.author_id " +
         "WHERE p.status = 'PUBLISHED' " +
         "  AND (p.group_id IS NULL " +
         "   OR g.privacy = 'PUBLIC' " +
@@ -93,10 +103,11 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "    ) " +
         "  ) " +
         "ORDER BY (" +
-        // w1=0.12 · affinity (reduced so one author does not dominate the whole page)
-        "  0.12 * CASE " +
+        // w1=0.20 · affinity: 4 levels — self / close-friend (≥5 interactions) / friend / stranger
+        "  0.20 * CASE " +
         "    WHEN :currentUserId IS NULL THEN 0.5 " +
         "    WHEN p.author_id = CAST(:currentUserId AS uuid) THEN 1.0 " +
+        "    WHEN COALESCE(ui.cnt, 0) >= 5 THEN 0.9 " +
         "    WHEN EXISTS (" +
         "      SELECT 1 FROM friendships f " +
         "      WHERE f.status = 'ACCEPTED' " +
@@ -105,14 +116,13 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "    ) THEN 0.7 " +
         "    ELSE 0.5 " +
         "  END + " +
-        // w2=0.3 · số tương tác: reactions + comments*2 + shares*3, normalized to [0,1]
-        "  0.3 * LEAST((" +
-        "    (SELECT count(*) FROM post_reactions pr WHERE pr.post_id = p.id) + " +
-        "    (SELECT count(*) FROM post_comments pc WHERE pc.post_id = p.id) * 2.0 + " +
-        "    (SELECT count(*) FROM post_shares ps WHERE ps.post_id = p.id) * 3.0 " +
-        "  ) / 100.0, 1.0) + " +
-        // w3=0.3 · độ mới: exponential decay, half-life ≈ 6 hours
-        "  0.3 * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (NOW() - COALESCE(p.published_at, p.created_at)))) / 21600.0)))" +
+        // w2=0.40 · time-weighted engagement: decay by sqrt(1 + age_weeks) so old viral posts don't dominate
+        "  0.40 * LEAST(" +
+        "    (COALESCE(pr_agg.cnt, 0) + COALESCE(pc_agg.cnt, 0) * 2.0 + COALESCE(ps_agg.cnt, 0) * 3.0) " +
+        "    / (100.0 * SQRT(1.0 + GREATEST(0, EXTRACT(EPOCH FROM (NOW() - COALESCE(p.published_at, p.created_at)))) / 604800.0)), " +
+        "    1.0) + " +
+        // w3=0.40 · recency: exponential decay, half-life ≈ 6 hours
+        "  0.40 * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (NOW() - COALESCE(p.published_at, p.created_at)))) / 21600.0)))" +
         ") DESC, p.created_at DESC",
         countQuery =
         "SELECT count(*) FROM posts p " +

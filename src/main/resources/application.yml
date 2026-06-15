@@ -51,7 +51,7 @@ server:
   port: ${PORT:8080}
 
 jwt:
-  secret: ${JWT_SECRET:local-dev-jwt-secret-change-in-production-must-be-at-least-64-chars-long!!}
+  secret: ${JWT_SECRET}  # Required — no default. Set JWT_SECRET env var. Local fallback lives in application-local.yml only.
   expiration: ${JWT_EXPIRATION:86400000}
 
 google:
@@ -81,6 +81,11 @@ livekit:
   api-key: ${LIVEKIT_API_KEY:}
   api-secret: ${LIVEKIT_API_SECRET:}
   token-ttl-minutes: ${LIVEKIT_TOKEN_TTL_MINUTES:120}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  # Comma-separated fallback chain (first available model wins)
+  models: ${GEMINI_MODELS:gemini-3.1-flash-lite,gemini-2.5-flash-lite,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash}
 
 logging:
   level:

@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.post.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -30,6 +31,11 @@ public class PostShare {
 
     @Column(name = "shared_content", columnDefinition = "TEXT")
     private String sharedContent;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "privacy", nullable = false, length = 20)
+    @Builder.Default
+    private PostPrivacy privacy = PostPrivacy.PUBLIC;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
