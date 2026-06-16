@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   MessageCircle,
   Share2,
@@ -34,6 +35,7 @@ import {
   type ReactionOption,
   updateReactionCounts,
 } from '../reactions';
+import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 import { PostMoreMenu, type Privacy } from './PostMoreMenu';
 import { PostMediaGallery, type PostGalleryItem } from './PostMediaGallery';
 import {
@@ -130,6 +132,7 @@ export function Post({
       : null;
   const hasLivePreview = Boolean(liveSource);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isLiked, setIsLiked] = useState(initialIsLiked || !!currentUserReactionType);
   const [likeCount, setLikeCount] = useState(likes);
   const [commentCount, setCommentCount] = useState(comments);
@@ -834,6 +837,8 @@ export function Post({
           } else {
             setShareCount(response.shareCount);
           }
+          // Refresh the feed so the new share post shows up immediately (no F5 needed)
+          void queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
         }}
       />
 

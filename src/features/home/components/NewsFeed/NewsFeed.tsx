@@ -11,6 +11,9 @@ import { mapApiPost } from '@/utils/postUtils';
 import { getSeenPostIds, markPostsSeen } from '@/utils/seenPosts';
 import { POSTS_FEED_KEY, useHighlightedPost, usePostsFeed } from '../../hooks/usePosts';
 
+// Khi rời tab ≥ ngưỡng này rồi quay lại → reload feed tươi mới (về đầu).
+const AWAY_RELOAD_MS = 60_000;
+
 export function NewsFeed() {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const queryClient = useQueryClient();
@@ -37,6 +40,25 @@ export function NewsFeed() {
     };
   }, [queryClient]);
 
+  // Reload the feed fresh (reset to page 0 + scroll to top) when returning to the
+  // tab after being away ≥ AWAY_RELOAD_MS. Short tab switches keep scroll/state.
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+      } else if (document.visibilityState === 'visible') {
+        if (hiddenAt != null && Date.now() - hiddenAt >= AWAY_RELOAD_MS) {
+          void queryClient.resetQueries({ queryKey: POSTS_FEED_KEY });
+          window.scrollTo({ top: 0, left: 0 });
+        }
+        hiddenAt = null;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [queryClient]);
+
   const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error } =
     usePostsFeed(currentUser?.id);
 
@@ -61,7 +83,7 @@ export function NewsFeed() {
   // returning users see fresh content first. Subsequent pages append in score order.
   const posts = useMemo(() => {
     if (!data) return [];
-    const allPosts = data.pages.flatMap((page, pageIndex) => {
+    const flattened = data.pages.flatMap((page, pageIndex) => {
       const pagePosts = page.content.map(mapApiPost);
       if (pageIndex === 0 && seenAtMount.current.size > 0) {
         const unseen = pagePosts.filter((p) => !seenAtMount.current.has(p.id));
@@ -69,6 +91,16 @@ export function NewsFeed() {
         return [...unseen, ...seen];
       }
       return pagePosts;
+    });
+
+    // The home feed ranks by a NOW()-based score with offset pagination, so pages
+    // can overlap and surface the same post twice. Dedupe by id (keep first) to
+    // avoid duplicate React keys, which remount the list and reset scroll on load-more.
+    const seenIds = new Set<string>();
+    const allPosts = flattened.filter((p) => {
+      if (seenIds.has(p.id)) return false;
+      seenIds.add(p.id);
+      return true;
     });
 
     if (!highlightedPostId) return allPosts;

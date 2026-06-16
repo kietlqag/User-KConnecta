@@ -223,6 +223,17 @@ export function LoginPage() {
   }, [formData.rememberMe, navigate, redirectTo]);
 
   useEffect(() => {
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
     const handler = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
       cancelAnimationFrame(rafIdRef.current);
@@ -358,9 +369,9 @@ export function LoginPage() {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="grid h-screen overflow-hidden lg:grid-cols-2">
       <div
-        className="relative hidden flex-col justify-between p-12 text-white lg:flex"
+        className="relative hidden flex-col justify-between overflow-hidden p-12 text-white lg:flex"
         style={{
           background: '#111126',
           backgroundImage:
@@ -574,7 +585,7 @@ export function LoginPage() {
         <div className="absolute bottom-1/4 left-1/4 size-96 rounded-full bg-primary-foreground/5 blur-3xl" />
       </div>
 
-      <div className="flex items-center justify-center bg-background p-8">
+      <div className="scrollbar-none flex items-center justify-center overflow-y-auto bg-background p-8">
         <div className="relative w-full max-w-[420px]">
           {isAuthenticating && <div className="absolute inset-0 z-20 cursor-wait" />}
           <div className="mb-12 flex items-center justify-center lg:hidden">

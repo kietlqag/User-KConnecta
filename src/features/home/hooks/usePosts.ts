@@ -18,6 +18,9 @@ export function usePostsFeed(currentUserId: string | undefined) {
     },
     enabled: !!currentUserId,
     staleTime: 30_000,
+    // Don't refetch the whole feed when the tab regains focus — switching tabs and
+    // coming back would otherwise reload the newsfeed and lose scroll position.
+    refetchOnWindowFocus: false,
   });
 }
 
