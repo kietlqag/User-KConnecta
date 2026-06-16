@@ -22,6 +22,7 @@ const VOICE_MESSAGE_PREFIX = '__VOICE__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
+const POST_SHARE_PREFIX = '__POST_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
 
@@ -39,6 +40,10 @@ function mapBackendContentToPreview(content?: string | null) {
   
   if (raw.startsWith(VIDEO_SHARE_PREFIX)) {
     return 'Video';
+  }
+
+  if (raw.startsWith(POST_SHARE_PREFIX)) {
+    return 'Đã chia sẻ một bài viết';
   }
 
   if (raw.startsWith(FILE_MESSAGE_PREFIX)) {

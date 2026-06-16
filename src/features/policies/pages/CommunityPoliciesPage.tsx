@@ -331,7 +331,7 @@ export default function CommunityPoliciesPage() {
                 {[
                   {
                     label: 'Giới hạn tốc độ gửi',
-                    note: `Tối đa ${policy.chatPolicy.messagesPerMinute} tin / phút — vượt quá sẽ bị tạm dừng`,
+                    note: `Tối đa ${policy.chatPolicy.messagesPerMinute} tin giống nhau liên tiếp — vượt quá cần đổi nội dung`,
                     enabled: policy.chatPolicy.antiSpamEnabled,
                   },
                   {

@@ -45,6 +45,7 @@ export interface Message {
   sharedPostId?: string;
   sharedPostContent?: string;
   sharedPostImage?: string;
+  sharedPostAuthorName?: string;
   storyReplyAuthorId?: string;
   storyReplyAuthorName?: string;
   storyReplyAuthorAvatarUrl?: string;

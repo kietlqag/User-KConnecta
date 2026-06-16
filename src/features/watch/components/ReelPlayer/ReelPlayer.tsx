@@ -351,6 +351,7 @@ export const ReelPlayer = ({
         postId={reel.id}
         postContent={reel.caption}
         postImage={reel.thumbnail}
+        postAuthorName={reel.creator.name}
         onShareComplete={(response) => setShareCount(response.shareCount)}
       />
     </div>

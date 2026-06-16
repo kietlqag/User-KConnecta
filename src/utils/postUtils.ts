@@ -15,12 +15,30 @@ export interface FeedPost {
   currentUserReactionType: PostResponse['currentUserReactionType'];
   reactionCounts?: PostReactionCountResponse[];
   group?: { id: string; name: string; icon?: string };
+  groupId?: string;
+  page?: { id: string; name: string; avatar?: string };
+  pageId?: string;
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
   isLivePost?: boolean;
   privacy: PostResponse['privacy'];
   // Share-wrapper fields
   sharedPost?: boolean;
   originalPost?: FeedPost;
+}
+
+export type PostSourceTab = 'feed' | 'group';
+
+export function getPostSource(post: FeedPost): PostSourceTab {
+  if (post.groupId || post.group?.id) return 'group';
+  return 'feed';
+}
+
+export function groupPostsBySource(posts: FeedPost[]): Record<PostSourceTab, FeedPost[]> {
+  const grouped: Record<PostSourceTab, FeedPost[]> = { feed: [], group: [] };
+  for (const post of posts) {
+    grouped[getPostSource(post)].push(post);
+  }
+  return grouped;
 }
 
 export function formatPostTimestamp(dateString?: string | null): string {
@@ -81,6 +99,13 @@ export function mapApiPost(item: PostResponse): FeedPost {
       name: item.groupName || 'Nhóm',
       icon: item.groupIconUrl || undefined
     } : undefined,
+    groupId: item.groupId ?? undefined,
+    page: item.pageId ? {
+      id: item.pageId,
+      name: item.pageName || 'Trang',
+      avatar: item.pageAvatarUrl || undefined,
+    } : undefined,
+    pageId: item.pageId ?? undefined,
     mediaList: (item.media ?? []).map(m => ({
       type: m.mediaType,
       url: m.mediaUrl || m.fileUrl || ''

@@ -34,6 +34,7 @@ interface PostShareModalProps {
   parentShareId?: string;
   postContent?: string;
   postImage?: string;
+  postAuthorName?: string;
   isLivePost?: boolean;
   onShareComplete?: (response: import('@/services/postService').PostShareResponse) => void;
 }
@@ -45,6 +46,7 @@ export function PostShareModal({
   parentShareId,
   postContent,
   postImage,
+  postAuthorName,
   isLivePost = false,
   onShareComplete,
 }: PostShareModalProps) {
@@ -125,6 +127,7 @@ export function PostShareModal({
       id: postId,
       content: postContent,
       image: postImage,
+      authorName: postAuthorName,
     })}`;
 
   const handleSendToFriend = async (userId: string, userName: string) => {

@@ -830,6 +830,7 @@ export function Post({
         postImage={sharedPost && originalPost
           ? (originalPost.image || (originalPost.media?.type === 'image' ? originalPost.media.url : undefined))
           : (image || (media?.type === 'image' ? media.url : undefined))}
+        postAuthorName={sharedPost && originalPost ? originalPost.author.name : author.name}
         isLivePost={hasLivePreview}
         onShareComplete={(response) => {
           if (sharedPost && response.wrapperShareCount != null) {

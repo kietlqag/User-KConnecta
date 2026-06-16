@@ -170,6 +170,7 @@ export const SavedItem = ({
         postId={id}
         postContent={title}
         postImage={thumbnail}
+        postAuthorName={author.name}
       />
 
       <AddToCollectionModal

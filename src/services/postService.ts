@@ -102,6 +102,9 @@ export interface PostResponse {
   groupId?: string | null;
   groupName?: string | null;
   groupIconUrl?: string | null;
+  pageId?: string | null;
+  pageName?: string | null;
+  pageAvatarUrl?: string | null;
   authorUsername: string;
   authorFullName: string;
   authorAvatarUrl?: string | null;

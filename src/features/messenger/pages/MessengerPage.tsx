@@ -122,7 +122,7 @@ function dataUrlToFile(dataUrl: string, fileName: string): File {
 
 function mapBackendContentToMessageFields(
   content: string,
-): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'systemActionType' | 'systemActionActorName' | 'systemActionTargetName' | 'systemActionValue' | 'callLogKind' | 'callDurationSec' | 'callMediaType' | 'storyReplyAuthorId' | 'storyReplyAuthorName' | 'storyReplyAuthorAvatarUrl' | 'storyReplySlideImageUrl' | 'storyReplySlideBackgroundColor' | 'sharedPostId' | 'sharedPostContent' | 'sharedPostImage'> {
+): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'systemActionType' | 'systemActionActorName' | 'systemActionTargetName' | 'systemActionValue' | 'callLogKind' | 'callDurationSec' | 'callMediaType' | 'storyReplyAuthorId' | 'storyReplyAuthorName' | 'storyReplyAuthorAvatarUrl' | 'storyReplySlideImageUrl' | 'storyReplySlideBackgroundColor' | 'sharedPostId' | 'sharedPostContent' | 'sharedPostImage' | 'sharedPostAuthorName'> {
   if (!content?.startsWith(CALL_LOG_PREFIX)) {
     if (content?.startsWith(CHAT_ACTION_PREFIX)) {
       try {
@@ -267,6 +267,7 @@ function mapBackendContentToMessageFields(
           sharedPostId: typeof payload?.id === 'string' ? payload.id : undefined,
           sharedPostContent: typeof payload?.content === 'string' ? payload.content : undefined,
           sharedPostImage: typeof payload?.image === 'string' ? payload.image : undefined,
+          sharedPostAuthorName: typeof payload?.authorName === 'string' ? payload.authorName : undefined,
         };
       } catch {
         return { text: 'Đã chia sẻ một bài viết' };

@@ -89,6 +89,7 @@ export interface LiveSessionResponse {
   streamKey: string;
   roomName: string;
   playbackUrl?: string | null;
+  hlsPlaybackUrl?: string | null;
   thumbnailUrl?: string | null;
   recordingStatus?: LiveRecordingStatus | null;
   recordingDurationSec?: number | null;

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+const LIVE_EDGE_THRESHOLD_SEC = 2;
+const BUFFER_REFRESH_MS = 4000;
+
 const getSupportedRecordingMimeType = () => {
   if (typeof MediaRecorder === 'undefined') return '';
   return [
@@ -10,12 +13,11 @@ const getSupportedRecordingMimeType = () => {
   ].find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
 };
 
-export type LiveViewerPlaybackMode = 'live' | 'dvr';
-
 export function useLiveViewerDvr(enabled: boolean) {
-  const [playbackMode, setPlaybackMode] = useState<LiveViewerPlaybackMode>('live');
-  const [dvrUrl, setDvrUrl] = useState<string | null>(null);
+  const [isAtLiveEdge, setIsAtLiveEdge] = useState(true);
+  const [playbackSeconds, setPlaybackSeconds] = useState(0);
   const [bufferedSeconds, setBufferedSeconds] = useState(0);
+  const [dvrUrl, setDvrUrl] = useState<string | null>(null);
 
   const chunksRef = useRef<BlobPart[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -23,6 +25,12 @@ export function useLiveViewerDvr(enabled: boolean) {
   const startedAtRef = useRef<number | null>(null);
   const mimeTypeRef = useRef('video/webm');
   const dvrUrlRef = useRef<string | null>(null);
+  const isScrubbingRef = useRef(false);
+
+  const getElapsedSeconds = useCallback(() => {
+    if (startedAtRef.current == null) return 0;
+    return Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000));
+  }, []);
 
   const revokeDvrUrl = useCallback(() => {
     if (dvrUrlRef.current) {
@@ -38,9 +46,6 @@ export function useLiveViewerDvr(enabled: boolean) {
     const nextUrl = URL.createObjectURL(blob);
     dvrUrlRef.current = nextUrl;
     setDvrUrl(nextUrl);
-    if (startedAtRef.current != null) {
-      setBufferedSeconds(Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000)));
-    }
   }, [revokeDvrUrl]);
 
   const stopRecorder = useCallback(async () => {
@@ -82,12 +87,17 @@ export function useLiveViewerDvr(enabled: boolean) {
         chunksRef.current = [];
         startedAtRef.current = Date.now();
         setBufferedSeconds(0);
+        setPlaybackSeconds(0);
+        setIsAtLiveEdge(true);
         revokeDvrUrl();
         setDvrUrl(null);
 
         recorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
             chunksRef.current.push(event.data);
+            if (chunksRef.current.length === 1) {
+              refreshDvrUrl();
+            }
           }
         };
         recorder.start(2000);
@@ -96,45 +106,94 @@ export function useLiveViewerDvr(enabled: boolean) {
         recorderRef.current = null;
       }
     })();
-  }, [enabled, revokeDvrUrl, stopRecorder]);
+  }, [enabled, refreshDvrUrl, revokeDvrUrl, stopRecorder]);
 
-  useEffect(() => {
-    if (!enabled || playbackMode !== 'live') return;
+  const seekTo = useCallback((seconds: number) => {
+    const max = getElapsedSeconds();
+    const clamped = Math.max(0, Math.min(seconds, max));
+    const atEdge = max <= LIVE_EDGE_THRESHOLD_SEC || clamped >= max - LIVE_EDGE_THRESHOLD_SEC;
+    setBufferedSeconds(max);
+    setPlaybackSeconds(clamped);
+    setIsAtLiveEdge(atEdge);
+  }, [getElapsedSeconds]);
 
-    const interval = window.setInterval(() => {
-      refreshDvrUrl();
-    }, 4000);
+  const goToLive = useCallback(() => {
+    isScrubbingRef.current = false;
+    const max = getElapsedSeconds();
+    setBufferedSeconds(max);
+    setPlaybackSeconds(max);
+    setIsAtLiveEdge(true);
+  }, [getElapsedSeconds]);
 
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [enabled, playbackMode, refreshDvrUrl]);
+  const setScrubbing = useCallback((scrubbing: boolean) => {
+    isScrubbingRef.current = scrubbing;
+  }, []);
 
-  useEffect(() => {
-    if (!enabled || playbackMode !== 'dvr') return;
-    refreshDvrUrl();
-  }, [enabled, playbackMode, refreshDvrUrl]);
+  const syncPlaybackFromVideo = useCallback((currentTime: number) => {
+    if (isScrubbingRef.current) return;
+    const max = getElapsedSeconds();
+    setBufferedSeconds(max);
+    setPlaybackSeconds(Math.max(0, Math.min(currentTime, max)));
+    if (max - currentTime <= LIVE_EDGE_THRESHOLD_SEC) {
+      goToLive();
+    }
+  }, [getElapsedSeconds, goToLive]);
 
   useEffect(() => {
     if (!enabled) {
       void stopRecorder();
-      setPlaybackMode('live');
+      setIsAtLiveEdge(true);
+      setPlaybackSeconds(0);
+      setBufferedSeconds(0);
+      return;
     }
-  }, [enabled, stopRecorder]);
+
+    const tick = () => {
+      const elapsed = getElapsedSeconds();
+      setBufferedSeconds(elapsed);
+      if (isAtLiveEdge && !isScrubbingRef.current) {
+        setPlaybackSeconds(elapsed);
+      }
+    };
+
+    tick();
+    const interval = window.setInterval(tick, 1000);
+    return () => window.clearInterval(interval);
+  }, [enabled, getElapsedSeconds, isAtLiveEdge, stopRecorder]);
+
+  useEffect(() => {
+    if (!enabled || !isAtLiveEdge) return;
+
+    const interval = window.setInterval(() => {
+      refreshDvrUrl();
+    }, BUFFER_REFRESH_MS);
+
+    return () => window.clearInterval(interval);
+  }, [enabled, isAtLiveEdge, refreshDvrUrl]);
+
+  useEffect(() => {
+    if (!enabled || isAtLiveEdge || !dvrUrl) return;
+    refreshDvrUrl();
+  }, [dvrUrl, enabled, isAtLiveEdge, refreshDvrUrl]);
 
   useEffect(() => () => {
     void stopRecorder();
     revokeDvrUrl();
   }, [revokeDvrUrl, stopRecorder]);
 
-  const canRewind = bufferedSeconds >= 10 && Boolean(dvrUrl);
+  const canScrub = bufferedSeconds > 0 && Boolean(dvrUrl);
 
   return {
-    playbackMode,
-    setPlaybackMode,
-    dvrUrl,
+    isAtLiveEdge,
+    playbackSeconds,
     bufferedSeconds,
-    canRewind,
+    dvrUrl,
+    canScrub,
+    seekTo,
+    goToLive,
+    setScrubbing,
+    syncPlaybackFromVideo,
     setSourceStream,
+    reset: goToLive,
   };
 }

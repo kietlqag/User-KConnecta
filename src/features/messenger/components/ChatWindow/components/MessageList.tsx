@@ -70,6 +70,22 @@ export const MessageList = forwardRef(({
     return next.isOwn || next.senderId !== current.senderId;
   };
 
+  const isGroupedWithPrevious = (index: number) => {
+    const current = messages[index];
+    const previous = messages[index - 1];
+    if (!current || !previous) return false;
+    if (current.systemType || previous.systemType) return false;
+    return current.senderId === previous.senderId;
+  };
+
+  const isGroupedWithNext = (index: number) => {
+    const current = messages[index];
+    const next = messages[index + 1];
+    if (!current || !next) return false;
+    if (current.systemType || next.systemType) return false;
+    return current.senderId === next.senderId;
+  };
+
   const lastOwnMessageId = (() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       if (messages[i].isOwn && !messages[i].systemType) return messages[i].id;
@@ -123,7 +139,7 @@ export const MessageList = forwardRef(({
         onWheel={onUserScrollIntent}
         onTouchStart={onUserScrollIntent}
         onPointerDown={onUserScrollIntent}
-        className="h-full overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1 scroll-smooth sm:px-4"
+        className="h-full overflow-y-auto overflow-x-hidden px-3 py-4 scroll-smooth sm:px-4"
       >
         {hasOlder && (
           <div className="flex justify-center py-2">
@@ -154,6 +170,8 @@ export const MessageList = forwardRef(({
             ) : (
               <MessageBubble
                 message={message}
+                groupWithPrevious={isGroupedWithPrevious(index)}
+                groupWithNext={isGroupedWithNext(index)}
                 showSenderAvatar={shouldShowSenderAvatar(index)}
                 senderAvatar={senderById.get(message.senderId)?.avatar || peerAvatar}
                 senderName={senderById.get(message.senderId)?.name || peerName}

@@ -271,6 +271,7 @@ export function PostDetailModal({
         parentShareId={parentShareId}
         postContent={post.content}
         postImage={post.image}
+        postAuthorName={post.author.name}
         onShareComplete={(response) => {
           const count = parentShareId != null && response.wrapperShareCount != null
             ? response.wrapperShareCount

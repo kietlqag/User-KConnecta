@@ -169,6 +169,7 @@ export default function LiveProducerPage() {
   const liveRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordingMimeTypeRef = useRef('');
+  const toolFormDirtyRef = useRef(false);
   const commentCount = postMetrics?.commentCount ?? 0;
   const shareCount = postMetrics?.shareCount ?? 0;
   const reactionCount = liveStats?.totalReactionCount ?? 0;
@@ -179,8 +180,11 @@ export default function LiveProducerPage() {
     return `${window.location.origin}/live/viewer?sessionId=${encodeURIComponent(sessionId)}`;
   }, [sessionId]);
 
-  const applyToolState = useCallback((data: LiveSessionToolStateResponse) => {
+  const applyToolState = useCallback((data: LiveSessionToolStateResponse, forceSyncForm = false) => {
     setToolState(data);
+    if (!forceSyncForm && toolFormDirtyRef.current) {
+      return;
+    }
     setPollEnabled(data.pollEnabled);
     setPollQuestion(data.pollQuestion ?? '');
     setPollOptions(data.pollOptions.length >= 2 ? data.pollOptions : ['', '']);
@@ -709,6 +713,10 @@ export default function LiveProducerPage() {
     window.setTimeout(() => setToolMessage(''), 2200);
   };
 
+  const markToolFormDirty = () => {
+    toolFormDirtyRef.current = true;
+  };
+
   const handleSavePoll = async () => {
     if (!sessionId) return;
     try {
@@ -717,7 +725,8 @@ export default function LiveProducerPage() {
         question: pollQuestion,
         options: pollOptions,
       });
-      setToolState(data);
+      toolFormDirtyRef.current = false;
+      applyToolState(data, true);
       showToolMessage('Đã lưu cuộc thăm dò ý kiến cho phiên live.');
     } catch (err) {
       setToolMessage('');
@@ -729,10 +738,8 @@ export default function LiveProducerPage() {
     if (!sessionId) return;
     try {
       const data = await liveService.upsertPoll(sessionId, { enabled: false, question: null, options: [] });
-      setToolState(data);
-      setPollEnabled(false);
-      setPollQuestion('');
-      setPollOptions(['', '']);
+      toolFormDirtyRef.current = false;
+      applyToolState(data, true);
       showToolMessage('Đã xóa cuộc thăm dò ý kiến.');
     } catch (err) {
       setToolMessage('');
@@ -747,7 +754,8 @@ export default function LiveProducerPage() {
         title: featuredLinkTitle,
         url: featuredLinkUrl,
       });
-      setToolState(data);
+      toolFormDirtyRef.current = false;
+      applyToolState(data, true);
       showToolMessage('Đã lưu liên kết đáng chú ý.');
     } catch (err) {
       setToolMessage('');
@@ -759,9 +767,8 @@ export default function LiveProducerPage() {
     if (!sessionId) return;
     try {
       const data = await liveService.upsertFeaturedLink(sessionId, { title: null, url: null });
-      setToolState(data);
-      setFeaturedLinkTitle('');
-      setFeaturedLinkUrl('');
+      toolFormDirtyRef.current = false;
+      applyToolState(data, true);
       showToolMessage('Đã xóa liên kết đáng chú ý.');
     } catch (err) {
       setToolMessage('');
@@ -773,7 +780,8 @@ export default function LiveProducerPage() {
     if (!sessionId) return;
     try {
       const data = await liveService.upsertHostNotice(sessionId, { notice: hostNotice });
-      setToolState(data);
+      toolFormDirtyRef.current = false;
+      applyToolState(data, true);
       showToolMessage('Đã lưu thông báo host.');
     } catch (err) {
       setToolMessage('');
@@ -801,11 +809,9 @@ export default function LiveProducerPage() {
             await liveService.uploadRecording(sessionId, recording, durationSec);
             toast.success('Đã lưu bản ghi phát lại live.');
           } catch (error) {
-            await liveService.markRecordingFailed(
-              sessionId,
-              error instanceof Error ? error.message : 'Không thể tải bản ghi live lên server',
-            ).catch(() => undefined);
-            toast.error('Không thể lưu bản ghi live. Vui lòng kiểm tra cấu hình Cloudinary trên server.');
+            const message = error instanceof Error ? error.message : 'Không thể tải bản ghi live lên server';
+            await liveService.markRecordingFailed(sessionId, message).catch(() => undefined);
+            toast.error(message || 'Không thể lưu bản ghi live. Vui lòng kiểm tra cấu hình Cloudinary trên server.');
           }
         } else if (currentUser?.id) {
           await liveService.markRecordingFailed(
@@ -1086,12 +1092,22 @@ export default function LiveProducerPage() {
                   </div>
                   <div className="space-y-3">
                     <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                      <input type="checkbox" checked={pollEnabled} onChange={(event) => setPollEnabled(event.target.checked)} />
+                      <input
+                        type="checkbox"
+                        checked={pollEnabled}
+                        onChange={(event) => {
+                          markToolFormDirty();
+                          setPollEnabled(event.target.checked);
+                        }}
+                      />
                       Bật thăm dò ý kiến cho phiên live
                     </label>
                     <input
                       value={pollQuestion}
-                      onChange={(event) => setPollQuestion(event.target.value)}
+                      onChange={(event) => {
+                        markToolFormDirty();
+                        setPollQuestion(event.target.value);
+                      }}
                       className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
                       placeholder="Câu hỏi"
                     />
@@ -1099,13 +1115,19 @@ export default function LiveProducerPage() {
                       <input
                         key={index}
                         value={option}
-                        onChange={(event) => setPollOptions((prev) => prev.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))}
+                        onChange={(event) => {
+                          markToolFormDirty();
+                          setPollOptions((prev) => prev.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)));
+                        }}
                         className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
                         placeholder={`Lựa chọn ${index + 1}`}
                       />
                     ))}
                     <button
-                      onClick={() => setPollOptions((prev) => (prev.length >= 6 ? prev : [...prev, '']))}
+                      onClick={() => {
+                        markToolFormDirty();
+                        setPollOptions((prev) => (prev.length >= 6 ? prev : [...prev, '']));
+                      }}
                       className="w-full rounded-xl border border-dashed border-blue-500 text-blue-600 py-2.5 font-medium"
                     >
                       Thêm lựa chọn
@@ -1150,7 +1172,10 @@ export default function LiveProducerPage() {
                   <div className="space-y-3">
                     <textarea
                       value={hostNotice}
-                      onChange={(event) => setHostNotice(event.target.value)}
+                      onChange={(event) => {
+                        markToolFormDirty();
+                        setHostNotice(event.target.value);
+                      }}
                       className="min-h-[110px] w-full resize-none rounded-xl bg-gray-100 px-4 py-3 outline-none"
                       placeholder="Ghi chú/thông báo cho host hoặc người kiểm duyệt..."
                     />
@@ -1166,13 +1191,19 @@ export default function LiveProducerPage() {
                   <div className="space-y-3">
                     <input
                       value={featuredLinkTitle}
-                      onChange={(event) => setFeaturedLinkTitle(event.target.value)}
+                      onChange={(event) => {
+                        markToolFormDirty();
+                        setFeaturedLinkTitle(event.target.value);
+                      }}
                       className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
                       placeholder="Tiêu đề liên kết"
                     />
                     <input
                       value={featuredLinkUrl}
-                      onChange={(event) => setFeaturedLinkUrl(event.target.value)}
+                      onChange={(event) => {
+                        markToolFormDirty();
+                        setFeaturedLinkUrl(event.target.value);
+                      }}
                       className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
                       placeholder="https://..."
                     />

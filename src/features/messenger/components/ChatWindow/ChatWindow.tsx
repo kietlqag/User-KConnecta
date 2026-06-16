@@ -112,16 +112,21 @@ export const ChatWindow = ({
   const [showPinnedModal, setShowPinnedModal] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const { data: publicPolicy } = usePublicPolicies();
-  const spamMaxMessages = publicPolicy?.chatPolicy?.messagesPerMinute ?? 20;
+  const spamMaxConsecutive = publicPolicy?.chatPolicy?.messagesPerMinute ?? 10;
   const spamCounterEnabled = publicPolicy?.chatPolicy?.antiSpamEnabled ?? true;
-  const { sentCount: spamSentCount, recordSend: recordSpamSend } = useSpamCounter(
-    spamMaxMessages,
-    spamCounterEnabled
+  const { recordSend: recordSpamSend, isAtLimitFor: isDuplicateAtLimit } = useSpamCounter(
+    user.id,
+    messages,
+    spamMaxConsecutive,
+    spamCounterEnabled,
   );
+
+  const isDuplicateBlocked =
+    spamCounterEnabled && Boolean(inputText.trim()) && isDuplicateAtLimit(inputText);
 
   const trackAndSendMessage = useCallback(
     (content: string) => {
-      recordSpamSend();
+      recordSpamSend(content);
       onSendMessage(content);
     },
     [onSendMessage, recordSpamSend]
@@ -197,6 +202,10 @@ export const ChatWindow = ({
       return;
     }
 
+    if (text && isDuplicateAtLimit(text)) {
+      return;
+    }
+
     if (pendingImages.length > 0) {
       void sendPendingImages(text || undefined);
       setInputText('');
@@ -218,7 +227,7 @@ export const ChatWindow = ({
           replyPreview: replyToMessage.text.slice(0, 120),
         })}`
       : text;
-    recordSpamSend();
+    recordSpamSend(text);
     onSendMessage(payload);
     setInputText('');
     setReplyToMessage(null);
@@ -360,9 +369,7 @@ export const ChatWindow = ({
             onSend={handleSend}
             connected={connected}
             cooldownSeconds={cooldownSeconds}
-            spamSentCount={spamSentCount}
-            spamMaxMessages={spamMaxMessages}
-            spamCounterEnabled={spamCounterEnabled}
+            isDuplicateBlocked={isDuplicateBlocked}
             isRecordingVoice={isRecordingVoice}
             isSendingVoice={isSendingVoice}
             isSendingImage={isSendingImage}

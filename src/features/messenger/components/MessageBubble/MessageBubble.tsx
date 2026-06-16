@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { createPortal } from 'react-dom';
-import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download } from 'lucide-react';
+import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download, Newspaper } from 'lucide-react';
 import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
 import { useNavigate } from 'react-router-dom';
@@ -27,6 +27,8 @@ interface MessageBubbleProps {
   onCallAgain?: (mediaType?: 'audio' | 'video') => void;
   isHighlighted?: boolean;
   themeColor?: string | null;
+  groupWithPrevious?: boolean;
+  groupWithNext?: boolean;
 }
 
 const quickReactions = ['👍', '❤️', '😂', '😮', '😢', '😡'];
@@ -76,6 +78,8 @@ export const MessageBubble = ({
   onCallAgain,
   isHighlighted = false,
   themeColor,
+  groupWithPrevious = false,
+  groupWithNext = false,
 }: MessageBubbleProps) => {
   const navigate = useNavigate();
   const [showReactions, setShowReactions] = useState(false);
@@ -328,9 +332,13 @@ export const MessageBubble = ({
     );
   }
 
+  const hasReactions = Boolean(message.reactions && message.reactions.length > 0);
+  const rowSpacing = hasReactions ? 'mb-2' : groupWithNext ? 'mb-0.5' : 'mb-1.5';
+  const rowPadding = groupWithPrevious && groupWithNext ? 'py-0' : groupWithPrevious ? 'pt-0 pb-0.5' : groupWithNext ? 'pt-0.5 pb-0' : 'py-0.5';
+
   return (
     <div
-      className={`flex min-w-0 items-end gap-1.5 ${message.reactions && message.reactions.length > 0 ? 'mb-3' : 'mb-1'} ${message.isOwn ? 'justify-end' : 'justify-start'} ${isHighlighted ? 'bg-blue-50/50 ring-1 ring-blue-100' : ''} transition-all duration-500 rounded-lg py-1 px-1 sm:gap-2 sm:px-2 sm:-mx-2`}
+      className={`flex min-w-0 items-end gap-1.5 ${rowSpacing} ${rowPadding} ${message.isOwn ? 'justify-end' : 'justify-start'} ${isHighlighted ? 'bg-blue-50/50 ring-1 ring-blue-100' : ''} transition-all duration-500 rounded-lg px-1 sm:gap-2 sm:px-2 sm:-mx-2`}
       onMouseEnter={() => {
         setShowTimestamp(true);
         setIsHovering(true);
@@ -422,6 +430,36 @@ export const MessageBubble = ({
                 <p className="text-sm leading-relaxed break-all [overflow-wrap:anywhere]">{storyCtx.text || message.text}</p>
               </div>
             </div>
+          ) : message.sharedPostId && !message.deleted ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/home?post=${message.sharedPostId}`)}
+              className="flex w-[min(300px,72vw)] max-w-full flex-col overflow-hidden rounded-xl border border-gray-200/90 bg-white text-left shadow-[0_1px_2px_rgba(0,0,0,0.08)] transition hover:shadow-md group/post-share"
+              title="Xem bài viết"
+            >
+              <div className="relative aspect-[1.91/1] w-full overflow-hidden bg-gray-100">
+                {message.sharedPostImage ? (
+                  <img
+                    src={message.sharedPostImage}
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover/post-share:scale-[1.03]"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 via-gray-100 to-slate-200">
+                    <Newspaper className="h-10 w-10 text-gray-400" strokeWidth={1.5} />
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-gray-100 px-3 py-2.5">
+                <p className="truncate text-xs font-semibold text-gray-500">
+                  {message.sharedPostAuthorName?.trim() || 'KConnecta'}
+                </p>
+                <p className="mt-0.5 text-sm font-semibold leading-snug text-gray-900 line-clamp-2">
+                  {message.sharedPostContent?.trim() || 'Xem bài viết trên KConnecta'}
+                </p>
+              </div>
+            </button>
           ) : imageUrls.length > 0 && !message.deleted ? (
             <div className={`flex max-w-full flex-col gap-1.5 sm:max-w-[386px] ${message.isOwn ? 'items-end' : 'items-start'}`}>
               <div className={`flex flex-wrap gap-1.5 ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
@@ -446,7 +484,9 @@ export const MessageBubble = ({
             </div>
           ) : (
             <div
-              className={`inline-block w-fit max-w-full overflow-hidden rounded-2xl px-3 py-2 break-all [overflow-wrap:anywhere] ${
+              className={`inline-block w-fit max-w-full overflow-hidden rounded-2xl break-all [overflow-wrap:anywhere] ${
+                message.deleted ? 'px-2.5 py-1.5' : 'px-3 py-2'
+              } ${
                 message.isOwn
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-900'
@@ -531,34 +571,6 @@ export const MessageBubble = ({
                   </p>
                   <p className={`mt-1 text-[11px] font-medium uppercase tracking-wider ${message.isOwn ? 'text-blue-100/70' : 'text-gray-500'}`}>
                     Nhấn để xem nội dung
-                  </p>
-                </div>
-              </button>
-              ) : message.sharedPostId && !message.deleted ? (
-              <button
-                type="button"
-                onClick={() => navigate(`/home?post=${message.sharedPostId}`)}
-                className="flex flex-col min-w-0 w-[min(280px,68vw)] max-w-full overflow-hidden rounded-xl group/post-share transition-transform hover:scale-[1.02]"
-                title="Xem bài viết"
-              >
-                {message.sharedPostImage && (
-                  <div className="relative w-full overflow-hidden" style={{ maxHeight: '200px' }}>
-                    <img
-                      src={message.sharedPostImage}
-                      alt="Ảnh bài viết"
-                      className="h-full w-full object-cover transition-transform group-hover/post-share:scale-105"
-                      style={{ maxHeight: '200px' }}
-                    />
-                  </div>
-                )}
-                <div className={`p-3 text-left ${message.isOwn ? 'bg-blue-700' : 'bg-gray-100'}`}>
-                  {message.sharedPostContent && (
-                    <p className={`text-sm line-clamp-3 ${message.isOwn ? 'text-white' : 'text-gray-900'}`}>
-                      {message.sharedPostContent}
-                    </p>
-                  )}
-                  <p className={`mt-1 text-[11px] font-medium uppercase tracking-wider ${message.isOwn ? 'text-blue-100/70' : 'text-gray-500'}`}>
-                    Nhấn để xem bài viết
                   </p>
                 </div>
               </button>
@@ -769,7 +781,7 @@ export const MessageBubble = ({
 
         {showDeliveryStatus && message.isOwn && !message.systemType && (
           <p
-            className="mt-1 pr-1 text-right text-[11px] leading-4 text-gray-500"
+            className="mt-0.5 pr-1 text-right text-[11px] leading-4 text-gray-500"
             style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
           >
             {deliveryStatusLabel}

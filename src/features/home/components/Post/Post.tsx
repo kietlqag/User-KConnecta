@@ -318,6 +318,7 @@ export function Post({
         postId={id}
         postContent={content}
         postImage={image}
+        postAuthorName={userName}
         onShareComplete={(response) => setShareCount(response.shareCount)}
       />
 
