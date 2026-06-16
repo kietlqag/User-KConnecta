@@ -263,9 +263,11 @@ export const liveService = {
     api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/end`, {}),
   uploadRecording: (sessionId: string, file: Blob, durationSec?: number) => {
     const formData = new FormData();
+    const mimeType = file.type || 'video/webm';
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const uploadFile = file instanceof File
       ? file
-      : new File([file], `live-${sessionId}.webm`, { type: file.type || 'video/webm' });
+      : new File([file], `live-${sessionId}.${ext}`, { type: mimeType });
     formData.append('file', uploadFile, uploadFile.name);
     if (durationSec != null) {
       formData.append('durationSec', String(durationSec));

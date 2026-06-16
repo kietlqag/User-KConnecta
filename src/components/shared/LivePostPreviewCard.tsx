@@ -95,12 +95,37 @@ export function LivePostPreviewCard({
       }
     };
     void loadLiveStatus();
-    const interval = window.setInterval(() => void loadLiveStatus(), 15000);
+    const interval = window.setInterval(() => void loadLiveStatus(), 3000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
   }, [postId]);
+
+  useEffect(() => {
+    if (liveSessionStatus !== 'ENDED' && liveSessionStatus !== 'CANCELED') return;
+    if (isPlayableUrl(liveSession?.playbackUrl)) return;
+    if (liveSession?.recordingStatus !== 'PROCESSING') return;
+
+    let cancelled = false;
+    const pollRecording = async () => {
+      try {
+        const session = await liveService.getSessionByPost(postId);
+        if (cancelled) return;
+        setLiveSession(session);
+        setLiveSessionStatus(session.status);
+      } catch {
+        // Keep polling while host upload is in progress.
+      }
+    };
+
+    void pollRecording();
+    const interval = window.setInterval(() => void pollRecording(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [liveSession?.playbackUrl, liveSession?.recordingStatus, liveSessionStatus, postId]);
 
   useEffect(() => {
     if (liveSessionStatus !== 'LIVE' || !currentUser?.id) return;

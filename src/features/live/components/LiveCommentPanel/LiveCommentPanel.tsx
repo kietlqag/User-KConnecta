@@ -27,6 +27,56 @@ function sortComments(comments: PostCommentResponse[], pinnedCommentId?: string 
   });
 }
 
+function patchCommentLike(
+  comments: PostCommentResponse[],
+  commentId: string,
+  liked: boolean,
+  likeCount: number,
+) {
+  return comments.map((comment) => (
+    comment.id === commentId
+      ? { ...comment, isLikedByCurrentUser: liked, likeCount }
+      : comment
+  ));
+}
+
+/** Preserve optimistic like/unlike while polling catches up; accept server when count is higher. */
+function mergeCommentLists(
+  previous: PostCommentResponse[],
+  incoming: PostCommentResponse[],
+) {
+  const previousById = new Map(previous.map((comment) => [comment.id, comment]));
+  return incoming.map((comment) => {
+    const local = previousById.get(comment.id);
+    if (!local) return comment;
+
+    if (
+      local.likeCount === comment.likeCount
+      && local.isLikedByCurrentUser === comment.isLikedByCurrentUser
+    ) {
+      return comment;
+    }
+
+    if (local.isLikedByCurrentUser !== comment.isLikedByCurrentUser) {
+      return {
+        ...comment,
+        likeCount: local.likeCount,
+        isLikedByCurrentUser: local.isLikedByCurrentUser,
+      };
+    }
+
+    if (comment.likeCount > local.likeCount) {
+      return comment;
+    }
+
+    return {
+      ...comment,
+      likeCount: local.likeCount,
+      isLikedByCurrentUser: local.isLikedByCurrentUser,
+    };
+  });
+}
+
 export function LiveCommentPanel({
   postId,
   sessionId,
@@ -56,7 +106,10 @@ export function LiveCommentPanel({
     if (!postId) return;
     try {
       const data = await postService.getReplies(postId, parentCommentId, currentUserId || undefined);
-      setRepliesByParent((prev) => ({ ...prev, [parentCommentId]: data }));
+      setRepliesByParent((prev) => ({
+        ...prev,
+        [parentCommentId]: mergeCommentLists(prev[parentCommentId] ?? [], data),
+      }));
       setExpandedReplies((prev) => ({ ...prev, [parentCommentId]: true }));
     } catch {
       // Keep previous replies on failure.
@@ -67,7 +120,7 @@ export function LiveCommentPanel({
     if (!postId) return;
     try {
       const data = await postService.getComments(postId, 0, 50, currentUserId || undefined);
-      setComments(data.content);
+      setComments((prev) => mergeCommentLists(prev, data.content));
     } catch {
       setComments([]);
     }
@@ -143,11 +196,14 @@ export function LiveCommentPanel({
   };
 
   const handleLikeChange = (commentId: string, liked: boolean, likeCount: number) => {
-    setComments((prev) => prev.map((comment) => (
-      comment.id === commentId
-        ? { ...comment, isLikedByCurrentUser: liked, likeCount }
-        : comment
-    )));
+    setComments((prev) => patchCommentLike(prev, commentId, liked, likeCount));
+    setRepliesByParent((prev) => {
+      const next: Record<string, PostCommentResponse[]> = {};
+      for (const [parentId, replies] of Object.entries(prev)) {
+        next[parentId] = patchCommentLike(replies, commentId, liked, likeCount);
+      }
+      return next;
+    });
   };
 
   const inputAvatar = currentUserAvatar || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(currentUserName)}`;

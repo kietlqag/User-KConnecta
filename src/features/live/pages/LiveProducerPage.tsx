@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Room, RoomEvent, Track } from 'livekit-client';
+import { toast } from 'sonner';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
 import { liveService, type LiveSessionRealtimeEvent, type LiveSessionResponse, type LiveSessionStatsResponse, type LiveSessionToolStateResponse } from '@/services/liveService';
@@ -59,6 +60,7 @@ const getSupportedRecordingMimeType = () => {
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm',
+    'video/mp4',
   ].find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
 };
 
@@ -163,6 +165,7 @@ export default function LiveProducerPage() {
   const publishedTracksRef = useRef<MediaStreamTrack[]>([]);
   const previousTrackStatsRef = useRef<PreviousTrackStats>({});
   const recordingChunksRef = useRef<BlobPart[]>([]);
+  const allRecordingChunksRef = useRef<BlobPart[]>([]);
   const liveRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingStartedAtRef = useRef<number | null>(null);
   const recordingMimeTypeRef = useRef('');
@@ -287,6 +290,32 @@ export default function LiveProducerPage() {
     await Promise.all([bind(mainVideoRef.current), bind(miniVideoRef.current)]);
   }, []);
 
+  const flushRecordingSegment = useCallback(async () => {
+    const recorder = liveRecorderRef.current;
+    if (!recorder) {
+      return;
+    }
+
+    if (recorder.state === 'recording' || recorder.state === 'paused') {
+      recorder.requestData();
+      await new Promise<void>((resolve) => {
+        recorder.addEventListener('stop', () => resolve(), { once: true });
+        recorder.stop();
+      });
+    } else if (recorder.state !== 'inactive') {
+      await new Promise<void>((resolve) => {
+        recorder.addEventListener('stop', () => resolve(), { once: true });
+        recorder.stop();
+      });
+    }
+
+    liveRecorderRef.current = null;
+    if (recordingChunksRef.current.length > 0) {
+      allRecordingChunksRef.current.push(...recordingChunksRef.current);
+      recordingChunksRef.current = [];
+    }
+  }, []);
+
   const startLiveRecording = useCallback((stream: MediaStream) => {
     if (typeof MediaRecorder === 'undefined') return;
     if (!stream.getVideoTracks().length) return;
@@ -300,7 +329,9 @@ export default function LiveProducerPage() {
           : { videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 },
       );
       recordingChunksRef.current = [];
-      recordingStartedAtRef.current = Date.now();
+      if (recordingStartedAtRef.current == null) {
+        recordingStartedAtRef.current = Date.now();
+      }
       recordingMimeTypeRef.current = recorder.mimeType || mimeType || 'video/webm';
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -317,31 +348,18 @@ export default function LiveProducerPage() {
   }, []);
 
   const stopLiveRecording = useCallback(async () => {
-    const recorder = liveRecorderRef.current;
-    if (!recorder) {
+    await flushRecordingSegment();
+
+    if (allRecordingChunksRef.current.length === 0) {
       return null;
     }
 
-    if (recorder.state === 'recording') {
-      recorder.requestData();
-      await new Promise<void>((resolve) => {
-        recorder.addEventListener('stop', () => resolve(), { once: true });
-        recorder.stop();
-      });
-    } else if (recorder.state !== 'inactive') {
-      await new Promise<void>((resolve) => {
-        recorder.addEventListener('stop', () => resolve(), { once: true });
-        recorder.stop();
-      });
-    }
-
-    liveRecorderRef.current = null;
-    if (recordingChunksRef.current.length === 0) {
-      return null;
-    }
-
-    return new Blob(recordingChunksRef.current, { type: recordingMimeTypeRef.current || 'video/webm' });
-  }, []);
+    const blob = new Blob(allRecordingChunksRef.current, {
+      type: recordingMimeTypeRef.current || 'video/webm',
+    });
+    allRecordingChunksRef.current = [];
+    return blob;
+  }, [flushRecordingSegment]);
 
   useEffect(() => {
     let mounted = true;
@@ -447,18 +465,7 @@ export default function LiveProducerPage() {
       const stream = localStreamRef.current;
       if (!sessionId || !isMediaReady || !stream) return;
 
-      const existing = liveRecorderRef.current;
-      if (existing && existing.state !== 'inactive') {
-        await new Promise<void>((resolve) => {
-          existing.addEventListener('stop', () => resolve(), { once: true });
-          if (existing.state === 'recording') {
-            existing.requestData();
-          }
-          existing.stop();
-        });
-        liveRecorderRef.current = null;
-      }
-
+      await flushRecordingSegment();
       if (cancelled) return;
       startLiveRecording(stream);
     };
@@ -467,7 +474,7 @@ export default function LiveProducerPage() {
     return () => {
       cancelled = true;
     };
-  }, [isMediaReady, localStreamVersion, sessionId, startLiveRecording]);
+  }, [flushRecordingSegment, isMediaReady, localStreamVersion, sessionId, startLiveRecording]);
 
   useEffect(() => {
     if (!livekitUrl || !hostToken) return;
@@ -792,11 +799,13 @@ export default function LiveProducerPage() {
           const durationSec = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : undefined;
           try {
             await liveService.uploadRecording(sessionId, recording, durationSec);
+            toast.success('Đã lưu bản ghi phát lại live.');
           } catch (error) {
             await liveService.markRecordingFailed(
               sessionId,
               error instanceof Error ? error.message : 'Không thể tải bản ghi live lên server',
             ).catch(() => undefined);
+            toast.error('Không thể lưu bản ghi live. Vui lòng kiểm tra cấu hình Cloudinary trên server.');
           }
         } else if (currentUser?.id) {
           await liveService.markRecordingFailed(

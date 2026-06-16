@@ -10,6 +10,7 @@ import { LiveCommentPanel } from '../components/LiveCommentPanel';
 import { LiveFloatingReactions, useLiveReactionBursts } from '../components/LiveFloatingReactions';
 import { isLiveSessionHost, navigateToLiveSession } from '../utils/navigateToLiveSession';
 import { useLiveSessionSocket } from '../hooks/useLiveSessionSocket';
+import { useLiveViewerDvr } from '../hooks/useLiveViewerDvr';
 
 const reactions: Array<{ label: string; value: NonNullable<UpsertLiveReactionRequest['reactionType']> }> = [
   { label: '👍', value: 'LIKE' },
@@ -34,6 +35,17 @@ function formatLiveElapsed(startedAt?: string | null) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+function formatDuration(seconds: number) {
+  const safe = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const secs = safe % 60;
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
 export default function LiveViewerPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -56,14 +68,40 @@ export default function LiveViewerPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const roomRef = useRef<Room | null>(null);
+  const videoTrackRef = useRef<RemoteTrack | null>(null);
+  const audioTrackRef = useRef<RemoteTrack | null>(null);
+  const dvrVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
+  const replayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() : '';
+  const isReplay = Boolean(replayUrl);
+  const isActiveLiveSession = Boolean(session && !isLiveEnded && !isReplay && session.status === 'LIVE');
+
+  const {
+    playbackMode,
+    setPlaybackMode,
+    dvrUrl,
+    bufferedSeconds,
+    canRewind,
+    setSourceStream,
+  } = useLiveViewerDvr(isActiveLiveSession);
+
+  const syncDvrStream = useCallback(() => {
+    const tracks = [
+      videoTrackRef.current?.mediaStreamTrack,
+      audioTrackRef.current?.mediaStreamTrack,
+    ].filter((track): track is MediaStreamTrack => Boolean(track && track.readyState === 'live'));
+    if (tracks.length === 0) {
+      setSourceStream(null);
+      return;
+    }
+    setSourceStream(new MediaStream(tracks));
+  }, [setSourceStream]);
 
   const hostLabel = useMemo(() => {
     if (!session) return 'Người dùng';
     return session.title || 'Video trực tiếp';
   }, [session]);
-
-  const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
-  const replayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() : '';
 
   const handleLiveEvent = useCallback((event: LiveSessionRealtimeEvent) => {
     if (event.session) {
@@ -89,13 +127,15 @@ export default function LiveViewerPage() {
     }
     if (event.type === 'LIVE_ENDED') {
       roomRef.current?.disconnect();
+      setPlaybackMode('live');
+      setSourceStream(null);
       setStatus('Live đã kết thúc.');
       setError('');
       if (!isViewerPreview && currentUserId && sessionId) {
         void liveService.leaveSession(sessionId).catch(() => undefined);
       }
     }
-  }, [currentUserId, isViewerPreview, pushBurst, sessionId]);
+  }, [currentUserId, isViewerPreview, pushBurst, sessionId, setPlaybackMode, setSourceStream]);
 
   useLiveSessionSocket(sessionId, currentUser?.token, handleLiveEvent);
 
@@ -113,9 +153,13 @@ export default function LiveViewerPage() {
     const attachTrack = (track: RemoteTrack) => {
       if (track.kind === Track.Kind.Video && videoRef.current) {
         track.attach(videoRef.current);
+        videoTrackRef.current = track;
+        syncDvrStream();
       }
       if (track.kind === Track.Kind.Audio && audioRef.current) {
         track.attach(audioRef.current);
+        audioTrackRef.current = track;
+        syncDvrStream();
       }
     };
 
@@ -135,7 +179,7 @@ export default function LiveViewerPage() {
         setSession(liveSession);
         if (liveSession.status === 'ENDED' || liveSession.status === 'CANCELED') {
           if (liveSession.recordingStatus === 'PROCESSING' && !isPlayableUrl(liveSession.playbackUrl)) {
-            setStatus('Bản ghi live đang được xử lý.');
+            setStatus('Bản ghi live đang được xử lý...');
             return;
           }
           if (liveSession.recordingStatus === 'FAILED' && !isPlayableUrl(liveSession.playbackUrl)) {
@@ -181,7 +225,7 @@ export default function LiveViewerPage() {
         void liveService.leaveSession(sessionId).catch(() => undefined);
       }
     };
-  }, [currentUser?.token, currentUserId, isViewerPreview, navigate, sessionId]);
+  }, [currentUser?.token, currentUserId, isViewerPreview, navigate, sessionId, syncDvrStream]);
 
   useEffect(() => {
     if (!sessionId || !currentUserId || isLiveEnded || isViewerPreview) return;
@@ -205,8 +249,44 @@ export default function LiveViewerPage() {
   useEffect(() => {
     if (!isLiveEnded) return;
     roomRef.current?.disconnect();
+    if (isPlayableUrl(session?.playbackUrl)) {
+      setStatus('Phát lại bản ghi live.');
+      setError('');
+      return;
+    }
     setStatus('Live đã kết thúc.');
-  }, [isLiveEnded]);
+  }, [isLiveEnded, session?.playbackUrl]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    if (!isLiveEnded) return;
+    if (isPlayableUrl(session?.playbackUrl)) return;
+    if (session?.recordingStatus !== 'PROCESSING') return;
+
+    let cancelled = false;
+    const pollRecording = async () => {
+      try {
+        const updated = await liveService.getSession(sessionId);
+        if (cancelled) return;
+        setSession(updated);
+        if (isPlayableUrl(updated.playbackUrl)) {
+          setStatus('Phát lại bản ghi live.');
+          setError('');
+        } else if (updated.recordingStatus === 'FAILED') {
+          setStatus('Không thể tạo bản ghi phát lại cho phiên live này.');
+        }
+      } catch {
+        // Keep polling until upload completes or user leaves.
+      }
+    };
+
+    void pollRecording();
+    const interval = window.setInterval(() => void pollRecording(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [isLiveEnded, session?.playbackUrl, session?.recordingStatus, sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -239,7 +319,10 @@ export default function LiveViewerPage() {
     if (audioRef.current) {
       audioRef.current.muted = isMuted;
     }
-  }, [isMuted]);
+    if (dvrVideoRef.current) {
+      dvrVideoRef.current.muted = isMuted;
+    }
+  }, [isMuted, playbackMode, dvrUrl]);
 
   const handleReaction = async (reactionType: NonNullable<UpsertLiveReactionRequest['reactionType']>) => {
     if (!sessionId || !currentUserId || isLiveEnded || isReacting) return;
@@ -293,8 +376,6 @@ export default function LiveViewerPage() {
     setIsMenuOpen(false);
   };
 
-  const isReplay = Boolean(replayUrl);
-
   const handleCloseLive = () => {
     if (session?.postId) {
       navigate(`/home?post=${encodeURIComponent(session.postId)}`);
@@ -302,6 +383,14 @@ export default function LiveViewerPage() {
     }
     navigate('/live');
   };
+
+  const handleTogglePlaybackMode = () => {
+    setPlaybackMode((mode) => (mode === 'live' ? 'dvr' : 'live'));
+  };
+
+  const statusLabel = playbackMode === 'dvr'
+    ? `Đang tua lại · ${formatDuration(bufferedSeconds)} đã ghi`
+    : status;
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -329,8 +418,11 @@ export default function LiveViewerPage() {
             <X className="w-8 h-8" />
           </button>
 
-          {!isLiveEnded && (
+          {!isLiveEnded && playbackMode === 'live' && (
             <div className="absolute top-4 right-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</div>
+          )}
+          {!isLiveEnded && playbackMode === 'dvr' && (
+            <div className="absolute top-4 right-4 rounded-md bg-blue-600 text-white text-sm font-semibold px-2 py-1">ĐANG TUA LẠI</div>
           )}
 
           <div className={`flex items-center justify-center ${isReplay ? 'h-[calc(100vh-56px)] flex-col' : 'h-[calc(100vh-160px)]'}`}>
@@ -359,11 +451,23 @@ export default function LiveViewerPage() {
               </>
             ) : (
               <>
-                <video ref={videoRef} autoPlay playsInline className="h-full w-full object-contain" />
-                <audio ref={audioRef} autoPlay />
+                <div className={playbackMode === 'dvr' ? 'hidden' : 'h-full w-full'}>
+                  <video ref={videoRef} autoPlay playsInline className="h-full w-full object-contain" />
+                  <audio ref={audioRef} autoPlay />
+                </div>
+                {playbackMode === 'dvr' && dvrUrl && (
+                  <video
+                    ref={dvrVideoRef}
+                    src={dvrUrl}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="h-full w-full object-contain"
+                  />
+                )}
               </>
             )}
-            {!isReplay && (error || status !== 'Đang xem trực tiếp.') && (
+            {!isReplay && playbackMode === 'live' && (error || status !== 'Đang xem trực tiếp.') && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 px-5 text-center text-white/80">
                 <div>
                   <p className="text-lg font-semibold">{error || status}</p>
@@ -382,8 +486,19 @@ export default function LiveViewerPage() {
                 showControls ? 'opacity-100' : 'pointer-events-none opacity-0'
               }`}
             >
-              <span>{status}</span>
+              <span>{statusLabel}</span>
               <span className="min-w-[44px] text-right text-xs text-white/80">{liveElapsed}</span>
+              {canRewind && (
+                <button
+                  type="button"
+                  onClick={handleTogglePlaybackMode}
+                  className="rounded-md bg-white/15 px-2 py-1 text-xs font-semibold hover:bg-white/25"
+                >
+                  {playbackMode === 'live'
+                    ? `Tua lại (${formatDuration(bufferedSeconds)})`
+                    : 'Về trực tiếp'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleToggleMute}

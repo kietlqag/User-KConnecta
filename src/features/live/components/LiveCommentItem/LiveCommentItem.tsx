@@ -47,19 +47,20 @@ export function LiveCommentItem({
   onLikeChange,
 }: LiveCommentItemProps) {
   const currentUser = authService.getCurrentUser();
-  const [isLiked, setIsLiked] = useState(comment.isLikedByCurrentUser);
-  const [likeCount, setLikeCount] = useState(comment.likeCount);
   const [isLiking, setIsLiking] = useState(false);
 
   const displayName = comment.userFullName || comment.username || 'Người dùng';
   const isSessionPinned = pinnedCommentId === comment.id;
+  const isLiked = comment.isLikedByCurrentUser;
+  const likeCount = comment.likeCount;
 
   const handleLike = async () => {
     if (!currentUser?.id || disabled || isLiking) return;
-    const nextLiked = !isLiked;
-    const nextCount = Math.max(0, likeCount + (nextLiked ? 1 : -1));
-    setIsLiked(nextLiked);
-    setLikeCount(nextCount);
+    const prevLiked = isLiked;
+    const prevCount = likeCount;
+    const nextLiked = !prevLiked;
+    const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1));
+    onLikeChange?.(comment.id, nextLiked, nextCount);
     setIsLiking(true);
     try {
       if (nextLiked) {
@@ -67,10 +68,8 @@ export function LiveCommentItem({
       } else {
         await postService.unlikeComment(comment.postId, comment.id, currentUser.id);
       }
-      onLikeChange?.(comment.id, nextLiked, nextCount);
     } catch {
-      setIsLiked(isLiked);
-      setLikeCount(likeCount);
+      onLikeChange?.(comment.id, prevLiked, prevCount);
     } finally {
       setIsLiking(false);
     }
