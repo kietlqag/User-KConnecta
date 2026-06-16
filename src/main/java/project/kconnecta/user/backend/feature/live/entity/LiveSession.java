@@ -80,6 +80,12 @@ public class LiveSession {
     @Column(name = "playback_url", length = 500)
     private String playbackUrl;
 
+    @Column(name = "hls_playback_url", length = 500)
+    private String hlsPlaybackUrl;
+
+    @Column(name = "egress_id", length = 120)
+    private String egressId;
+
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
 

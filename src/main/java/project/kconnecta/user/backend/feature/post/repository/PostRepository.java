@@ -260,6 +260,54 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         org.springframework.data.domain.Pageable pageable
     );
 
+    @Query("""
+        SELECT DISTINCT p FROM Post p
+        JOIN FETCH p.author
+        LEFT JOIN FETCH p.group
+        LEFT JOIN FETCH p.page
+        WHERE p.author.id = :authorId
+          AND p.status = project.kconnecta.user.backend.feature.post.entity.enums.PostStatus.PUBLISHED
+          AND (
+            p.privacy = project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy.PUBLIC
+            OR (:currentUserId IS NOT NULL AND p.author.id = :currentUserId)
+            OR (
+              :currentUserId IS NOT NULL
+              AND p.privacy IN (
+                project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy.FRIENDS,
+                project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy.FRIENDS_EXCEPT
+              )
+              AND EXISTS (
+                SELECT 1 FROM Friendship f
+                WHERE f.status = project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus.ACCEPTED
+                  AND (
+                    (f.requester.id = :currentUserId AND f.addressee.id = p.author.id)
+                    OR (f.addressee.id = :currentUserId AND f.requester.id = p.author.id)
+                  )
+              )
+              AND NOT (
+                p.privacy = project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy.FRIENDS_EXCEPT
+                AND EXISTS (
+                  SELECT 1 FROM PostAudienceExclusion pae
+                  WHERE pae.post = p AND pae.excludedUser.id = :currentUserId
+                )
+              )
+            )
+            OR (
+              :currentUserId IS NOT NULL
+              AND p.privacy = project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy.SPECIFIC_FRIENDS
+              AND EXISTS (
+                SELECT 1 FROM PostAudienceAllowance paa
+                WHERE paa.post = p AND paa.allowedUser.id = :currentUserId
+              )
+            )
+          )
+        ORDER BY p.createdAt DESC
+        """)
+    List<Post> findByAuthorIdWithPrivacyFetched(
+        @Param("authorId") UUID authorId,
+        @Param("currentUserId") UUID currentUserId
+    );
+
     @org.springframework.data.jpa.repository.Query(
         value =
         "SELECT p.* FROM posts p " +

@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.feature.live.entity.enums.LiveRecordingSta
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
+import project.kconnecta.user.backend.feature.live.service.LiveKitEgressService;
 import project.kconnecta.user.backend.feature.live.service.LiveKitTokenService;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveStartService;
@@ -36,6 +37,7 @@ public class LiveStartServiceImpl implements LiveStartService {
     private final UserRepository userRepository;
     private final LiveSessionRepository liveSessionRepository;
     private final LiveKitTokenService liveKitTokenService;
+    private final LiveKitEgressService liveKitEgressService;
     private final LiveSessionRealtimePublisher realtimePublisher;
 
     @Override
@@ -86,6 +88,14 @@ public class LiveStartServiceImpl implements LiveStartService {
                 .totalReactionCount(0)
                 .startedAt(status == LiveSessionStatus.LIVE ? now : null)
                 .build());
+
+        if (status == LiveSessionStatus.LIVE) {
+            liveKitEgressService.startRoomHlsEgress(session).ifPresent(result -> {
+                session.setEgressId(result.getEgressId());
+                session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
+                liveSessionRepository.save(session);
+            });
+        }
 
         if (status == LiveSessionStatus.LIVE) {
             realtimePublisher.publishSessionEvent("LIVE_STARTED", toResponse(session));
@@ -143,6 +153,7 @@ public class LiveStartServiceImpl implements LiveStartService {
                 .streamKey(session.getStreamKey())
                 .roomName(session.getRoomName())
                 .playbackUrl(session.getPlaybackUrl())
+                .hlsPlaybackUrl(session.getHlsPlaybackUrl())
                 .thumbnailUrl(session.getThumbnailUrl())
                 .recordingStatus(session.getRecordingStatus())
                 .recordingDurationSec(session.getRecordingDurationSec())

@@ -557,8 +557,8 @@ public class PostServiceImpl implements PostService {
     @Transactional(readOnly = true)
     public Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable) {
         // Load all accessible posts for this author (privacy-filtered), then merge with shares in memory.
-        Page<Post> allPostsPage = postRepository.findByAuthorIdWithPrivacy(authorId, currentUserId, Pageable.unpaged());
-        List<PostResponse> postResponses = processPostsBulk(allPostsPage.getContent(), currentUserId);
+        List<Post> allPosts = postRepository.findByAuthorIdWithPrivacyFetched(authorId, currentUserId);
+        List<PostResponse> postResponses = processPostsBulk(allPosts, currentUserId);
 
         List<PostShare> shares = postShareRepository.findSharesWithPostByUserId(authorId);
         List<PostResponse> shareWrappers = toShareWrappers(shares, currentUserId);

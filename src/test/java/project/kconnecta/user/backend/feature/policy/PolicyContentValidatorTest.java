@@ -78,10 +78,10 @@ class PolicyContentValidatorTest {
         // default config used by most tests — overridden per-test via when()
     }
 
-    // ── rate limit ──────────────────────────────────────────────────────────
+    // ── duplicate message limit ─────────────────────────────────────────────
 
     @Test
-    void rateLimit_underLimit_passes() throws Exception {
+    void duplicateLimit_underLimit_passes() throws Exception {
         when(policyService.getConfigJson()).thenReturn(configWith(5, true, false));
 
         for (int i = 0; i < 5; i++) {
@@ -92,7 +92,7 @@ class PolicyContentValidatorTest {
     }
 
     @Test
-    void rateLimit_exceedsLimit_throwsChatRateLimited() throws Exception {
+    void duplicateLimit_exceedsLimit_throwsChatRateLimited() throws Exception {
         when(policyService.getConfigJson()).thenReturn(configWith(3, true, false));
 
         for (int i = 0; i < 3; i++) {
@@ -104,13 +104,27 @@ class PolicyContentValidatorTest {
             .satisfies(ex -> {
                 ChatValidationException e = (ChatValidationException) ex;
                 assertThat(e.getCode()).isEqualTo("CHAT_RATE_LIMITED");
-                assertThat(e.getRetryAfterSeconds()).isGreaterThanOrEqualTo(1);
-                assertThat(e.getRetryAfterSeconds()).isLessThanOrEqualTo(60);
+                assertThat(e.getRetryAfterSeconds()).isNull();
             });
     }
 
     @Test
-    void rateLimit_carriesConversationIdAndMessageClientId() throws Exception {
+    void duplicateLimit_differentMessages_doNotShareLimit() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWith(2, true, false));
+
+        validator.validateChatMessage(userId, "hello", null, null);
+        validator.validateChatMessage(userId, "hello", null, null);
+
+        assertThatThrownBy(() -> validator.validateChatMessage(userId, "hello", null, null))
+            .isInstanceOf(ChatValidationException.class);
+
+        assertThatNoException().isThrownBy(
+            () -> validator.validateChatMessage(userId, "world", null, null)
+        );
+    }
+
+    @Test
+    void duplicateLimit_carriesConversationIdAndMessageClientId() throws Exception {
         when(policyService.getConfigJson()).thenReturn(configWith(1, true, false));
         UUID convId = UUID.randomUUID();
         String clientId = "client-abc";
@@ -127,19 +141,18 @@ class PolicyContentValidatorTest {
     }
 
     @Test
-    void rateLimit_differentUsers_trackedSeparately() throws Exception {
+    void duplicateLimit_differentUsers_trackedSeparately() throws Exception {
         when(policyService.getConfigJson()).thenReturn(configWith(1, true, false));
         UUID user2 = UUID.randomUUID();
 
         validator.validateChatMessage(userId, "hi", null, null);
-        // user2 should NOT be rate-limited even though userId is
         assertThatNoException().isThrownBy(
             () -> validator.validateChatMessage(user2, "hi", null, null)
         );
     }
 
     @Test
-    void rateLimit_disabled_neverBlocks() throws Exception {
+    void duplicateLimit_disabled_neverBlocks() throws Exception {
         when(policyService.getConfigJson()).thenReturn(configWith(1, false, false));
 
         for (int i = 0; i < 20; i++) {

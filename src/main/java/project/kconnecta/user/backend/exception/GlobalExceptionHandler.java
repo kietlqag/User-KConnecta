@@ -8,6 +8,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -29,7 +30,7 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
     }
 
-    // 400/429 chat message validation (keyword, link, rate limit)
+    // 400/429 chat message validation (keyword, link, duplicate spam)
     @ExceptionHandler(ChatValidationException.class)
     public ResponseEntity<?> handleChatValidation(ChatValidationException ex) {
         HttpStatus status = "CHAT_RATE_LIMITED".equals(ex.getCode())
@@ -48,6 +49,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<?> handleBadRequest(BadRequestException ex) {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    // 400 multipart too large
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<?> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "File quá lớn. Giới hạn hiện tại là 100MB.");
     }
 
     // 403 forbidden

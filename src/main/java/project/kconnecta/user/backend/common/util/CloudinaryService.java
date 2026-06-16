@@ -140,8 +140,10 @@ public class CloudinaryService {
                     )
             );
             return result.get("secure_url").toString();
-        } catch (IOException e) {
-            throw new RuntimeException("Upload live recording failed", e);
+        } catch (Exception e) {
+            log.error("Upload live recording failed for session {} (size={} bytes, type={})",
+                    sessionId, file.getSize(), file.getContentType(), e);
+            throw new RuntimeException("Upload live recording failed: " + e.getMessage(), e);
         }
     }
 

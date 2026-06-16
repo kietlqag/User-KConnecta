@@ -27,6 +27,7 @@ public class LiveSessionResponse {
     private String streamKey;
     private String roomName;
     private String playbackUrl;
+    private String hlsPlaybackUrl;
     private String thumbnailUrl;
     private LiveRecordingStatus recordingStatus;
     private Integer recordingDurationSec;

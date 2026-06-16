@@ -94,7 +94,7 @@ public class PolicyServiceImpl implements PolicyService {
                 new PublicPolicyResponse.ChatPolicyView(
                         chat.path("antiSpamEnabled").asBoolean(true),
                         chat.path("blockMaliciousLinks").asBoolean(true),
-                        chat.path("messagesPerMinute").asInt(20),
+                        chat.path("messagesPerMinute").asInt(10),
                         chat.path("aiScanEnabled").asBoolean(true)
                 ),
                 new PublicPolicyResponse.PrivacyPolicyView(

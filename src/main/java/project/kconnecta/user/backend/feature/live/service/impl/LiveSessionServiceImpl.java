@@ -30,6 +30,7 @@ import project.kconnecta.user.backend.feature.live.repository.LiveSessionReposit
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionViewerRepository;
 import project.kconnecta.user.backend.feature.live.service.LiveAccessService;
 import project.kconnecta.user.backend.feature.live.service.LiveEventSubscriptionService;
+import project.kconnecta.user.backend.feature.live.service.LiveKitEgressService;
 import project.kconnecta.user.backend.feature.live.service.LiveKitTokenService;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionService;
@@ -64,6 +65,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     private final LiveSessionRealtimePublisher realtimePublisher;
     private final LiveAccessService liveAccessService;
     private final LiveKitTokenService liveKitTokenService;
+    private final LiveKitEgressService liveKitEgressService;
     private final LiveEventSubscriptionService liveEventSubscriptionService;
 
     @Override
@@ -133,6 +135,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         if (session.getStartedAt() == null) {
             session.setStartedAt(LocalDateTime.now());
         }
+        startHlsEgressIfNeeded(session);
 
         LiveSessionResponse response = toResponse(liveSessionRepository.save(session), hostUserId);
         realtimePublisher.publishSessionEvent("LIVE_STARTED", response);
@@ -162,6 +165,10 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             return response;
         }
 
+        if (!isBlank(session.getEgressId())) {
+            liveKitEgressService.stopEgress(session.getEgressId());
+        }
+
         session.setStatus(LiveSessionStatus.ENDED);
         session.setEndedAt(LocalDateTime.now());
         session.setViewerCount(0);
@@ -184,7 +191,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         String playbackUrl;
         try {
             playbackUrl = cloudinaryService.uploadLiveRecording(file, sessionId.toString());
-        } catch (RuntimeException ex) {
+        } catch (Exception ex) {
             log.error("Failed to upload live recording for session {}", sessionId, ex);
             throw new BadRequestException("Không thể tải bản ghi live lên Cloudinary. Kiểm tra cấu hình CLOUDINARY_* trên server.");
         }
@@ -463,6 +470,16 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
     }
 
+    private void startHlsEgressIfNeeded(LiveSession session) {
+        if (!isBlank(session.getHlsPlaybackUrl()) && !isBlank(session.getEgressId())) {
+            return;
+        }
+        liveKitEgressService.startRoomHlsEgress(session).ifPresent(result -> {
+            session.setEgressId(result.getEgressId());
+            session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
+        });
+    }
+
     private void cleanupStaleViewers(LiveSession session) {
         liveSessionViewerRepository.deleteStaleBySessionId(
                 session.getId(),
@@ -501,6 +518,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .streamKey(session.getStreamKey())
                 .roomName(session.getRoomName())
                 .playbackUrl(session.getPlaybackUrl())
+                .hlsPlaybackUrl(session.getHlsPlaybackUrl())
                 .thumbnailUrl(session.getThumbnailUrl())
                 .recordingStatus(session.getRecordingStatus())
                 .recordingDurationSec(session.getRecordingDurationSec())

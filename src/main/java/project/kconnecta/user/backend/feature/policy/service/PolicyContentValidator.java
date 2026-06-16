@@ -30,7 +30,12 @@ public class PolicyContentValidator {
     private final PolicyService policyService;
 
     private final Map<UUID, Deque<Instant>> postTimestamps = new ConcurrentHashMap<>();
-    private final Map<UUID, Deque<Instant>> chatTimestamps = new ConcurrentHashMap<>();
+    private final Map<String, ConsecutiveMessageState> consecutiveMessageStates = new ConcurrentHashMap<>();
+
+    private static final class ConsecutiveMessageState {
+        private String lastNormalizedContent = "";
+        private int streak;
+    }
 
     public void validatePost(UUID authorId, String content, int mediaCount) {
         JsonNode config = policyService.getConfigJson();
@@ -124,8 +129,8 @@ public class PolicyContentValidator {
         String convId = conversationId != null ? conversationId.toString() : null;
 
         if (chatPolicy.path("antiSpamEnabled").asBoolean(true)) {
-            int perMinute = chatPolicy.path("messagesPerMinute").asInt(20);
-            checkChatRateLimit(senderId, perMinute, convId, messageClientId);
+            int maxConsecutive = chatPolicy.path("messagesPerMinute").asInt(10);
+            checkDuplicateMessageSpam(senderId, text, maxConsecutive, convId, messageClientId);
         }
 
         try {
@@ -288,26 +293,39 @@ public class PolicyContentValidator {
         deque.addLast(Instant.now());
     }
 
-    private void checkChatRateLimit(UUID userId, int limitPerMinute, String conversationId, String messageClientId) {
-        if (userId == null || limitPerMinute <= 0) {
+    private void checkDuplicateMessageSpam(UUID userId, String content, int maxConsecutive, String conversationId, String messageClientId) {
+        if (userId == null || maxConsecutive <= 0) {
             return;
         }
-        Instant cutoff = Instant.now().minusSeconds(60);
-        Deque<Instant> deque = chatTimestamps.computeIfAbsent(userId, k -> new ConcurrentLinkedDeque<>());
-        while (!deque.isEmpty() && deque.peekFirst().isBefore(cutoff)) {
-            deque.pollFirst();
+        String normalized = normalizeChatContent(content);
+        if (normalized.isEmpty()) {
+            return;
         }
-        if (deque.size() >= limitPerMinute) {
-            long retryMs = deque.peekFirst().toEpochMilli() + 60_000L - Instant.now().toEpochMilli();
-            int retryAfterSeconds = (int) Math.max(1, (retryMs + 999) / 1000);
-            throw new ChatValidationException(
-                    "CHAT_RATE_LIMITED",
-                    "Bạn đang gửi tin nhắn quá nhanh. Vui lòng thử lại sau " + retryAfterSeconds + " giây.",
-                    retryAfterSeconds,
-                    conversationId,
-                    messageClientId
-            );
+        String stateKey = userId + ":" + (conversationId != null ? conversationId : "_");
+        ConsecutiveMessageState state = consecutiveMessageStates.computeIfAbsent(stateKey, key -> new ConsecutiveMessageState());
+
+        if (normalized.equals(state.lastNormalizedContent)) {
+            if (state.streak >= maxConsecutive) {
+                throw new ChatValidationException(
+                        "CHAT_RATE_LIMITED",
+                        "Bạn đã gửi quá nhiều tin giống nhau liên tiếp. Vui lòng đổi nội dung.",
+                        null,
+                        conversationId,
+                        messageClientId
+                );
+            }
+            state.streak++;
+            return;
         }
-        deque.addLast(Instant.now());
+
+        state.lastNormalizedContent = normalized;
+        state.streak = 1;
+    }
+
+    private String normalizeChatContent(String content) {
+        if (content == null) {
+            return "";
+        }
+        return content.trim().replaceAll("\\s+", " ");
     }
 }

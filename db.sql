@@ -160,6 +160,8 @@ CREATE TABLE IF NOT EXISTS public.live_sessions (
     stream_key VARCHAR(120) NOT NULL UNIQUE,
     room_name VARCHAR(120) NOT NULL UNIQUE,
     playback_url VARCHAR(500),
+    hls_playback_url VARCHAR(500),
+    egress_id VARCHAR(120),
     thumbnail_url VARCHAR(500),
     recording_status VARCHAR(20) NOT NULL DEFAULT 'NONE',
     recording_duration_sec INTEGER,
