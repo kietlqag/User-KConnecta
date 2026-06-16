@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.AddReactionReques
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
@@ -46,6 +47,14 @@ public class PostController {
             @Valid @RequestBody CreatePostRequest request) {
         request.setAuthorId(principal.getUserId());
         return ResponseEntity.status(HttpStatus.CREATED).body(postService.createPost(request));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<PostResponse> updatePost(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdatePostRequest request) {
+        return ResponseEntity.ok(postService.updatePost(id, principal.getUserId(), request));
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

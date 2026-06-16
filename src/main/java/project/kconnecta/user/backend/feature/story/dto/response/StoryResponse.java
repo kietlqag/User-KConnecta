@@ -24,6 +24,7 @@ public class StoryResponse {
     private Double textPosY;
     private String musicTrackId;
     private String altText;
+    private UUID linkedPostId;
     
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;

@@ -8,6 +8,15 @@ spring:
     hibernate:
       ddl-auto: update  # temporary: adds missing columns (privacy in post_shares); revert to validate after first run
 
+  datasource:
+    hikari:
+      # Remote Postgres (e.g. Render) can drop idle SSL sockets; keep connections warm.
+      maximum-pool-size: 5
+      minimum-idle: 1
+      max-lifetime: 540000
+      keepalive-time: 120000
+      connection-timeout: 30000
+
   data:
     redis:
       host: localhost

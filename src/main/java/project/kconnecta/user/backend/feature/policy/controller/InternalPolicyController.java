@@ -7,13 +7,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import java.security.MessageDigest;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import project.kconnecta.user.backend.feature.policy.dto.PolicyConfigUpdateRequest;
+import project.kconnecta.user.backend.feature.policy.dto.PolicyKeywordMergeResult;
 import project.kconnecta.user.backend.feature.policy.service.PolicyService;
 
 import java.util.Map;
@@ -44,6 +47,19 @@ public class InternalPolicyController {
         validateKey(key);
         JsonNode saved = policyService.saveConfig(request.config(), request.updatedBy());
         return ResponseEntity.ok(saved);
+    }
+
+    /**
+     * Merges keywords from classpath {@code policy/default-config.json} into the live DB policy.
+     * Existing keywords are kept; new ones are appended (deduped by value + category).
+     */
+    @PostMapping("/merge-default-keywords")
+    public ResponseEntity<PolicyKeywordMergeResult> mergeDefaultKeywords(
+            @RequestHeader("X-Internal-Key") String key,
+            @RequestParam(required = false) String updatedBy) {
+        validateKey(key);
+        return ResponseEntity.ok(policyService.mergeDefaultKeywords(
+                updatedBy != null && !updatedBy.isBlank() ? updatedBy : "system-merge"));
     }
 
     private void validateKey(String key) {

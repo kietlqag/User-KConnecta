@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
@@ -54,14 +53,64 @@ public class RedisSearchIndexer {
     // ── Startup ───────────────────────────────────────────────────────────────
 
     @EventListener(ApplicationReadyEvent.class)
-    @Async
     public void onStartup() {
         try {
             createIndexes();
-            reindexAll();
+            reindexAllWithRetry(3, 3_000);
         } catch (Exception e) {
             log.error("[RedisSearch] Startup indexing failed — search will fall back gracefully: {}", e.getMessage());
         }
+    }
+
+    private void reindexAllWithRetry(int maxAttempts, long delayMs) throws InterruptedException {
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                reindexAll();
+                return;
+            } catch (Exception e) {
+                if (attempt >= maxAttempts || !isTransientDbError(e)) {
+                    throw e;
+                }
+                log.warn("[RedisSearch] Reindex attempt {}/{} failed ({}), retrying in {}ms",
+                        attempt, maxAttempts, rootMessage(e), delayMs);
+                Thread.sleep(delayMs);
+            }
+        }
+    }
+
+    private static boolean isTransientDbError(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (current instanceof java.net.SocketException) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null) {
+                String lower = message.toLowerCase();
+                if (lower.contains("i/o error")
+                        || lower.contains("socket closed")
+                        || lower.contains("connection reset")
+                        || lower.contains("08006")
+                        || lower.contains("connection refused")
+                        || lower.contains("terminating connection")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private static String rootMessage(Throwable error) {
+        Throwable current = error;
+        String message = error.getMessage();
+        while (current.getCause() != null) {
+            current = current.getCause();
+            if (current.getMessage() != null) {
+                message = current.getMessage();
+            }
+        }
+        return message != null ? message : error.getClass().getSimpleName();
     }
 
     // ── Index creation ────────────────────────────────────────────────────────

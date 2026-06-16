@@ -37,6 +37,7 @@ public class PostSeederController {
     private final UserRepository userRepository;
     private final PostRepository postRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final EngagementSeeder engagementSeeder;
 
     private static final int POSTS_PER_CATEGORY = 100;
     private static final PostPrivacy[] PRIVACIES = {
@@ -243,9 +244,12 @@ public class PostSeederController {
             }
         }
 
-        postRepository.saveAll(batch);
+        postRepository.saveAllAndFlush(batch);
 
         log.info("PostSeeder: saved {} posts for {} users.", batch.size(), users.size());
+
+        // Flush ở trên đảm bảo posts đã có trong DB trước khi insert engagement (FK post_id).
+        EngagementSeeder.Stats engagement = engagementSeeder.seedFor(batch, users);
 
         Map<String, Long> byUser = new java.util.LinkedHashMap<>();
         batch.forEach(p -> byUser.merge(p.getAuthor().getUsername(), 1L, Long::sum));
@@ -255,6 +259,9 @@ public class PostSeederController {
             "users", users.size(),
             "categories", CATEGORIES.length,
             "postsPerCategory", POSTS_PER_CATEGORY,
+            "reactions", engagement.reactions(),
+            "comments", engagement.comments(),
+            "shares", engagement.shares(),
             "distribution", byUser
         ));
     }

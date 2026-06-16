@@ -2,9 +2,8 @@ package project.kconnecta.user.backend.seeder;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
-import org.springframework.core.annotation.Order;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.feature.post.entity.Post;
@@ -14,20 +13,56 @@ import project.kconnecta.user.backend.feature.post.repository.PostRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 @Slf4j
 @Component
 @Profile({"dev", "local"})
-@Order(10)
 @RequiredArgsConstructor
-public class PostSeeder implements CommandLineRunner {
+public class PostSeeder {
 
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+    private final EngagementSeeder engagementSeeder;
+    private final JdbcTemplate jdbcTemplate;
+
+    // Bộ ảnh mẫu (Cloudinary demo) — gán ngẫu nhiên cho post để feed đa dạng.
+    private static final String[] SAMPLE_IMAGE_URLS = {
+        "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+        "https://res.cloudinary.com/demo/image/upload/cld-sample.jpg",
+        "https://res.cloudinary.com/demo/image/upload/cld-sample-2.jpg",
+        "https://res.cloudinary.com/demo/image/upload/cld-sample-3.jpg",
+        "https://res.cloudinary.com/demo/image/upload/cld-sample-4.jpg",
+        "https://res.cloudinary.com/demo/image/upload/cld-sample-5.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/landscapes/nature-mountains.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/landscapes/beach-boat.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/food/spices.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/food/pot-mussels.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/food/dessert.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/people/boy-snow-hoodie.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/people/kitchen-bar.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/people/jazz.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/animals/three-dogs.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/animals/cat.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/animals/reindeer.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/coffee.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/breakfast.jpg",
+        "https://res.cloudinary.com/demo/image/upload/samples/balloons.jpg"
+    };
+
+    // Video mẫu (Cloudinary demo) cho một phần post.
+    private static final String[] SAMPLE_VIDEO_URLS = {
+        "https://res.cloudinary.com/demo/video/upload/dog.mp4",
+        "https://res.cloudinary.com/demo/video/upload/sea_turtle.mp4",
+        "https://res.cloudinary.com/demo/video/upload/elephants.mp4"
+    };
+    private static final int VIDEO_PERCENT = 20;
 
     private static final int POSTS_PER_CATEGORY = 100;
     private static final PostPrivacy[] PRIVACIES = {
@@ -166,9 +201,8 @@ public class PostSeeder implements CommandLineRunner {
         "sản phẩm", "giải pháp", "phương pháp", "chủ đề", "xu hướng", "nội dung"
     };
 
-    @Override
     @Transactional
-    public void run(String... args) {
+    public void seed() {
         if (postRepository.count() > 0) {
             log.info("PostSeeder: posts already exist, skipping.");
             return;
@@ -217,7 +251,107 @@ public class PostSeeder implements CommandLineRunner {
             }
         }
 
-        postRepository.saveAll(batch);
+        postRepository.saveAllAndFlush(batch);
         log.info("PostSeeder: saved {} posts total.", batch.size());
+
+        // Flush ở trên đảm bảo posts đã có trong DB trước khi insert engagement (FK post_id).
+        engagementSeeder.seedFor(batch, users);
+    }
+
+    /**
+     * Thêm react/comment/share ngẫu nhiên cho các post ĐÃ CÓ trong DB
+     * (chỉ những post chưa có engagement). Không tạo post mới, không xóa gì.
+     */
+    @Transactional
+    public void seedEngagementForExistingPosts() {
+        List<User> users = userRepository.findAll();
+        if (users.isEmpty()) {
+            log.warn("PostSeeder: no users found, skipping engagement seed.");
+            return;
+        }
+
+        List<Post> posts = postRepository.findAll();
+        if (posts.isEmpty()) {
+            log.warn("PostSeeder: no posts found — nothing to add engagement to.");
+            return;
+        }
+
+        EngagementSeeder.Stats stats = engagementSeeder.seedMissing(posts, users);
+        log.info("PostSeeder: engagement seeded for existing posts — {} reactions, {} comments, {} shares.",
+                stats.reactions(), stats.comments(), stats.shares());
+    }
+
+    /**
+     * Gán ảnh mẫu NGẪU NHIÊN cho post chưa có media — gồm post chưa có ảnh
+     * (image_url null) và post đang dùng một ảnh seed (để đa dạng hóa lại, tránh trùng).
+     * Không đụng post đã có media (kể cả post video).
+     */
+    @Transactional
+    public void fillMissingPostImages() {
+        String inPlaceholders = String.join(",", Collections.nCopies(SAMPLE_IMAGE_URLS.length, "?"));
+        List<UUID> targets = jdbcTemplate.queryForList(
+                "SELECT id FROM public.posts "
+                + "WHERE (image_url IS NULL OR image_url IN (" + inPlaceholders + ")) "
+                + "AND id NOT IN (SELECT post_id FROM public.post_media)",
+                UUID.class, (Object[]) SAMPLE_IMAGE_URLS);
+
+        if (targets.isEmpty()) {
+            log.info("PostSeeder: no posts need a sample image.");
+            return;
+        }
+
+        Random random = new Random();
+        Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+        List<Object[]> rows = new ArrayList<>(targets.size());
+        for (UUID id : targets) {
+            String image = SAMPLE_IMAGE_URLS[random.nextInt(SAMPLE_IMAGE_URLS.length)];
+            rows.add(new Object[]{image, now, id});
+        }
+
+        jdbcTemplate.batchUpdate(
+                "UPDATE public.posts SET image_url = ?, updated_at = ? WHERE id = ?", rows);
+        log.info("PostSeeder: assigned random sample image to {} posts.", rows.size());
+    }
+
+    /**
+     * Chuyển ~{@value #VIDEO_PERCENT}% post đang dùng ảnh mẫu sang post video:
+     * thêm post_media VIDEO (random 1 trong các link mẫu) và xóa image_url.
+     * Idempotent: post đã có media không còn là ứng viên.
+     */
+    @Transactional
+    public void convertSomePostsToVideo() {
+        String inPlaceholders = String.join(",", Collections.nCopies(SAMPLE_IMAGE_URLS.length, "?"));
+        List<UUID> candidates = jdbcTemplate.queryForList(
+                "SELECT id FROM public.posts WHERE image_url IN (" + inPlaceholders + ") "
+                + "AND id NOT IN (SELECT post_id FROM public.post_media)",
+                UUID.class, (Object[]) SAMPLE_IMAGE_URLS);
+
+        if (candidates.isEmpty()) {
+            log.info("PostSeeder: no image-only posts to convert to video.");
+            return;
+        }
+
+        Random random = new Random();
+        Collections.shuffle(candidates, random);
+        int count = Math.max(1, candidates.size() * VIDEO_PERCENT / 100);
+        List<UUID> chosen = candidates.subList(0, Math.min(count, candidates.size()));
+
+        Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+        List<Object[]> mediaRows = new ArrayList<>(chosen.size());
+        List<Object[]> clearImageRows = new ArrayList<>(chosen.size());
+        for (UUID postId : chosen) {
+            String video = SAMPLE_VIDEO_URLS[random.nextInt(SAMPLE_VIDEO_URLS.length)];
+            mediaRows.add(new Object[]{UUID.randomUUID(), postId, "VIDEO", video, null, 0, now});
+            clearImageRows.add(new Object[]{now, postId});
+        }
+
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO public.post_media (id, post_id, media_type, file_url, thumbnail_url, sort_order, created_at) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?)", mediaRows);
+        jdbcTemplate.batchUpdate(
+                "UPDATE public.posts SET image_url = NULL, updated_at = ? WHERE id = ?", clearImageRows);
+
+        log.info("PostSeeder: converted {} posts to video (out of {} image-only candidates).",
+                chosen.size(), candidates.size());
     }
 }

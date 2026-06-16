@@ -23,4 +23,5 @@ public class CreateStoryRequest {
     private String musicTrackId;
     private String altText;
     private String sharedImageUrl;
+    private UUID linkedPostId;
 }

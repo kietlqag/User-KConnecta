@@ -51,6 +51,9 @@ public class Story {
     @Column(name = "alt_text", length = 500)
     private String altText;
 
+    @Column(name = "linked_post_id")
+    private UUID linkedPostId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

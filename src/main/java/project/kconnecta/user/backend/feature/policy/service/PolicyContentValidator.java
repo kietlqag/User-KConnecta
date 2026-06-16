@@ -48,8 +48,28 @@ public class PolicyContentValidator {
             throw new ValidationException("Tối đa " + maxImages + " ảnh/video mỗi bài");
         }
 
-        checkKeywords(text, config, true);
+        checkKeywords(text, config, true, "đăng bài viết");
         checkRateLimit(authorId, postsPerMinute, postTimestamps, "đăng bài");
+    }
+
+    public void validatePostUpdate(UUID authorId, String content, int mediaCount) {
+        JsonNode config = policyService.getConfigJson();
+        JsonNode postPolicy = config.path("postPolicy");
+
+        int maxLength = postPolicy.path("maxPostLength").asInt(5000);
+        int maxImages = postPolicy.path("maxImagesPerPost").asInt(10);
+
+        String text = content == null ? "" : content;
+        if (text.length() > maxLength) {
+            throw new ValidationException("Không thể lưu thay đổi bài viết. Lý do: nội dung vượt quá "
+                    + maxLength + " ký tự cho phép.");
+        }
+        if (mediaCount > maxImages) {
+            throw new ValidationException("Không thể lưu thay đổi bài viết. Lý do: tối đa "
+                    + maxImages + " ảnh/video mỗi bài.");
+        }
+
+        checkKeywords(text, config, true, "lưu thay đổi bài viết");
     }
 
     /**
@@ -92,7 +112,7 @@ public class PolicyContentValidator {
         }
         // Watchlist (vùng xám) KHÔNG chặn cứng ở đây — để isSuspect đẩy sang PENDING cho AI duyệt.
         // Blacklist chặn ngay. blocked_domain chặn cả khi không phải URL đầy đủ (vd: "casino", "bit.ly/phish").
-        checkKeywords(text, config, false);
+        checkKeywords(text, config, false, "đăng bình luận");
         checkBlockedDomainsInText(text, config);
         checkBlockedLinks(text, config);
     }
@@ -109,7 +129,7 @@ public class PolicyContentValidator {
         }
 
         try {
-            checkKeywords(text, config, true);
+            checkKeywords(text, config, true, "gửi tin nhắn");
         } catch (ValidationException e) {
             throw new ChatValidationException("CHAT_BLOCKED_KEYWORD",
                     "Tin nhắn chứa nội dung không phù hợp nên không thể gửi.", null, convId, messageClientId);
@@ -125,7 +145,7 @@ public class PolicyContentValidator {
         }
     }
 
-    private void checkKeywords(String text, JsonNode config, boolean blockWatchlist) {
+    private void checkKeywords(String text, JsonNode config, boolean blockWatchlist, String actionLabel) {
         if (text.isBlank()) {
             return;
         }
@@ -149,9 +169,20 @@ public class PolicyContentValidator {
                 continue;
             }
             if (keywordMatches(lower, norm, value)) {
-                throw new ValidationException("Nội dung chứa từ khóa không được phép");
+                throw new ValidationException(buildPostPolicyViolationMessage(category, actionLabel));
             }
         }
+    }
+
+    private String buildPostPolicyViolationMessage(String category, String actionPhrase) {
+        String reason = switch (category) {
+            case "blacklist", "banned" -> "chứa từ ngữ bị cấm theo quy tắc cộng đồng";
+            case "watchlist" -> "chứa ngôn từ nhạy cảm hoặc không phù hợp tiêu chuẩn cộng đồng";
+            case "blocked_domain" -> "chứa liên kết hoặc tên miền không được phép";
+            default -> "chứa nội dung không được phép";
+        };
+        return "Không thể " + actionPhrase + ". Lý do: nội dung " + reason
+                + ". Vui lòng chỉnh sửa và thử lại.";
     }
 
     /**
@@ -211,7 +242,9 @@ public class PolicyContentValidator {
             }
             String value = kw.path("value").asText("");
             if (!value.isBlank() && keywordMatches(lower, norm, value)) {
-                throw new ValidationException("Nội dung chứa liên kết hoặc từ khóa không được phép");
+                throw new ValidationException(
+                        "Không thể đăng bình luận. Lý do: nội dung chứa liên kết hoặc tên miền không được phép. "
+                                + "Vui lòng chỉnh sửa và thử lại.");
             }
         }
     }

@@ -13,6 +13,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequ
 import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostMediaRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
@@ -229,6 +230,115 @@ public class PostServiceImpl implements PostService {
                     "{\"postId\":\"" + response.getId() + "\"}");
         }
         return response;
+    }
+
+    @Override
+    public PostResponse updatePost(UUID postId, UUID userId, UpdatePostRequest request) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
+
+        if (!post.getAuthor().getId().equals(userId)) {
+            throw new ValidationException("Bạn không có quyền chỉnh sửa bài viết này");
+        }
+        if (post.getStatus() == PostStatus.DELETED) {
+            throw new ValidationException("Không thể chỉnh sửa bài viết đã xóa");
+        }
+        if ("LIVE_POST".equals(post.getBackgroundStyle())) {
+            throw new ValidationException("Không thể chỉnh sửa bài viết live");
+        }
+
+        String newContent = request.getContent() != null ? trimToNull(request.getContent()) : post.getContent();
+        List<CreatePostMediaRequest> mediaRequests = request.getMedia() != null
+                ? request.getMedia()
+                : post.getMedia().stream()
+                        .map(m -> {
+                            CreatePostMediaRequest mediaRequest = new CreatePostMediaRequest();
+                            mediaRequest.setMediaType(m.getMediaType());
+                            mediaRequest.setFileUrl(m.getFileUrl());
+                            mediaRequest.setThumbnailUrl(m.getThumbnailUrl());
+                            mediaRequest.setSortOrder(m.getSortOrder());
+                            return mediaRequest;
+                        })
+                        .toList();
+
+        if ((newContent == null || newContent.isBlank()) && mediaRequests.isEmpty()) {
+            throw new ValidationException("Bài viết phải có nội dung hoặc media");
+        }
+
+        policyContentValidator.validatePostUpdate(userId, newContent, mediaRequests.size());
+
+        if (newContent != null && !newContent.isBlank()) {
+            geminiModerationService.moderate(newContent).ifPresent(moderation -> {
+                if (!moderation.safe()) {
+                    throw new ValidationException(
+                            "Không thể lưu thay đổi bài viết. Lý do: nội dung vi phạm tiêu chuẩn cộng đồng ("
+                                    + moderation.reason() + "). Vui lòng chỉnh sửa và thử lại.");
+                }
+            });
+        }
+
+        PostPrivacy privacy = request.getPrivacy() != null ? request.getPrivacy() : post.getPrivacy();
+        if (post.getGroup() != null && privacy != PostPrivacy.PUBLIC) {
+            privacy = PostPrivacy.PUBLIC;
+        }
+        if (post.getPage() != null && privacy != PostPrivacy.PUBLIC) {
+            privacy = PostPrivacy.PUBLIC;
+        }
+
+        if (privacy != PostPrivacy.FRIENDS_EXCEPT
+                && request.getExcludedUserIds() != null
+                && !request.getExcludedUserIds().isEmpty()) {
+            throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
+        }
+        if (privacy != PostPrivacy.SPECIFIC_FRIENDS
+                && request.getAllowedUserIds() != null
+                && !request.getAllowedUserIds().isEmpty()) {
+            throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
+        }
+        if (post.getGroup() != null) {
+            if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
+                throw new ValidationException("Audience exclusions are not supported for group posts");
+            }
+            if (request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
+                throw new ValidationException("Audience allowances are not supported for group posts");
+            }
+        }
+        if (post.getPage() != null) {
+            if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
+                throw new ValidationException("Audience exclusions are not supported for page posts");
+            }
+            if (request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
+                throw new ValidationException("Audience allowances are not supported for page posts");
+            }
+        }
+
+        post.setContent(newContent);
+        post.setPrivacy(privacy);
+        if (request.getLocationText() != null) {
+            post.setLocationText(trimToNull(request.getLocationText()));
+        }
+
+        if (request.getMedia() != null) {
+            post.getMedia().clear();
+            attachMedia(post, mediaRequests);
+            post.setImageUrl(mediaRequests.isEmpty() ? null : mediaRequests.get(0).getFileUrl().trim());
+        }
+
+        if (request.getExcludedUserIds() != null) {
+            post.getAudienceExclusions().clear();
+            attachExcludedUsers(post, request.getExcludedUserIds());
+        }
+        if (request.getAllowedUserIds() != null) {
+            post.getAudienceAllowances().clear();
+            attachAllowedUsers(post, request.getAllowedUserIds());
+        }
+        if (request.getTaggedUserIds() != null) {
+            post.getMentions().clear();
+            attachTaggedUsers(post, request.getTaggedUserIds());
+        }
+
+        Post saved = postRepository.save(post);
+        return mapToResponse(saved, userId);
     }
 
     @Override
@@ -1125,10 +1235,16 @@ public class PostServiceImpl implements PostService {
     private List<PostResponse> toShareWrappers(List<PostShare> shares, UUID currentUserId) {
         if (shares.isEmpty()) return Collections.emptyList();
 
-        List<Post> originalPosts = shares.stream().map(PostShare::getPost).toList();
+        List<Post> originalPosts = shares.stream()
+                .map(PostShare::getPost)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(Post::getId, p -> p, (p1, p2) -> p1))
+                .values()
+                .stream()
+                .toList();
         List<PostResponse> originals = processPostsBulk(originalPosts, currentUserId);
         Map<UUID, PostResponse> byPostId = originals.stream()
-                .collect(Collectors.toMap(PostResponse::getId, r -> r));
+                .collect(Collectors.toMap(PostResponse::getId, r -> r, (existing, replacement) -> existing));
 
         return shares.stream()
                 .map(share -> {

@@ -4,6 +4,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.AddReactionReques
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
@@ -25,6 +26,7 @@ import java.util.UUID;
 
 public interface PostService {
     PostResponse createPost(CreatePostRequest request);
+    PostResponse updatePost(UUID postId, UUID userId, UpdatePostRequest request);
     String uploadPostImage(UUID uploaderId, MultipartFile file);
     void deleteMedia(String url, UUID userId);
     Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable);

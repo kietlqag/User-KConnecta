@@ -2,24 +2,28 @@ package project.kconnecta.user.backend.feature.policy.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import project.kconnecta.user.backend.feature.policy.dto.AiModerationConfigRequest;
+import project.kconnecta.user.backend.feature.policy.dto.PolicyKeywordMergeResult;
 import project.kconnecta.user.backend.feature.policy.dto.PublicPolicyResponse;
 import project.kconnecta.user.backend.feature.policy.entity.PlatformPolicy;
 import project.kconnecta.user.backend.feature.policy.repository.PlatformPolicyRepository;
 import project.kconnecta.user.backend.feature.policy.service.PolicyService;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -129,8 +133,7 @@ public class PolicyServiceImpl implements PolicyService {
             return;
         }
         try {
-            ClassPathResource resource = new ClassPathResource("policy/default-config.json");
-            String json = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            String json = objectMapper.writeValueAsString(loadDefaultConfigJson());
             PlatformPolicy policy = PlatformPolicy.builder()
                     .id(PlatformPolicy.SINGLETON_ID)
                     .configJson(json)
@@ -160,6 +163,61 @@ public class PolicyServiceImpl implements PolicyService {
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to save AI moderation config: " + e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional
+    public PolicyKeywordMergeResult mergeDefaultKeywords(String updatedBy) {
+        try {
+            ObjectNode current = (ObjectNode) objectMapper.readTree(objectMapper.writeValueAsString(getConfigJson()));
+            JsonNode defaultConfig = loadDefaultConfigJson();
+            JsonNode defaultKeywords = defaultConfig.path("keywords");
+            if (!defaultKeywords.isArray()) {
+                throw new IllegalStateException("default-config.json has no keywords array");
+            }
+
+            ArrayNode mergedKeywords = objectMapper.createArrayNode();
+            Set<String> seen = new HashSet<>();
+
+            JsonNode existingKeywords = current.path("keywords");
+            if (existingKeywords.isArray()) {
+                for (JsonNode kw : existingKeywords) {
+                    mergedKeywords.add(kw.deepCopy());
+                    seen.add(keywordDedupeKey(kw));
+                }
+            }
+
+            int added = 0;
+            int skipped = 0;
+            for (JsonNode kw : defaultKeywords) {
+                String key = keywordDedupeKey(kw);
+                if (seen.contains(key)) {
+                    skipped++;
+                    continue;
+                }
+                mergedKeywords.add(kw.deepCopy());
+                seen.add(key);
+                added++;
+            }
+
+            current.set("keywords", mergedKeywords);
+            saveConfig(current, updatedBy != null ? updatedBy : "system-merge");
+            log.info("Merged default policy keywords: added={}, skipped={}, total={}", added, skipped, mergedKeywords.size());
+            return new PolicyKeywordMergeResult(added, skipped, mergedKeywords.size());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to merge default policy keywords", e);
+        }
+    }
+
+    private JsonNode loadDefaultConfigJson() throws IOException {
+        ClassPathResource resource = new ClassPathResource("policy/default-config.json");
+        return objectMapper.readTree(resource.getInputStream());
+    }
+
+    private static String keywordDedupeKey(JsonNode kw) {
+        String category = kw.path("category").asText("").trim().toLowerCase(Locale.ROOT);
+        String value = kw.path("value").asText("").trim().toLowerCase(Locale.ROOT);
+        return category + "|" + value;
     }
 
     private JsonNode loadFromDb() {

@@ -54,6 +54,7 @@ public class StoryServiceImpl implements StoryService {
                 .textPosY(request.getTextPosY())
                 .musicTrackId(request.getMusicTrackId())
                 .altText(request.getAltText())
+                .linkedPostId(request.getLinkedPostId())
                 .build();
 
         story = storyRepository.save(story);
@@ -107,6 +108,7 @@ public class StoryServiceImpl implements StoryService {
                 .textPosY(story.getTextPosY())
                 .musicTrackId(story.getMusicTrackId())
                 .altText(story.getAltText())
+                .linkedPostId(story.getLinkedPostId())
                 .createdAt(story.getCreatedAt())
                 .expiresAt(story.getExpiresAt())
                 .active(story.isActive())
