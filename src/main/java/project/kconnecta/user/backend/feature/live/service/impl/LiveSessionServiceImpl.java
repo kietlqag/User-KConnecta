@@ -181,7 +181,13 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         liveAccessService.requireHost(session, hostUserId);
         validateRecordingFile(file);
 
-        String playbackUrl = cloudinaryService.uploadLiveRecording(file, sessionId.toString());
+        String playbackUrl;
+        try {
+            playbackUrl = cloudinaryService.uploadLiveRecording(file, sessionId.toString());
+        } catch (RuntimeException ex) {
+            log.error("Failed to upload live recording for session {}", sessionId, ex);
+            throw new BadRequestException("Không thể tải bản ghi live lên Cloudinary. Kiểm tra cấu hình CLOUDINARY_* trên server.");
+        }
         session.setPlaybackUrl(playbackUrl);
         session.setRecordingStatus(LiveRecordingStatus.READY);
         session.setRecordingDurationSec(durationSec == null ? null : Math.max(0, durationSec));
@@ -361,10 +367,6 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     public LiveSessionStatsResponse getStats(UUID sessionId, UUID viewerUserId) {
         LiveSession session = findSession(sessionId);
         liveAccessService.requireCanView(session, viewerUserId);
-        if (session.getStatus() == LiveSessionStatus.LIVE) {
-            cleanupStaleViewers(session);
-            refreshViewerCount(session);
-        }
         return LiveSessionStatsResponse.builder()
                 .sessionId(session.getId())
                 .viewerCount(session.getViewerCount())
