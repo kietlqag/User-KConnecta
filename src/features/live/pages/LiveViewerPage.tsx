@@ -293,6 +293,8 @@ export default function LiveViewerPage() {
     setIsMenuOpen(false);
   };
 
+  const isReplay = Boolean(replayUrl);
+
   const handleCloseLive = () => {
     if (session?.postId) {
       navigate(`/home?post=${encodeURIComponent(session.postId)}`);
@@ -331,17 +333,38 @@ export default function LiveViewerPage() {
             <div className="absolute top-4 right-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</div>
           )}
 
-          <div className="h-[calc(100vh-160px)] flex items-center justify-center">
-            {replayUrl ? (
-              <video src={replayUrl} controls autoPlay playsInline className="h-full w-full object-contain" />
+          <div className={`flex items-center justify-center ${isReplay ? 'h-[calc(100vh-56px)] flex-col' : 'h-[calc(100vh-160px)]'}`}>
+            {isReplay ? (
+              <>
+                <video
+                  src={replayUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="min-h-0 w-full flex-1 object-contain"
+                />
+                <div className="flex w-full shrink-0 items-center justify-center gap-2 border-t border-white/10 bg-black/80 px-4 py-3 text-3xl">
+                  {reactions.map((reaction) => (
+                    <button
+                      key={reaction.value}
+                      type="button"
+                      disabled
+                      className="cursor-not-allowed rounded-full px-1 opacity-40"
+                      aria-label={`Cảm xúc ${reaction.value}`}
+                    >
+                      {reaction.label}
+                    </button>
+                  ))}
+                </div>
+              </>
             ) : (
               <>
                 <video ref={videoRef} autoPlay playsInline className="h-full w-full object-contain" />
                 <audio ref={audioRef} autoPlay />
               </>
             )}
-            {(error || status !== 'Đang xem trực tiếp.') && (
-              <div className={`${replayUrl ? 'hidden ' : ''}absolute inset-0 flex items-center justify-center bg-black/50 px-5 text-center text-white/80`}>
+            {!isReplay && (error || status !== 'Đang xem trực tiếp.') && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 px-5 text-center text-white/80">
                 <div>
                   <p className="text-lg font-semibold">{error || status}</p>
                   {isLiveEnded && <p className="mt-2 text-sm text-white/70">Bạn có thể quay lại bài viết để xem tương tác của buổi live.</p>}
@@ -352,6 +375,7 @@ export default function LiveViewerPage() {
 
           <LiveFloatingReactions bursts={bursts} />
 
+          {!isReplay && (
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
             <div
               className={`mb-2 flex items-center gap-3 text-sm text-white transition-opacity duration-200 ${
@@ -359,9 +383,6 @@ export default function LiveViewerPage() {
               }`}
             >
               <span>{status}</span>
-              <div className="flex-1 overflow-hidden rounded bg-white/30">
-                <div className="h-1 w-full bg-blue-500" />
-              </div>
               <span className="min-w-[44px] text-right text-xs text-white/80">{liveElapsed}</span>
               <button
                 type="button"
@@ -390,6 +411,7 @@ export default function LiveViewerPage() {
               ))}
             </div>
           </div>
+          )}
         </section>
 
         <aside className="relative border-l border-gray-200 bg-white min-h-[calc(100vh-56px)] p-4 flex flex-col">

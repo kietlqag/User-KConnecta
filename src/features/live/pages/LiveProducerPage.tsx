@@ -289,11 +289,16 @@ export default function LiveProducerPage() {
 
   const startLiveRecording = useCallback((stream: MediaStream) => {
     if (typeof MediaRecorder === 'undefined') return;
-    if (liveRecorderRef.current && liveRecorderRef.current.state !== 'inactive') return;
+    if (!stream.getVideoTracks().length) return;
 
     try {
       const mimeType = getSupportedRecordingMimeType();
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const recorder = new MediaRecorder(
+        stream,
+        mimeType
+          ? { mimeType, videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 }
+          : { videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 },
+      );
       recordingChunksRef.current = [];
       recordingStartedAtRef.current = Date.now();
       recordingMimeTypeRef.current = recorder.mimeType || mimeType || 'video/webm';
@@ -317,7 +322,13 @@ export default function LiveProducerPage() {
       return null;
     }
 
-    if (recorder.state !== 'inactive') {
+    if (recorder.state === 'recording') {
+      recorder.requestData();
+      await new Promise<void>((resolve) => {
+        recorder.addEventListener('stop', () => resolve(), { once: true });
+        recorder.stop();
+      });
+    } else if (recorder.state !== 'inactive') {
       await new Promise<void>((resolve) => {
         recorder.addEventListener('stop', () => resolve(), { once: true });
         recorder.stop();
@@ -431,9 +442,31 @@ export default function LiveProducerPage() {
   }, [selectedCameraId, selectedMicId, videoSourceMode, bindStreamToPreview]);
 
   useEffect(() => {
-    const stream = localStreamRef.current;
-    if (!sessionId || !isMediaReady || !stream) return;
-    startLiveRecording(stream);
+    let cancelled = false;
+    const syncRecording = async () => {
+      const stream = localStreamRef.current;
+      if (!sessionId || !isMediaReady || !stream) return;
+
+      const existing = liveRecorderRef.current;
+      if (existing && existing.state !== 'inactive') {
+        await new Promise<void>((resolve) => {
+          existing.addEventListener('stop', () => resolve(), { once: true });
+          if (existing.state === 'recording') {
+            existing.requestData();
+          }
+          existing.stop();
+        });
+        liveRecorderRef.current = null;
+      }
+
+      if (cancelled) return;
+      startLiveRecording(stream);
+    };
+
+    void syncRecording();
+    return () => {
+      cancelled = true;
+    };
   }, [isMediaReady, localStreamVersion, sessionId, startLiveRecording]);
 
   useEffect(() => {
@@ -754,7 +787,7 @@ export default function LiveProducerPage() {
 
         await liveService.endSession(sessionId);
 
-        if (recording && currentUser?.id) {
+        if (recording && recording.size > 0 && currentUser?.id) {
           const startedAt = recordingStartedAtRef.current;
           const durationSec = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : undefined;
           try {
@@ -762,10 +795,14 @@ export default function LiveProducerPage() {
           } catch (error) {
             await liveService.markRecordingFailed(
               sessionId,
-              error instanceof Error ? error.message : 'Cannot upload live recording',
+              error instanceof Error ? error.message : 'Không thể tải bản ghi live lên server',
             ).catch(() => undefined);
-            // Ending the LiveKit session should not be blocked by a failed replay upload.
           }
+        } else if (currentUser?.id) {
+          await liveService.markRecordingFailed(
+            sessionId,
+            'Không ghi được video từ phiên live. Vui lòng kiểm tra quyền camera/micro và thử lại.',
+          ).catch(() => undefined);
         }
       }
       navigate('/live');

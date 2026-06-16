@@ -45,6 +45,7 @@ export interface SharePostPayload {
   userId: string;
   sharedContent?: string;
   privacy?: 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
+  parentShareId?: string;
 }
 
 export type ReactionType = 'LIKE' | 'LOVE' | 'HAHA' | 'WOW' | 'SAD' | 'ANGRY';
@@ -196,6 +197,7 @@ export interface PostShareResponse {
   userId: string;
   userFullName: string;
   shareCount: number;
+  wrapperShareCount?: number | null;
 }
 
 export interface CheckInSuggestionResponse {

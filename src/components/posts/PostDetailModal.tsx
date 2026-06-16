@@ -64,6 +64,9 @@ interface PostDetailModalProps {
   onPrivacyChange?: (privacy: Privacy) => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  livePreview?: React.ReactNode;
+  originalPostId?: string;
+  parentShareId?: string;
 }
 
 export function PostDetailModal({
@@ -79,6 +82,9 @@ export function PostDetailModal({
   onPrivacyChange,
   onEdit,
   onDelete,
+  livePreview,
+  originalPostId,
+  parentShareId,
 }: PostDetailModalProps) {
   const [commentCount, setCommentCount] = useState(post.comments || 0);
   const [shareCount, setShareCount] = useState(post.shares || 0);
@@ -178,9 +184,13 @@ export function PostDetailModal({
             </div>
           </div>
 
-          <div className="px-4 pb-3">
-            <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{post.content}</p>
-          </div>
+          {!livePreview && (
+            <div className="px-4 pb-3">
+              <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{post.content}</p>
+            </div>
+          )}
+
+          {livePreview ? <div className="mb-3 px-4">{livePreview}</div> : null}
 
           {post.mediaList && post.mediaList.length >= 2 ? (
             <div className="mb-3 px-4">
@@ -257,10 +267,14 @@ export function PostDetailModal({
       <PostShareModal
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
-        postId={post.id}
+        postId={originalPostId ?? post.id}
+        parentShareId={parentShareId}
         postContent={post.content}
         postImage={post.image}
-        onShareComplete={(count) => {
+        onShareComplete={(response) => {
+          const count = parentShareId != null && response.wrapperShareCount != null
+            ? response.wrapperShareCount
+            : response.shareCount;
           setShareCount(count);
           onShareAdded?.(count);
         }}

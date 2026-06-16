@@ -155,6 +155,21 @@
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+@keyframes welcome-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes welcome-float-delayed {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes welcome-pulse-glow {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.06); }
+}
+
 /* Reaction animations */
 @keyframes reaction-entrance {
   0%   { transform: scale(0.1) translateY(14px); opacity: 0; }
@@ -190,10 +205,25 @@
   .animate-logo-intro {
     animation: logoIntro 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
   }
+
+  .animate-welcome-float {
+    animation: welcome-float 5s ease-in-out infinite;
+  }
+
+  .animate-welcome-float-delayed {
+    animation: welcome-float-delayed 6s ease-in-out infinite 1s;
+  }
+
+  .animate-welcome-pulse-glow {
+    animation: welcome-pulse-glow 7s ease-in-out infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-logo-intro { animation: none; opacity: 1; transform: none; }
+  .animate-welcome-float,
+  .animate-welcome-float-delayed,
+  .animate-welcome-pulse-glow { animation: none; }
   @keyframes reaction-entrance { 0%, 100% { opacity: 1; transform: none; } }
   @keyframes reaction-pop      { 0%, 100% { transform: scale(1); } }
   @keyframes like-thump        { 0%, 100% { transform: scale(1); } }

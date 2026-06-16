@@ -30,16 +30,18 @@ interface PostShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   postId: string;
+  parentShareId?: string;
   postContent?: string;
   postImage?: string;
   isLivePost?: boolean;
-  onShareComplete?: (newShareCount: number) => void;
+  onShareComplete?: (response: import('@/services/postService').PostShareResponse) => void;
 }
 
 export function PostShareModal({
   isOpen,
   onClose,
   postId,
+  parentShareId,
   postContent,
   postImage,
   isLivePost = false,
@@ -150,8 +152,9 @@ export function PostShareModal({
         userId: currentUser.id,
         sharedContent: caption.trim() || undefined,
         privacy,
+        parentShareId,
       });
-      onShareComplete?.(response.shareCount);
+      onShareComplete?.(response);
       toast.success('Đã đăng bài chia sẻ lên bảng tin');
       handleClose();
     } catch (error) {

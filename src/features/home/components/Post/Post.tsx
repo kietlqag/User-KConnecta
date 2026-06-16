@@ -318,7 +318,7 @@ export function Post({
         postId={id}
         postContent={content}
         postImage={image}
-        onShareComplete={(count) => setShareCount(count)}
+        onShareComplete={(response) => setShareCount(response.shareCount)}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
