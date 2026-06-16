@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.kconnecta.user.backend.feature.policy.entity.PlatformPolicy;
 import project.kconnecta.user.backend.feature.policy.repository.PlatformPolicyRepository;
+import project.kconnecta.user.backend.feature.policy.service.impl.PolicyServiceImpl;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -61,7 +62,7 @@ class PolicyServiceMergeKeywordsTest {
     }
 
     @Test
-    void mergeDefaultKeywords_addsMissingAndSkipsDuplicates() {
+    void mergeDefaultKeywords_addsMissingAndSkipsDuplicates() throws Exception {
         var result = policyService.mergeDefaultKeywords("admin");
 
         assertThat(result.added()).isGreaterThan(0);
