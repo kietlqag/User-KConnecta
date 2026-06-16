@@ -11,6 +11,7 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
@@ -465,6 +466,7 @@ export function LivePostPreviewCard({
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Người quan tâm sự kiện</DialogTitle>
+            <DialogDescription className="sr-only">Danh sách người đăng ký nhắc nhở trước khi live bắt đầu</DialogDescription>
           </DialogHeader>
           {isSubscribersLoading ? (
             <p className="py-6 text-center text-sm text-gray-500">Đang tải...</p>

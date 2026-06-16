@@ -6,6 +6,7 @@ import Picker from '@emoji-mart/react';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -173,6 +174,7 @@ export function PostShareModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="sm:max-w-[500px] p-0 overflow-visible bg-white rounded-2xl border-none shadow-2xl">
+        <DialogDescription className="sr-only">Chia sẻ bài viết lên bảng tin hoặc gửi cho bạn bè</DialogDescription>
         {showFriendPicker ? (
           <>
             <DialogHeader className="p-4 border-b">
