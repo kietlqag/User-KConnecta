@@ -116,13 +116,17 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "    ) THEN 0.7 " +
         "    ELSE 0.5 " +
         "  END + " +
+        // Recency uses NOW() snapped to a 10-minute bucket (to_timestamp(floor(epoch/600)*600))
+        // so the ranking is STABLE across page fetches within a scroll session. Without this,
+        // NOW() advances between page 0 and page 1, scores drift, offset pages overlap/skip, and
+        // the same post can appear on two pages → duplicate React keys → feed scroll jumps.
         // w2=0.40 · time-weighted engagement: decay by sqrt(1 + age_weeks) so old viral posts don't dominate
         "  0.40 * LEAST(" +
         "    (COALESCE(pr_agg.cnt, 0) + COALESCE(pc_agg.cnt, 0) * 2.0 + COALESCE(ps_agg.cnt, 0) * 3.0) " +
-        "    / (100.0 * SQRT(1.0 + GREATEST(0, EXTRACT(EPOCH FROM (NOW() - COALESCE(p.published_at, p.created_at)))) / 604800.0)), " +
+        "    / (100.0 * SQRT(1.0 + GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 604800.0)), " +
         "    1.0) + " +
         // w3=0.40 · recency: exponential decay, half-life ≈ 6 hours
-        "  0.40 * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (NOW() - COALESCE(p.published_at, p.created_at)))) / 21600.0)))" +
+        "  0.40 * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 21600.0)))" +
         ") DESC, p.created_at DESC",
         countQuery =
         "SELECT count(*) FROM posts p " +

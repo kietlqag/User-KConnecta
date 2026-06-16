@@ -5,14 +5,14 @@ import org.springframework.context.ConfigurableApplicationContext;
 import project.kconnecta.user.backend.Application;
 
 /**
- * Chạy seed độc lập — KHÔNG chạy khi khởi động app bình thường.
+ * Chạy seed MEDIA (ảnh + video) độc lập — KHÔNG chạy khi khởi động app bình thường.
+ * Phần like/comment/share tách riêng ở {@link EngagementSeedRunner}.
  *
  * Boot Spring context như app thật nhưng trên cổng ngẫu nhiên (server.port=0)
  * để không đụng cổng nếu app đang chạy, gọi
- * {@link PostSeeder#seedEngagementForExistingPosts()} — thêm react/comment/share
- * ngẫu nhiên cho các post ĐÃ CÓ trong DB (bỏ qua post đã có engagement), và
- * {@link PostSeeder#fillMissingPostImages()} — gắn ảnh mẫu cho post chưa có ảnh/video,
- * rồi tự thoát.
+ * {@link PostSeeder#fillMissingPostImages()} — gắn ảnh mẫu ngẫu nhiên cho post chưa
+ * có ảnh/video, và {@link PostSeeder#convertSomePostsToVideo()} — chuyển ~20% post
+ * ảnh sang video, rồi tự thoát.
  *
  * Không tạo post mới, không xóa gì. Muốn xóa & seed lại toàn bộ post thì dùng
  * endpoint /api/internal/seed/posts?force=true.
@@ -35,7 +35,6 @@ public class SeedRunner {
                 .properties("server.port=0")
                 .run(args)) {
             PostSeeder seeder = ctx.getBean(PostSeeder.class);
-            seeder.seedEngagementForExistingPosts();
             seeder.fillMissingPostImages();
             seeder.convertSomePostsToVideo();
         }
