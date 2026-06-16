@@ -11,6 +11,7 @@ import {
   Lock,
   Check,
   AlertTriangle,
+  Pencil,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -58,6 +59,7 @@ interface PostMoreMenuProps {
   privacy?: Privacy;
   currentUserId?: string;
   onToggleSave?: () => void;
+  onEdit?: () => void;
   onDelete?: () => void;
   onPrivacyChange?: (privacy: Privacy) => void;
   className?: string;
@@ -70,6 +72,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   privacy = 'PUBLIC',
   currentUserId,
   onToggleSave,
+  onEdit,
   onDelete,
   onPrivacyChange,
   className,
@@ -213,6 +216,21 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
 
         {isOwner && (
           <>
+            <div className="my-1 border-t border-gray-100" />
+
+            <DropdownMenuItem
+              className="flex items-start gap-3 p-3 cursor-pointer"
+              onClick={onEdit}
+            >
+              <div className="mt-1">
+                <Pencil className="w-6 h-6 text-gray-900" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-[15px]">Chỉnh sửa bài viết</span>
+                <span className="text-[13px] text-gray-500">Thay đổi nội dung hoặc ảnh/video.</span>
+              </div>
+            </DropdownMenuItem>
+
             <div className="my-1 border-t border-gray-100" />
 
             {/* Privacy submenu */}

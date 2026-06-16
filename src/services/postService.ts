@@ -25,6 +25,16 @@ export interface CreatePostPayload {
   promoted?: boolean;
 }
 
+export interface UpdatePostPayload {
+  content: string;
+  media?: CreatePostMediaRequest[];
+  privacy?: PostResponse['privacy'];
+  locationText?: string | null;
+  excludedUserIds?: string[];
+  allowedUserIds?: string[];
+  taggedUserIds?: string[];
+}
+
 export interface CreateCommentPayload {
   userId: string;
   content: string;
@@ -248,6 +258,8 @@ export const postService = {
     }
     return api.post<PostResponse>('/posts', data);
   },
+  updatePost: (postId: string, data: UpdatePostPayload) =>
+    api.put<PostResponse>(`/posts/${postId}`, data),
   uploadPostImage: (file: File, signal?: AbortSignal) => {
     const formData = new FormData();
     formData.append('file', file);

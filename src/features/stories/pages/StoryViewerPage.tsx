@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { storyService, type StoryResponse } from '@/services/storyService';
+import { resolveStoryTextSize } from '@/lib/storyShareText';
 import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
@@ -39,6 +40,7 @@ interface StorySlide {
   textSize: number | null;
   textPosX: number | null;
   textPosY: number | null;
+  linkedPostId: string | null;
   durationMs: number;
   createdAt: string;
 }
@@ -80,6 +82,7 @@ function groupStoriesByUser(stories: StoryResponse[]): StoryAuthor[] {
       textSize: s.textSize,
       textPosX: s.textPosX,
       textPosY: s.textPosY,
+      linkedPostId: s.linkedPostId ?? null,
       durationMs: 5000,
       createdAt: s.createdAt,
     });
@@ -270,6 +273,11 @@ export function StoryViewerPage() {
     progressRef.current = 0;
   };
 
+  const handleOpenLinkedPost = useCallback(() => {
+    if (!slide?.linkedPostId) return;
+    navigate(`/home?post=${encodeURIComponent(slide.linkedPostId)}`);
+  }, [navigate, slide?.linkedPostId]);
+
   if (loading) {
     return (
       <div className="flex h-screen bg-black items-center justify-center">
@@ -420,18 +428,18 @@ export function StoryViewerPage() {
           {/* Text overlay */}
           {slide.textContent && (
             <div
-              className="absolute z-20 -translate-x-1/2 -translate-y-1/2 px-3 max-w-[80%]"
+              className="absolute z-20 -translate-x-1/2 -translate-y-1/2 px-3 max-w-[85%]"
               style={{
                 left: `${slide.textPosX ?? 50}%`,
                 top: `${slide.textPosY ?? 50}%`,
               }}
             >
               <p
-                className="font-bold text-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] whitespace-pre-wrap"
+                className="font-bold text-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] whitespace-pre-wrap break-words"
                 style={{
                   color: slide.textColor || '#ffffff',
-                  fontSize: `${slide.textSize || 48}px`,
-                  lineHeight: 1.1,
+                  fontSize: `${resolveStoryTextSize(slide.textContent, slide.textSize)}px`,
+                  lineHeight: 1.2,
                 }}
               >
                 {slide.textContent}
@@ -542,10 +550,35 @@ export function StoryViewerPage() {
           </div>
 
           {/* Tap areas */}
-          <div className="absolute inset-0 z-10 flex">
-            <div className="flex-1 cursor-pointer" onClick={goPrevSlide} />
-            <div className="flex-1 cursor-pointer" onClick={goNextSlide} />
-          </div>
+          {slide.linkedPostId ? (
+            <div className="absolute inset-0 z-10 flex">
+              <div className="w-[18%] cursor-pointer" onClick={goPrevSlide} />
+              <div
+                className="flex-1 cursor-pointer"
+                onClick={handleOpenLinkedPost}
+                title="Xem bài viết live"
+              />
+              <div className="w-[18%] cursor-pointer" onClick={goNextSlide} />
+            </div>
+          ) : (
+            <div className="absolute inset-0 z-10 flex">
+              <div className="flex-1 cursor-pointer" onClick={goPrevSlide} />
+              <div className="flex-1 cursor-pointer" onClick={goNextSlide} />
+            </div>
+          )}
+
+          {slide.linkedPostId ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenLinkedPost();
+              }}
+              className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-900 shadow-lg transition hover:bg-white cursor-pointer"
+            >
+              Xem bài live
+            </button>
+          ) : null}
 
           {/* Floating emoji reactions */}
           {floatingEmojis.map(({ id, emoji, x }) => (

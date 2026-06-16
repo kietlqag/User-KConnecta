@@ -1,0 +1,422 @@
+import { useEffect, useRef, useState } from 'react';
+import { X, Image, Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
+import { authService } from '@/services/authService';
+import { postService, type CreatePostMediaRequest } from '@/services/postService';
+import { compressImage } from '@/utils/imageUtils';
+import { CurrentUserAvatar } from '@/components/shared';
+import { usePublicPolicies } from '@/hooks/usePublicPolicies';
+import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidation';
+import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
+
+const MODERATION_URL = import.meta.env.VITE_MODERATION_URL
+  ?? 'http://localhost:8082/api/v1/internal/moderation/check';
+
+const AI_BLOCK_CATEGORIES = new Set([
+  'sexual/minors',
+  'violence/graphic',
+  'hate/threatening',
+  'illicit/violent',
+  'self-harm/instructions',
+]);
+
+async function checkAiModeration(text: string): Promise<string | null> {
+  try {
+    const res = await fetch(MODERATION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, imageUrl: null }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as { flagged: boolean; categories: Record<string, boolean> };
+    if (!data.flagged) return null;
+    const flaggedCats = Object.entries(data.categories).filter(([, v]) => v).map(([k]) => k);
+    const blockedCats = flaggedCats.filter((c) => AI_BLOCK_CATEGORIES.has(c));
+    if (blockedCats.length > 0) {
+      return `Không thể lưu thay đổi bài viết. Lý do: nội dung vi phạm tiêu chuẩn cộng đồng (${blockedCats.join(', ')}). Vui lòng chỉnh sửa và thử lại.`;
+    }
+    toast.warning(`Cảnh báo AI: Nội dung có dấu hiệu ${flaggedCats.join(', ')} — vui lòng cân nhắc trước khi lưu`);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+type MediaItem = {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  previewUrl: string;
+  isExisting: boolean;
+  file?: File;
+  uploading?: boolean;
+  uploadFailed?: boolean;
+};
+
+export interface EditPostModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  postId: string;
+  initialContent: string;
+  initialMedia: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+  onPostUpdated?: (data: {
+    content: string;
+    mediaList: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+  }) => void;
+}
+
+export function EditPostModal({
+  isOpen,
+  onClose,
+  postId,
+  initialContent,
+  initialMedia,
+  onPostUpdated,
+}: EditPostModalProps) {
+  const [content, setContent] = useState(initialContent);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadPromisesRef = useRef<Map<string, Promise<string>>>(new Map());
+  const uploadControllersRef = useRef<Map<string, AbortController>>(new Map());
+  const { data: publicPolicy } = usePublicPolicies();
+  const queryClient = useQueryClient();
+  const currentUser = authService.getCurrentUser();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setContent(initialContent);
+    setMediaItems(
+      initialMedia.map((m, i) => ({
+        id: `existing-${i}-${m.url}`,
+        type: m.type === 'VIDEO' ? 'video' : 'image',
+        url: m.url,
+        previewUrl: m.url,
+        isExisting: true,
+      })),
+    );
+  }, [isOpen, initialContent, initialMedia]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+
+    const newItems: MediaItem[] = files.map((file) => {
+      const isVideo = file.type.startsWith('video/');
+      return {
+        id: `new-${Date.now()}-${Math.random()}`,
+        type: isVideo ? 'video' : 'image',
+        url: '',
+        previewUrl: URL.createObjectURL(file),
+        isExisting: false,
+        file,
+        uploading: true,
+      };
+    });
+
+    setMediaItems((prev) => [...prev, ...newItems]);
+
+    newItems.forEach((item) => {
+      if (!item.file) return;
+      const controller = new AbortController();
+      uploadControllersRef.current.set(item.id, controller);
+
+      const promise = (item.type === 'video'
+        ? postService.uploadPostImage(item.file, controller.signal)
+        : compressImage(item.file).then((compressed) => postService.uploadPostImage(compressed, controller.signal))
+      )
+        .then((res) => {
+          uploadControllersRef.current.delete(item.id);
+          setMediaItems((prev) =>
+            prev.map((m) =>
+              m.id === item.id ? { ...m, url: res.url, uploading: false } : m,
+            ),
+          );
+          return res.url;
+        })
+        .catch((err) => {
+          uploadControllersRef.current.delete(item.id);
+          if (err instanceof Error && err.name === 'AbortError') return '';
+          setMediaItems((prev) =>
+            prev.map((m) =>
+              m.id === item.id ? { ...m, uploading: false, uploadFailed: true } : m,
+            ),
+          );
+          return '';
+        });
+
+      uploadPromisesRef.current.set(item.id, promise);
+    });
+
+    e.target.value = '';
+  };
+
+  const removeMedia = (id: string) => {
+    uploadControllersRef.current.get(id)?.abort();
+    uploadControllersRef.current.delete(id);
+    uploadPromisesRef.current.delete(id);
+
+    setMediaItems((prev) => {
+      const removed = prev.find((m) => m.id === id);
+      if (removed && !removed.isExisting) {
+        URL.revokeObjectURL(removed.previewUrl);
+        if (removed.url) {
+          postService.deletePostMedia(removed.url).catch(() => {});
+        }
+      }
+      return prev.filter((m) => m.id !== id);
+    });
+  };
+
+  const handleClose = () => {
+    if (isSaving) return;
+    uploadControllersRef.current.forEach((controller) => controller.abort());
+    uploadControllersRef.current.clear();
+    uploadPromisesRef.current.clear();
+
+    mediaItems.forEach((item) => {
+      if (!item.isExisting) {
+        URL.revokeObjectURL(item.previewUrl);
+        if (item.url) {
+          postService.deletePostMedia(item.url).catch(() => {});
+        }
+      }
+    });
+
+    onClose();
+  };
+
+  const handleSave = async () => {
+    if (!currentUser?.id) {
+      toast.error('Bạn cần đăng nhập để chỉnh sửa bài viết');
+      return;
+    }
+    if (!content.trim() && mediaItems.length === 0) {
+      toast.error('Bài viết phải có nội dung hoặc ảnh/video');
+      return;
+    }
+
+    const failedUploads = mediaItems.filter((m) => m.uploadFailed);
+    if (failedUploads.length > 0) {
+      toast.error('Một số ảnh/video tải lên thất bại. Vui lòng xóa và chọn lại.');
+      return;
+    }
+
+    const stillUploading = mediaItems.some((m) => m.uploading);
+    if (stillUploading) {
+      toast.error('Vui lòng đợi ảnh/video tải lên xong');
+      return;
+    }
+
+    const policyError = validatePostAgainstPolicy(
+      content.trim(),
+      mediaItems.length,
+      publicPolicy,
+      'edit',
+    );
+    if (policyError) {
+      toast.error(policyError);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const aiError = await checkAiModeration(content.trim());
+      if (aiError) {
+        toast.error(aiError);
+        return;
+      }
+
+      const media: CreatePostMediaRequest[] = mediaItems.map((m, i) => ({
+        mediaType: m.type === 'video' ? 'VIDEO' : 'IMAGE',
+        fileUrl: m.url,
+        sortOrder: i,
+      }));
+
+      const updated = await postService.updatePost(postId, {
+        content: content.trim(),
+        media,
+      });
+
+      const updatedMediaList = (updated.media ?? []).map((m) => ({
+        type: m.mediaType,
+        url: m.mediaUrl || m.fileUrl || '',
+      }));
+
+      onPostUpdated?.({
+        content: updated.content || '',
+        mediaList: updatedMediaList,
+      });
+
+      void queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
+      toast.success('Đã cập nhật bài viết');
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error && error.message
+        ? error.message
+        : 'Không thể lưu thay đổi bài viết. Vui lòng thử lại sau.';
+      toast.error(message, { duration: 6000 });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="relative flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
+        {isSaving && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-white/80 backdrop-blur-[2px] dark:bg-gray-800/80">
+            <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang lưu thay đổi...</p>
+          </div>
+        )}
+
+        <div className="relative flex shrink-0 items-center justify-center border-b border-gray-200 p-4 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Chỉnh sửa bài viết</h2>
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={isSaving}
+            className="absolute right-4 rounded-full p-2 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-700"
+          >
+            <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+          <div className="mb-4 flex items-center gap-3">
+            <CurrentUserAvatar />
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              {currentUser?.fullName || currentUser?.username || 'Bạn'}
+            </h3>
+          </div>
+
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Bạn đang nghĩ gì?"
+            disabled={isSaving}
+            className="min-h-[120px] w-full resize-none border-none bg-transparent text-xl text-gray-900 outline-none placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white dark:placeholder:text-gray-500"
+            autoFocus
+          />
+
+          {publicPolicy && (() => {
+            const max = publicPolicy.postPolicy.maxPostLength;
+            const len = content.length;
+            const ratio = len / max;
+            return (
+              <div className={`text-right text-xs ${
+                ratio >= 1 ? 'font-medium text-red-500' : ratio >= 0.9 ? 'text-orange-500' : 'text-gray-400'
+              }`}>
+                {len} / {max}
+              </div>
+            );
+          })()}
+
+          {(() => {
+            const err = checkKeywords(content, publicPolicy, 'edit');
+            return err ? (
+              <div className="mt-1 flex items-center gap-1.5 rounded-md bg-red-50 px-2.5 py-1.5 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {err}
+              </div>
+            ) : null;
+          })()}
+
+          {mediaItems.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              {mediaItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-black dark:border-gray-600"
+                >
+                  {item.type === 'video' ? (
+                    <video
+                      src={item.previewUrl}
+                      className="h-full w-full object-contain"
+                      controls
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={item.previewUrl}
+                      alt=""
+                      className="h-full w-full object-contain"
+                    />
+                  )}
+                  {item.uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                      <Loader2 className="h-8 w-8 animate-spin text-white" />
+                    </div>
+                  )}
+                  {item.uploadFailed && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-red-900/60 p-2 text-center text-xs text-white">
+                      Tải lên thất bại
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeMedia(item.id)}
+                    disabled={isSaving}
+                    className="absolute right-2 top-2 rounded-full bg-white/90 p-1 text-gray-700 shadow hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSaving}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            <Image className="h-4 w-4" />
+            Thêm ảnh/video
+          </button>
+        </div>
+
+        <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-700">
+          <button
+            type="button"
+            disabled={isSaving || (!content.trim() && mediaItems.length === 0)}
+            onClick={() => void handleSave()}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Đang lưu...
+              </>
+            ) : (
+              'Lưu thay đổi'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

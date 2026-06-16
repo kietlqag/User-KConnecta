@@ -37,6 +37,7 @@ export function ReactionSummaryDialog({
   const [reactionUsers, setReactionUsers] = useState<PostReactionUserResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showMoreOpen, setShowMoreOpen] = useState(false);
 
   useEffect(() => {
     setResolvedCounts(reactionCounts);
@@ -101,7 +102,7 @@ export function ReactionSummaryDialog({
             Hiển thị tổng số cảm xúc và danh sách người dùng theo từng loại cảm xúc.
           </DialogDescription>
 
-          <div className="flex items-center gap-5 pr-10">
+          <div className="flex items-center gap-5 pr-10 relative">
             <button
               type="button"
               onClick={() => setActiveFilter('ALL')}
@@ -119,7 +120,10 @@ export function ReactionSummaryDialog({
               <button
                 key={reaction.type}
                 type="button"
-                onClick={() => setActiveFilter(reaction.type)}
+                onClick={() => {
+                  setActiveFilter(reaction.type);
+                  setShowMoreOpen(false);
+                }}
                 className={cn(
                   'flex items-center gap-1.5 border-b-[3px] pb-3 text-[16px] font-semibold transition-colors',
                   activeFilter === reaction.type
@@ -135,11 +139,37 @@ export function ReactionSummaryDialog({
             {activeReactions.length > 3 && (
               <button
                 type="button"
+                onClick={() => setShowMoreOpen((open) => !open)}
                 className="flex items-center gap-1 border-b-[3px] border-transparent pb-3 text-[16px] font-semibold text-gray-500 hover:text-gray-800"
               >
                 <span>Xem thêm</span>
                 <ChevronDown className="h-4 w-4" />
               </button>
+            )}
+
+            {activeReactions.length > 3 && showMoreOpen && (
+              <div className="absolute left-[120px] top-[52px] z-20 min-w-[160px] rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                {activeReactions.slice(3).map((reaction) => (
+                  <button
+                    key={reaction.type}
+                    type="button"
+                    onClick={() => {
+                      setActiveFilter(reaction.type);
+                      setShowMoreOpen(false);
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-2 px-3 py-2 text-left text-[14px]',
+                      activeFilter === reaction.type
+                        ? 'bg-blue-50 font-semibold text-gray-900'
+                        : 'text-gray-700 hover:bg-gray-100',
+                    )}
+                  >
+                    <img src={reaction.emoji} alt={reaction.label} width={18} height={18} draggable={false} />
+                    <span className="flex-1 truncate">{reaction.label}</span>
+                    <span className="text-[13px] text-gray-500">{resolvedCounts[reaction.type]}</span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </DialogHeader>

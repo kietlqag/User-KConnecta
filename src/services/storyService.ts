@@ -15,6 +15,7 @@ export interface StoryResponse {
   textPosY: number | null;
   musicTrackId: string | null;
   altText: string | null;
+  linkedPostId: string | null;
   createdAt: string;
   expiresAt: string;
   active: boolean;
@@ -37,6 +38,7 @@ export const storyService = {
     altText?: string;
     backgroundColor?: string;
     sharedImageUrl?: string;
+    linkedPostId?: string;
   }) => {
     const formData = new FormData();
     formData.append('userId', params.userId);
@@ -50,6 +52,7 @@ export const storyService = {
     if (params.altText) formData.append('altText', params.altText);
     if (params.backgroundColor) formData.append('backgroundColor', params.backgroundColor);
     if (params.sharedImageUrl) formData.append('sharedImageUrl', params.sharedImageUrl);
+    if (params.linkedPostId) formData.append('linkedPostId', params.linkedPostId);
     return api.postMultipart<StoryResponse>('/stories', formData);
   },
 

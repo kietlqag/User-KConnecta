@@ -2,10 +2,35 @@ import type { PublicPolicyResponse } from '@/types/policy';
 
 const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 
+export type PostPolicyAction = 'create' | 'edit';
+
+function keywordCategoryReason(category: string): string {
+  switch (category) {
+    case 'blacklist':
+    case 'banned':
+      return 'chứa từ ngữ bị cấm theo quy tắc cộng đồng';
+    case 'watchlist':
+      return 'chứa ngôn từ nhạy cảm hoặc không phù hợp tiêu chuẩn cộng đồng';
+    case 'blocked_domain':
+      return 'chứa liên kết hoặc tên miền không được phép';
+    default:
+      return 'chứa nội dung không được phép';
+  }
+}
+
+export function buildPostPolicyViolationMessage(
+  category: string,
+  action: PostPolicyAction = 'create',
+): string {
+  const actionPhrase = action === 'edit' ? 'lưu thay đổi bài viết' : 'đăng bài viết';
+  return `Không thể ${actionPhrase}. Lý do: nội dung ${keywordCategoryReason(category)}. Vui lòng chỉnh sửa và thử lại.`;
+}
+
 export function validatePostAgainstPolicy(
   content: string,
   mediaCount: number,
-  policy: PublicPolicyResponse | undefined
+  policy: PublicPolicyResponse | undefined,
+  action: PostPolicyAction = 'create',
 ): string | null {
   if (!policy) return null;
 
@@ -19,7 +44,7 @@ export function validatePostAgainstPolicy(
     return `Tối đa ${maxImagesPerPost} ảnh/video mỗi bài`;
   }
 
-  return validateTextKeywords(text, policy);
+  return validateTextKeywords(text, policy, action);
 }
 
 export function validateChatAgainstPolicy(
@@ -48,15 +73,17 @@ export function validateChatAgainstPolicy(
 
 export function checkKeywords(
   text: string,
-  policy: PublicPolicyResponse | undefined
+  policy: PublicPolicyResponse | undefined,
+  action: PostPolicyAction = 'create',
 ): string | null {
   if (!policy) return null;
-  return validateTextKeywords(text, policy);
+  return validateTextKeywords(text, policy, action);
 }
 
 function validateTextKeywords(
   text: string,
-  policy: PublicPolicyResponse
+  policy: PublicPolicyResponse,
+  action: PostPolicyAction = 'create',
 ): string | null {
   const keywords = policy.fullConfig?.keywords;
   if (!Array.isArray(keywords)) return null;
@@ -65,9 +92,9 @@ function validateTextKeywords(
   for (const kw of keywords as { value?: string; category?: string }[]) {
     const value = (kw.value ?? '').toLowerCase();
     const category = kw.category ?? '';
-    if (!value || category === 'blocked_domain') continue;
+    if (!value) continue;
     if (normalized.includes(value)) {
-      return 'Nội dung chứa từ khóa không được phép';
+      return buildPostPolicyViolationMessage(category, action);
     }
   }
   return null;

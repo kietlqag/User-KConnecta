@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authService, AuthUser } from '@/services/authService';
 import { useCreateStoryMutation } from '@/features/stories/hooks/useStories';
+import { estimateStoryTextSize } from '@/lib/storyShareText';
 import bgImg1 from './backgroundImage/000ecac94d4fa09a8369747056ce72f0.jpg';
 import bgImg2 from './backgroundImage/2886e1de8d8637a139478d903feb0643.jpg';
 import bgImg3 from './backgroundImage/60b39f8c265cc15e17009e2b539249c7.jpg';
@@ -96,8 +97,10 @@ export function CreateStoryPage() {
   const userFullName = currentUser?.fullName || 'Khang Nguyen';
 
   // State from share-to-story: a remote image URL or plain text pre-filled from a post
-  const sharedImageUrl = (location.state as { sharedImageUrl?: string | null; sharedText?: string | null } | null)?.sharedImageUrl ?? null;
-  const sharedText = (location.state as { sharedImageUrl?: string | null; sharedText?: string | null } | null)?.sharedText ?? null;
+  const sharedImageUrl = (location.state as { sharedImageUrl?: string | null; sharedText?: string | null; sharedIsLive?: boolean; sharedPostId?: string | null } | null)?.sharedImageUrl ?? null;
+  const sharedText = (location.state as { sharedImageUrl?: string | null; sharedText?: string | null; sharedIsLive?: boolean; sharedPostId?: string | null } | null)?.sharedText ?? null;
+  const sharedIsLive = (location.state as { sharedIsLive?: boolean } | null)?.sharedIsLive ?? false;
+  const linkedPostId = (location.state as { sharedPostId?: string | null } | null)?.sharedPostId ?? null;
 
   const imageInputRef = useRef<HTMLInputElement>(null);
   const previewFrameRef = useRef<HTMLDivElement>(null);
@@ -145,11 +148,14 @@ export function CreateStoryPage() {
       setActiveTool('text');
       setStoryText('');
     } else if (sharedText) {
+      const normalizedText = sharedText.trim();
+      const fittedSize = estimateStoryTextSize(normalizedText);
       setIsTextStoryMode(true);
       setActiveTool('background');
-      setStoryText(sharedText);
-      setTextPosition({ x: 50, y: 50 });
-      setSelectedBg(DEFAULT_BG);
+      setStoryText(normalizedText);
+      setTextSize(fittedSize);
+      setTextPosition({ x: 50, y: sharedIsLive ? 46 : 50 });
+      setSelectedBg(sharedIsLive ? { type: 'gradient', value: bgPresets[0].value } : DEFAULT_BG);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -225,6 +231,7 @@ export function CreateStoryPage() {
       musicTrackId: selectedTrackId ?? undefined,
       altText: altText.trim() || undefined,
       backgroundColor: isTextStoryMode ? selectedBg.value : undefined,
+      linkedPostId: linkedPostId ?? undefined,
     });
 
     navigate('/home');
@@ -982,14 +989,13 @@ export function CreateStoryPage() {
                         onFocus={() => setIsEditingText(true)}
                         onBlur={() => setIsEditingText(false)}
                         onInput={handleStoryTextInput}
-                        className="relative px-2 text-center font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] outline-none"
+                        className="relative px-2 text-center font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] outline-none max-w-[88%] mx-auto whitespace-pre-wrap break-words"
                         style={{
                           fontSize: `${textSize}px`,
                           color: textColor,
-                          lineHeight: 1.05,
+                          lineHeight: 1.2,
                           minHeight: '1.2em',
                           minWidth: '1ch',
-                          whiteSpace: 'nowrap',
                           opacity: isPlaceholderText ? 0.45 : 1,
                         }}
                       >

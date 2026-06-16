@@ -28,6 +28,7 @@ import { formatScheduledDisplayFromIso, isScheduledSessionDue } from '@/features
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { PostDetailModal } from '../posts/PostDetailModal';
 import { PostShareModal } from '../posts/PostShareModal';
+import { EditPostModal } from '../posts/EditPostModal';
 import {
   Dialog,
   DialogContent,
@@ -138,6 +139,15 @@ export function Post({
 }: PostProps) {
   // For share wrappers, all API interactions target the original post
   const targetPostId = sharedPost && originalPost ? originalPost.id : id;
+  const livePostId =
+    sharedPost && originalPost?.isLivePost
+      ? originalPost.id
+      : !sharedPost && isLivePost
+        ? id
+        : null;
+  const showLiveCard = livePostId != null;
+  const liveCardContent =
+    sharedPost && originalPost?.isLivePost ? originalPost.content : content;
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(initialIsLiked || !!currentUserReactionType);
   const [likeCount, setLikeCount] = useState(likes);
@@ -155,8 +165,16 @@ export function Post({
   const [isReacting, setIsReacting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [displayContent, setDisplayContent] = useState(content);
+  const [displayMediaList, setDisplayMediaList] = useState(mediaList);
   const [currentPrivacy, setCurrentPrivacy] = useState<Privacy>(initialPrivacy);
   const currentUser = authService.getCurrentUser();
+
+  useEffect(() => {
+    setDisplayContent(content);
+    setDisplayMediaList(mediaList);
+  }, [content, mediaList, id]);
 
   useEffect(() => {
     setCurrentPrivacy(initialPrivacy);
@@ -193,15 +211,15 @@ export function Post({
 
   const galleryItems = useMemo((): PostGalleryItem[] => {
     const raw: PostGalleryItem[] =
-      mediaList.length > 0
-        ? mediaList
+      displayMediaList.length > 0
+        ? displayMediaList
         : media?.url
           ? [{ type: media.type === 'video' ? 'VIDEO' : 'IMAGE', url: media.url }]
           : image
             ? [{ type: 'IMAGE', url: image }]
             : [];
     return raw.filter((x) => Boolean(x.url?.trim()));
-  }, [mediaList, media, image]);
+  }, [displayMediaList, media, image]);
 
   const imagesOnly = useMemo(
     () => galleryItems.filter((m) => m.type === 'IMAGE').map((m) => m.url),
@@ -251,11 +269,11 @@ export function Post({
   }, [lightboxIndex, isLightboxOpen]);
 
   useEffect(() => {
-    if (!isLivePost) return;
+    if (!showLiveCard || !livePostId) return;
     let cancelled = false;
     const loadLiveStatus = async () => {
       try {
-        const session = await liveService.getSessionByPost(id);
+        const session = await liveService.getSessionByPost(livePostId);
         if (!cancelled) {
           setLiveSession(session);
           setLiveSessionStatus(session.status);
@@ -275,10 +293,10 @@ export function Post({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [id, isLivePost]);
+  }, [livePostId, showLiveCard]);
 
   useEffect(() => {
-    if (!isLivePost || liveSessionStatus !== 'LIVE' || !currentUser?.id) return;
+    if (!showLiveCard || !livePostId || liveSessionStatus !== 'LIVE' || !currentUser?.id) return;
     const root = livePreviewRootRef.current;
     if (!root) return;
 
@@ -319,7 +337,7 @@ export function Post({
       livePreviewConnectingRef.current = true;
       setIsLivePreviewConnecting(true);
       try {
-        const session = liveSession?.status === 'LIVE' ? liveSession : await liveService.getSessionByPost(id);
+        const session = liveSession?.status === 'LIVE' ? liveSession : await liveService.getSessionByPost(livePostId!);
         if (cancelled || session.status !== 'LIVE') {
           livePreviewConnectingRef.current = false;
           setIsLivePreviewConnecting(false);
@@ -330,7 +348,7 @@ export function Post({
         const nextRoom = new Room();
         room = nextRoom;
         livePreviewRoomRef.current = nextRoom;
-        window.dispatchEvent(new CustomEvent(LIVE_PREVIEW_ACTIVE_EVENT, { detail: { postId: id, sessionId: session.id } }));
+        window.dispatchEvent(new CustomEvent(LIVE_PREVIEW_ACTIVE_EVENT, { detail: { postId: livePostId, sessionId: session.id } }));
         nextRoom.on(RoomEvent.TrackSubscribed, attachTrack);
         await nextRoom.connect(token.livekitUrl, token.token);
         if (cancelled) return;
@@ -342,7 +360,7 @@ export function Post({
 
     const handleOtherPreview = (event: Event) => {
       const detail = (event as CustomEvent<{ postId?: string }>).detail;
-      if (detail?.postId && detail.postId !== id) {
+      if (detail?.postId && detail.postId !== livePostId) {
         disconnectPreview();
       }
     };
@@ -366,7 +384,7 @@ export function Post({
       observer.disconnect();
       disconnectPreview();
     };
-  }, [currentUser?.id, id, isLivePost, liveSession, liveSessionStatus]);
+  }, [currentUser?.id, livePostId, liveSession, liveSessionStatus, showLiveCard]);
 
   // Handle scroll lock
   useEffect(() => {
@@ -393,12 +411,12 @@ export function Post({
   const activeReactions = getActiveReactions(reactionCounts);
   const totalReactionCount = getTotalReactionCount(reactionCounts);
   const [liveTitle, liveDescription] = useMemo(() => {
-    const [title, ...rest] = (content || '').split(/\n\s*\n/);
+    const [title, ...rest] = (liveCardContent || '').split(/\n\s*\n/);
     return [title?.trim() || 'Video trực tiếp', rest.join('\n\n').trim()];
-  }, [content]);
+  }, [liveCardContent]);
   const liveReplayUrl = isLiveEnded && isPlayableUrl(liveSession?.playbackUrl) ? liveSession?.playbackUrl?.trim() : '';
   const isRecordingProcessing = isLiveEnded && liveSession?.recordingStatus === 'PROCESSING' && !liveReplayUrl;
-  const isRecordingFailed = isLiveEnded && liveSession?.recordingStatus === 'FAILED' && !liveReplayUrl;
+  const liveEndedWithoutReplay = isLiveEnded && !liveReplayUrl;
   const scheduledLiveAt = liveSessionStatus === 'SCHEDULED' && liveSession?.scheduledAt
     ? formatScheduledDisplayFromIso(liveSession.scheduledAt)
     : '';
@@ -412,7 +430,7 @@ export function Post({
         name: author.name,
         avatar: author.avatar,
       },
-      content,
+      content: displayContent,
       timestamp,
       likes: likeCount,
       comments: commentCount,
@@ -429,7 +447,7 @@ export function Post({
       author.avatar,
       author.name,
       commentCount,
-      content,
+      displayContent,
       currentPrivacy,
       currentUser?.id,
       galleryItems,
@@ -569,8 +587,9 @@ export function Post({
   };
 
   const handleOpenLive = async () => {
+    if (!livePostId) return;
     try {
-      const session = await liveService.getSessionByPost(id);
+      const session = await liveService.getSessionByPost(livePostId);
       setLiveSession(session);
       setLiveSessionStatus(session.status);
       setIsLiveSubscribed(Boolean(session.subscribedByCurrentUser));
@@ -584,14 +603,6 @@ export function Post({
       if (session.status === 'ENDED' || session.status === 'CANCELED') {
         if (isPlayableUrl(session.playbackUrl)) {
           navigate(`/live/viewer?sessionId=${encodeURIComponent(session.id)}`);
-          return;
-        }
-        if (session.recordingStatus === 'PROCESSING') {
-          toast.info('Bản ghi live đang được xử lý.');
-          return;
-        }
-        if (session.recordingStatus === 'FAILED') {
-          toast.error('Không thể tạo bản ghi phát lại cho phiên live này.');
           return;
         }
         toast.info('Live đã kết thúc.');
@@ -684,17 +695,18 @@ export function Post({
               privacy={currentPrivacy}
               currentUserId={currentUser?.id}
               onToggleSave={handleToggleSave}
+              onEdit={isOwner && !showLiveCard ? () => setEditModalOpen(true) : undefined}
               onDelete={() => setDeleteDialogOpen(true)}
               onPrivacyChange={setCurrentPrivacy}
             />
           </div>
 
-          {!isLivePost && content && (
-            <p className="text-gray-900 mb-3 whitespace-pre-wrap">{content}</p>
-          )}
+          {(displayContent && !showLiveCard) || (sharedPost && displayContent) ? (
+            <p className="text-gray-900 mb-3 whitespace-pre-wrap">{displayContent}</p>
+          ) : null}
 
-          {/* Embedded original post card for share wrappers */}
-          {sharedPost && originalPost && (() => {
+          {/* Embedded original post card for share wrappers (non-live) */}
+          {sharedPost && originalPost && !originalPost.isLivePost && (() => {
             const origMediaUrl = originalPost.media?.url || originalPost.image;
             const origIsVideo = originalPost.media?.type === 'video' ||
               (originalPost.mediaList ?? []).some((m) => m.type === 'VIDEO');
@@ -746,7 +758,7 @@ export function Post({
           })()}
         </div>
 
-        {!sharedPost && isLivePost ? (
+        {showLiveCard ? (
           <div className="px-4 pb-4">
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-zinc-950 shadow-sm">
               <button
@@ -781,7 +793,7 @@ export function Post({
                 />
                 <div className={`absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow ${isLiveEnded ? 'bg-gray-700' : 'bg-red-600'}`}>
                   <span className={`h-2 w-2 rounded-full bg-white ${isLiveEnded ? '' : 'animate-pulse'}`} />
-                  {scheduledLiveAt ? 'Đã lên lịch' : liveReplayUrl ? 'Phát lại' : isRecordingProcessing ? 'Đang xử lý' : isRecordingFailed ? 'Lỗi bản ghi' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
+                  {scheduledLiveAt ? 'Đã lên lịch' : liveReplayUrl ? 'Phát lại' : isLiveEnded ? 'Đã kết thúc' : isRecordingProcessing ? 'Đang xử lý' : 'Live'}
                 </div>
                 {isLivePreviewConnecting && (
                   <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/35">
@@ -812,17 +824,15 @@ export function Post({
                       ? `Bắt đầu lúc ${scheduledLiveAt}`
                       : liveReplayUrl
                         ? 'Xem lại phiên live'
-                        : isRecordingProcessing
-                          ? 'Bản ghi đang được xử lý'
-                          : isRecordingFailed
-                            ? 'Không thể tạo bản ghi phát lại'
-                            : isLiveEnded
-                              ? 'Live đã kết thúc'
-                              : isLivePreviewReady
-                                ? 'Đang phát trực tiếp'
-                                : isLivePreviewConnecting
-                                  ? 'Đang tải video live...'
-                                  : 'Đang phát trực tiếp'}
+                        : liveEndedWithoutReplay
+                          ? isRecordingProcessing
+                            ? 'Bản ghi đang được xử lý'
+                            : 'Live đã kết thúc'
+                          : isLivePreviewReady
+                            ? 'Đang phát trực tiếp'
+                            : isLivePreviewConnecting
+                              ? 'Đang tải video live...'
+                              : 'Đang phát trực tiếp'}
                   </div>
                   <h2 className="line-clamp-2 text-xl font-bold leading-tight">{liveTitle}</h2>
                   {liveDescription && <p className="mt-1 line-clamp-2 text-sm text-white/75">{liveDescription}</p>}
@@ -838,8 +848,10 @@ export function Post({
                         : scheduledLiveAt
                       : liveReplayUrl
                         ? 'Nhấn để xem lại phiên live đã phát'
-                        : isRecordingProcessing
-                          ? 'Vui lòng quay lại sau ít phút'
+                        : liveEndedWithoutReplay
+                          ? isRecordingProcessing
+                            ? 'Vui lòng quay lại sau ít phút'
+                            : 'Phiên live đã kết thúc'
                           : isLivePreviewReady
                             ? 'Video live đang phát ngay trên bảng tin'
                             : 'Nhấn để xem phiên live và tham gia bình luận'}
@@ -896,11 +908,11 @@ export function Post({
                   >
                     {liveReplayUrl
                       ? 'Xem lại'
-                      : isRecordingProcessing
-                        ? 'Đang xử lý'
-                        : isLiveEnded
-                          ? 'Đã kết thúc'
-                          : 'Xem trực tiếp'}
+                      : liveEndedWithoutReplay
+                        ? isRecordingProcessing
+                          ? 'Đang xử lý'
+                          : 'Đã kết thúc'
+                        : 'Xem trực tiếp'}
                   </button>
                 )}
               </div>
@@ -938,12 +950,18 @@ export function Post({
           </div>
         ) : null}
 
-        <div className="px-4 py-2 flex items-center justify-between text-sm text-gray-500">
+        <div
+          className="px-4 py-2 flex items-center justify-between text-sm text-gray-500"
+          onClick={() => setIsModalOpen(true)}
+        >
           <div className="flex items-center gap-2">
             {totalReactionCount > 0 && (
               <button
                 type="button"
-                onClick={() => setIsReactionSummaryOpen(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsReactionSummaryOpen(true);
+                }}
                 className="flex cursor-pointer items-center gap-2 hover:opacity-85"
               >
                 <div className="flex items-center -space-x-1">
@@ -961,8 +979,26 @@ export function Post({
             )}
           </div>
           <div className="flex items-center gap-4">
-            <span>{commentCount} bình luận</span>
-            <span>{shareCount} chia sẻ</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsModalOpen(true);
+              }}
+              className="cursor-pointer text-gray-500 hover:text-gray-800"
+            >
+              {commentCount} bình luận
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsShareModalOpen(true);
+              }}
+              className="cursor-pointer text-gray-500 hover:text-gray-800"
+            >
+              {shareCount} chia sẻ
+            </button>
           </div>
         </div>
 
@@ -1008,6 +1044,18 @@ export function Post({
         onReactionChange={handleReactionChange}
         isReacting={isReacting}
         onPrivacyChange={setCurrentPrivacy}
+        onEdit={
+          isOwner && !showLiveCard
+            ? () => {
+                setIsModalOpen(false);
+                setEditModalOpen(true);
+              }
+            : undefined
+        }
+        onDelete={() => {
+          setIsModalOpen(false);
+          setDeleteDialogOpen(true);
+        }}
       />
 
       <ReactionSummaryDialog
@@ -1163,11 +1211,24 @@ export function Post({
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         postId={targetPostId}
-        postContent={sharedPost && originalPost ? originalPost.content : content}
+        postContent={sharedPost && originalPost ? originalPost.content : displayContent}
         postImage={sharedPost && originalPost
           ? (originalPost.image || (originalPost.media?.type === 'image' ? originalPost.media.url : undefined))
           : (image || (media?.type === 'image' ? media.url : undefined))}
+        isLivePost={showLiveCard}
         onShareComplete={(count) => setShareCount(count)}
+      />
+
+      <EditPostModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        postId={id}
+        initialContent={displayContent}
+        initialMedia={galleryItems.map((g) => ({ type: g.type, url: g.url }))}
+        onPostUpdated={({ content: newContent, mediaList: newMediaList }) => {
+          setDisplayContent(newContent);
+          setDisplayMediaList(newMediaList);
+        }}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -62,6 +62,8 @@ interface PostDetailModalProps {
   onReactionChange?: (reaction: ReactionOption | null) => void;
   isReacting?: boolean;
   onPrivacyChange?: (privacy: Privacy) => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 export function PostDetailModal({
@@ -75,6 +77,8 @@ export function PostDetailModal({
   onReactionChange,
   isReacting = false,
   onPrivacyChange,
+  onEdit,
+  onDelete,
 }: PostDetailModalProps) {
   const [commentCount, setCommentCount] = useState(post.comments || 0);
   const [shareCount, setShareCount] = useState(post.shares || 0);
@@ -164,6 +168,8 @@ export function PostDetailModal({
                 isOwner={post.isOwner}
                 privacy={privacy}
                 currentUserId={post.currentUserId}
+                onEdit={onEdit}
+                onDelete={onDelete}
                 onPrivacyChange={(p) => {
                   setPrivacy(p);
                   onPrivacyChange?.(p);

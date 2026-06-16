@@ -14,6 +14,7 @@ import { useFriendConversations } from '@/features/messenger/hooks/useFriendConv
 import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
+import { formatLivePostStoryText } from '@/lib/storyShareText';
 
 const POST_SHARE_PREFIX = '__POST_SHARE__:';
 
@@ -31,6 +32,7 @@ interface PostShareModalProps {
   postId: string;
   postContent?: string;
   postImage?: string;
+  isLivePost?: boolean;
   onShareComplete?: (newShareCount: number) => void;
 }
 
@@ -40,11 +42,13 @@ export function PostShareModal({
   postId,
   postContent,
   postImage,
+  isLivePost = false,
   onShareComplete,
 }: PostShareModalProps) {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
   const [isSharingNow, setIsSharingNow] = useState(false);
+  const [sendingToUserId, setSendingToUserId] = useState<string | null>(null);
   const [showFriendPicker, setShowFriendPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [caption, setCaption] = useState('');
@@ -93,6 +97,7 @@ export function PostShareModal({
     setPrivacy('PUBLIC');
     setShowPrivacyMenu(false);
     setShowEmojiPicker(false);
+    setSendingToUserId(null);
     onClose();
   };
 
@@ -112,32 +117,29 @@ export function PostShareModal({
     }, 0);
   };
 
-  const handleSendToFriend = async (userId: string, userName: string) => {
-    const shareContent = `${POST_SHARE_PREFIX}${JSON.stringify({
+  const buildMessengerShareContent = () =>
+    `${POST_SHARE_PREFIX}${JSON.stringify({
       id: postId,
       content: postContent,
       image: postImage,
     })}`;
-    sendMessage(userId, shareContent);
 
-    if (currentUser) {
-      try {
-        const response = await postService.sharePost(postId, {
-          userId: currentUser.id,
-          sharedContent: caption.trim() || undefined,
-          privacy,
-        });
-        onShareComplete?.(response.shareCount);
-      } catch {
-        // Non-fatal: messenger message already sent
-      }
+  const handleSendToFriend = async (userId: string, userName: string) => {
+    if (sendingToUserId) return;
+
+    setSendingToUserId(userId);
+    try {
+      sendMessage(userId, buildMessengerShareContent());
+      toast.success(`Đã gửi cho ${userName} qua Messenger`);
+      handleClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể gửi qua Messenger');
+    } finally {
+      setSendingToUserId(null);
     }
-
-    toast.success(`Đã gửi cho ${userName}`);
-    handleClose();
   };
 
-  const handleShareNow = async () => {
+  const handleShareToFeed = async () => {
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để chia sẻ');
       return;
@@ -150,7 +152,7 @@ export function PostShareModal({
         privacy,
       });
       onShareComplete?.(response.shareCount);
-      toast.success('Đã chia sẻ bài viết');
+      toast.success('Đã đăng bài chia sẻ lên bảng tin');
       handleClose();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể chia sẻ bài viết');
@@ -217,10 +219,11 @@ export function PostShareModal({
                       <span className="flex-1 text-sm font-semibold text-gray-800 truncate">{conv.user.name}</span>
                       <button
                         type="button"
-                        onClick={() => handleSendToFriend(conv.user.id, conv.user.name)}
-                        className="shrink-0 rounded-full bg-indigo-100 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-200 transition-colors cursor-pointer"
+                        disabled={sendingToUserId === conv.user.id}
+                        onClick={() => void handleSendToFriend(conv.user.id, conv.user.name)}
+                        className="shrink-0 rounded-full bg-indigo-100 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-200 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        Gửi
+                        {sendingToUserId === conv.user.id ? 'Đang gửi...' : 'Gửi'}
                       </button>
                     </div>
                   ))
@@ -324,14 +327,14 @@ export function PostShareModal({
                 </div>
               </div>
 
-              {/* Share now button */}
+              {/* Đăng bài lên feed */}
               <button
                 type="button"
-                onClick={handleShareNow}
+                onClick={() => void handleShareToFeed()}
                 disabled={isSharingNow}
                 className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               >
-                {isSharingNow ? 'Đang chia sẻ...' : 'Chia sẻ ngay'}
+                {isSharingNow ? 'Đang đăng...' : 'Đăng bài'}
               </button>
 
               <div className="h-px bg-gray-100" />
@@ -357,8 +360,9 @@ export function PostShareModal({
                         <button
                           key={conv.id}
                           type="button"
-                          onClick={() => handleSendToFriend(conv.user.id, conv.user.name)}
-                          className="flex flex-col items-center gap-1.5 min-w-[64px] hover:opacity-80 transition-opacity cursor-pointer group"
+                          disabled={Boolean(sendingToUserId)}
+                          onClick={() => void handleSendToFriend(conv.user.id, conv.user.name)}
+                          className="flex flex-col items-center gap-1.5 min-w-[64px] hover:opacity-80 transition-opacity cursor-pointer group disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <div className="relative">
                             <img
@@ -405,7 +409,16 @@ export function PostShareModal({
                   onClick={() => {
                     handleClose();
                     navigate('/stories/create', {
-                      state: { sharedPostId: postId, sharedImageUrl: postImage || null, sharedText: postImage ? null : (postContent || null) },
+                      state: {
+                        sharedPostId: postId,
+                        sharedImageUrl: postImage || null,
+                        sharedText: postImage
+                          ? null
+                          : (isLivePost && postContent
+                            ? formatLivePostStoryText(postContent)
+                            : (postContent || null)),
+                        sharedIsLive: isLivePost,
+                      },
                     });
                   }}
                   className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
