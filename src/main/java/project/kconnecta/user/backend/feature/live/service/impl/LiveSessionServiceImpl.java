@@ -51,7 +51,7 @@ import java.util.UUID;
 public class LiveSessionServiceImpl implements LiveSessionService {
 
     private static final long VIEWER_HEARTBEAT_TIMEOUT_SECONDS = 45;
-    private static final long MAX_RECORDING_SIZE_BYTES = 100L * 1024L * 1024L;
+    private static final long MAX_RECORDING_SIZE_BYTES = 500L * 1024L * 1024L;
     private static final DateTimeFormatter SCHEDULED_AT_DISPLAY_FORMAT =
             DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
 
@@ -441,7 +441,10 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             throw new BadRequestException("Recording file is too large");
         }
         String contentType = file.getContentType();
-        if (contentType != null && !contentType.startsWith("video/")) {
+        if (contentType != null
+                && !contentType.startsWith("video/")
+                && !"application/octet-stream".equalsIgnoreCase(contentType)
+                && !"application/webm".equalsIgnoreCase(contentType)) {
             throw new BadRequestException("Unsupported recording content type");
         }
     }

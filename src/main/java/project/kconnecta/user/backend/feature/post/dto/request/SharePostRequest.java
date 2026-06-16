@@ -19,4 +19,7 @@ public class SharePostRequest {
     private String sharedContent;
 
     private PostPrivacy privacy;
+
+    /** When resharing from a timeline share wrapper, links to that share row. */
+    private UUID parentShareId;
 }

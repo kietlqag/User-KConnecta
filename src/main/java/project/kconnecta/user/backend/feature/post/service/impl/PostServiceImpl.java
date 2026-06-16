@@ -657,24 +657,36 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PostReactionResponse addReaction(UUID postId, AddReactionRequest request) {
-        Post post = getPost(postId);
+        InteractionTarget target = resolveInteractionTarget(postId);
         User user = getUser(request.getUserId(), "Reaction user not found");
 
-        PostReaction reaction = postReactionRepository.findByPostIdAndUserId(postId, request.getUserId())
-                .orElseGet(() -> PostReaction.builder().post(post).user(user).build());
+        PostReaction reaction;
+        if (target.isShare()) {
+            reaction = postReactionRepository.findByShareIdAndUserId(target.share().getId(), request.getUserId())
+                    .orElseGet(() -> PostReaction.builder()
+                            .post(target.post())
+                            .share(target.share())
+                            .user(user)
+                            .build());
+        } else {
+            reaction = postReactionRepository.findByPostIdAndUserId(target.post().getId(), request.getUserId())
+                    .orElseGet(() -> PostReaction.builder().post(target.post()).user(user).build());
+        }
         reaction.setReactionType(request.getReactionType());
 
         PostReaction saved = postReactionRepository.save(reaction);
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.REACTION_ADDED,
-                "{\"postId\":\"" + postId + "\",\"type\":\"" + request.getReactionType() + "\"}");
+                "{\"targetId\":\"" + target.getTargetId() + "\",\"type\":\"" + request.getReactionType() + "\"}");
 
-        // Push LIKE event → Queue → Listener creates notification FIFO
+        UUID recipientId = target.isShare()
+                ? target.share().getUser().getId()
+                : target.post().getAuthor().getId();
         notificationEventPublisher.publish(
                 user.getId(),
-                post.getAuthor().getId(),
+                recipientId,
                 NotificationType.LIKE,
-                user.getFullName() + " đã thích bài viết của bạn.",
-                post.getId()
+                user.getFullName() + (target.isShare() ? " đã thích bài chia sẻ của bạn." : " đã thích bài viết của bạn."),
+                target.getTargetId()
         );
 
         return PostReactionResponse.builder()
@@ -689,16 +701,22 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public void removeReaction(UUID postId, UUID userId) {
-        getPost(postId);
+        InteractionTarget target = resolveInteractionTarget(postId);
         getUser(userId, "Reaction user not found");
-        postReactionRepository.deleteByPostIdAndUserId(postId, userId);
+        if (target.isShare()) {
+            postReactionRepository.deleteByShareIdAndUserId(target.share().getId(), userId);
+        } else {
+            postReactionRepository.deleteByPostIdAndUserId(target.post().getId(), userId);
+        }
     }
 
     @Override
     @Transactional(readOnly = true)
     public PostReactionDetailsResponse getReactionDetails(UUID postId) {
-        Post post = getPost(postId);
-        List<PostReaction> reactions = postReactionRepository.findAllByPostIdOrderByCreatedAtDesc(postId);
+        InteractionTarget target = resolveInteractionTarget(postId);
+        List<PostReaction> reactions = target.isShare()
+                ? postReactionRepository.findAllByShareIdOrderByCreatedAtDesc(target.share().getId())
+                : postReactionRepository.findAllByPostIdOrderByCreatedAtDesc(target.post().getId());
 
         var countByType = reactions.stream()
                 .collect(Collectors.groupingBy(PostReaction::getReactionType, Collectors.counting()));
@@ -722,7 +740,7 @@ public class PostServiceImpl implements PostService {
                 .toList();
 
         return PostReactionDetailsResponse.builder()
-                .postId(post.getId())
+                .postId(target.getTargetId())
                 .totalCount(reactions.size())
                 .counts(counts)
                 .reactions(users)
@@ -757,21 +775,31 @@ public class PostServiceImpl implements PostService {
 
     /** Push COMMENT event → Queue → Listener creates notification FIFO. */
     private void publishCommentNotification(PostComment comment) {
+        boolean onShare = comment.getShare() != null;
+        UUID recipientId = onShare
+                ? comment.getShare().getUser().getId()
+                : comment.getPost().getAuthor().getId();
+        UUID referenceId = onShare ? comment.getShare().getId() : comment.getPost().getId();
         notificationEventPublisher.publish(
                 comment.getUser().getId(),
-                comment.getPost().getAuthor().getId(),
+                recipientId,
                 NotificationType.COMMENT,
-                comment.getUser().getFullName() + " đã bình luận về bài viết của bạn.",
-                comment.getPost().getId()
+                comment.getUser().getFullName() + (onShare ? " đã bình luận bài chia sẻ của bạn." : " đã bình luận về bài viết của bạn."),
+                referenceId
         );
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<PostCommentResponse> getComments(UUID postId, UUID currentUserId, Pageable pageable) {
-        getPost(postId);
+        InteractionTarget target = resolveInteractionTarget(postId);
+        if (target.isShare()) {
+            return postCommentRepository
+                    .findTopLevelVisibleByShareId(target.share().getId(), currentUserId, pageable)
+                    .map(comment -> toCommentResponse(comment, null, currentUserId));
+        }
         return postCommentRepository
-                .findTopLevelVisible(postId, currentUserId, pageable)
+                .findTopLevelVisible(target.post().getId(), currentUserId, pageable)
                 .map(comment -> toCommentResponse(comment, null, currentUserId));
     }
 
@@ -788,26 +816,32 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public PostCommentResponse addComment(UUID postId, CreateCommentRequest request) {
-        Post post = getPost(postId);
+        InteractionTarget target = resolveInteractionTarget(postId);
         User user = getUser(request.getUserId(), "Comment user not found");
 
         PostComment parentComment = null;
         if (request.getParentCommentId() != null) {
             parentComment = postCommentRepository.findById(request.getParentCommentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Parent comment not found"));
-            if (!parentComment.getPost().getId().equals(postId)) {
+            if (target.isShare()) {
+                if (parentComment.getShare() == null
+                        || !parentComment.getShare().getId().equals(target.share().getId())) {
+                    throw new ValidationException("Parent comment does not belong to this share");
+                }
+            } else if (parentComment.getShare() != null
+                    || !parentComment.getPost().getId().equals(target.post().getId())) {
                 throw new ValidationException("Parent comment does not belong to this post");
             }
         }
 
         policyContentValidator.validateComment(request.getContent());
 
-        // Tiền lọc rẻ (không AI): comment nghi ngờ → PENDING (ẩn) + chờ job nền gọi Gemini.
         CommentStatus status = policyContentValidator.isSuspect(request.getContent())
                 ? CommentStatus.PENDING : CommentStatus.APPROVED;
 
         PostComment saved = postCommentRepository.save(PostComment.builder()
-                .post(post)
+                .post(target.post())
+                .share(target.share())
                 .user(user)
                 .parentComment(parentComment)
                 .content(request.getContent().trim())
@@ -815,7 +849,7 @@ public class PostServiceImpl implements PostService {
                 .build());
 
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.COMMENT_ADDED,
-                "{\"postId\":\"" + postId + "\"}");
+                "{\"targetId\":\"" + target.getTargetId() + "\"}");
 
         // Hoãn notification cho comment PENDING — chỉ báo khi đã được duyệt (job nền sẽ gửi).
         if (status == CommentStatus.APPROVED) {
@@ -915,33 +949,49 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        if (!postShareRepository.existsByPostIdAndUserId(postId, request.getUserId())) {
-            PostPrivacy sharePrivacy = request.getPrivacy() != null ? request.getPrivacy() : PostPrivacy.PUBLIC;
-            postShareRepository.save(PostShare.builder()
-                    .post(post)
-                    .user(user)
-                    .sharedContent(trimToNull(request.getSharedContent()))
-                    .privacy(sharePrivacy)
-                    .build());
-
-            activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.POST_SHARED,
-                    "{\"postId\":\"" + postId + "\"}");
-
-            notificationEventPublisher.publish(
-                    user.getId(),
-                    post.getAuthor().getId(),
-                    NotificationType.SHARE,
-                    user.getFullName() + " đã chia sẻ bài viết của bạn.",
-                    post.getId()
-            );
+        PostShare resolvedParentShare = null;
+        if (request.getParentShareId() != null) {
+            resolvedParentShare = postShareRepository.findById(request.getParentShareId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Parent share not found"));
+            if (!resolvedParentShare.getPost().getId().equals(postId)) {
+                throw new ValidationException("Parent share does not belong to this post");
+            }
         }
 
+        if (postShareRepository.existsByPostIdAndUserId(postId, request.getUserId())) {
+            throw new ValidationException("Bạn đã chia sẻ bài viết này rồi");
+        }
+
+        PostPrivacy sharePrivacy = request.getPrivacy() != null ? request.getPrivacy() : PostPrivacy.PUBLIC;
+        postShareRepository.save(PostShare.builder()
+                .post(post)
+                .user(user)
+                .parentShare(resolvedParentShare)
+                .sharedContent(trimToNull(request.getSharedContent()))
+                .privacy(sharePrivacy)
+                .build());
+
+        activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.POST_SHARED,
+                "{\"postId\":\"" + postId + "\",\"parentShareId\":\"" + request.getParentShareId() + "\"}");
+
+        notificationEventPublisher.publish(
+                user.getId(),
+                post.getAuthor().getId(),
+                NotificationType.SHARE,
+                user.getFullName() + " đã chia sẻ bài viết của bạn.",
+                post.getId()
+        );
+
         long shareCount = postShareRepository.countByPostId(postId);
+        Long wrapperShareCount = request.getParentShareId() != null
+                ? postShareRepository.countByParentShareId(request.getParentShareId())
+                : null;
         return PostShareResponse.builder()
                 .postId(postId)
                 .userId(user.getId())
                 .userFullName(user.getFullName())
                 .shareCount(shareCount)
+                .wrapperShareCount(wrapperShareCount)
                 .build();
     }
 
@@ -1127,6 +1177,22 @@ public class PostServiceImpl implements PostService {
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + postId));
     }
 
+    private record InteractionTarget(Post post, PostShare share) {
+        boolean isShare() {
+            return share != null;
+        }
+
+        UUID getTargetId() {
+            return isShare() ? share.getId() : post.getId();
+        }
+    }
+
+    private InteractionTarget resolveInteractionTarget(UUID id) {
+        return postShareRepository.findById(id)
+                .map(share -> new InteractionTarget(share.getPost(), share))
+                .orElseGet(() -> new InteractionTarget(getPost(id), null));
+    }
+
     private User getUser(UUID userId, String message) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(message + ": " + userId));
@@ -1235,22 +1301,52 @@ public class PostServiceImpl implements PostService {
     private List<PostResponse> toShareWrappers(List<PostShare> shares, UUID currentUserId) {
         if (shares.isEmpty()) return Collections.emptyList();
 
-        List<Post> originalPosts = shares.stream()
+        List<Post> uniqueOriginalPosts = shares.stream()
                 .map(PostShare::getPost)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(Post::getId, p -> p, (p1, p2) -> p1))
+                .collect(Collectors.toMap(Post::getId, post -> post, (left, right) -> left))
                 .values()
                 .stream()
                 .toList();
-        List<PostResponse> originals = processPostsBulk(originalPosts, currentUserId);
+        List<PostResponse> originals = processPostsBulk(uniqueOriginalPosts, currentUserId);
         Map<UUID, PostResponse> byPostId = originals.stream()
-                .collect(Collectors.toMap(PostResponse::getId, r -> r, (existing, replacement) -> existing));
+                .collect(Collectors.toMap(PostResponse::getId, r -> r, (left, right) -> left));
+
+        List<UUID> shareIds = shares.stream().map(PostShare::getId).toList();
+        Map<UUID, Long> shareCommentCounts = postCommentRepository.countByShareIdIn(shareIds).stream()
+                .collect(Collectors.toMap(PostCommentRepository.ShareCountProjection::getShareId, PostCommentRepository.ShareCountProjection::getCount));
+        Map<UUID, Map<ReactionType, Long>> shareReactionCounts = postReactionRepository.findReactionCountsByShareIds(shareIds).stream()
+                .collect(Collectors.groupingBy(
+                        PostReactionRepository.ShareReactionCountProjection::getShareId,
+                        Collectors.toMap(
+                                PostReactionRepository.ShareReactionCountProjection::getReactionType,
+                                PostReactionRepository.ShareReactionCountProjection::getCount
+                        )
+                ));
+        Map<UUID, ReactionType> userShareReactions = currentUserId == null
+                ? Collections.emptyMap()
+                : postReactionRepository.findAllByUserIdAndShareIdIn(currentUserId, shareIds).stream()
+                        .collect(Collectors.toMap(r -> r.getShare().getId(), PostReaction::getReactionType));
+        Map<UUID, Long> wrapperShareCounts = shareIds.isEmpty()
+                ? Collections.emptyMap()
+                : postShareRepository.countByParentShareIdIn(shareIds).stream()
+                        .collect(Collectors.toMap(PostShareRepository.ParentShareCountProjection::getParentShareId, PostShareRepository.ParentShareCountProjection::getCount));
 
         return shares.stream()
                 .map(share -> {
                     PostResponse original = byPostId.get(share.getPost().getId());
                     if (original == null) return null;
                     User sharer = share.getUser();
+                    Map<ReactionType, Long> reactionMap = shareReactionCounts.getOrDefault(share.getId(), Collections.emptyMap());
+                    List<PostReactionCountResponse> reactionCounts = Arrays.stream(ReactionType.values())
+                            .map(reactionType -> PostReactionCountResponse.builder()
+                                    .reactionType(reactionType)
+                                    .count(reactionMap.getOrDefault(reactionType, 0L))
+                                    .build())
+                            .toList();
+                    long reactionTotal = reactionCounts.stream().mapToLong(PostReactionCountResponse::getCount).sum();
+                    long commentCount = shareCommentCounts.getOrDefault(share.getId(), 0L);
+                    ReactionType currentUserReaction = userShareReactions.get(share.getId());
                     return PostResponse.builder()
                             .id(share.getId())
                             .authorId(sharer.getId())
@@ -1263,13 +1359,12 @@ public class PostServiceImpl implements PostService {
                             .publishedAt(share.getCreatedAt())
                             .privacy(share.getPrivacy() != null ? share.getPrivacy() : PostPrivacy.PUBLIC)
                             .status(PostStatus.PUBLISHED)
-                            // Carry original post's engagement so action buttons show real numbers
-                            .reactionCount(original.getReactionCount())
-                            .reactionCounts(original.getReactionCounts())
-                            .currentUserReactionType(original.getCurrentUserReactionType())
+                            .reactionCount(reactionTotal)
+                            .reactionCounts(reactionCounts)
+                            .currentUserReactionType(currentUserReaction)
                             .savedByCurrentUser(original.isSavedByCurrentUser())
-                            .commentCount(original.getCommentCount())
-                            .shareCount(original.getShareCount())
+                            .commentCount(commentCount)
+                            .shareCount(wrapperShareCounts.getOrDefault(share.getId(), 0L))
                             .media(Collections.emptyList())
                             .excludedUserIds(Collections.emptyList())
                             .taggedUserIds(Collections.emptyList())

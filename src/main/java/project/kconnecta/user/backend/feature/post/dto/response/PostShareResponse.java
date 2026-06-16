@@ -16,4 +16,6 @@ public class PostShareResponse {
     private String sharedContent;
     private LocalDateTime createdAt;
     private long shareCount;
+    /** Reshare count on the parent share wrapper, when parentShareId was sent in the request. */
+    private Long wrapperShareCount;
 }
