@@ -6,7 +6,7 @@ export function usePublicPolicies() {
     queryKey: ['policies', 'public'],
     queryFn: () => policyService.getPublicPolicies(),
     staleTime: 0,
-    refetchInterval: 60 * 1000,
+    refetchInterval: 30 * 1000,
     refetchOnWindowFocus: true,
   });
 }

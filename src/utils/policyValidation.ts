@@ -4,8 +4,13 @@ const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 
 export type PostPolicyAction = 'create' | 'edit';
 
+function normalizeCategory(category: string): string {
+  if (category === 'sensitive') return 'watchlist';
+  return category;
+}
+
 function keywordCategoryReason(category: string): string {
-  switch (category) {
+  switch (normalizeCategory(category)) {
     case 'blacklist':
     case 'banned':
       return 'chứa từ ngữ bị cấm theo quy tắc cộng đồng';
@@ -91,8 +96,10 @@ function validateTextKeywords(
   const normalized = text.toLowerCase();
   for (const kw of keywords as { value?: string; category?: string }[]) {
     const value = (kw.value ?? '').toLowerCase();
-    const category = kw.category ?? '';
+    const category = normalizeCategory(kw.category ?? '');
     if (!value) continue;
+    // blocked_domain chỉ kiểm tra trong URL — khớp backend PolicyContentValidator
+    if (category === 'blocked_domain') continue;
     if (normalized.includes(value)) {
       return buildPostPolicyViolationMessage(category, action);
     }

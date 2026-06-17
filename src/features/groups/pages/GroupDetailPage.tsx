@@ -12,6 +12,7 @@ import {
   GroupTabBar,
   GroupMembersTab,
   GroupPlaceholderTab,
+  GroupMediaTab,
 } from '../components';
 import { GroupRequestsTab } from '../components/GroupRequestsTab/GroupRequestsTab';
 import {
@@ -214,6 +215,24 @@ export const GroupDetailPage = () => {
     setPreviewUrl(null);
     setSelectedFile(null);
   };
+
+  // Private groups hide content from non-approved members — applies to discussion and media.
+  const isPrivateLocked =
+    group?.privacy === 'private' && group.role !== 'ADMIN' && group.role !== 'MEMBER';
+
+  const privateLockScreen = (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 flex flex-col items-center justify-center min-h-[350px] text-center">
+      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+        <Lock className="w-8 h-8 text-gray-400" />
+      </div>
+      <h3 className="text-lg font-bold text-gray-900 mb-2">Nhóm riêng tư</h3>
+      <p className="text-gray-500 text-sm max-w-sm leading-relaxed">
+        {group?.role === 'PENDING'
+          ? 'Yêu cầu tham gia của bạn đang chờ quản trị viên phê duyệt.'
+          : 'Chỉ thành viên được phê duyệt mới xem được nội dung nhóm này.'}
+      </p>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -486,19 +505,7 @@ export const GroupDetailPage = () => {
                )}
 
                {activeTab === 'discussion' && groupId && (
-                 group?.privacy === 'private' && group.role !== 'ADMIN' && group.role !== 'MEMBER' ? (
-                   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 flex flex-col items-center justify-center min-h-[350px] text-center">
-                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                       <Lock className="w-8 h-8 text-gray-400" />
-                     </div>
-                     <h3 className="text-lg font-bold text-gray-900 mb-2">Nhóm riêng tư</h3>
-                     <p className="text-gray-500 text-sm max-w-sm leading-relaxed">
-                       {group.role === 'PENDING'
-                         ? 'Yêu cầu tham gia của bạn đang chờ quản trị viên phê duyệt.'
-                         : 'Chỉ thành viên được phê duyệt mới xem được nội dung nhóm này.'}
-                     </p>
-                   </div>
-                 ) : (
+                 isPrivateLocked ? privateLockScreen : (
                    <GroupFeed
                      groupId={groupId}
                      isApprovedMember={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
@@ -509,7 +516,11 @@ export const GroupDetailPage = () => {
                  )
                )}
 
-               {(activeTab === 'events' || activeTab === 'media' || activeTab === 'documents') && (
+               {activeTab === 'media' && groupId && (
+                 isPrivateLocked ? privateLockScreen : <GroupMediaTab groupId={groupId} />
+               )}
+
+               {(activeTab === 'events' || activeTab === 'documents') && (
                  <GroupPlaceholderTab
                    tabId={activeTab}
                    isAdmin={isAdmin}

@@ -57,7 +57,7 @@ export const ReelInteractionPanel = ({
         <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-blue-600 transition-colors">
           <MessageCircle className="w-6 h-6 text-white" />
         </div>
-        <span className="text-sm font-semibold text-white">
+        <span className="text-sm font-semibold text-black">
           {formatCount(comments)}
         </span>
       </button>
@@ -70,7 +70,7 @@ export const ReelInteractionPanel = ({
         <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-purple-600 transition-colors">
           <Share2 className="w-6 h-6 text-white" />
         </div>
-        <span className="text-sm font-semibold text-white">
+        <span className="text-sm font-semibold text-black">
           {formatCount(shares)}
         </span>
       </button>

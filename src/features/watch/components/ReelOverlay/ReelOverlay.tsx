@@ -1,5 +1,6 @@
-import { Music, CheckCircle } from 'lucide-react';
+import { Music, CheckCircle, Globe, Users, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import type { Reel } from '../../types/watch.types';
 
 interface ReelOverlayProps {
   creator: {
@@ -9,39 +10,95 @@ interface ReelOverlayProps {
     verified?: boolean;
   };
   caption: string;
+  privacy: Reel['privacy'];
+  group?: Reel['group'];
   music?: {
     name: string;
     artist: string;
   };
 }
 
-export const ReelOverlay = ({ creator, caption, music }: ReelOverlayProps) => {
+const PRIVACY_META: Record<Reel['privacy'], { label: string; Icon: typeof Globe }> = {
+  PUBLIC: { label: 'Công khai', Icon: Globe },
+  FRIENDS: { label: 'Bạn bè', Icon: Users },
+  FRIENDS_EXCEPT: { label: 'Bạn bè', Icon: Users },
+  SPECIFIC_FRIENDS: { label: 'Bạn bè', Icon: Users },
+  PRIVATE: { label: 'Chỉ mình tôi', Icon: Lock },
+};
+
+export const ReelOverlay = ({ creator, caption, privacy, group, music }: ReelOverlayProps) => {
+  const { label: privacyLabel, Icon: PrivacyIcon } = PRIVACY_META[privacy] ?? PRIVACY_META.PUBLIC;
   const navigate = useNavigate();
   const goToProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/profile/${creator.id}`);
   };
+  const goToGroup = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (group) navigate(`/groups/${group.id}`);
+  };
   return (
     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-6 pt-24">
       {/* Creator Info */}
       <div className="flex items-center gap-3 mb-3">
-        <img
-          src={creator.avatar}
-          alt={creator.name}
-          onClick={goToProfile}
-          className="w-12 h-12 rounded-full object-cover border-2 border-white cursor-pointer hover:opacity-90 transition-opacity"
-        />
-        <div className="flex items-center gap-2">
-          <h3
-            onClick={goToProfile}
-            className="font-semibold text-white text-lg cursor-pointer hover:underline"
-          >
-            {creator.name}
-          </h3>
-          {creator.verified && (
-            <CheckCircle className="w-5 h-5 text-blue-500 fill-blue-500" />
+        <div className="relative flex-shrink-0">
+          <img
+            src={group ? group.icon || creator.avatar : creator.avatar}
+            alt={group ? group.name : creator.name}
+            onClick={group ? goToGroup : goToProfile}
+            className={`w-12 h-12 object-cover border-2 border-white cursor-pointer hover:opacity-90 transition-opacity ${group ? 'rounded-lg' : 'rounded-full'}`}
+          />
+          {group && (
+            <img
+              src={creator.avatar}
+              alt={creator.name}
+              onClick={goToProfile}
+              className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-2 border-white object-cover cursor-pointer"
+            />
           )}
         </div>
+
+        {group ? (
+          <div className="min-w-0">
+            <h3
+              onClick={goToGroup}
+              className="font-semibold text-white text-lg cursor-pointer hover:underline leading-tight truncate"
+            >
+              {group.name}
+            </h3>
+            <div className="flex items-center gap-1.5 text-white/90 text-sm leading-tight">
+              <span onClick={goToProfile} className="cursor-pointer hover:underline truncate">
+                {creator.name}
+              </span>
+              {creator.verified && (
+                <CheckCircle className="w-4 h-4 text-blue-500 fill-blue-500 flex-shrink-0" />
+              )}
+              <span>·</span>
+              <PrivacyIcon className="w-3.5 h-3.5 text-white/80 flex-shrink-0" aria-label={privacyLabel}>
+                <title>{privacyLabel}</title>
+              </PrivacyIcon>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h3
+              onClick={goToProfile}
+              className="font-semibold text-white text-lg cursor-pointer hover:underline"
+            >
+              {creator.name}
+            </h3>
+            {creator.verified && (
+              <CheckCircle className="w-5 h-5 text-blue-500 fill-blue-500" />
+            )}
+            <PrivacyIcon
+              className="w-4 h-4 text-white/80"
+              aria-label={privacyLabel}
+            >
+              <title>{privacyLabel}</title>
+            </PrivacyIcon>
+          </div>
+        )}
+
         <button className="ml-2 px-6 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full transition-colors cursor-pointer">
           Theo dõi
         </button>

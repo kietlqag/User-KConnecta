@@ -8,6 +8,7 @@ import { WATCH_FEED_KEY, useWatchFeed } from '../hooks/useWatchFeed';
 
 export const WatchPage = () => {
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
+  const [slideDirection, setSlideDirection] = useState<'up' | 'down'>('up');
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -52,12 +53,14 @@ export const WatchPage = () => {
 
   const handlePrevious = () => {
     if (currentReelIndex > 0) {
+      setSlideDirection('down');
       setCurrentReelIndex(currentReelIndex - 1);
     }
   };
 
   const handleNext = () => {
     if (currentReelIndex < reels.length - 1) {
+      setSlideDirection('up');
       setCurrentReelIndex(currentReelIndex + 1);
     }
   };
@@ -82,6 +85,29 @@ export const WatchPage = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentReelIndex, reels.length]);
 
+  useEffect(() => {
+    let cooldown = false;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Bỏ qua khi đang cuộn bên trong bảng bình luận
+      if ((e.target as HTMLElement | null)?.closest('[data-reel-comments]')) return;
+      if (cooldown || Math.abs(e.deltaY) < 10) return;
+
+      cooldown = true;
+      if (e.deltaY > 0) {
+        handleNext();
+      } else {
+        handlePrevious();
+      }
+      window.setTimeout(() => {
+        cooldown = false;
+      }, 600);
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [currentReelIndex, reels.length]);
+
   const loadingMessage = useMemo(() => {
     if (!currentUser?.id) return 'Vui lòng đăng nhập để xem video.';
     if (isLoading) return 'Đang tải video...';
@@ -90,21 +116,22 @@ export const WatchPage = () => {
   }, [currentUser?.id, isLoading, isFetchingNextPage, reels.length]);
 
   return (
-    <div className="h-screen bg-black overflow-hidden">
+    <div className="h-screen bg-white overflow-hidden">
       <Header />
 
       <div className="mt-14 h-[calc(100vh-56px)] relative">
         {loadingMessage ? (
-          <div className="flex h-full items-center justify-center text-white">{loadingMessage}</div>
+          <div className="flex h-full items-center justify-center text-gray-700">{loadingMessage}</div>
         ) : isError ? (
-          <div className="flex h-full items-center justify-center text-white">
+          <div className="flex h-full items-center justify-center text-gray-700">
             Không thể tải video. Vui lòng thử lại sau.
           </div>
         ) : reels.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-white">Chưa có video nào.</div>
+          <div className="flex h-full items-center justify-center text-gray-700">Chưa có video nào.</div>
         ) : currentReel ? (
           <ReelPlayer
             reel={currentReel}
+            slideDirection={slideDirection}
             onPrevious={handlePrevious}
             onNext={handleNext}
             hasPrevious={currentReelIndex > 0}
@@ -114,7 +141,7 @@ export const WatchPage = () => {
       </div>
 
       {!isLoading && reels.length > 0 && (
-        <div className="fixed top-14 left-0 right-0 h-1 bg-gray-800 z-50">
+        <div className="fixed top-14 left-0 right-0 h-1 bg-gray-200 z-50">
           <div
             className="h-full bg-emerald-600 transition-all duration-300"
             style={{

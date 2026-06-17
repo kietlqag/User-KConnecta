@@ -19,10 +19,10 @@ export const ReelNavigation = ({
       <button
         onClick={onPrevious}
         disabled={!hasPrevious}
-        className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center transition-all border border-white/20 ${
+        className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center transition-all border border-gray-700/40 ${
           hasPrevious
-            ? 'bg-white/20 hover:bg-white/30 cursor-pointer'
-            : 'bg-white/10 cursor-not-allowed opacity-50'
+            ? 'bg-gray-800/50 hover:bg-gray-700/80 cursor-pointer'
+            : 'bg-gray-800/30 cursor-not-allowed opacity-50'
         }`}
       >
         <ChevronUp className="w-6 h-6 text-white" />
@@ -32,10 +32,10 @@ export const ReelNavigation = ({
       <button
         onClick={onNext}
         disabled={!hasNext}
-        className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center transition-all border border-white/20 ${
+        className={`w-12 h-12 rounded-full backdrop-blur-sm flex items-center justify-center transition-all border border-gray-700/40 ${
           hasNext
-            ? 'bg-white/20 hover:bg-white/30 cursor-pointer'
-            : 'bg-white/10 cursor-not-allowed opacity-50'
+            ? 'bg-gray-800/50 hover:bg-gray-700/80 cursor-pointer'
+            : 'bg-gray-800/30 cursor-not-allowed opacity-50'
         }`}
       >
         <ChevronDown className="w-6 h-6 text-white" />

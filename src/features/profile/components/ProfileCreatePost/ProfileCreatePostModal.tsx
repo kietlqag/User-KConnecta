@@ -6,6 +6,7 @@ import {
   X,
   Globe,
   Image,
+  Video,
   Users,
   UsersRound,
   Smile,
@@ -692,6 +693,12 @@ export function ProfileCreatePostModal({
                   >
                     <Image className="h-6 w-6 text-green-500" />
                   </button>
+                  <button
+                    onClick={() => setShowImagePicker(true)}
+                    className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <Video className="h-6 w-6 text-red-500" />
+                  </button>
                   <button className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
                     <Users className="h-6 w-6 text-emerald-500" />
                   </button>
@@ -705,6 +712,13 @@ export function ProfileCreatePostModal({
             {(() => {
               const hasContent = postContent.trim() || selectedImages.length > 0;
               const isUploading = selectedImages.some(img => img.uploading);
+              const hasVideo = selectedImages.some(img => img.type === 'video');
+              const hasImage = selectedImages.some(img => img.type === 'image');
+              const uploadingLabel = hasVideo && hasImage
+                ? 'Đang tải...'
+                : hasVideo
+                  ? 'Đang đăng hình ảnh/video...'
+                  : 'Đang tải ảnh lên...';
               const disabled = !hasContent || isUploading || !!checkKeywords(postContent, publicPolicy);
               return (
                 <button
@@ -720,7 +734,7 @@ export function ProfileCreatePostModal({
                   {isUploading ? (
                     <span className="flex items-center justify-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Đang tải ảnh lên...
+                      {uploadingLabel}
                     </span>
                   ) : 'Tiếp'}
                 </button>

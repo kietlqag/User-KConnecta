@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { FileText } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { FileText, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type PostCommentResponse } from '@/services/postService';
@@ -13,6 +13,13 @@ interface CommentSectionProps {
 }
 
 const PAGE_SIZE = 10;
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Mới nhất', desc: 'Hiển thị bình luận mới nhất trước tiên.', sort: 'createdAt,desc' },
+  { value: 'oldest', label: 'Cũ nhất', desc: 'Hiển thị bình luận cũ nhất trước tiên.', sort: 'createdAt,asc' },
+] as const;
+
+type SortValue = (typeof SORT_OPTIONS)[number]['value'];
 
 function formatCommentTime(createdAt: string) {
   return new Intl.DateTimeFormat('vi-VN', {
@@ -51,6 +58,20 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortBy, setSortBy] = useState<SortValue>('oldest');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
+
+  const activeSort = SORT_OPTIONS.find((o) => o.value === sortBy) ?? SORT_OPTIONS[1];
+
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [sortMenuOpen]);
 
   const fetchPage = useCallback(async (pageIndex: number, append: boolean) => {
     try {
@@ -58,7 +79,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
       else setIsLoading(true);
 
       const currentUser = authService.getCurrentUser();
-      const res = await postService.getComments(postId, pageIndex, PAGE_SIZE, currentUser?.id);
+      const res = await postService.getComments(postId, pageIndex, PAGE_SIZE, currentUser?.id, activeSort.sort);
       const mapped = res.content.map(mapToComment);
 
       setComments((prev) => (append ? [...prev, ...mapped] : mapped));
@@ -71,7 +92,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  }, [postId, onCommentsLoaded]);
+  }, [postId, onCommentsLoaded, activeSort.sort]);
 
   useEffect(() => {
     setComments([]);
@@ -187,6 +208,33 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
         </div>
       ) : (
         <div className="mb-4 space-y-4">
+          {/* Sắp xếp bình luận */}
+          <div className="relative inline-block" ref={sortRef}>
+            <button
+              onClick={() => setSortMenuOpen((o) => !o)}
+              className="flex items-center gap-1 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+            >
+              {activeSort.label}
+              <ChevronDown className="h-4 w-4" />
+            </button>
+            {sortMenuOpen && (
+              <div className="absolute left-0 top-full z-10 mt-1 w-72 rounded-lg bg-white py-2 shadow-xl ring-1 ring-black/10">
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setSortBy(opt.value); setSortMenuOpen(false); }}
+                    className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-blue-600' : 'text-gray-900'}`}>
+                      {opt.label}
+                    </span>
+                    <span className="text-xs text-gray-500">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {comments.map((comment) => (
             <div key={comment.id} className="group">
               <CommentItem comment={comment} depth={0} onReply={handleAddReply} onDelete={handleDeleteComment} onUpdate={handleUpdateComment} />

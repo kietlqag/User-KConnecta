@@ -29,6 +29,7 @@ interface ReactionButtonProps {
   variant?: 'default' | 'reel';
   count?: number;
   compact?: boolean;
+  pickerAlign?: 'left' | 'right';
 }
 
 function formatReelCount(count: number): string {
@@ -50,6 +51,7 @@ export function ReactionButton({
   variant = 'default',
   count = 0,
   compact = false,
+  pickerAlign = 'left',
 }: ReactionButtonProps) {
   const [selectedReaction, setSelectedReaction]   = useState<ReactionOption | null>(initialReaction);
   const [showReactions, setShowReactions]         = useState(false);
@@ -165,7 +167,7 @@ export function ReactionButton({
   const pickerPositionClass =
     variant === 'reel'
       ? 'absolute right-full top-1/2 -translate-y-1/2 mr-3'
-      : 'absolute bottom-full left-0 mb-2';
+      : `absolute bottom-full mb-2 ${pickerAlign === 'right' ? 'right-0' : 'left-0'}`;
 
   const picker = showReactions ? (
     <div
@@ -246,7 +248,7 @@ export function ReactionButton({
               <ThumbsUp className="h-6 w-6 text-white" />
             )}
           </div>
-          <span className="text-sm font-semibold text-white">{formatReelCount(count)}</span>
+          <span className="text-sm font-semibold text-black">{formatReelCount(count)}</span>
         </button>
       </div>
     );

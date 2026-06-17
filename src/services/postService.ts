@@ -278,8 +278,8 @@ export const postService = {
     api.delete<void>(`/posts/${postId}/reactions?userId=${encodeURIComponent(userId)}`),
   getReactionDetails: (postId: string) =>
     api.get<PostReactionDetailsResponse>(`/posts/${postId}/reactions/details`),
-  getComments: (postId: string, page = 0, size = 10, currentUserId?: string) => {
-    const params = new URLSearchParams({ page: String(page), size: String(size), sort: 'createdAt,asc' });
+  getComments: (postId: string, page = 0, size = 10, currentUserId?: string, sort = 'createdAt,asc') => {
+    const params = new URLSearchParams({ page: String(page), size: String(size), sort });
     if (currentUserId) params.append('currentUserId', currentUserId);
     return api
       .get<SpringPaginatedRaw<PostCommentResponse>>(`/posts/${postId}/comments?${params.toString()}`)

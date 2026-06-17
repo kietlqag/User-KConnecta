@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, MoreHorizontal, Trash2 } from 'lucide-react';
+import { X, MoreHorizontal, Trash2, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type PostCommentResponse } from '@/services/postService';
 import { ReactionButton, reactions, type ReactionOption } from '@/components/reactions';
+import { formatPostTimestamp } from '@/utils/postUtils';
 
 interface CommentsPanelProps {
   postId: string;
+  creator: { name: string; avatar: string };
+  caption: string;
   onClose: () => void;
   onCommentCountChange?: (delta: number) => void;
 }
@@ -163,17 +166,17 @@ function PanelCommentRow({
                 <button
                   onClick={() => setOpenMenu(prev => !prev)}
                   disabled={isDeleting}
-                  className="w-7 h-7 rounded-full hover:bg-gray-700/80 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
+                  className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
                 >
-                  <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                  <MoreHorizontal className="w-4 h-4 text-gray-500" />
                 </button>
                 {openMenu && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(false)} />
-                    <div className="absolute right-0 top-8 z-50 w-40 rounded-xl bg-[#2a2d31] border border-gray-700 shadow-xl py-1">
+                    <div className="absolute right-0 top-8 z-50 w-40 rounded-xl bg-white border border-gray-200 shadow-xl py-1">
                       <button
                         onClick={() => void handleDelete()}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-gray-700 transition-colors cursor-pointer"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-50 transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                         Xóa bình luận
@@ -184,26 +187,28 @@ function PanelCommentRow({
               </div>
             )}
 
-            <div className="bg-[#2a2d31] rounded-2xl px-3 py-2 pr-8 w-full">
-              <h4 className="text-white font-semibold text-sm leading-tight">{comment.userFullName}</h4>
+            <div className="bg-gray-100 rounded-2xl px-3 py-2 pr-8 w-full">
+              <h4 className="text-gray-900 font-semibold text-sm leading-tight">{comment.userFullName}</h4>
               {comment.moderationStatus === 'PENDING' && (
-                <p className="mt-1 text-[11px] font-medium text-amber-400">Đang chờ kiểm duyệt</p>
+                <p className="mt-1 text-[11px] font-medium text-amber-600">Đang chờ kiểm duyệt</p>
               )}
               {comment.moderationStatus === 'REJECTED' && (
-                <p className="mt-1 text-[11px] font-medium text-red-400">
+                <p className="mt-1 text-[11px] font-medium text-red-600">
                   {comment.moderationFailReason || 'Bình luận không được duyệt'}
                 </p>
               )}
-              <p className="text-gray-200 text-sm mt-0.5 break-words">{comment.content}</p>
+              <p className="text-gray-800 text-sm mt-0.5 break-words">{comment.content}</p>
             </div>
           </div>
 
           <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+            <span className="text-xs text-gray-500 shrink-0">{formatPostTimestamp(comment.createdAt)}</span>
             <ReactionButton
               compact
+              pickerAlign="right"
               initialReaction={selectedReaction}
               onReactionChange={handleReactionChange}
-              buttonClassName="shrink-0 hover:bg-gray-700/60 text-gray-400 [&.text-muted-foreground]:text-gray-400"
+              buttonClassName="shrink-0 hover:bg-gray-100 text-gray-600 [&.text-muted-foreground]:text-gray-600"
             />
             {comment.likeCount > 0 && (
               <span className="text-xs text-gray-500 shrink-0">{comment.likeCount}</span>
@@ -211,7 +216,7 @@ function PanelCommentRow({
 
             <button
               onClick={() => setShowReplyInput(v => !v)}
-              className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-400 hover:bg-gray-700/60 hover:text-white transition-colors cursor-pointer"
+              className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
             >
               Trả lời
             </button>
@@ -234,7 +239,7 @@ function PanelCommentRow({
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleReplySubmit(); }
                   if (e.key === 'Escape') { setShowReplyInput(false); setReplyText(''); }
                 }}
-                className="flex-1 min-w-0 bg-[#2a2d31] text-white rounded-full px-3 py-1.5 text-xs outline-none focus:bg-[#35383d] transition-colors"
+                className="flex-1 min-w-0 bg-gray-100 text-gray-900 placeholder-gray-500 rounded-full px-3 py-1.5 text-xs outline-none focus:bg-gray-200 transition-colors"
               />
             </div>
           )}
@@ -243,9 +248,9 @@ function PanelCommentRow({
             <button
               onClick={() => void handleShowReplies()}
               disabled={isLoadingReplies}
-              className="flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-white hover:underline mt-2 py-0.5 cursor-pointer disabled:opacity-60 transition-colors"
+              className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-700 hover:underline mt-2 py-0.5 cursor-pointer disabled:opacity-60 transition-colors"
             >
-              <div className="w-5 h-px bg-gray-600 shrink-0" />
+              <div className="w-5 h-px bg-gray-300 shrink-0" />
               {isLoadingReplies ? 'Đang tải...' : showReplies ? 'Ẩn phản hồi' : `${totalReplies} phản hồi`}
             </button>
           )}
@@ -271,20 +276,41 @@ function PanelCommentRow({
   );
 }
 
-export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: CommentsPanelProps) => {
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Mới nhất', desc: 'Hiển thị bình luận mới nhất trước tiên.', sort: 'createdAt,desc' },
+  { value: 'oldest', label: 'Cũ nhất', desc: 'Hiển thị bình luận cũ nhất trước tiên.', sort: 'createdAt,asc' },
+] as const;
+
+type SortValue = (typeof SORT_OPTIONS)[number]['value'];
+
+export const CommentsPanel = ({ postId, creator, caption, onClose, onCommentCountChange }: CommentsPanelProps) => {
   const [comments, setComments] = useState<PostCommentResponse[]>([]);
   const [totalElements, setTotalElements] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortBy, setSortBy] = useState<SortValue>('oldest');
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const sortRef = useRef<HTMLDivElement>(null);
   const currentUser = authService.getCurrentUser();
+
+  const activeSort = SORT_OPTIONS.find(o => o.value === sortBy) ?? SORT_OPTIONS[1];
+
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [sortMenuOpen]);
 
   useEffect(() => {
     let isMounted = true;
     const fetchComments = async () => {
       try {
         setIsLoading(true);
-        const response = await postService.getComments(postId, 0, 20, currentUser?.id);
+        const response = await postService.getComments(postId, 0, 20, currentUser?.id, activeSort.sort);
         if (isMounted) {
           setComments(response.content.filter(c => !c.parentCommentId));
           setTotalElements(response.totalElements);
@@ -297,7 +323,7 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
     };
     void fetchComments();
     return () => { isMounted = false; };
-  }, [postId]);
+  }, [postId, activeSort.sort]);
 
   const handleAddComment = async () => {
     if (!newComment.trim()) return;
@@ -330,37 +356,83 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
   };
 
   return (
-    <div className="w-[400px] bg-[#1c1e21] h-full flex flex-col border-l border-gray-800">
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <h2 className="text-white font-semibold text-lg">Bình luận ({totalElements})</h2>
+    <div className="w-[400px] bg-white h-full flex flex-col border-l border-gray-200">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200">
+        <h2 className="text-gray-900 font-semibold text-lg">Bình luận ({totalElements})</h2>
         <button
           onClick={onClose}
-          className="w-9 h-9 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors cursor-pointer"
+          className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors cursor-pointer"
         >
-          <X className="w-5 h-5 text-gray-200" />
+          <X className="w-5 h-5 text-gray-600" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {isLoading ? (
-          <div className="text-gray-400 text-center text-sm">Đang tải bình luận...</div>
-        ) : comments.length === 0 ? (
-          <div className="text-gray-400 text-center text-sm">Chưa có bình luận nào</div>
-        ) : (
-          comments.map(comment => (
-            <PanelCommentRow
-              key={comment.id}
-              comment={comment}
-              postId={postId}
-              currentUser={currentUser}
-              onDelete={handleDeleteComment}
-              onCommentCountChange={onCommentCountChange}
+      <div className="flex-1 overflow-y-auto">
+        {/* Post header: tác giả + nội dung bài đăng */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <img
+              src={creator.avatar}
+              alt={creator.name}
+              className="w-10 h-10 rounded-full object-cover"
             />
-          ))
-        )}
+            <p className="text-gray-900 font-semibold text-sm">{creator.name}</p>
+          </div>
+          {caption && (
+            <p className="text-gray-700 text-sm mt-3 whitespace-pre-line">{caption}</p>
+          )}
+        </div>
+
+        {/* Sắp xếp bình luận */}
+        <div className="px-4 pt-3" ref={sortRef}>
+          <div className="relative inline-block">
+            <button
+              onClick={() => setSortMenuOpen(o => !o)}
+              className="flex items-center gap-1 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+            >
+              {activeSort.label}
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {sortMenuOpen && (
+              <div className="absolute left-0 top-full mt-1 w-72 bg-white rounded-lg shadow-xl ring-1 ring-black/10 py-2 z-10">
+                {SORT_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setSortBy(opt.value); setSortMenuOpen(false); }}
+                    className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-blue-600' : 'text-gray-900'}`}>
+                      {opt.label}
+                    </span>
+                    <span className="text-xs text-gray-500">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {isLoading ? (
+            <div className="text-gray-500 text-center text-sm">Đang tải bình luận...</div>
+          ) : comments.length === 0 ? (
+            <div className="text-gray-500 text-center text-sm">Chưa có bình luận nào</div>
+          ) : (
+            comments.map(comment => (
+              <PanelCommentRow
+                key={comment.id}
+                comment={comment}
+                postId={postId}
+                currentUser={currentUser}
+                onDelete={handleDeleteComment}
+                onCommentCountChange={onCommentCountChange}
+              />
+            ))
+          )}
+        </div>
       </div>
 
-      <div className={`p-4 border-t border-gray-800 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`p-4 border-t border-gray-200 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex items-center gap-2">
           <img
             src={currentUser?.avatarUrl || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(currentUser?.fullName || 'User')}`}
@@ -373,7 +445,7 @@ export const CommentsPanel = ({ postId, onClose, onCommentCountChange }: Comment
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleAddComment(); } }}
-            className="flex-1 bg-[#2a2d31] text-white rounded-full px-4 py-2 text-sm outline-none focus:bg-[#35383d] transition-colors"
+            className="flex-1 bg-gray-100 text-gray-900 placeholder-gray-500 rounded-full px-4 py-2 text-sm outline-none focus:bg-gray-200 transition-colors"
           />
         </div>
       </div>

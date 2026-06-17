@@ -37,6 +37,26 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   will-change: transform, opacity;
 }
 
+@keyframes reel-slide-up {
+  from { transform: translateY(48px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes reel-slide-down {
+  from { transform: translateY(-48px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.reel-slide-up {
+  animation: reel-slide-up 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform, opacity;
+}
+
+.reel-slide-down {
+  animation: reel-slide-down 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: transform, opacity;
+}
+
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;

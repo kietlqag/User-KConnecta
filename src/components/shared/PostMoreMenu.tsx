@@ -151,36 +151,36 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-2">
-        <DropdownMenuItem
-          className="flex items-start gap-3 p-3 cursor-pointer"
-          onClick={() => handleAction('interested')}
-        >
-          <div className="mt-1">
-            <Plus className="w-6 h-6 text-gray-900 border-2 border-gray-900 rounded-full p-0.5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-[15px]">Quan tâm</span>
-            <span className="text-[13px] text-gray-500">Bạn sẽ nhìn thấy nhiều bài viết tương tự hơn.</span>
-          </div>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          className="flex items-start gap-3 p-3 cursor-pointer"
-          onClick={() => handleAction('not_interested')}
-        >
-          <div className="mt-1">
-            <Minus className="w-6 h-6 text-gray-900 border-2 border-gray-900 rounded-full p-0.5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-semibold text-[15px]">Không quan tâm</span>
-            <span className="text-[13px] text-gray-500">Bạn sẽ thấy ít bài viết tương tự hơn.</span>
-          </div>
-        </DropdownMenuItem>
-
-        <div className="my-1 border-t border-gray-100" />
-
         {!isOwner && (
           <>
+            <DropdownMenuItem
+              className="flex items-start gap-3 p-3 cursor-pointer"
+              onClick={() => handleAction('interested')}
+            >
+              <div className="mt-1">
+                <Plus className="w-6 h-6 text-gray-900 border-2 border-gray-900 rounded-full p-0.5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-[15px]">Quan tâm</span>
+                <span className="text-[13px] text-gray-500">Bạn sẽ nhìn thấy nhiều bài viết tương tự hơn.</span>
+              </div>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              className="flex items-start gap-3 p-3 cursor-pointer"
+              onClick={() => handleAction('not_interested')}
+            >
+              <div className="mt-1">
+                <Minus className="w-6 h-6 text-gray-900 border-2 border-gray-900 rounded-full p-0.5" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-[15px]">Không quan tâm</span>
+                <span className="text-[13px] text-gray-500">Bạn sẽ thấy ít bài viết tương tự hơn.</span>
+              </div>
+            </DropdownMenuItem>
+
+            <div className="my-1 border-t border-gray-100" />
+
             <DropdownMenuItem
               className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
               disabled={reporting}

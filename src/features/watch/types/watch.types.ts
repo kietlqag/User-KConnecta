@@ -11,6 +11,12 @@ export interface Reel {
     verified?: boolean;
   };
   caption: string;
+  privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'SPECIFIC_FRIENDS' | 'PRIVATE';
+  group?: {
+    id: string;
+    name: string;
+    icon?: string;
+  };
   music?: {
     name: string;
     artist: string;

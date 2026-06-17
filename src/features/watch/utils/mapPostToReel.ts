@@ -43,6 +43,10 @@ export function mapPostToReel(post: PostResponse): Reel | null {
       avatar: post.authorAvatarUrl || fallbackAvatar,
     },
     caption: post.content || '',
+    privacy: post.privacy,
+    group: post.groupId
+      ? { id: post.groupId, name: post.groupName ?? 'Nhóm', icon: post.groupIconUrl ?? undefined }
+      : undefined,
     music: {
       name: 'Âm thanh gốc',
       artist: post.authorFullName,

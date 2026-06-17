@@ -13,18 +13,20 @@ import { toast } from 'sonner';
 
 interface ReelPlayerProps {
   reel: Reel;
+  slideDirection: 'up' | 'down';
   onPrevious: () => void;
   onNext: () => void;
   hasPrevious: boolean;
   hasNext: boolean;
 }
 
-export const ReelPlayer = ({ 
-  reel, 
-  onPrevious, 
-  onNext, 
-  hasPrevious, 
-  hasNext 
+export const ReelPlayer = ({
+  reel,
+  slideDirection,
+  onPrevious,
+  onNext,
+  hasPrevious,
+  hasNext
 }: ReelPlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
@@ -203,7 +205,10 @@ export const ReelPlayer = ({
 
   return (
     <div className={`flex items-center justify-center h-full px-8 relative transition-[padding] duration-200 ${showComments ? 'pr-[424px]' : ''}`}>
-      <div className="flex items-center gap-6">
+      <div
+        key={reel.id}
+        className={`flex items-center gap-6 ${slideDirection === 'up' ? 'reel-slide-up' : 'reel-slide-down'}`}
+      >
         {/* Video Container */}
         <div className="relative w-full max-w-[500px] h-[calc(100vh-120px)] bg-black rounded-lg overflow-hidden group flex-shrink-0">
           <video
@@ -265,6 +270,8 @@ export const ReelPlayer = ({
           <ReelOverlay
             creator={reel.creator}
             caption={reel.caption}
+            privacy={reel.privacy}
+            group={reel.group}
             music={reel.music}
           />
 
@@ -307,36 +314,29 @@ export const ReelPlayer = ({
           />
         </div>
 
-        {/* Navigation - inline when comments open to avoid overlapping interaction buttons */}
-        {showComments && (
-          <div className="flex-shrink-0 flex items-center">
-            <ReelNavigation
-              onPrevious={onPrevious}
-              onNext={onNext}
-              hasPrevious={hasPrevious}
-              hasNext={hasNext}
-            />
-          </div>
-        )}
       </div>
 
-      {/* Navigation - far right when comments closed */}
-      {!showComments && (
-        <div className="fixed right-6 top-1/2 -translate-y-1/2 z-10">
-          <ReelNavigation
-            onPrevious={onPrevious}
-            onNext={onNext}
-            hasPrevious={hasPrevious}
-            hasNext={hasNext}
-          />
-        </div>
-      )}
+      {/* Navigation - just left of the comments panel when open, flush right when closed */}
+      <div
+        className={`fixed top-1/2 -translate-y-1/2 z-30 transition-all ${
+          showComments ? 'right-[416px]' : 'right-6'
+        }`}
+      >
+        <ReelNavigation
+          onPrevious={onPrevious}
+          onNext={onNext}
+          hasPrevious={hasPrevious}
+          hasNext={hasNext}
+        />
+      </div>
 
       {/* Comments Panel - Fixed full-height right corner */}
       {showComments && (
-        <div className="fixed right-0 top-14 h-[calc(100vh-56px)] z-20">
+        <div data-reel-comments className="fixed right-0 top-14 h-[calc(100vh-56px)] z-20">
           <CommentsPanel
             postId={reel.id}
+            creator={reel.creator}
+            caption={reel.caption}
             onClose={() => setShowComments(false)}
             onCommentCountChange={(delta) => {
               setCommentCount(prev => prev + delta);
