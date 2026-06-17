@@ -8,4 +8,7 @@ FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar
-CMD ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.jar"]
+
+# Render free tier ~512MB RAM — cap heap so Spring Boot + Hibernate can start.
+ENV JAVA_OPTS="-Xms128m -Xmx384m"
+CMD ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-8080} -jar app.jar"]

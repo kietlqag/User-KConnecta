@@ -48,6 +48,7 @@ import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.page.repository.PageRepository;
+import project.kconnecta.user.backend.feature.page.entity.Page;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -61,6 +62,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -557,7 +559,11 @@ public class PostServiceImpl implements PostService {
     @Transactional(readOnly = true)
     public Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable) {
         // Load all accessible posts for this author (privacy-filtered), then merge with shares in memory.
-        List<Post> allPosts = postRepository.findByAuthorIdWithPrivacyFetched(authorId, currentUserId);
+        // Native SQL avoids heavy JPQL parsing that can OOM on small Render instances.
+        List<Post> allPosts = postRepository
+                .findByAuthorIdWithPrivacy(authorId, currentUserId, Pageable.unpaged())
+                .getContent();
+        hydratePostAssociations(allPosts);
         List<PostResponse> postResponses = processPostsBulk(allPosts, currentUserId);
 
         List<PostShare> shares = postShareRepository.findSharesWithPostByUserId(authorId);
@@ -574,6 +580,62 @@ public class PostServiceImpl implements PostService {
         List<PostResponse> page = start >= merged.size() ? Collections.emptyList() : new ArrayList<>(merged.subList(start, end));
 
         return new PageImpl<>(page, pageable, merged.size());
+    }
+
+    private void hydratePostAssociations(List<Post> posts) {
+        if (posts.isEmpty()) {
+            return;
+        }
+
+        Set<UUID> authorIds = new HashSet<>();
+        Set<UUID> groupIds = new HashSet<>();
+        Set<UUID> pageIds = new HashSet<>();
+
+        for (Post post : posts) {
+            if (post.getAuthor() != null) {
+                authorIds.add(post.getAuthor().getId());
+            }
+            if (post.getGroup() != null) {
+                groupIds.add(post.getGroup().getId());
+            }
+            if (post.getPage() != null) {
+                pageIds.add(post.getPage().getId());
+            }
+        }
+
+        Map<UUID, User> authorsById = authorIds.isEmpty()
+                ? Collections.emptyMap()
+                : userRepository.findAllById(authorIds).stream()
+                        .collect(Collectors.toMap(User::getId, user -> user));
+        Map<UUID, Group> groupsById = groupIds.isEmpty()
+                ? Collections.emptyMap()
+                : groupRepository.findAllById(groupIds).stream()
+                        .collect(Collectors.toMap(Group::getId, group -> group));
+        Map<UUID, Page> pagesById = pageIds.isEmpty()
+                ? Collections.emptyMap()
+                : pageRepository.findAllById(pageIds).stream()
+                        .collect(Collectors.toMap(Page::getId, page -> page));
+
+        for (Post post : posts) {
+            if (post.getAuthor() != null) {
+                User author = authorsById.get(post.getAuthor().getId());
+                if (author != null) {
+                    post.setAuthor(author);
+                }
+            }
+            if (post.getGroup() != null) {
+                Group group = groupsById.get(post.getGroup().getId());
+                if (group != null) {
+                    post.setGroup(group);
+                }
+            }
+            if (post.getPage() != null) {
+                Page page = pagesById.get(post.getPage().getId());
+                if (page != null) {
+                    post.setPage(page);
+                }
+            }
+        }
     }
 
     @Override
