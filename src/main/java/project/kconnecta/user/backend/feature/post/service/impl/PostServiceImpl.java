@@ -48,7 +48,6 @@ import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.page.repository.PageRepository;
-import project.kconnecta.user.backend.feature.page.entity.Page;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -611,10 +610,10 @@ public class PostServiceImpl implements PostService {
                 ? Collections.emptyMap()
                 : groupRepository.findAllById(groupIds).stream()
                         .collect(Collectors.toMap(Group::getId, group -> group));
-        Map<UUID, Page> pagesById = pageIds.isEmpty()
+        Map<UUID, project.kconnecta.user.backend.feature.page.entity.Page> pagesById = pageIds.isEmpty()
                 ? Collections.emptyMap()
                 : pageRepository.findAllById(pageIds).stream()
-                        .collect(Collectors.toMap(Page::getId, page -> page));
+                        .collect(Collectors.toMap(project.kconnecta.user.backend.feature.page.entity.Page::getId, page -> page));
 
         for (Post post : posts) {
             if (post.getAuthor() != null) {
@@ -630,7 +629,7 @@ public class PostServiceImpl implements PostService {
                 }
             }
             if (post.getPage() != null) {
-                Page page = pagesById.get(post.getPage().getId());
+                project.kconnecta.user.backend.feature.page.entity.Page page = pagesById.get(post.getPage().getId());
                 if (page != null) {
                     post.setPage(page);
                 }
