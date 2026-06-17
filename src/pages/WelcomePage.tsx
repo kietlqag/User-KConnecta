@@ -85,7 +85,7 @@ function WelcomePreview() {
 export function WelcomePage() {
   return (
     <div
-      className="relative min-h-[100dvh] overflow-hidden"
+      className="welcome-page relative h-[100dvh] max-h-[100dvh] overflow-hidden"
       style={{ background: '#111126' }}
     >
       <div
@@ -112,8 +112,8 @@ export function WelcomePage() {
         style={{ background: 'radial-gradient(circle, #059669 0%, transparent 70%)' }}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-6xl flex-col">
-        <header className="flex shrink-0 items-center gap-4 px-6 pb-2 pt-6 sm:pt-7 lg:px-10 lg:pb-4 lg:pt-8">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-6xl flex-col overflow-hidden">
+        <header className="flex shrink-0 items-center gap-4 px-6 pb-2 pt-5 sm:pt-6 lg:px-10 lg:pb-3 lg:pt-7">
           <img src={logoV2} alt="KConnecta" className="h-14 w-auto sm:h-16" />
           <p className="text-2xl font-bold tracking-tight text-white sm:text-3xl">KConnecta</p>
           <span className="ml-1 hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 sm:inline-flex">
@@ -121,8 +121,8 @@ export function WelcomePage() {
           </span>
         </header>
 
-        <main className="flex flex-1 items-center px-6 pb-10 lg:px-10 lg:pb-12">
-          <div className="grid w-full items-center gap-10 lg:grid-cols-2 lg:gap-12 xl:gap-16">
+        <main className="flex min-h-0 flex-1 items-center overflow-hidden px-6 pb-6 lg:px-10 lg:pb-10">
+          <div className="grid w-full items-center gap-8 lg:grid-cols-2 lg:gap-12 xl:gap-16">
           <div>
             <span className="mb-5 inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 sm:hidden">
               Mạng xã hội mới
@@ -169,7 +169,7 @@ export function WelcomePage() {
               </Link>
             </div>
 
-            <div className="mt-8 lg:hidden">
+            <div className="mt-6 sm:mt-8 lg:hidden">
               <WelcomePreview />
             </div>
           </div>
@@ -179,7 +179,7 @@ export function WelcomePage() {
               <WelcomePreview />
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-white/10 bg-white shadow-xl shadow-black/20">
+            <div className="hidden overflow-hidden rounded-xl border border-white/10 bg-white shadow-xl shadow-black/20 lg:block">
               <div className="border-b border-gray-100 bg-emerald-50 px-5 py-4 sm:px-6">
                 <p className="text-sm font-semibold text-gray-900">Vì sao dùng KConnecta?</p>
                 <p className="mt-1 text-sm text-gray-500">Những điều bạn có ngay sau khi tham gia</p>

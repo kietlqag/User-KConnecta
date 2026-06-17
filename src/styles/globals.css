@@ -148,6 +148,14 @@
   }
 }
 
+/* WelcomePage — no page scroll */
+html:has(.welcome-page),
+html:has(.welcome-page) body {
+  overflow: hidden;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
 /* WelcomePage animations */
 @keyframes logoIntro {
   0% { opacity: 0; transform: translateY(110px) scale(2); }
