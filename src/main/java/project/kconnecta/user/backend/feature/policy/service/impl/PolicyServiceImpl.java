@@ -200,6 +200,11 @@ public class PolicyServiceImpl implements PolicyService {
                 added++;
             }
 
+            if (added == 0) {
+                log.debug("Default policy keywords already up to date (skipped={})", skipped);
+                return new PolicyKeywordMergeResult(0, skipped, mergedKeywords.size());
+            }
+
             current.set("keywords", mergedKeywords);
             saveConfig(current, updatedBy != null ? updatedBy : "system-merge");
             log.info("Merged default policy keywords: added={}, skipped={}, total={}", added, skipped, mergedKeywords.size());
