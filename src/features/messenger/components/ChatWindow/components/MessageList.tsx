@@ -122,6 +122,8 @@ export const MessageList = forwardRef(({
         return `${actor} đã gỡ biệt danh của ${target}.`;
       case 'add_members':
         return `${actor} đã thêm ${value || 'người mới'} vào nhóm.`;
+      case 'add_members_pending':
+        return `${actor} đã mời ${value || 'người mới'} — đang chờ phê duyệt.`;
       case 'pin_message':
         return `${actor} đã ghim một tin nhắn.`;
       case 'unpin_message':

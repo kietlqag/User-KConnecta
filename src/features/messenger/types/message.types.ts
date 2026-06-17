@@ -30,6 +30,7 @@ export interface Message {
     | 'change_nickname'
     | 'clear_nickname'
     | 'add_members'
+    | 'add_members_pending'
     | 'pin_message'
     | 'unpin_message';
   systemActionActorName?: string;
@@ -61,6 +62,7 @@ export interface ChatUser {
   avatar: string;
   isOnline: boolean;
   lastActiveAt?: string;
+  memberStatus?: 'APPROVED' | 'PENDING';
 }
 
 /** Shape của message nhận từ backend qua WebSocket */

@@ -27,6 +27,8 @@ interface LivePostPreviewCardProps {
   alwaysActive?: boolean;
   /** Hide bottom action bar; keep video frame. */
   compact?: boolean;
+  /** Compact row layout for live hub lists. */
+  variant?: 'feed' | 'list';
   className?: string;
 }
 
@@ -36,6 +38,7 @@ export function LivePostPreviewCard({
   content,
   alwaysActive = false,
   compact = false,
+  variant = 'feed',
   className = '',
 }: LivePostPreviewCardProps) {
   const navigate = useNavigate();
@@ -296,6 +299,131 @@ export function LivePostPreviewCard({
       toast.error(error instanceof Error ? error.message : 'Không thể mở phiên live');
     }
   };
+
+  if (variant === 'list') {
+    return (
+      <>
+        <div className={className}>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40">
+            <div className="flex items-start justify-between gap-3">
+              <button
+                type="button"
+                disabled={isScheduledLockedForHost}
+                onClick={isScheduledLockedForHost ? undefined : () => void handleOpenLive()}
+                className={`min-w-0 flex-1 text-left ${isScheduledLockedForHost ? 'cursor-default' : ''}`}
+              >
+                <div className="mb-2 inline-flex rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  {scheduledLiveAt ? 'Đã lên lịch' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
+                </div>
+                <p className="font-semibold text-gray-900 line-clamp-1">{liveTitle}</p>
+                {liveDescription && (
+                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">{liveDescription}</p>
+                )}
+                <p className="mt-2 text-xs text-gray-500">
+                  {scheduledLiveAt
+                    ? `Bắt đầu lúc ${scheduledLiveAt}`
+                    : liveReplayUrl
+                      ? 'Nhấn để xem lại'
+                      : isLiveEnded
+                        ? 'Phiên live đã kết thúc'
+                        : 'Nhấn để xem trực tiếp'}
+                </p>
+                {scheduledLiveAt && isOwner && liveSubscriptionCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleOpenSubscribers();
+                    }}
+                    className="mt-1 text-xs font-semibold text-green-700 hover:underline"
+                  >
+                    {liveSubscriptionCount} người quan tâm
+                  </button>
+                )}
+              </button>
+              {scheduledLiveAt && isOwner ? (
+                <button
+                  type="button"
+                  disabled={!canStartScheduledLive}
+                  onClick={() => void handleOpenLive()}
+                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${
+                    canStartScheduledLive
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'cursor-not-allowed bg-gray-400'
+                  }`}
+                >
+                  {canStartScheduledLive ? 'Bắt đầu phát' : 'Chưa đến giờ'}
+                </button>
+              ) : scheduledLiveAt ? (
+                <button
+                  type="button"
+                  disabled={isSubscribeLoading}
+                  onClick={() => void handleToggleLiveSubscription()}
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                    isLiveSubscribed
+                      ? 'border border-green-600 bg-green-50 text-green-700 hover:bg-green-100'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  } disabled:cursor-not-allowed disabled:opacity-60`}
+                >
+                  <Bell className="h-3.5 w-3.5" />
+                  {isSubscribeLoading ? '...' : isLiveSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleOpenLive()}
+                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${
+                    isLiveEnded ? 'bg-gray-700 hover:bg-gray-800' : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {liveReplayUrl ? 'Xem lại' : isLiveEnded ? 'Đã kết thúc' : 'Xem'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        <Dialog open={isSubscribersOpen} onOpenChange={setIsSubscribersOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Người quan tâm sự kiện</DialogTitle>
+              <DialogDescription className="sr-only">Danh sách người đăng ký nhắc nhở trước khi live bắt đầu</DialogDescription>
+            </DialogHeader>
+            {isSubscribersLoading ? (
+              <p className="py-6 text-center text-sm text-gray-500">Đang tải...</p>
+            ) : eventSubscribers.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-500">Chưa có ai đăng ký nhắc nhở.</p>
+            ) : (
+              <div className="max-h-80 space-y-2 overflow-y-auto">
+                {eventSubscribers.map((subscriber) => (
+                  <button
+                    key={subscriber.userId}
+                    type="button"
+                    onClick={() => {
+                      setIsSubscribersOpen(false);
+                      navigate(`/profile/${subscriber.userId}`);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-gray-100"
+                  >
+                    <ImageWithFallback
+                      src={subscriber.avatarUrl || ''}
+                      alt={subscriber.fullName || subscriber.username}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-gray-900">
+                        {subscriber.fullName || subscriber.username}
+                      </p>
+                      <p className="text-xs text-gray-500">@{subscriber.username}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
 
   return (
     <>

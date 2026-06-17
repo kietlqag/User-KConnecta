@@ -33,13 +33,14 @@ import { Conversation, MessengerFilter } from '../types/messenger.types';
 import { ChatUser, IncomingChatMessage, IncomingMessageStatus, Message } from '../types/message.types';
 import { useFriendConversations } from '../hooks/useFriendConversations';
 import { authService } from '@/services/authService';
-import { chatService } from '@/services/chatService';
+import { chatService, type GroupConversationMemberResponse } from '@/services/chatService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { formatLastActiveLabel } from '../utils/presenceLabel';
 import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '../utils/callDuration';
 import { toast } from 'sonner';
 import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { validateChatAgainstPolicy } from '@/utils/policyValidation';
+import { Switch } from '@/components/ui/switch';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
 const REPLY_PREFIX = '__REPLY__:';
@@ -62,6 +63,20 @@ function uniqueByUserId<T extends { userId: string }>(items: T[]) {
     }
   });
   return Array.from(byId.values());
+}
+
+function mapGroupMembersToChatUsers(members: GroupConversationMemberResponse[]): ChatUser[] {
+  return members.map((member) => ({
+    id: member.userId,
+    name: member.nickname || member.fullName || member.username || 'Người dùng',
+    fullName: member.fullName || member.username || 'Người dùng',
+    nickname: member.nickname,
+    avatar:
+      member.avatarUrl?.trim() ||
+      `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(member.fullName || member.username || 'User')}`,
+    isOnline: false,
+    memberStatus: member.memberStatus ?? 'APPROVED',
+  }));
 }
 
 function loadImageElement(src: string): Promise<HTMLImageElement> {
@@ -501,6 +516,11 @@ function ChatInfoPanel({
   onLoadMoreHistory,
   hasMoreHistory = false,
   isLoadingMoreHistory = false,
+  memberApprovalRequired = false,
+  canManageMemberApproval = false,
+  onMemberApprovalChange,
+  onApproveMember,
+  onRejectMember,
 }: {
   user: ChatUser;
   messages: Message[];
@@ -518,6 +538,11 @@ function ChatInfoPanel({
   onLoadMoreHistory?: () => Promise<void> | void;
   hasMoreHistory?: boolean;
   isLoadingMoreHistory?: boolean;
+  memberApprovalRequired?: boolean;
+  canManageMemberApproval?: boolean;
+  onMemberApprovalChange?: (enabled: boolean) => void;
+  onApproveMember?: (memberId: string) => void;
+  onRejectMember?: (memberId: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<InfoPanelTab>('media');
   const [infoView, setInfoView] = useState<'overview' | 'files'>('overview');
@@ -1133,13 +1158,18 @@ function ChatInfoPanel({
     const toggleGroupSection = (section: keyof typeof groupSectionsOpen) => {
       setGroupSectionsOpen((prev) => ({ ...prev, [section]: !prev[section] }));
     };
-    const sortedMembers = [...groupMembers].sort((a, b) => {
+    const sortedMembers = [...groupMembers]
+      .filter((member) => member.memberStatus !== 'PENDING')
+      .sort((a, b) => {
       if (a.id === groupCreatorId) return -1;
       if (b.id === groupCreatorId) return 1;
       if (a.id === currentUserId) return -1;
       if (b.id === currentUserId) return 1;
       return a.name.localeCompare(b.name, 'vi');
     });
+    const pendingMembers = [...groupMembers]
+      .filter((member) => member.memberStatus === 'PENDING')
+      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 
     const renderGroupSectionHeader = (
       section: keyof typeof groupSectionsOpen,
@@ -1226,31 +1256,75 @@ function ChatInfoPanel({
             </div>
           )}
 
-          {renderGroupSectionHeader('options', 'Tùy chọn nhóm')}
-          {groupSectionsOpen.options && (
-            <div className="space-y-2 px-3 pb-3 text-sm text-gray-600">
-              <button type="button" className="block w-full rounded-lg py-2 text-left hover:text-gray-900 cursor-pointer">
-                Tìm kiếm trong đoạn chat
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('media');
-                  setInfoView('files');
-                }} className="block w-full rounded-lg py-2 text-left hover:text-gray-900"
-              >
-                Xem phương tiện, file và link
-              </button>
-            </div>
+          {canManageMemberApproval && (
+            <>
+              {renderGroupSectionHeader('options', 'Tùy chọn nhóm')}
+              {groupSectionsOpen.options && (
+                <div className="space-y-2 px-3 pb-3 text-sm text-gray-600">
+                  <div className="flex items-center justify-between gap-3 rounded-lg py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-semibold text-gray-900">Phê duyệt thành viên</p>
+                      <p className="text-xs text-gray-500">
+                        Thành viên tự tham gia cần được bạn duyệt. Người do quản trị viên thêm sẽ vào nhóm ngay.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={memberApprovalRequired}
+                      onCheckedChange={(checked) => onMemberApprovalChange?.(checked)}
+                      aria-label="Phê duyệt thành viên"
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {renderGroupSectionHeader('members', 'Thành viên trong đoạn chat')}
           {groupSectionsOpen.members && (
             <div className="space-y-3 px-3 pb-3 pt-1">
+              {canManageMemberApproval && pendingMembers.length > 0 && (
+                <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3">
+                  <p className="text-sm font-semibold text-amber-900">
+                    Chờ phê duyệt ({pendingMembers.length})
+                  </p>
+                  {pendingMembers.map((member) => (
+                    <div key={member.id} className="flex items-center gap-3">
+                      <img
+                        src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`}
+                        alt={member.name}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-semibold text-gray-900">{member.name}</p>
+                        <p className="truncate text-sm text-amber-700">Đang chờ phê duyệt</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onApproveMember?.(member.id)}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-white hover:bg-green-700 cursor-pointer"
+                          title="Duyệt"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onRejectMember?.(member.id)}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer"
+                          title="Từ chối"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {sortedMembers.map((member) => {
                 const isCreator = member.id === groupCreatorId;
                 const isCurrentUser = member.id === currentUserId;
-                const subtitle = isCreator ? 'Người tạo nhóm' : isCurrentUser ? 'Bạn' : 'Do bạn thêm';
+                const subtitle = isCreator ? 'Quản trị viên' : isCurrentUser ? 'Bạn' : 'Do bạn thêm';
 
                 return (
                   <div key={member.id} className="flex items-center gap-3">
@@ -1616,6 +1690,7 @@ export default function MessengerPage() {
   const [serverGroupConversations, setServerGroupConversations] = useState<Conversation[]>([]);
   const [groupMembersById, setGroupMembersById] = useState<Record<string, ChatUser[]>>({});
   const [groupCreatorById, setGroupCreatorById] = useState<Record<string, string>>({});
+  const [groupMemberApprovalById, setGroupMemberApprovalById] = useState<Record<string, boolean>>({});
   const callRecorderRef = useRef<MediaRecorder | null>(null);
   const callRecorderChunksRef = useRef<Blob[]>([]);
   const callRecorderAudioCtxRef = useRef<AudioContext | null>(null);
@@ -1850,19 +1925,12 @@ export default function MessengerPage() {
 
       const membersMap: Record<string, ChatUser[]> = {};
       const creatorsMap: Record<string, string> = {};
+      const approvalMap: Record<string, boolean> = {};
       groups.forEach((group) => {
         const chatUserId = `group:${group.id}`;
-        membersMap[chatUserId] = group.members.map((member) => ({
-          id: member.userId,
-          name: member.nickname || member.fullName || member.username || 'Người dùng',
-          fullName: member.fullName || member.username || 'Người dùng',
-          nickname: member.nickname,
-          avatar:
-            member.avatarUrl?.trim() ||
-            `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(member.fullName || member.username || 'User')}`,
-          isOnline: false,
-        }));
+        membersMap[chatUserId] = mapGroupMembersToChatUsers(group.members);
         creatorsMap[chatUserId] = group.createdBy;
+        approvalMap[chatUserId] = Boolean(group.memberApprovalRequired);
       });
 
       setServerGroupConversations(mapped);
@@ -1881,6 +1949,7 @@ export default function MessengerPage() {
       });
       setGroupMembersById((prev) => ({ ...prev, ...membersMap }));
       setGroupCreatorById((prev) => ({ ...prev, ...creatorsMap }));
+      setGroupMemberApprovalById((prev) => ({ ...prev, ...approvalMap }));
     } catch {
       // keep current state on failure
     }
@@ -1912,18 +1981,10 @@ export default function MessengerPage() {
     setServerGroupConversations((prev) => [conversation, ...prev.filter((item) => item.user.id !== chatUserId)]);
     setGroupMembersById((prev) => ({
       ...prev,
-      [chatUserId]: group.members.map((member) => ({
-        id: member.userId,
-        name: member.nickname || member.fullName || member.username || 'Người dùng',
-        fullName: member.fullName || member.username || 'Người dùng',
-        nickname: member.nickname,
-        avatar:
-          member.avatarUrl?.trim() ||
-          `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(member.fullName || member.username || 'User')}`,
-        isOnline: false,
-      })),
+      [chatUserId]: mapGroupMembersToChatUsers(group.members),
     }));
     setGroupCreatorById((prev) => ({ ...prev, [chatUserId]: group.createdBy }));
+    setGroupMemberApprovalById((prev) => ({ ...prev, [chatUserId]: Boolean(group.memberApprovalRequired) }));
   }, [overrides]);
 
   const loadInitialHistory = useCallback(
@@ -2781,35 +2842,7 @@ export default function MessengerPage() {
     setIsAddingGroupMembers(true);
     try {
       const updated = await chatService.addGroupMembers(conversationId, selectedAddGroupMemberIds);
-      const chatUserId = `group:${updated.id}`;
-      const memberProfiles: ChatUser[] = updated.members.map((m) => ({
-        id: m.userId,
-        name: m.fullName || m.username || 'Người dùng',
-        avatar:
-          m.avatarUrl?.trim() ||
-          `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(m.fullName || m.username || 'User')}`,
-        isOnline: false,
-      }));
-
-      setGroupMembersById((prev) => ({ ...prev, [chatUserId]: memberProfiles }));
-      setGroupCreatorById((prev) => ({ ...prev, [chatUserId]: updated.createdBy }));
-      setServerGroupConversations((prev) =>
-        prev.map((conversation) =>
-          conversation.user.id === chatUserId
-            ? {
-                ...conversation,
-                user: {
-                  ...conversation.user,
-                  name: updated.name,
-                  avatar:
-                    updated.avatarUrl?.trim() ||
-                    conversation.user.avatar ||
-                    `https://ui-avatars.com/api/?background=2563eb&color=ffffff&bold=true&name=${encodeURIComponent('Group')}`,
-                },
-              }
-            : conversation,
-        ),
-      );
+      applyGroupConversationResponse(updated);
       setIsAddGroupMembersOpen(false);
       setSelectedAddGroupMemberIds([]);
       setAddGroupMemberSearch('');
@@ -2819,7 +2852,7 @@ export default function MessengerPage() {
     } finally {
       setIsAddingGroupMembers(false);
     }
-  }, [activeChatUserId, selectedAddGroupMemberIds]);
+  }, [activeChatUserId, applyGroupConversationResponse, selectedAddGroupMemberIds]);
 
   const handleCreateGroupChat = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -3162,6 +3195,45 @@ export default function MessengerPage() {
     }
   }, [activeChatUserId, applyGroupConversationResponse]);
 
+  const handleToggleMemberApproval = useCallback(async (enabled: boolean) => {
+    if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
+    const conversationId = activeChatUserId.replace('group:', '');
+    const previousValue = groupMemberApprovalById[activeChatUserId] ?? false;
+    setGroupMemberApprovalById((prev) => ({ ...prev, [activeChatUserId]: enabled }));
+    try {
+      const updated = await chatService.updateGroupConversation(conversationId, { memberApprovalRequired: enabled });
+      applyGroupConversationResponse(updated);
+      toast.success(enabled ? 'Đã bật phê duyệt thành viên.' : 'Đã tắt phê duyệt thành viên.');
+    } catch {
+      setGroupMemberApprovalById((prev) => ({ ...prev, [activeChatUserId]: previousValue }));
+      toast.error('Không thể cập nhật cài đặt phê duyệt.');
+    }
+  }, [activeChatUserId, applyGroupConversationResponse, groupMemberApprovalById, isActiveGroupCreator]);
+
+  const handleApproveGroupMember = useCallback(async (memberUserId: string) => {
+    if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
+    const conversationId = activeChatUserId.replace('group:', '');
+    try {
+      const updated = await chatService.approveGroupMember(conversationId, memberUserId);
+      applyGroupConversationResponse(updated);
+      toast.success('Đã phê duyệt thành viên.');
+    } catch {
+      toast.error('Không thể phê duyệt thành viên.');
+    }
+  }, [activeChatUserId, applyGroupConversationResponse, isActiveGroupCreator]);
+
+  const handleRejectGroupMember = useCallback(async (memberUserId: string) => {
+    if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
+    const conversationId = activeChatUserId.replace('group:', '');
+    try {
+      const updated = await chatService.rejectGroupMember(conversationId, memberUserId);
+      applyGroupConversationResponse(updated);
+      toast.success('Đã từ chối thành viên.');
+    } catch {
+      toast.error('Không thể từ chối thành viên.');
+    }
+  }, [activeChatUserId, applyGroupConversationResponse, isActiveGroupCreator]);
+
   const handleSaveNickname = useCallback(async (memberUserId: string, nickname: string) => {
     if (!activeChatUserId?.startsWith('group:')) return;
     const conversationId = activeChatUserId.replace('group:', '');
@@ -3392,6 +3464,11 @@ export default function MessengerPage() {
               onLoadMoreHistory={handleLoadOlderMessages}
               hasMoreHistory={hasOlderMessages}
               isLoadingMoreHistory={loadingOlderMessages}
+              memberApprovalRequired={activeChatUserId ? Boolean(groupMemberApprovalById[activeChatUserId]) : false}
+              canManageMemberApproval={isActiveGroupCreator}
+              onMemberApprovalChange={handleToggleMemberApproval}
+              onApproveMember={handleApproveGroupMember}
+              onRejectMember={handleRejectGroupMember}
             />
           )}
         </div>

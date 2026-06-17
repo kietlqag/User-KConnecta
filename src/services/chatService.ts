@@ -61,6 +61,7 @@ export interface GroupConversationMemberResponse {
   fullName: string;
   avatarUrl?: string | null;
   nickname?: string | null;
+  memberStatus?: 'APPROVED' | 'PENDING';
 }
 
 export interface GroupConversationResponse {
@@ -70,6 +71,7 @@ export interface GroupConversationResponse {
   themeColor?: string | null;
   createdAt: string;
   createdBy: string;
+  memberApprovalRequired?: boolean;
   members: GroupConversationMemberResponse[];
 }
 
@@ -253,8 +255,12 @@ export const chatService = {
   addGroupMembers: (conversationId: string, memberIds: string[]) => {
     return api.post<GroupConversationResponse>(`/chat/conversations/${conversationId}/members`, { memberIds });
   },
+  approveGroupMember: (conversationId: string, memberUserId: string) =>
+    api.post<GroupConversationResponse>(`/chat/conversations/${conversationId}/members/${memberUserId}/approve`, {}),
+  rejectGroupMember: (conversationId: string, memberUserId: string) =>
+    api.delete<GroupConversationResponse>(`/chat/conversations/${conversationId}/members/${memberUserId}/pending`),
 
-  updateGroupConversation: (conversationId: string, payload: { name?: string; avatarUrl?: string | null; themeColor?: string | null }) => {
+  updateGroupConversation: (conversationId: string, payload: { name?: string; avatarUrl?: string | null; themeColor?: string | null; memberApprovalRequired?: boolean }) => {
     return api.put<GroupConversationResponse>(`/chat/conversations/${conversationId}`, payload);
   },
 

@@ -11,6 +11,7 @@ import {
   UserRound,
   Users2,
   UsersRound,
+  Video,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -55,9 +56,6 @@ const privacyOptions: Array<{ id: PrivacyChoice; label: string; description: str
   { id: 'ONLY_ME', label: 'Chỉ mình tôi', description: 'Chỉ bạn mới có thể xem', icon: Lock },
 ];
 
-const leftMenuItems = [
-  { icon: Calendar, label: 'Chi tiết sự kiện', active: true },
-];
 
 export default function LiveEventPage() {
   const navigate = useNavigate();
@@ -112,9 +110,8 @@ export default function LiveEventPage() {
       { label: 'Tên sự kiện', done: isTitleValid },
       { label: 'Mô tả nội dung', done: isDescriptionValid },
       { label: 'Thời gian bắt đầu', done: isTimeValid },
-      { label: 'Chọn nơi đăng', done: isDestinationValid },
     ],
-    [isDescriptionValid, isDestinationValid, isTimeValid, isTitleValid],
+    [isDescriptionValid, isTimeValid, isTitleValid],
   );
 
   const completedSteps = checklist.filter((item) => item.done).length;
@@ -179,48 +176,64 @@ export default function LiveEventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50/80 via-gray-50 to-white">
       <Header />
 
       <div className="flex pt-14">
-        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-gray-200 bg-white">
+        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-emerald-100/80 bg-white/90 shadow-[4px_0_24px_rgba(16,185,129,0.06)] backdrop-blur-sm">
           <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-5 border-b border-gray-200 pb-4">
+          <div className="mb-5 overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 p-4">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-white/80 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              Lên lịch phát trực tiếp
+            </div>
             <h1 className="mb-2 text-2xl font-bold leading-tight text-gray-900">Lên lịch buổi live</h1>
-            <p className="mb-3 text-sm text-gray-600">
+            <p className="mb-4 text-sm leading-relaxed text-gray-600">
               Tạo bài thông báo trước. Đến giờ bạn mới thiết lập camera và bắt đầu phát.
             </p>
-            <div className="h-2 overflow-hidden rounded-full bg-gray-200">
+            <div className="mb-1 flex items-center justify-between text-xs font-medium text-gray-500">
+              <span>Tiến độ chuẩn bị</span>
+              <span className="text-emerald-700">{completedSteps}/{checklist.length}</span>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-white/80 shadow-inner">
               <div
-                className="h-full bg-green-600 transition-all duration-300"
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 transition-all duration-500 ease-out"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <div className="mt-3 space-y-2">
+            <div className="mt-4 space-y-2">
               {checklist.map((item) => (
-                <div key={item.label} className="flex items-center gap-3 text-sm text-gray-900">
+                <div
+                  key={item.label}
+                  className={`flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors ${
+                    item.done ? 'bg-emerald-50/90 text-emerald-900' : 'text-gray-700'
+                  }`}
+                >
                   {item.done ? (
-                    <CircleCheck className="h-5 w-5 text-green-600" />
+                    <CircleCheck className="h-5 w-5 shrink-0 text-emerald-600" />
                   ) : (
-                    <Circle className="h-5 w-5 text-gray-500" />
+                    <Circle className="h-5 w-5 shrink-0 text-gray-400" />
                   )}
-                  {item.label}
+                  <span className={item.done ? 'font-medium' : ''}>{item.label}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="mb-3 flex items-center gap-2.5">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-gray-200">
+          <div className="mb-4 flex items-center gap-3 rounded-2xl border border-gray-100 bg-gradient-to-r from-white to-gray-50/80 p-3 shadow-sm">
+            <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 ring-2 ring-emerald-200/60 ring-offset-2">
               {currentUserAvatar ? (
                 <img src={currentUserAvatar} alt={currentUserName} className="h-full w-full object-cover" />
               ) : (
-                <UserRound className="h-6 w-6 text-gray-600" />
+                <UserRound className="h-6 w-6 text-emerald-700" />
               )}
             </div>
-            <div className="leading-snug">
-              <p className="text-base font-bold text-gray-900">{currentUserName}</p>
-              <p className="text-xs text-gray-700">Người tổ chức - Trang cá nhân của bạn</p>
+            <div className="min-w-0 leading-snug">
+              <p className="truncate text-base font-bold text-gray-900">{currentUserName}</p>
+              <p className="text-xs text-gray-500">Người tổ chức · Trang cá nhân</p>
             </div>
           </div>
 
@@ -229,7 +242,7 @@ export default function LiveEventPage() {
               <button
                 type="button"
                 onClick={() => setIsDestinationOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-left hover:bg-gray-50"
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-left shadow-sm transition-all hover:border-emerald-200 hover:shadow-md"
               >
                 <p className="text-sm text-gray-500">Chọn nơi đăng</p>
                 <div className="flex items-center justify-between text-base font-semibold text-gray-900">
@@ -264,7 +277,7 @@ export default function LiveEventPage() {
                             {disabled ? 'Chưa có dữ liệu để chọn' : option.description}
                           </p>
                         </div>
-                        {destinationType === option.id && <Check className="h-4 w-4 text-green-600" />}
+                        {destinationType === option.id && <Check className="h-4 w-4 text-emerald-600" />}
                       </button>
                     );
                   })}
@@ -300,14 +313,14 @@ export default function LiveEventPage() {
                           if (destinationType === 'page') setSelectedPageId(item.id);
                           else setSelectedGroupId(item.id);
                         }}
-                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm ${
-                          isSelected ? 'bg-green-50 text-green-700' : 'text-gray-800 hover:bg-gray-50'
+                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
+                          isSelected ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 hover:bg-gray-50'
                         }`}
                       >
                         <span className="truncate">{item.name}</span>
                         <span
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                            isSelected ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 bg-white'
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                            isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300 bg-white'
                           }`}
                         >
                           {isSelected && <Check className="h-3 w-3" />}
@@ -323,7 +336,7 @@ export default function LiveEventPage() {
               <button
                 type="button"
                 onClick={() => setIsPrivacyOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-left hover:bg-gray-50"
+                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-left shadow-sm transition-all hover:border-emerald-200 hover:shadow-md"
               >
                 <p className="text-sm text-gray-500">Chọn quyền riêng tư</p>
                 <div className="flex items-center justify-between text-base font-semibold text-gray-900">
@@ -353,7 +366,7 @@ export default function LiveEventPage() {
                           <p className="text-sm font-semibold text-gray-900">{option.label}</p>
                           <p className="text-xs text-gray-500">{option.description}</p>
                         </div>
-                        {privacy === option.id && <Check className="h-4 w-4 text-green-600" />}
+                        {privacy === option.id && <Check className="h-4 w-4 text-emerald-600" />}
                       </button>
                     );
                   })}
@@ -362,37 +375,14 @@ export default function LiveEventPage() {
             </div>
           </div>
 
-          <div className="mt-4 space-y-2">
-            {leftMenuItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-base font-semibold ${
-                    item.active ? 'bg-green-50 text-gray-900' : 'text-gray-900 hover:bg-gray-100'
-                  }`}
-                >
-                  <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-full ${
-                      item.active ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
           </div>
 
-          <div className="shrink-0 border-t border-gray-200 bg-white p-4">
+          <div className="shrink-0 border-t border-emerald-100/80 bg-white/95 p-4 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/live')}
-              className="flex-1 rounded-xl bg-gray-200 py-2.5 text-base font-semibold text-gray-900"
+              className="flex-1 rounded-xl border border-gray-200 bg-white py-2.5 text-base font-semibold text-gray-800 transition-colors hover:bg-gray-50"
             >
               Quay lại
             </button>
@@ -400,8 +390,10 @@ export default function LiveEventPage() {
               type="button"
               disabled={!canSubmit || isSubmitting}
               onClick={() => void handleCreateEvent()}
-              className={`flex-1 rounded-xl py-2.5 text-base font-semibold text-white transition-colors ${
-                canSubmit && !isSubmitting ? 'bg-green-600 hover:bg-green-700' : 'cursor-not-allowed bg-gray-400'
+              className={`flex-1 rounded-xl py-2.5 text-base font-semibold text-white transition-all ${
+                canSubmit && !isSubmitting
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/30 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/40'
+                  : 'cursor-not-allowed bg-gray-300'
               }`}
             >
               {isSubmitting ? 'Đang tạo...' : 'Tạo sự kiện'}
@@ -411,10 +403,11 @@ export default function LiveEventPage() {
           </div>
         </aside>
 
-        <main className="flex-1 p-6">
-          <section className="mx-auto max-w-3xl rounded-2xl border border-gray-200 bg-white p-5">
-            <h2 className="mb-1 text-2xl font-bold text-gray-900">Chi tiết sự kiện</h2>
-            <p className="mb-5 text-sm text-gray-600">
+        <main className="flex-1 p-6 lg:p-8">
+          <div className="mx-auto grid max-w-6xl gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <section className="max-w-xl">
+            <h2 className="text-xl font-bold text-gray-900">Chi tiết sự kiện</h2>
+            <p className="mt-1 mb-6 text-sm text-gray-600">
               Thông tin này sẽ hiển thị trên bài thông báo trong feed.
             </p>
 
@@ -425,7 +418,7 @@ export default function LiveEventPage() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Ví dụ: Livestream giới thiệu sản phẩm mới"
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none ring-2 ring-transparent placeholder:text-gray-500 focus:border-green-400 focus:ring-green-100"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none placeholder:text-gray-500 focus:border-green-500"
                 />
                 <div className="mt-1 flex items-center justify-between text-xs">
                   {!isTitleValid && title.length > 0 ? (
@@ -444,7 +437,7 @@ export default function LiveEventPage() {
                   onChange={(e) => setDescription(e.target.value)}
                   rows={5}
                   placeholder="Mô tả nội dung buổi phát để mọi người biết trước khi tham gia"
-                  className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none ring-2 ring-transparent placeholder:text-gray-500 focus:border-green-400 focus:ring-green-100"
+                  className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none placeholder:text-gray-500 focus:border-green-500"
                 />
                 <div className="mt-1 flex items-center justify-between text-xs">
                   {!isDescriptionValid && description.length > 0 ? (
@@ -463,7 +456,7 @@ export default function LiveEventPage() {
                   value={scheduledAt}
                   min={minScheduledAt}
                   onChange={(e) => setScheduledAt(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 outline-none focus:border-green-500"
                 />
                 {scheduledAt && isTimeValid && (
                   <p className="mt-2 text-sm text-gray-700">
@@ -476,6 +469,55 @@ export default function LiveEventPage() {
               </div>
             </div>
           </section>
+
+          <aside className="xl:sticky xl:top-[4.5rem] xl:self-start">
+            <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-[0_8px_30px_rgba(17,17,38,0.06)]">
+              <div className="border-b border-gray-100 bg-gray-50/80 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Xem trước bài thông báo</p>
+              </div>
+              <div className="p-4">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-100 to-teal-100">
+                    {currentUserAvatar ? (
+                      <img src={currentUserAvatar} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <UserRound className="h-5 w-5 text-emerald-700" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-gray-900">{currentUserName}</p>
+                    <p className="text-xs text-gray-500">Đăng bài thông báo live</p>
+                  </div>
+                </div>
+
+                <div className="relative aspect-video overflow-hidden rounded-xl bg-gradient-to-br from-gray-900 via-[#1a1a35] to-emerald-950">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Video className="h-12 w-12 text-white/20" />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-4">
+                    <p className="text-base font-bold leading-snug text-white line-clamp-2">
+                      {title.trim() || 'Tên sự kiện của bạn'}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-sm leading-relaxed text-gray-700 line-clamp-4">
+                  {description.trim() || 'Mô tả buổi live sẽ hiển thị ở đây để mọi người biết nội dung trước khi tham gia.'}
+                </p>
+
+                <div className="mt-3 flex items-center gap-2 border-t border-gray-100 pt-3 text-sm text-gray-600">
+                  <Calendar className="h-4 w-4 shrink-0 text-emerald-600" />
+                  <span>
+                    {scheduledAt && isTimeValid
+                      ? `Bắt đầu lúc ${formatScheduledDisplay(scheduledAt)}`
+                      : 'Chưa chọn thời gian bắt đầu'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </aside>
+          </div>
         </main>
       </div>
     </div>

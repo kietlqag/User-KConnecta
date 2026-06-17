@@ -240,6 +240,19 @@ export const liveService = {
     api.post<LiveKitTokenResponse>('/live/token', payload),
   listActiveSessions: () =>
     api.get<LiveSessionResponse[]>('/live/sessions/active'),
+  listScheduledSessions: () =>
+    api.get<LiveSessionResponse[]>('/live/sessions/scheduled'),
+  updateScheduledSession: (
+    sessionId: string,
+    payload: {
+      title: string;
+      description: string;
+      scheduledAt: string;
+      privacy: LiveSessionResponse['privacy'];
+    },
+  ) => api.put<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/scheduled`, payload),
+  cancelScheduledSession: (sessionId: string) =>
+    api.delete<void>(`/live/sessions/${encodeURIComponent(sessionId)}/scheduled`),
   getSession: (sessionId: string) =>
     api.get<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}`),
   getSessionByPost: (postId: string) =>
