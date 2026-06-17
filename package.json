@@ -77,5 +77,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "esbuild"
+    ]
   }
 }
