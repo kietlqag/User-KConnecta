@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.chat.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import project.kconnecta.user.backend.feature.chat.entity.enums.ChatMemberStatus;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -38,4 +39,15 @@ public class ChatConversationMember {
 
     @Column(name = "nickname", length = 120)
     private String nickname;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "member_status", nullable = false, length = 20)
+    private ChatMemberStatus memberStatus;
+
+    @PrePersist
+    void prePersist() {
+        if (memberStatus == null) {
+            memberStatus = ChatMemberStatus.APPROVED;
+        }
+    }
 }

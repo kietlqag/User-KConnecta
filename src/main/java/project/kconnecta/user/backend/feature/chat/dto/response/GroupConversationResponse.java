@@ -20,5 +20,6 @@ public class GroupConversationResponse {
     private String themeColor;
     private LocalDateTime createdAt;
     private UUID createdBy;
+    private boolean memberApprovalRequired;
     private List<GroupConversationMemberResponse> members;
 }

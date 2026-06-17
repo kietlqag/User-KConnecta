@@ -17,4 +17,5 @@ public class GroupConversationMemberResponse {
     private String fullName;
     private String avatarUrl;
     private String nickname;
+    private String memberStatus;
 }

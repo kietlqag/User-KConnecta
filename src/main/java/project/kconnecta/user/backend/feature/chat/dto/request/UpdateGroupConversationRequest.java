@@ -9,4 +9,5 @@ public class UpdateGroupConversationRequest {
     private String name;
     private String avatarUrl;
     private String themeColor;
+    private Boolean memberApprovalRequired;
 }

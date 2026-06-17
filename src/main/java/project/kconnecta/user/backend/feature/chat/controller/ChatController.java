@@ -189,6 +189,30 @@ public class ChatController {
         return ResponseEntity.ok(chatService.addGroupMembers(principal.getName(), conversationId, request));
     }
 
+    @PostMapping("/conversations/{conversationId}/members/{memberUserId}/approve")
+    public ResponseEntity<GroupConversationResponse> approveGroupMember(
+            @PathVariable UUID conversationId,
+            @PathVariable UUID memberUserId,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.approveGroupMember(principal.getName(), conversationId, memberUserId));
+    }
+
+    @DeleteMapping("/conversations/{conversationId}/members/{memberUserId}/pending")
+    public ResponseEntity<GroupConversationResponse> rejectGroupMember(
+            @PathVariable UUID conversationId,
+            @PathVariable UUID memberUserId,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.rejectGroupMember(principal.getName(), conversationId, memberUserId));
+    }
+
     @PostMapping("/conversations/{conversationId}/calls")
     public ResponseEntity<GroupCallSessionResponse> createGroupCallSession(
             @PathVariable UUID conversationId,

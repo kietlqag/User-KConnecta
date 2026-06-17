@@ -45,6 +45,8 @@ public interface ChatService {
     GroupConversationResponse updateGroupMemberNickname(String currentUsername, UUID conversationId, UUID memberUserId, UpdateGroupMemberNicknameRequest request);
     List<GroupConversationResponse> getMyGroupConversations(String currentUsername);
     GroupConversationResponse addGroupMembers(String currentUsername, UUID conversationId, AddGroupMembersRequest request);
+    GroupConversationResponse approveGroupMember(String currentUsername, UUID conversationId, UUID targetUserId);
+    GroupConversationResponse rejectGroupMember(String currentUsername, UUID conversationId, UUID targetUserId);
     GroupCallSessionResponse createGroupCallSession(String currentUsername, UUID conversationId, CreateGroupCallSessionRequest request);
     GroupCallSessionResponse getGroupCallSessionSnapshot(String currentUsername, UUID callId);
     ConversationPinResponse setConversationPinned(String currentUsername, ConversationPinRequest request);

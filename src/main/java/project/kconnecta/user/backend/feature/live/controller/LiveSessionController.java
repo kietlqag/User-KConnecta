@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.live.dto.request.session.CreateLiveSessionRequest;
+import project.kconnecta.user.backend.feature.live.dto.request.session.UpdateScheduledLiveRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveReactionRequest;
 import project.kconnecta.user.backend.feature.live.dto.response.session.GoLiveResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveEventSubscribersResponse;
@@ -175,6 +176,37 @@ public class LiveSessionController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         return ResponseEntity.ok(liveSessionService.listActive(principal == null ? null : principal.getUserId()));
+    }
+
+    @GetMapping("/scheduled")
+    public ResponseEntity<List<LiveSessionResponse>> listScheduled(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(liveSessionService.listScheduled(principal == null ? null : principal.getUserId()));
+    }
+
+    @PutMapping("/{sessionId}/scheduled")
+    public ResponseEntity<LiveSessionResponse> updateScheduled(
+            @PathVariable UUID sessionId,
+            @Valid @RequestBody UpdateScheduledLiveRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.updateScheduled(sessionId, principal.getUserId(), request));
+    }
+
+    @DeleteMapping("/{sessionId}/scheduled")
+    public ResponseEntity<Void> cancelScheduled(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        liveSessionService.cancelScheduled(sessionId, principal.getUserId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

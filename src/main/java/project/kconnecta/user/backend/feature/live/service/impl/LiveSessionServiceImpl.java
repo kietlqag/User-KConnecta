@@ -12,6 +12,7 @@ import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.live.dto.request.LiveKitTokenRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.CreateLiveSessionRequest;
+import project.kconnecta.user.backend.feature.live.dto.request.session.UpdateScheduledLiveRequest;
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveReactionRequest;
 import project.kconnecta.user.backend.feature.live.dto.response.LiveKitTokenResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.GoLiveResponse;
@@ -35,6 +36,7 @@ import project.kconnecta.user.backend.feature.live.service.LiveKitTokenService;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionService;
 import project.kconnecta.user.backend.feature.post.entity.Post;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import project.kconnecta.user.backend.feature.post.repository.PostRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
@@ -358,6 +360,62 @@ public class LiveSessionServiceImpl implements LiveSessionService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<LiveSessionResponse> listScheduled(UUID viewerUserId) {
+        return liveSessionRepository.findAllByStatusOrderByScheduledAtAsc(LiveSessionStatus.SCHEDULED)
+                .stream()
+                .filter(session -> liveAccessService.canView(session, viewerUserId))
+                .map(session -> toResponse(session, viewerUserId))
+                .toList();
+    }
+
+    @Override
+    public LiveSessionResponse updateScheduled(UUID sessionId, UUID hostUserId, UpdateScheduledLiveRequest request) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireHost(session, hostUserId);
+        if (session.getStatus() != LiveSessionStatus.SCHEDULED) {
+            throw new ValidationException("Chỉ có thể chỉnh sửa sự kiện live đang chờ phát");
+        }
+        validateScheduleRule(LiveStartMode.SCHEDULED, request.getScheduledAt());
+
+        String title = request.getTitle().trim();
+        String description = request.getDescription().trim();
+        PostPrivacy privacy = request.getPrivacy();
+
+        session.setTitle(title);
+        session.setDescription(description);
+        session.setScheduledAt(request.getScheduledAt());
+        session.setPrivacy(privacy);
+
+        if (session.getPostId() != null) {
+            postRepository.findById(session.getPostId()).ifPresent(post -> {
+                post.setContent(buildLiveContent(title, description));
+                post.setScheduledAt(request.getScheduledAt());
+                post.setPrivacy(privacy);
+                postRepository.save(post);
+            });
+        }
+
+        return toResponse(liveSessionRepository.save(session), hostUserId);
+    }
+
+    @Override
+    public void cancelScheduled(UUID sessionId, UUID hostUserId) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireHost(session, hostUserId);
+        if (session.getStatus() != LiveSessionStatus.SCHEDULED) {
+            throw new ValidationException("Chỉ có thể xóa sự kiện live đang chờ phát");
+        }
+
+        session.setStatus(LiveSessionStatus.CANCELED);
+        liveSessionRepository.save(session);
+
+        if (session.getPostId() != null) {
+            postRepository.findById(session.getPostId()).ifPresent(postRepository::delete);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<LiveSessionResponse> listByHost(UUID hostUserId, UUID requesterUserId) {
         liveAccessService.requireAuthenticated(requesterUserId);
         if (!hostUserId.equals(requesterUserId)) {
@@ -541,5 +599,20 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }
 
         return builder.build();
+    }
+
+    private String buildLiveContent(String title, String description) {
+        String safeTitle = title == null ? "" : title.trim();
+        String safeDescription = description == null ? "" : description.trim();
+        if (safeTitle.isBlank() && safeDescription.isBlank()) {
+            throw new ValidationException("Live post content cannot be empty");
+        }
+        if (safeTitle.isBlank()) {
+            return safeDescription;
+        }
+        if (safeDescription.isBlank()) {
+            return safeTitle;
+        }
+        return safeTitle + "\n\n" + safeDescription;
     }
 }

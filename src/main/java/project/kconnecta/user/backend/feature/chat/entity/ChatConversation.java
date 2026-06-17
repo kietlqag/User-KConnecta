@@ -29,10 +29,20 @@ public class ChatConversation {
     @Column(name = "theme_color", length = 32)
     private String themeColor;
 
+    @Column(name = "member_approval_required", nullable = false)
+    private boolean memberApprovalRequired;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }

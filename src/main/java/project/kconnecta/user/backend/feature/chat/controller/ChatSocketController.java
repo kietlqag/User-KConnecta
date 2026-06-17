@@ -111,7 +111,7 @@ public class ChatSocketController {
             User receiver = userRepository.findById(request.getReceiverId())
                     .orElseThrow(() -> new BadRequestException("Receiver not found"));
             if (request.getConversationId() != null
-                    && !chatConversationMemberRepository.existsByConversationIdAndUserId(
+                    && !chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(
                     request.getConversationId(),
                     receiver.getId()
             )) {
@@ -323,7 +323,7 @@ public class ChatSocketController {
             }
             ChatConversation conversation = chatConversationRepository.findByIdPlain(request.getConversationId())
                     .orElseThrow(() -> new BadRequestException("Conversation not found"));
-            if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversation.getId(), sender.getId())) {
+            if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversation.getId(), sender.getId())) {
                 throw new ForbiddenException("Forbidden");
             }
             session = GroupCallSession.builder()

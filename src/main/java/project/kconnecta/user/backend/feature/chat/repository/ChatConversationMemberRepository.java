@@ -16,6 +16,15 @@ public interface ChatConversationMemberRepository extends JpaRepository<ChatConv
             FROM ChatConversationMember cm
             WHERE cm.conversation.id = :conversationId
               AND cm.user.id = :userId
+              AND cm.memberStatus = project.kconnecta.user.backend.feature.chat.entity.enums.ChatMemberStatus.APPROVED
+            """)
+    boolean existsApprovedByConversationIdAndUserId(@Param("conversationId") UUID conversationId, @Param("userId") UUID userId);
+
+    @Query("""
+            SELECT COUNT(cm.id) > 0
+            FROM ChatConversationMember cm
+            WHERE cm.conversation.id = :conversationId
+              AND cm.user.id = :userId
             """)
     boolean existsByConversationIdAndUserId(@Param("conversationId") UUID conversationId, @Param("userId") UUID userId);
 
@@ -43,7 +52,8 @@ public interface ChatConversationMemberRepository extends JpaRepository<ChatConv
             SELECT cm FROM ChatConversationMember cm
             JOIN FETCH cm.conversation c
             WHERE cm.user.id = :userId
+              AND cm.memberStatus = project.kconnecta.user.backend.feature.chat.entity.enums.ChatMemberStatus.APPROVED
             ORDER BY c.createdAt DESC
             """)
-    List<ChatConversationMember> findByUserIdWithConversation(@Param("userId") UUID userId);
+    List<ChatConversationMember> findApprovedByUserIdWithConversation(@Param("userId") UUID userId);
 }

@@ -105,7 +105,7 @@ public class CallRecordingServiceImpl implements CallRecordingService {
 
         GroupCallSession groupSession = groupCallSessionRepository.findByCallId(callId)
                 .orElseThrow(() -> new ResourceNotFoundException("Call session not found: " + callId));
-        boolean isGroupMember = chatConversationMemberRepository.existsByConversationIdAndUserId(
+        boolean isGroupMember = chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(
                 groupSession.getConversation().getId(),
                 owner.getId()
         );

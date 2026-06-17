@@ -4,6 +4,8 @@ package project.kconnecta.user.backend.feature.live.service;
 
 import project.kconnecta.user.backend.feature.live.dto.request.session.CreateLiveSessionRequest;
 
+import project.kconnecta.user.backend.feature.live.dto.request.session.UpdateScheduledLiveRequest;
+
 import project.kconnecta.user.backend.feature.live.dto.request.session.UpsertLiveReactionRequest;
 
 import project.kconnecta.user.backend.feature.live.dto.response.session.GoLiveResponse;
@@ -51,6 +53,12 @@ public interface LiveSessionService {
     LiveSessionResponse getByPostId(UUID postId, UUID viewerUserId);
 
     List<LiveSessionResponse> listActive(UUID viewerUserId);
+
+    List<LiveSessionResponse> listScheduled(UUID viewerUserId);
+
+    LiveSessionResponse updateScheduled(UUID sessionId, UUID hostUserId, UpdateScheduledLiveRequest request);
+
+    void cancelScheduled(UUID sessionId, UUID hostUserId);
 
     List<LiveSessionResponse> listByHost(UUID hostUserId, UUID requesterUserId);
 

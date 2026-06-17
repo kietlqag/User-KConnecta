@@ -52,7 +52,8 @@ public class LiveStartServiceImpl implements LiveStartService {
         createPostRequest.setPageId(request.getPageId());
         createPostRequest.setContent(buildContent(request.getTitle(), request.getDescription()));
         createPostRequest.setPrivacy(request.getPrivacy());
-        createPostRequest.setStatus(request.getStartMode() == LiveStartMode.SCHEDULED ? PostStatus.SCHEDULED : PostStatus.PUBLISHED);
+        // Scheduled live: publish announcement post immediately; only the stream session waits.
+        createPostRequest.setStatus(PostStatus.PUBLISHED);
         createPostRequest.setScheduledAt(request.getStartMode() == LiveStartMode.SCHEDULED ? request.getScheduledAt() : null);
         createPostRequest.setLocationText(request.getLocationText());
         createPostRequest.setBackgroundStyle("LIVE_POST");

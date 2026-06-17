@@ -36,6 +36,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.MessageStatusRes
 import project.kconnecta.user.backend.feature.chat.entity.CallSession;
 import project.kconnecta.user.backend.feature.chat.entity.ChatConversation;
 import project.kconnecta.user.backend.feature.chat.entity.ChatConversationMember;
+import project.kconnecta.user.backend.feature.chat.entity.enums.ChatMemberStatus;
 import project.kconnecta.user.backend.feature.chat.entity.ChatMessage;
 import project.kconnecta.user.backend.feature.chat.entity.ChatMessageReaction;
 import project.kconnecta.user.backend.feature.chat.entity.ChatMessageReport;
@@ -279,7 +280,7 @@ public class ChatServiceImpl implements ChatService {
         ChatConversation conversation = chatConversationRepository.findByIdPlain(request.getConversationId())
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
 
-        boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(conversation.getId(), sender.getId());
+        boolean isMember = chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversation.getId(), sender.getId());
         if (!isMember) {
             throw new RuntimeException("Forbidden");
         }
@@ -435,7 +436,7 @@ public class ChatServiceImpl implements ChatService {
         }
         User viewer = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, viewer.getId());
+        boolean isMember = chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, viewer.getId());
         if (!isMember) {
             throw new RuntimeException("Forbidden");
         }
@@ -483,7 +484,7 @@ public class ChatServiceImpl implements ChatService {
         if (conversationId == null) {
             throw new BadRequestException("Conversation ID is required");
         }
-        boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, viewer.getId());
+        boolean isMember = chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, viewer.getId());
         if (!isMember) {
             throw new ForbiddenException("Forbidden");
         }
@@ -539,6 +540,7 @@ public class ChatServiceImpl implements ChatService {
                     .conversation(conversation)
                     .user(user)
                     .joinedAt(joinedAt)
+                    .memberStatus(ChatMemberStatus.APPROVED)
                     .build());
         }
         chatConversationMemberRepository.saveAll(members);
@@ -553,7 +555,7 @@ public class ChatServiceImpl implements ChatService {
         }
         User actor = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, actor.getId())) {
+        if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, actor.getId())) {
             throw new RuntimeException("Forbidden");
         }
         ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
@@ -579,6 +581,12 @@ public class ChatServiceImpl implements ChatService {
             if (request.getThemeColor() != null) {
                 String themeColor = request.getThemeColor().trim();
                 conversation.setThemeColor(themeColor.isBlank() ? null : themeColor.substring(0, Math.min(themeColor.length(), 32)));
+            }
+            if (request.getMemberApprovalRequired() != null) {
+                if (!conversation.getCreatedBy().getId().equals(actor.getId())) {
+                    throw new RuntimeException("Only the group creator can change member approval settings");
+                }
+                conversation.setMemberApprovalRequired(request.getMemberApprovalRequired());
             }
         }
 
@@ -625,7 +633,7 @@ public class ChatServiceImpl implements ChatService {
         }
         User actor = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, actor.getId())) {
+        if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, actor.getId())) {
             throw new RuntimeException("Forbidden");
         }
         ChatConversationMember target = chatConversationMemberRepository
@@ -658,7 +666,7 @@ public class ChatServiceImpl implements ChatService {
         User user = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        List<ChatConversationMember> memberships = chatConversationMemberRepository.findByUserIdWithConversation(user.getId());
+        List<ChatConversationMember> memberships = chatConversationMemberRepository.findApprovedByUserIdWithConversation(user.getId());
         List<GroupConversationResponse> responses = new ArrayList<>();
         for (ChatConversationMember membership : memberships) {
             ChatConversation conversation = membership.getConversation();
@@ -676,7 +684,7 @@ public class ChatServiceImpl implements ChatService {
         if (conversationId == null) {
             throw new RuntimeException("Conversation ID is required");
         }
-        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, actor.getId())) {
+        if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, actor.getId())) {
             throw new RuntimeException("You are not a member of this conversation");
         }
 
@@ -704,12 +712,15 @@ public class ChatServiceImpl implements ChatService {
         }
 
         LocalDateTime joinedAt = LocalDateTime.now();
+        boolean isGroupAdmin = conversation.getCreatedBy().getId().equals(actor.getId());
+        boolean requiresApproval = conversation.isMemberApprovalRequired() && !isGroupAdmin;
         List<ChatConversationMember> newMembers = users.stream()
                 .filter(user -> !chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, user.getId()))
                 .map(user -> ChatConversationMember.builder()
                         .conversation(conversation)
                         .user(user)
                         .joinedAt(joinedAt)
+                        .memberStatus(requiresApproval ? ChatMemberStatus.PENDING : ChatMemberStatus.APPROVED)
                         .build())
                 .toList();
 
@@ -720,7 +731,7 @@ public class ChatServiceImpl implements ChatService {
                     .map(this::displayName)
                     .collect(Collectors.joining(", "));
             sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
-                    "add_members",
+                    requiresApproval ? "add_members_pending" : "add_members",
                     actor,
                     null,
                     addedNames
@@ -731,6 +742,60 @@ public class ChatServiceImpl implements ChatService {
                 conversation,
                 chatConversationMemberRepository.findMembersByConversationId(conversationId)
         );
+    }
+
+    @Override
+    @Transactional
+    public GroupConversationResponse approveGroupMember(String currentUsername, UUID conversationId, UUID targetUserId) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        if (!conversation.getCreatedBy().getId().equals(actor.getId())) {
+            throw new RuntimeException("Only the group creator can approve members");
+        }
+
+        ChatConversationMember member = chatConversationMemberRepository.findByConversationIdAndUserId(conversationId, targetUserId)
+                .orElseThrow(() -> new RuntimeException("Member request not found"));
+        if (member.getMemberStatus() != ChatMemberStatus.PENDING) {
+            throw new RuntimeException("Member is not pending approval");
+        }
+        member.setMemberStatus(ChatMemberStatus.APPROVED);
+        chatConversationMemberRepository.save(member);
+        sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                "approve_member",
+                actor,
+                member.getUser(),
+                null
+        ));
+        return toGroupConversationResponse(conversation, chatConversationMemberRepository.findMembersByConversationId(conversationId));
+    }
+
+    @Override
+    @Transactional
+    public GroupConversationResponse rejectGroupMember(String currentUsername, UUID conversationId, UUID targetUserId) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        if (!conversation.getCreatedBy().getId().equals(actor.getId())) {
+            throw new RuntimeException("Only the group creator can reject members");
+        }
+
+        ChatConversationMember member = chatConversationMemberRepository.findByConversationIdAndUserId(conversationId, targetUserId)
+                .orElseThrow(() -> new RuntimeException("Member request not found"));
+        if (member.getMemberStatus() != ChatMemberStatus.PENDING) {
+            throw new RuntimeException("Member is not pending approval");
+        }
+        User target = member.getUser();
+        chatConversationMemberRepository.delete(member);
+        sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                "reject_member",
+                actor,
+                target,
+                null
+        ));
+        return toGroupConversationResponse(conversation, chatConversationMemberRepository.findMembersByConversationId(conversationId));
     }
 
     @Override
@@ -778,7 +843,7 @@ public class ChatServiceImpl implements ChatService {
         if (conversationId == null) {
             throw new BadRequestException("Conversation ID is required");
         }
-        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, caller.getId())) {
+        if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, caller.getId())) {
             throw new ForbiddenException("You are not a member of this conversation");
         }
 
@@ -808,7 +873,7 @@ public class ChatServiceImpl implements ChatService {
         GroupCallSession session = groupCallSessionRepository.findByCallIdWithDetails(callId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group call session not found"));
         UUID conversationId = session.getConversation().getId();
-        if (!chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, viewer.getId())) {
+        if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, viewer.getId())) {
             throw new ForbiddenException("You are not a member of this conversation");
         }
         return toGroupCallSessionResponse(session, LocalDateTime.now());
@@ -852,7 +917,7 @@ public class ChatServiceImpl implements ChatService {
 
         ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
-        boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, owner.getId());
+        boolean isMember = chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, owner.getId());
         if (!isMember) {
             throw new RuntimeException("Forbidden");
         }
@@ -968,7 +1033,7 @@ public class ChatServiceImpl implements ChatService {
         if (message.getConversation() == null || !message.getConversation().getId().equals(conversationId)) {
             throw new RuntimeException("Message does not belong to target conversation");
         }
-        boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, actor.getId());
+        boolean isMember = chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, actor.getId());
         if (!isMember) {
             throw new RuntimeException("Forbidden");
         }
@@ -1063,7 +1128,7 @@ public class ChatServiceImpl implements ChatService {
                 .distinct()
                 .toList();
         if (!safeConversationIds.isEmpty()) {
-            Set<UUID> allowedConversationIds = chatConversationMemberRepository.findByUserIdWithConversation(currentUserId)
+            Set<UUID> allowedConversationIds = chatConversationMemberRepository.findApprovedByUserIdWithConversation(currentUserId)
                     .stream()
                     .map(member -> member.getConversation().getId())
                     .collect(Collectors.toSet());
@@ -1271,7 +1336,10 @@ public class ChatServiceImpl implements ChatService {
 
     private void broadcastMessageUpdate(ChatMessage message, ChatMessageResponse response) {
         if (message.getConversation() != null) {
-            List<ChatConversationMember> members = chatConversationMemberRepository.findMembersByConversationId(message.getConversation().getId());
+            List<ChatConversationMember> members = chatConversationMemberRepository.findMembersByConversationId(message.getConversation().getId())
+                    .stream()
+                    .filter(member -> member.getMemberStatus() == null || member.getMemberStatus() == ChatMemberStatus.APPROVED)
+                    .toList();
             for (ChatConversationMember member : members) {
                 messagingTemplate.convertAndSendToUser(
                         member.getUser().getUsername(),
@@ -1299,7 +1367,7 @@ public class ChatServiceImpl implements ChatService {
     private void validateParticipant(ChatMessage message, User actor) {
         UUID actorId = actor.getId();
         if (message.getConversation() != null) {
-            boolean isMember = chatConversationMemberRepository.existsByConversationIdAndUserId(message.getConversation().getId(), actorId);
+            boolean isMember = chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(message.getConversation().getId(), actorId);
             if (!isMember) {
                 throw new RuntimeException("Forbidden");
             }
@@ -1517,7 +1585,8 @@ public class ChatServiceImpl implements ChatService {
                         member.getUser().getUsername(),
                         member.getUser().getFullName(),
                         member.getUser().getAvatarUrl(),
-                        member.getNickname()
+                        member.getNickname(),
+                        member.getMemberStatus() == null ? ChatMemberStatus.APPROVED.name() : member.getMemberStatus().name()
                 ))
                 .toList();
 
@@ -1528,6 +1597,7 @@ public class ChatServiceImpl implements ChatService {
                 conversation.getThemeColor(),
                 conversation.getCreatedAt(),
                 conversation.getCreatedBy().getId(),
+                conversation.isMemberApprovalRequired(),
                 memberResponses
         );
     }
