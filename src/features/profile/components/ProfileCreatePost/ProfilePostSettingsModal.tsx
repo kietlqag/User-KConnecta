@@ -53,7 +53,7 @@ export function ProfilePostSettingsModal({
       case 'public':
         return 'Công khai';
       case 'friends':
-        return 'Bạn bè';
+        return 'Chọn bạn bè để xem';
       case 'friends-except':
         return excludedCount > 0 ? `Bạn bè ngoại trừ (${excludedCount} người)` : 'Bạn bè ngoại trừ...';
       case 'specific-friends':

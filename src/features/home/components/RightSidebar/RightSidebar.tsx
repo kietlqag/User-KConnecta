@@ -1,10 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MoreHorizontal, Video, Phone, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { friendService } from '@/services/friendService';
 import { authService } from '@/services/authService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
+
+function normalizeSearchText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/đ/g, 'd')
+    .trim();
+}
 
 export function RightSidebar() {
   const navigate = useNavigate();
@@ -18,7 +27,7 @@ export function RightSidebar() {
   const currentUser = authService.getCurrentUser();
 
   const filteredContacts = query.trim()
-    ? contacts.filter(c => c.name.toLowerCase().includes(query.trim().toLowerCase()))
+    ? contacts.filter((c) => normalizeSearchText(c.name).includes(normalizeSearchText(query)))
     : contacts;
 
   useEffect(() => {
@@ -83,9 +92,6 @@ export function RightSidebar() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-gray-600 font-semibold">Người liên hệ</h3>
             <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <Video className="w-4 h-4 text-gray-600" />
-              </button>
               <button
                 onClick={() => {
                   setSearchOpen(v => {
@@ -96,9 +102,6 @@ export function RightSidebar() {
                 className={`p-2 rounded-full transition-colors ${searchOpen ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
               >
                 <Search className="w-4 h-4 text-gray-600" />
-              </button>
-              <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <MoreHorizontal className="w-4 h-4 text-gray-600" />
               </button>
             </div>
           </div>
@@ -148,6 +151,8 @@ export function RightSidebar() {
                   <span className="text-sm font-medium text-gray-900 group-hover:underline">{contact.name}</span>
                 </div>
               ))
+            ) : query.trim() ? (
+                <div className="p-2 text-sm text-gray-500">Không tìm thấy người liên hệ</div>
             ) : (
                 <div className="p-2 text-sm text-gray-500">Không có người liên hệ</div>
             )}
