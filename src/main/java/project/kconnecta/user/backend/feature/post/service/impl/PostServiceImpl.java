@@ -97,6 +97,7 @@ public class PostServiceImpl implements PostService {
     private final ActivityLogService activityLogService;
     private final project.kconnecta.user.backend.integration.AdminPostReportNotificationClient adminPostReportNotificationClient;
     private final PolicyContentValidator policyContentValidator;
+    private final project.kconnecta.user.backend.feature.policy.service.AiModerationPolicyReader aiModerationPolicyReader;
     private final RedisSearchIndexer redisSearchIndexer;
     private final RedisTemplate<String, Object> redisTemplate;
     private final project.kconnecta.user.backend.feature.ai.GeminiModerationService geminiModerationService;
@@ -117,7 +118,8 @@ public class PostServiceImpl implements PostService {
                 mediaRequests.size()
         );
 
-        if (request.getContent() != null && !request.getContent().isBlank()) {
+        if (aiModerationPolicyReader.isEnabled()
+                && request.getContent() != null && !request.getContent().isBlank()) {
             geminiModerationService.moderate(request.getContent()).ifPresent(moderation -> {
                 if (!moderation.safe()) {
                     throw new project.kconnecta.user.backend.exception.ValidationException(
@@ -268,7 +270,7 @@ public class PostServiceImpl implements PostService {
 
         policyContentValidator.validatePostUpdate(userId, newContent, mediaRequests.size());
 
-        if (newContent != null && !newContent.isBlank()) {
+        if (aiModerationPolicyReader.isEnabled() && newContent != null && !newContent.isBlank()) {
             geminiModerationService.moderate(newContent).ifPresent(moderation -> {
                 if (!moderation.safe()) {
                     throw new ValidationException(
@@ -357,7 +359,8 @@ public class PostServiceImpl implements PostService {
 
             // Re-moderate content at publish time — catches cases where the API key
             // was missing at creation time or policy has since changed.
-            if (post.getContent() != null && !post.getContent().isBlank()) {
+            if (aiModerationPolicyReader.isEnabled()
+                    && post.getContent() != null && !post.getContent().isBlank()) {
                 var moderation = geminiModerationService.moderate(post.getContent());
                 if (moderation.isPresent() && !moderation.get().safe()) {
                     post.setStatus(PostStatus.REJECTED);
@@ -387,6 +390,9 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public int moderatePendingComments() {
+        if (!aiModerationPolicyReader.isEnabled()) {
+            return 0;
+        }
         Page<PostComment> pending = postCommentRepository.findByStatusAndModerationAttemptsLessThanOrderByCreatedAtAsc(
                 CommentStatus.PENDING, MAX_MODERATION_ATTEMPTS, PageRequest.of(0, COMMENT_MODERATION_BATCH));
         if (pending.isEmpty()) {
@@ -897,7 +903,8 @@ public class PostServiceImpl implements PostService {
 
         policyContentValidator.validateComment(request.getContent());
 
-        CommentStatus status = policyContentValidator.isSuspect(request.getContent())
+        CommentStatus status = aiModerationPolicyReader.isEnabled()
+                && policyContentValidator.isSuspect(request.getContent())
                 ? CommentStatus.PENDING : CommentStatus.APPROVED;
 
         PostComment saved = postCommentRepository.save(PostComment.builder()
@@ -931,7 +938,7 @@ public class PostServiceImpl implements PostService {
         policyContentValidator.validateComment(request.getContent());
         comment.setContent(request.getContent().trim());
 
-        if (policyContentValidator.isSuspect(request.getContent())) {
+        if (aiModerationPolicyReader.isEnabled() && policyContentValidator.isSuspect(request.getContent())) {
             comment.setStatus(CommentStatus.PENDING);
         } else {
             comment.setStatus(CommentStatus.APPROVED);

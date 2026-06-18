@@ -53,7 +53,8 @@ public class PolicyContentValidator {
             throw new ValidationException("Tối đa " + maxImages + " ảnh/video mỗi bài");
         }
 
-        checkKeywords(text, config, true, "đăng bài viết");
+        // Watchlist (vùng xám) không chặn cứng — PostServiceImpl gọi Gemini ngay sau bước này.
+        checkKeywords(text, config, false, "đăng bài viết");
         checkRateLimit(authorId, postsPerMinute, postTimestamps, "đăng bài");
     }
 
@@ -74,7 +75,7 @@ public class PolicyContentValidator {
                     + maxImages + " ảnh/video mỗi bài.");
         }
 
-        checkKeywords(text, config, true, "lưu thay đổi bài viết");
+        checkKeywords(text, config, false, "lưu thay đổi bài viết");
     }
 
     /**

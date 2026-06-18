@@ -19,4 +19,7 @@ public interface PolicyService {
 
     /** Merges keywords from classpath default-config.json into the DB policy (deduped by value+category). */
     PolicyKeywordMergeResult mergeDefaultKeywords(String updatedBy);
+
+    /** Replaces the live DB policy with classpath default-config.json (clears auditLog). */
+    JsonNode resetToDefault(String updatedBy);
 }

@@ -1,11 +1,13 @@
 package project.kconnecta.user.backend.feature.post.service.impl;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import project.kconnecta.user.backend.feature.policy.service.AiModerationPolicyReader;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
@@ -21,6 +23,7 @@ import project.kconnecta.user.backend.feature.post.entity.PostComment;
 import project.kconnecta.user.backend.feature.post.repository.PostCommentLikeRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostCommentRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostRepository;
+import project.kconnecta.user.backend.feature.post.repository.PostShareRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -32,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,14 +56,25 @@ class PostServiceImplCommentTest {
     @Mock
     private PostCommentLikeRepository postCommentLikeRepository;
     @Mock
+    private PostShareRepository postShareRepository;
+    @Mock
     private PolicyContentValidator policyContentValidator;
     @Mock
     private ActivityLogService activityLogService;
     @Mock
     private NotificationEventPublisher notificationEventPublisher;
+    @Mock
+    private AiModerationPolicyReader aiModerationPolicyReader;
 
     @InjectMocks
     private PostServiceImpl service;
+
+    @BeforeEach
+    void enableAiModeration() {
+        // AI on by default so the keyword `isSuspect` gate is exercised; lenient because
+        // some tests throw before reaching it.
+        lenient().when(aiModerationPolicyReader.isEnabled()).thenReturn(true);
+    }
 
     // --- helpers -----------------------------------------------------------
 

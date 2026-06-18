@@ -285,7 +285,7 @@ class PolicyContentValidatorTest {
         assertThat(validator.isSuspect("con    cho")).isTrue();
     }
 
-    // ── watchlist mềm cho comment, cứng cho post/chat ───────────────────────
+    // ── watchlist mềm cho comment/post (AI duyệt), cứng cho chat ─────────────
 
     @Test
     void validateComment_watchlistKeyword_doesNotThrow() throws Exception {
@@ -317,10 +317,23 @@ class PolicyContentValidatorTest {
     }
 
     @Test
-    void validatePost_watchlistKeyword_stillBlocks() throws Exception {
-        // Post vẫn chặn cứng watchlist (không có hàng đợi PENDING như comment).
+    void validatePost_watchlistKeyword_doesNotThrow() throws Exception {
+        // Watchlist là vùng xám — không chặn cứng bài viết; Gemini quyết định sau đó.
         when(policyService.getConfigJson()).thenReturn(configWithWatchlist("con chó"));
-        assertThatThrownBy(() -> validator.validatePost(userId, "đồ con chó", 0))
+        assertThatNoException().isThrownBy(() -> validator.validatePost(userId, "đồ con chó", 0));
+    }
+
+    @Test
+    void validatePost_idiomaticGietThoiGian_watchlistGiet_doesNotThrow() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithWatchlist("giết"));
+        assertThatNoException().isThrownBy(() ->
+                validator.validatePost(userId, "viec nay giet thoi gian nhanh qua", 0));
+    }
+
+    @Test
+    void validatePost_blacklistViolencePhrase_stillBlocks() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithKeyword("giết mày"));
+        assertThatThrownBy(() -> validator.validatePost(userId, "tao se giet may", 0))
             .isInstanceOf(ValidationException.class);
     }
 }

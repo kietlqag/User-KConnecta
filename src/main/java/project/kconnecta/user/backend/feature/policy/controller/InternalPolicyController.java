@@ -62,6 +62,19 @@ public class InternalPolicyController {
                 updatedBy != null && !updatedBy.isBlank() ? updatedBy : "system-merge"));
     }
 
+    /**
+     * Replaces the live DB policy with classpath {@code policy/default-config.json}.
+     * Clears auditLog in the saved config.
+     */
+    @PostMapping("/reset-to-default")
+    public ResponseEntity<JsonNode> resetToDefault(
+            @RequestHeader("X-Internal-Key") String key,
+            @RequestParam(required = false) String updatedBy) {
+        validateKey(key);
+        return ResponseEntity.ok(policyService.resetToDefault(
+                updatedBy != null && !updatedBy.isBlank() ? updatedBy : "system-reset"));
+    }
+
     private void validateKey(String key) {
         if (!MessageDigest.isEqual(
                 internalApiKey.getBytes(java.nio.charset.StandardCharsets.UTF_8),

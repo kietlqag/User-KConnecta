@@ -12,7 +12,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
-import project.kconnecta.user.backend.feature.policy.dto.PolicyKeywordMergeResult;
 import project.kconnecta.user.backend.feature.policy.entity.PlatformPolicy;
 import project.kconnecta.user.backend.feature.policy.repository.PlatformPolicyRepository;
 import project.kconnecta.user.backend.feature.policy.service.PolicyKeywordService;
@@ -20,6 +19,7 @@ import project.kconnecta.user.backend.feature.policy.service.impl.PolicyServiceI
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class PolicyServiceMergeKeywordsTest {
+class PolicyServiceResetToDefaultTest {
 
     @Mock
     private PlatformPolicyRepository repository;
@@ -44,7 +44,8 @@ class PolicyServiceMergeKeywordsTest {
     void setUp() throws Exception {
         String existingJson = """
                 {
-                  "postPolicy": {"maxPostLength": 5000}
+                  "auditLog": [{"id":"a1","section":"keywords"}],
+                  "postPolicy": {"maxPostLength": 999}
                 }
                 """;
         PlatformPolicy entity = PlatformPolicy.builder()
@@ -59,33 +60,33 @@ class PolicyServiceMergeKeywordsTest {
 
         ReflectionTestUtils.setField(policyService, "objectMapper", mapper);
 
-        ArrayNode mergedKeywords = mapper.createArrayNode();
-        mergedKeywords.addObject().put("id", "old-1").put("value", "đm").put("category", "watchlist");
-        mergedKeywords.addObject().put("id", "old-2").put("value", "casino").put("category", "blocked_domain");
-        mergedKeywords.addObject().put("id", "bl-1").put("value", "đm").put("category", "blacklist");
-        when(policyKeywordService.findAllAsJsonArray()).thenReturn(mergedKeywords);
+        ArrayNode defaultKeywords = mapper.createArrayNode();
+        IntStream.range(0, 55).forEach(i ->
+                defaultKeywords.addObject().put("id", "bl-" + i).put("value", "kw" + i).put("category", "blacklist"));
+        when(policyKeywordService.findAllAsJsonArray()).thenReturn(defaultKeywords);
 
         var field = PolicyServiceImpl.class.getDeclaredField("cachedConfig");
         field.setAccessible(true);
         ObjectNode cached = (ObjectNode) mapper.readTree(existingJson);
-        cached.set("keywords", mergedKeywords);
+        cached.set("keywords", defaultKeywords);
         field.set(policyService, cached);
     }
 
     @Test
-    void mergeDefaultKeywords_delegatesToKeywordServiceAndRefreshesCache() throws Exception {
-        when(policyKeywordService.mergeFromDefault(any())).thenReturn(new PolicyKeywordMergeResult(5, 2, 7));
+    void resetToDefault_resetsKeywordTableAndStripsKeywordsFromStoredJson() throws Exception {
+        JsonNode result = policyService.resetToDefault("admin");
 
-        var result = policyService.mergeDefaultKeywords("admin");
+        verify(policyKeywordService).resetFromDefault(any());
 
-        assertThat(result.added()).isEqualTo(5);
-        assertThat(result.skipped()).isEqualTo(2);
-        assertThat(result.totalKeywords()).isEqualTo(7);
-        verify(policyKeywordService).mergeFromDefault(any());
-        verify(repository).save(any(PlatformPolicy.class));
+        ArgumentCaptor<PlatformPolicy> captor = ArgumentCaptor.forClass(PlatformPolicy.class);
+        verify(repository).save(captor.capture());
 
-        JsonNode config = policyService.getConfigJson();
-        assertThat(config.path("keywords").isArray()).isTrue();
-        assertThat(config.path("keywords")).hasSize(3);
+        JsonNode saved = mapper.readTree(captor.getValue().getConfigJson());
+        assertThat(saved.path("postPolicy").path("maxPostLength").asInt()).isEqualTo(5000);
+        assertThat(saved.path("auditLog")).isInstanceOf(ArrayNode.class);
+        assertThat(saved.path("auditLog")).isEmpty();
+        assertThat(saved.has("keywords")).isFalse();
+
+        assertThat(result.path("keywords").size()).isGreaterThan(50);
     }
 }
