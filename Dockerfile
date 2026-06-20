@@ -9,6 +9,5 @@ WORKDIR /app
 
 COPY --from=build /app/target/*.jar app.jar
 
-# Render free tier ~512MB RAM — cap heap so Spring Boot + Hibernate can start.
-ENV JAVA_OPTS="-Xms128m -Xmx384m"
-CMD ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT:-8080} -jar app.jar"]
+# Render free tier ~512MB RAM. Unset dashboard JAVA_TOOL_OPTIONS and cap JVM explicitly.
+CMD ["sh", "-c", "unset JAVA_TOOL_OPTIONS && exec java -Xms128m -Xmx300m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC -Dserver.port=${PORT:-8080} -jar app.jar"]

@@ -37,6 +37,7 @@ public class SecurityConfig {
                                 .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/set-password").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/search/suggest").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/policies/public").permitAll()

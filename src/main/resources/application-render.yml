@@ -8,6 +8,11 @@ spring:
   cache:
     type: none
 
+logging:
+  level:
+    org.hibernate.SQL: OFF
+    org.hibernate.orm.jdbc.bind: OFF
+
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://user-k-connecta.vercel.app}
