@@ -98,6 +98,7 @@ public class PostServiceImpl implements PostService {
     private final project.kconnecta.user.backend.integration.AdminPostReportNotificationClient adminPostReportNotificationClient;
     private final PolicyContentValidator policyContentValidator;
     private final project.kconnecta.user.backend.feature.policy.service.AiModerationPolicyReader aiModerationPolicyReader;
+    private final project.kconnecta.user.backend.feature.policy.service.RecommendationPolicyReader recommendationPolicyReader;
     private final RedisSearchIndexer redisSearchIndexer;
     private final RedisTemplate<String, Object> redisTemplate;
     private final project.kconnecta.user.backend.feature.ai.GeminiModerationService geminiModerationService;
@@ -418,6 +419,13 @@ public class PostServiceImpl implements PostService {
                     comment.setStatus(CommentStatus.REJECTED);
                     comment.setModerationFailReason(moderation.get().reason());
                     postCommentRepository.save(comment);
+                    notificationEventPublisher.publish(
+                            null,
+                            comment.getUser().getId(),
+                            NotificationType.SYSTEM,
+                            "Cảnh báo: bình luận của bạn đã bị ẩn do vi phạm tiêu chuẩn cộng đồng. Vui lòng tuân thủ chính sách để tránh bị hạn chế.",
+                            comment.getId()
+                    );
                     log.warn("comment moderation reject: commentId={}, reason={}", comment.getId(), moderation.get().reason());
                 }
                 resolved++;
@@ -497,7 +505,9 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable) {
-        Page<Post> postPage = postRepository.findHomeFeedPostsWithScoring(currentUserId, pageable);
+        var weights = recommendationPolicyReader.getFeedWeights();
+        Page<Post> postPage = postRepository.findHomeFeedPostsWithScoring(
+                currentUserId, weights.affinity(), weights.engagement(), weights.recency(), pageable);
         List<Post> diversified = applyAuthorDiversity(postPage.getContent(), 3);
         List<PostResponse> responses = processPostsBulk(diversified, currentUserId);
 
@@ -524,10 +534,15 @@ public class PostServiceImpl implements PostService {
                     // Trim regular posts to keep total count = pageSize
                     int postsToKeep = Math.max(0, pageable.getPageSize() - shareWrappers.size());
                     List<PostResponse> trimmedPosts = responses.subList(0, Math.min(responses.size(), postsToKeep));
-                    List<PostResponse> merged = Stream.concat(trimmedPosts.stream(), shareWrappers.stream())
+                    // Keep the recommendation-weighted order of regular posts as the feed backbone.
+                    // Sort ONLY the shares among themselves (recent first) and append them after the
+                    // ranked posts — do NOT re-sort the whole page by time, which would discard the weights.
+                    List<PostResponse> sortedShares = shareWrappers.stream()
                             .sorted(Comparator.comparing(
                                     r -> r.getCreatedAt() != null ? r.getCreatedAt() : LocalDateTime.MIN,
                                     Comparator.reverseOrder()))
+                            .toList();
+                    List<PostResponse> merged = Stream.concat(trimmedPosts.stream(), sortedShares.stream())
                             .toList();
                     return new PageImpl<>(merged, pageable, adjustedTotal + shareWrappers.size());
                 }

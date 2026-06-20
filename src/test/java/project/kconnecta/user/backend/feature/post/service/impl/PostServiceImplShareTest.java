@@ -19,6 +19,7 @@ import project.kconnecta.user.backend.feature.post.repository.PostReactionReposi
 import project.kconnecta.user.backend.feature.post.repository.PostRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostSavedRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostShareRepository;
+import project.kconnecta.user.backend.feature.policy.service.RecommendationPolicyReader;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
@@ -43,6 +44,8 @@ class PostServiceImplShareTest {
     private PostCommentRepository postCommentRepository;
     @Mock
     private PostSavedRepository postSavedRepository;
+    @Mock
+    private RecommendationPolicyReader recommendationPolicyReader;
 
     @InjectMocks
     private PostServiceImpl postService;
@@ -56,7 +59,10 @@ class PostServiceImplShareTest {
         User author = User.builder().id(UUID.randomUUID()).username("author").fullName("Author Name").build();
         Post post1 = Post.builder().id(UUID.randomUUID()).author(author).createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).media(new ArrayList<>()).mentions(new ArrayList<>()).audienceAllowances(new ArrayList<>()).audienceExclusions(new ArrayList<>()).build();
         Page<Post> postPage = new PageImpl<>(List.of(post1), pageable, 1);
-        when(postRepository.findHomeFeedPostsWithScoring(eq(currentUserId), eq(pageable))).thenReturn(postPage);
+        when(recommendationPolicyReader.getFeedWeights())
+                .thenReturn(new RecommendationPolicyReader.FeedWeights(0.2, 0.4, 0.4));
+        when(postRepository.findHomeFeedPostsWithScoring(eq(currentUserId), anyDouble(), anyDouble(), anyDouble(), eq(pageable)))
+                .thenReturn(postPage);
 
         // Mock bulk processing data for the home feed post
         when(postReactionRepository.findReactionCountsByPostIds(anyList())).thenReturn(Collections.emptyList());

@@ -34,6 +34,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -117,10 +118,10 @@ public class AuthService {
         User user = userRepository.findByAccountId(account.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
 
-        if (account.getStatus() == AccountStatus.BLOCKED) {
-            activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.ACCOUNT_LOCKED,
-                    "{\"reason\":\"Tai khoan bi khoa tam thoi khi dang nhap\"}");
-            return toBlockedResponse(user);
+        AuthResponse blocked = resolveLockState(account, user,
+                "{\"reason\":\"Tai khoan bi khoa khi dang nhap\"}");
+        if (blocked != null) {
+            return blocked;
         }
         if (account.getStatus() == AccountStatus.DELETED) {
             throw new ValidationException("Tai khoan da bi xoa");
@@ -164,10 +165,10 @@ public class AuthService {
         }
 
         Account account = user.getAccount();
-        if (account.getStatus() == AccountStatus.BLOCKED) {
-            activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.ACCOUNT_LOCKED,
-                    "{\"reason\":\"Tai khoan bi khoa tam thoi khi dang nhap Google\"}");
-            return toBlockedResponse(user);
+        AuthResponse blocked = resolveLockState(account, user,
+                "{\"reason\":\"Tai khoan bi khoa khi dang nhap Google\"}");
+        if (blocked != null) {
+            return blocked;
         }
         if (account.getStatus() == AccountStatus.DELETED) {
             throw new ValidationException("Tai khoan da bi xoa");
@@ -327,7 +328,34 @@ public class AuthService {
                 .build();
     }
 
-    private AuthResponse toBlockedResponse(User user) {
+    /**
+     * Decides access for a BLOCKED account. A temporary lock (lockedUntil set) whose time
+     * has passed is auto-unlocked here and {@code null} is returned so login can proceed.
+     * Returns a blocked {@link AuthResponse} while the lock is still in effect, or
+     * {@code null} when the account is not blocked.
+     */
+    private AuthResponse resolveLockState(Account account, User user, String activityReason) {
+        if (account.getStatus() != AccountStatus.BLOCKED) {
+            return null;
+        }
+        LocalDateTime lockedUntil = account.getLockedUntil();
+        if (lockedUntil != null && !LocalDateTime.now().isBefore(lockedUntil)) {
+            account.setStatus(AccountStatus.ACTIVE);
+            account.setLockedUntil(null);
+            account.setLockReason(null);
+            accountRepository.save(account);
+            return null;
+        }
+        activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.ACCOUNT_LOCKED, activityReason);
+        return toBlockedResponse(user, account);
+    }
+
+    private AuthResponse toBlockedResponse(User user, Account account) {
+        String reason = account.getLockReason() != null && !account.getLockReason().isBlank()
+                ? account.getLockReason()
+                : account.getLockedUntil() != null
+                ? "Tài khoản của bạn đang bị khóa tạm thời và sẽ tự mở lại sau thời gian khóa."
+                : "Tài khoản của bạn đang bị khóa do bị báo cáo hoặc admin cần xem xét thủ công.";
         return AuthResponse.builder()
                 .id(user.getId())
                 .email(user.getAccount().getEmail())
@@ -336,7 +364,8 @@ public class AuthService {
                 .hasPassword(user.getAccount().getPasswordHash() != null)
                 .requiresProfileSetup(false)
                 .accountStatus(AccountStatus.BLOCKED)
-                .blockedReason("Tài khoản của bạn đang bị khóa tạm thời do bị báo cáo hoặc admin cần xem xét thủ công.")
+                .blockedReason(reason)
+                .lockedUntil(account.getLockedUntil())
                 .build();
     }
 

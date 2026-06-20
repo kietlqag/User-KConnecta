@@ -34,6 +34,12 @@ public class Account {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "locked_until")
+    private LocalDateTime lockedUntil;
+
+    @Column(name = "lock_reason", length = 255)
+    private String lockReason;
+
     @OneToOne(mappedBy = "account")
     private User user;
 

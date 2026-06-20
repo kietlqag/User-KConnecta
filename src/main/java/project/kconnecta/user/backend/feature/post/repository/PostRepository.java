@@ -103,8 +103,10 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "    ) " +
         "  ) " +
         "ORDER BY (" +
-        // w1=0.20 · affinity: 4 levels — self / close-friend (≥5 interactions) / friend / stranger
-        "  0.20 * CASE " +
+        // w1 · affinity: 4 levels — self / close-friend (≥5 interactions) / friend / stranger.
+        // Weights (:wAffinity/:wEngagement/:wRecency) come from the admin recommendation policy
+        // (RecommendationPolicyReader), normalized to sum ≈ 1.0; default = 0.20/0.40/0.40.
+        "  :wAffinity * CASE " +
         "    WHEN :currentUserId IS NULL THEN 0.5 " +
         "    WHEN p.author_id = CAST(:currentUserId AS uuid) THEN 1.0 " +
         "    WHEN COALESCE(ui.cnt, 0) >= 5 THEN 0.9 " +
@@ -120,13 +122,13 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         // so the ranking is STABLE across page fetches within a scroll session. Without this,
         // NOW() advances between page 0 and page 1, scores drift, offset pages overlap/skip, and
         // the same post can appear on two pages → duplicate React keys → feed scroll jumps.
-        // w2=0.40 · time-weighted engagement: decay by sqrt(1 + age_weeks) so old viral posts don't dominate
-        "  0.40 * LEAST(" +
+        // w2 · time-weighted engagement: decay by sqrt(1 + age_weeks) so old viral posts don't dominate
+        "  :wEngagement * LEAST(" +
         "    (COALESCE(pr_agg.cnt, 0) + COALESCE(pc_agg.cnt, 0) * 2.0 + COALESCE(ps_agg.cnt, 0) * 3.0) " +
         "    / (100.0 * SQRT(1.0 + GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 604800.0)), " +
         "    1.0) + " +
-        // w3=0.40 · recency: exponential decay, half-life ≈ 6 hours
-        "  0.40 * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 21600.0)))" +
+        // w3 · recency: exponential decay, half-life ≈ 6 hours
+        "  :wRecency * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 21600.0)))" +
         ") DESC, p.created_at DESC",
         countQuery =
         "SELECT count(*) FROM posts p " +
@@ -147,7 +149,10 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         nativeQuery = true
     )
     org.springframework.data.domain.Page<Post> findHomeFeedPostsWithScoring(
-        @org.springframework.data.repository.query.Param("currentUserId") UUID currentUserId, 
+        @org.springframework.data.repository.query.Param("currentUserId") UUID currentUserId,
+        @org.springframework.data.repository.query.Param("wAffinity") double wAffinity,
+        @org.springframework.data.repository.query.Param("wEngagement") double wEngagement,
+        @org.springframework.data.repository.query.Param("wRecency") double wRecency,
         org.springframework.data.domain.Pageable pageable
     );
 

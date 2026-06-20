@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -18,4 +19,5 @@ public class AuthResponse {
     private String token;
     private AccountStatus accountStatus;
     private String blockedReason;
+    private LocalDateTime lockedUntil;
 }

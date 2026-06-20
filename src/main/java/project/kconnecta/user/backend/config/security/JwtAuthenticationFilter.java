@@ -1,5 +1,6 @@
 package project.kconnecta.user.backend.config.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,11 +16,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
 import project.kconnecta.user.backend.common.util.JwtUtil;
+import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,6 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -47,10 +52,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UUID userId = UUID.fromString(claims.getSubject());
 
                 Optional<User> userOpt = userRepository.findById(userId);
-                if (userOpt.isEmpty()
-                        || userOpt.get().getAccount() == null
-                        || userOpt.get().getAccount().getStatus() != AccountStatus.ACTIVE) {
-                    sendUnauthorized(response, "Tai khoan bi khoa hoac khong ton tai");
+                User user = userOpt.orElse(null);
+                Account account = user != null ? user.getAccount() : null;
+                if (user == null || account == null || account.getStatus() != AccountStatus.ACTIVE) {
+                    sendLockedResponse(response, user, account);
                     return;
                 }
 
@@ -68,10 +73,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private void sendUnauthorized(HttpServletResponse response, String message) throws IOException {
+    /**
+     * 401 for an inactive account. For a BLOCKED account the body carries the lock reason,
+     * unlock time and identity so the frontend can show the lock screen even when the user is
+     * force-logged-out mid-session (the in-app notification is unreachable once logged out).
+     */
+    private void sendLockedResponse(HttpServletResponse response, User user, Account account) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write("{\"message\":\"" + message + "\"}");
+
+        Map<String, Object> body = new HashMap<>();
+        if (account != null && account.getStatus() == AccountStatus.BLOCKED) {
+            body.put("message", "Tài khoản của bạn đã bị khóa.");
+            body.put("accountStatus", "BLOCKED");
+            body.put("blockedReason", account.getLockReason() != null && !account.getLockReason().isBlank()
+                    ? account.getLockReason()
+                    : "Tài khoản của bạn đang bị khóa do vi phạm hoặc cần admin xem xét.");
+            body.put("lockedUntil", account.getLockedUntil());
+            body.put("email", account.getEmail());
+            if (user != null) {
+                body.put("fullName", user.getFullName());
+                body.put("username", user.getUsername());
+            }
+        } else {
+            body.put("message", "Tài khoản không khả dụng hoặc không tồn tại.");
+        }
+        response.getWriter().write(objectMapper.writeValueAsString(body));
     }
 }
