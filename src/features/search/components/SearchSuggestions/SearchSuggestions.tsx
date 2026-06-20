@@ -91,9 +91,9 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
       {/* Suggestions Panel */}
-      <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-lg shadow-2xl z-50 max-h-[500px] overflow-hidden">
+      <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-2xl z-50 max-h-[500px] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <h3 className="font-semibold text-base">
             {showRecent ? 'Tìm kiếm gần đây' : `Kết quả cho "${query}"`}
           </h3>
@@ -121,7 +121,7 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
             <button
               key={item.id}
               onClick={() => handleSuggestionClick(item)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 transition-colors cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer"
             >
               {item.avatarUrl ? (
                 <img
@@ -130,10 +130,10 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
                   className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                   {item.type === 'person'
-                    ? <User className="w-5 h-5 text-gray-500" />
-                    : <Users className="w-5 h-5 text-gray-500" />
+                    ? <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                    : <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   }
                 </div>
               )}
@@ -164,14 +164,14 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
             <div
               key={item.id}
               onClick={() => handleHistoryClick(item)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 transition-colors group cursor-pointer"
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors group cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
                 {item.type === 'person'
-                  ? <User className="w-5 h-5 text-gray-500" />
+                  ? <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   : item.type === 'group'
-                  ? <Users className="w-5 h-5 text-gray-500" />
-                  : <Clock className="w-5 h-5 text-gray-500" />
+                  ? <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                  : <Clock className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 }
               </div>
               <div className="flex-1 text-left min-w-0">
@@ -184,17 +184,17 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
               </div>
               <button
                 onClick={(e) => handleRemoveHistory(e, item.id)}
-                className="w-8 h-8 rounded-full hover:bg-gray-200 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer"
+                className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer"
                 title="Xóa"
               >
-                <X className="w-4 h-4 text-gray-600" />
+                <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
           ))}
 
           {/* ── Tip when typing ── */}
           {!loading && !showRecent && (
-            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-100 text-sm text-gray-500">
+            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-100 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400">
               <Search className="w-4 h-4" />
               <span>Nhấn Enter để tìm kiếm "{query}"</span>
             </div>

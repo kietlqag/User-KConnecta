@@ -89,39 +89,39 @@ export function PinnedMessagesModal({
   return (
     <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/35 p-4" onMouseDown={onClose}>
       <div
-        className="flex max-h-[82vh] w-full max-w-[520px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl"
+        className="flex max-h-[82vh] w-full max-w-[520px] flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl"
         onMouseDown={(event) => event.stopPropagation()}
         style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300">
               <Pin className="h-4.5 w-4.5" />
             </span>
             <div>
-              <h3 className="text-[17px] font-semibold text-gray-900">Tin nhắn đã ghim</h3>
-              <p className="text-xs text-gray-500">{sortedItems.length} tin nhắn</p>
+              <h3 className="text-[17px] font-semibold text-gray-900 dark:text-gray-100">Tin nhắn đã ghim</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{sortedItems.length} tin nhắn</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 cursor-pointer" title="Đóng">
+          <button type="button" onClick={onClose} className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 dark:text-gray-400 hover:bg-muted cursor-pointer" title="Đóng">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {sortedItems.length === 0 ? (
-            <div className="flex min-h-[240px] flex-col items-center justify-center px-6 text-center text-gray-500">
-              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+            <div className="flex min-h-[240px] flex-col items-center justify-center px-6 text-center text-gray-500 dark:text-gray-400">
+              <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-400">
                 <Pin className="h-5 w-5" />
               </span>
-              <p className="text-sm font-medium text-gray-700">Chưa có tin nhắn ghim</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Chưa có tin nhắn ghim</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
               {sortedItems.map((item) => {
                 const senderLabel = item.senderId === currentUserId ? 'Bạn' : item.senderName;
                 return (
-                  <div key={item.messageId} className="flex gap-3 px-4 py-3 hover:bg-gray-50">
+                  <div key={item.messageId} className="flex gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <img
                       src={item.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderLabel)}&background=random`}
                       alt={senderLabel}
@@ -137,15 +137,15 @@ export function PinnedMessagesModal({
                       title="Xem trong đoạn chat"
                     >
                       <div className="flex min-w-0 items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-gray-900">{senderLabel}</p>
-                        <span className="shrink-0 text-xs text-gray-500">{formatPinnedTime(item.messageCreatedAt || item.pinnedAt)}</span>
+                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{senderLabel}</p>
+                        <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">{formatPinnedTime(item.messageCreatedAt || item.pinnedAt)}</span>
                       </div>
-                      <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-gray-700 break-words">{item.text || 'Tin nhắn'}</p>
+                      <p className="mt-0.5 line-clamp-2 text-sm leading-5 text-gray-700 dark:text-gray-300 break-words">{item.text || 'Tin nhắn'}</p>
                     </button>
                     <button
                       type="button"
                       onClick={(event) => openMenu(item.messageId, event.currentTarget)}
-                      className="mt-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                      className="mt-0.5 flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-gray-500 hover:bg-muted hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100"
                       title="Tùy chọn"
                     >
                       <MoreHorizontal className="h-5 w-5" />
@@ -161,7 +161,7 @@ export function PinnedMessagesModal({
       {openMenuMessageId && menuPosition && (
         <div
           ref={menuRef}
-          className="fixed z-[240] min-w-[196px] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl"
+          className="fixed z-[240] min-w-[196px] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-xl"
           style={{ top: menuPosition.top, left: menuPosition.left, fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
           onMouseDown={(event) => event.stopPropagation()}
         >
@@ -173,7 +173,7 @@ export function PinnedMessagesModal({
               onClose();
               onJumpToMessage(id);
             }}
-            className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
+            className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 dark:text-gray-200 hover:bg-muted"
           >
             <MessageSquare className="h-4 w-4" />
             Xem trong đoạn chat
@@ -185,7 +185,7 @@ export function PinnedMessagesModal({
               setOpenMenuMessageId(null);
               onUnpinMessage(id);
             }}
-            className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
+            className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 dark:text-gray-200 hover:bg-muted"
           >
             <PinOff className="h-4 w-4" />
             Bỏ ghim

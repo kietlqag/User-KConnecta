@@ -114,21 +114,21 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
     <div>
       <button
         onClick={onBack}
-        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100 mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         <span className="text-sm font-medium">Quay lại</span>
       </button>
 
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Xác nhận Email</h2>
-        <p className="text-gray-600">Chúng tôi đã gửi mã xác nhận đến</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Xác nhận Email</h2>
+        <p className="text-gray-600 dark:text-gray-400">Chúng tôi đã gửi mã xác nhận đến</p>
         <p className="text-emerald-600 font-semibold mt-1">{email}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3 text-center">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 text-center">
             Nhập mã OTP
           </label>
           <div className="flex gap-2 justify-center">
@@ -148,7 +148,7 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
                     ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                     : digit
                       ? 'border-emerald-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-200'
-                      : 'border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
+                      : 'border-gray-300 dark:border-gray-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
                 }`}
                 autoFocus={index === 0}
               />
@@ -175,7 +175,7 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
           )}
         </button>
 
-        <p className="text-sm text-gray-500 text-center -mt-2">
+        <p className="text-sm text-gray-500 dark:text-gray-400 text-center -mt-2">
           Mã hết hạn sau:{' '}
           <span className={expiresIn > 10 ? 'font-semibold text-amber-600' : 'font-semibold text-red-500'}>
             {formattedExpiresIn}
@@ -183,7 +183,7 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
         </p>
 
         <div className="text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             Không nhận được mã?{' '}
             {expiresIn > 0 ? (
               <span className="text-gray-400">Gửi lại sau {expiresIn}s</span>

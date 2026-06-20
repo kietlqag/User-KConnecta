@@ -72,9 +72,9 @@ export const GroupsLeftSidebar = ({
   };
 
   return (
-    <div className="w-[360px] bg-white border-r border-gray-200 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto sidebar-scrollbar">
+    <div className="w-[360px] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto sidebar-scrollbar">
       <div className="p-4">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Nhóm</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Nhóm</h1>
 
         <div className="relative mb-4" ref={searchWrapRef}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -88,7 +88,7 @@ export const GroupsLeftSidebar = ({
             onFocus={() => setShowSearchPanel(true)}
             onKeyDown={handleSearchKeyDown}
             placeholder="Tìm kiếm nhóm"
-            className="w-full pl-10 pr-9 py-2 bg-gray-100 rounded-full outline-none focus:bg-gray-200 focus:ring-2 focus:ring-blue-500/30 transition-colors text-[15px]"
+            className="w-full pl-10 pr-9 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-gray-200 dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500/30 transition-colors text-[15px]"
             aria-label="Tìm kiếm nhóm"
             aria-expanded={showSearchPanel}
             autoComplete="off"
@@ -100,7 +100,7 @@ export const GroupsLeftSidebar = ({
                 setSearchQuery('');
                 setShowSearchPanel(false);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-200 text-gray-500"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
               aria-label="Xóa tìm kiếm"
             >
               <X className="w-4 h-4" />
@@ -139,10 +139,10 @@ export const GroupsLeftSidebar = ({
                   else if (section.id === 'discover') navigate('/groups/discover');
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-900 hover:bg-gray-100'
+                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-900 dark:text-gray-100 hover:bg-muted'
                 }`}
               >
-                <div className={isActive ? 'text-blue-600' : 'text-gray-600'}>{section.icon}</div>
+                <div className={isActive ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400'}>{section.icon}</div>
                 <span className="font-medium">{section.label}</span>
               </button>
             );
@@ -152,26 +152,26 @@ export const GroupsLeftSidebar = ({
         <button
           type="button"
           onClick={() => navigate('/groups/create')}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors mb-4"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors mb-4"
         >
-          <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center">
-            <Plus className="w-5 h-5 text-gray-700" />
+          <div className="w-9 h-9 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+            <Plus className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </div>
-          <span className="font-semibold text-gray-900">Tạo nhóm mới</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100">Tạo nhóm mới</span>
         </button>
 
-        <div className="border-t border-gray-200 my-4" />
+        <div className="border-t border-gray-200 dark:border-gray-700 my-4" />
 
         {managedGroups.length > 0 && (
           <div className="mb-4">
-            <h3 className="font-semibold text-gray-600 text-[15px] mb-2 px-1">Nhóm do bạn quản lý</h3>
-            <div className="space-y-1 bg-gray-50 rounded-lg overflow-hidden border border-gray-200 p-1">
+            <h3 className="font-semibold text-gray-600 dark:text-gray-400 text-[15px] mb-2 px-1">Nhóm do bạn quản lý</h3>
+            <div className="space-y-1 bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 p-1">
               {managedGroups.map(group => (
                 <button
                   key={group.id}
                   type="button"
                   onClick={() => navigate(`/groups/${group.id}`)}
-                  className="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors group"
+                  className="w-full flex items-start gap-3 px-2 py-2 rounded-lg hover:bg-muted transition-colors group"
                 >
                   {group.icon ? (
                     <img src={group.icon} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
@@ -181,23 +181,23 @@ export const GroupsLeftSidebar = ({
                     </div>
                   )}
                   <div className="flex-1 text-left min-w-0">
-                    <h4 className="font-semibold text-gray-900 text-[15px] truncate group-hover:text-blue-600 transition-colors pt-0.5">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] truncate group-hover:text-blue-600 transition-colors pt-0.5">
                       {group.name}
                     </h4>
                     {group.lastActivity && (
-                      <p className="text-xs text-gray-500 truncate mt-0.5">{group.lastActivity}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{group.lastActivity}</p>
                     )}
                   </div>
                 </button>
               ))}
             </div>
-            <div className="border-t border-gray-200 my-4" />
+            <div className="border-t border-gray-200 dark:border-gray-700 my-4" />
           </div>
         )}
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-gray-600 text-sm">Nhóm bạn đã tham gia</h3>
+            <h3 className="font-semibold text-gray-600 dark:text-gray-400 text-sm">Nhóm bạn đã tham gia</h3>
             <button
               type="button"
               onClick={() => navigate('/groups/joined')}
@@ -216,21 +216,21 @@ export const GroupsLeftSidebar = ({
                   key={group.id}
                   type="button"
                   onClick={() => navigate(`/groups/${group.id}`)}
-                  className="w-full flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors group"
+                  className="w-full flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-muted transition-colors group"
                 >
                   {group.icon ? (
                     <img src={group.icon} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
                   ) : (
-                    <div className="w-9 h-9 rounded-lg bg-gray-200 flex items-center justify-center text-gray-600 font-semibold text-sm shrink-0">
+                    <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-gray-400 font-semibold text-sm shrink-0">
                       {group.name.charAt(0)}
                     </div>
                   )}
                   <div className="flex-1 text-left min-w-0">
-                    <h4 className="font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                    <h4 className="font-medium text-gray-900 dark:text-gray-100 truncate group-hover:text-blue-600 transition-colors">
                       {group.name}
                     </h4>
                     {group.lastActivity && (
-                      <p className="text-xs text-gray-500 truncate">{group.lastActivity}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{group.lastActivity}</p>
                     )}
                   </div>
                 </button>

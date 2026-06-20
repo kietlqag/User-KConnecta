@@ -73,13 +73,13 @@ export function PostPermalinkPage() {
     <MainLayout>
       <main className="mx-auto flex min-h-[calc(100vh-56px)] w-full max-w-3xl items-center justify-center px-4 py-8">
         {loading ? (
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
             <Loader2 className="h-5 w-5 animate-spin" />
             <span>Đang mở bài viết...</span>
           </div>
         ) : error ? (
-          <div className="w-full rounded-lg bg-white p-6 text-center shadow-sm">
-            <p className="text-base font-semibold text-gray-900">{error}</p>
+          <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-6 text-center shadow-sm dark:shadow-none">
+            <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{error}</p>
             <Link
               to="/home"
               className="mt-4 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"

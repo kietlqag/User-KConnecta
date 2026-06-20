@@ -108,18 +108,18 @@ export const FriendsPage = () => {
 
   const renderContent = () => {
     if (loading) {
-      return <div className="text-center py-16 text-gray-500">Đang tải...</div>;
+      return <div className="text-center py-16 text-gray-500 dark:text-gray-400">Đang tải...</div>;
     }
 
     if (activeTab === 'requests') {
       return (
         <section>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Lời mời kết bạn
-            <span className="ml-2 text-gray-500 font-normal">{friendRequests.length}</span>
+            <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">{friendRequests.length}</span>
           </h2>
           {friendRequests.length === 0 ? (
-            <p className="text-gray-500">Không có lời mời kết bạn nào.</p>
+            <p className="text-gray-500 dark:text-gray-400">Không có lời mời kết bạn nào.</p>
           ) : (
             <div className={FRIEND_GRID_CLASS}>
               {friendRequests.map((request) => (
@@ -141,9 +141,9 @@ export const FriendsPage = () => {
       const hasMore = visibleCount < visibleSuggestions.length;
       return (
         <section>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Những người bạn có thể biết</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Những người bạn có thể biết</h2>
           {visibleSuggestions.length === 0 ? (
-            <p className="text-gray-500">Không có gợi ý nào.</p>
+            <p className="text-gray-500 dark:text-gray-400">Không có gợi ý nào.</p>
           ) : (
             <>
               <div className={FRIEND_GRID_CLASS}>
@@ -175,12 +175,12 @@ export const FriendsPage = () => {
       const hasMore = visibleCount < friends.length;
       return (
         <section>
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Tất cả bạn bè
-            <span className="ml-2 text-gray-500 font-normal">{friends.length}</span>
+            <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">{friends.length}</span>
           </h2>
           {friends.length === 0 ? (
-            <p className="text-gray-500">Bạn chưa có bạn bè nào.</p>
+            <p className="text-gray-500 dark:text-gray-400">Bạn chưa có bạn bè nào.</p>
           ) : (
             <>
               <div className={FRIEND_GRID_CLASS}>
@@ -205,9 +205,9 @@ export const FriendsPage = () => {
         {friendRequests.length > 0 && (
           <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
                 Lời mời kết bạn
-                <span className="ml-2 text-gray-500 font-normal">{friendRequests.length}</span>
+                <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">{friendRequests.length}</span>
               </h2>
               <button
                 onClick={() => setActiveTab('requests')}
@@ -232,7 +232,7 @@ export const FriendsPage = () => {
         {visibleSuggestions.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Những người bạn có thể biết</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Những người bạn có thể biết</h2>
               <button
                 onClick={() => setActiveTab('suggestions')}
                 className="text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer"
@@ -263,8 +263,8 @@ export const FriendsPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Không có lời mời kết bạn mới</h3>
-            <p className="text-gray-600">Hãy khám phá và kết nối với những người bạn có thể biết</p>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Không có lời mời kết bạn mới</h3>
+            <p className="text-gray-600 dark:text-gray-400">Hãy khám phá và kết nối với những người bạn có thể biết</p>
           </div>
         )}
       </>
@@ -292,7 +292,7 @@ export const FriendsPage = () => {
               onRemove={handleRemoveSuggestion}
               onBack={() => setActiveTab('home')}
             />
-            <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-gray-100">
+            <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-gray-100 dark:bg-background">
               <ProfilePreviewPanel
                 userId={selectedSuggestionUserId}
                 isPending={selectedSuggestionUserId ? !!pendingRequests[selectedSuggestionUserId] : false}

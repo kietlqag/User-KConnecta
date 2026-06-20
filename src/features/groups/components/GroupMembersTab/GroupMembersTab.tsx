@@ -54,10 +54,10 @@ export function GroupMembersTab({
   onRemoveMember,
 }: GroupMembersTabProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="p-4 border-b border-gray-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-gray-900">Thành viên · {members.length}</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Thành viên · {members.length}</h2>
           {isAdmin && (
             <button
               type="button"
@@ -75,30 +75,30 @@ export function GroupMembersTab({
             placeholder="Tìm kiếm thành viên"
             value={memberSearch}
             onChange={e => onMemberSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:bg-gray-800 transition-all"
           />
         </div>
       </div>
 
       {adminMembers.length > 0 && (
-        <div className="p-4 border-b border-gray-100">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
             Quản trị viên · {adminMembers.length}
           </h3>
           <div className="space-y-1">
             {adminMembers.map(member => (
-              <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors group">
+              <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => onMemberClick(member.userId)}>
                   <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} className="w-12 h-12" />
                   <div>
-                    <div className="font-semibold text-gray-900 text-[15px] group-hover:underline">{member.fullName}</div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] group-hover:underline">{member.fullName}</div>
                     <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
                       <Shield className="w-3 h-3" /> Quản trị viên
                     </div>
                   </div>
                 </div>
-                <button type="button" className="p-2 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-                  <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <button type="button" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+                  <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
             ))}
@@ -107,7 +107,7 @@ export function GroupMembersTab({
       )}
 
       <div className="p-4">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
           Thành viên · {regularMembers.length}
         </h3>
         {regularMembers.length === 0 ? (
@@ -117,12 +117,12 @@ export function GroupMembersTab({
         ) : (
           <div className="space-y-1">
             {regularMembers.map(member => (
-              <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 transition-colors group">
+              <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => onMemberClick(member.userId)}>
                   <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} className="w-12 h-12" />
                   <div>
-                    <div className="font-semibold text-gray-900 text-[15px] group-hover:underline">{member.fullName}</div>
-                    <div className="text-xs text-gray-500">Thành viên</div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] group-hover:underline">{member.fullName}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Thành viên</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -136,8 +136,8 @@ export function GroupMembersTab({
                       <UserMinus className="w-5 h-5" />
                     </button>
                   )}
-                  <button type="button" className="p-2 rounded-full hover:bg-gray-200 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                  <button type="button" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
+                    <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
               </div>

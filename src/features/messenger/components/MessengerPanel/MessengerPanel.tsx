@@ -38,30 +38,30 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
-      <div className="fixed top-14 right-4 z-50 flex h-[min(620px,calc(100vh-80px))] w-[360px] flex-col overflow-hidden rounded-lg bg-white shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
-        <div className="shrink-0 border-b border-gray-200 p-4">
+      <div className="fixed top-14 right-4 z-50 flex h-[min(620px,calc(100vh-80px))] w-[360px] flex-col overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="shrink-0 border-b border-gray-200 dark:border-gray-700 p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-bold">Đoạn chat</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={reload}
                 disabled={loading}
-                className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+                className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
                 title="Tải lại"
               >
-                <RefreshCw className={`w-4 h-4 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
               </button>
-              <button className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer">
-                <MoreHorizontal className="w-5 h-5 text-gray-600" />
+              <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors cursor-pointer">
+                <MoreHorizontal className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
               <button
                 onClick={() => {
                   navigate('/messages');
                   onClose();
-                }} className="w-9 h-9 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer"
+                }} className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors cursor-pointer"
                 title="Mở trong Messenger"
               >
-                <ExternalLink className="w-5 h-5 text-gray-600" />
+                <ExternalLink className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
           </div>
@@ -73,7 +73,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
               placeholder="Tìm kiếm trên Messenger"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:bg-gray-200 transition-colors"
+              className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full text-sm outline-none focus:bg-gray-200 dark:focus:bg-gray-700 transition-colors"
             />
           </div>
 
@@ -84,7 +84,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
                 onClick={() => setActiveFilter(filter.key)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
                   activeFilter === filter.key
                     ? 'bg-blue-100 text-blue-600'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 {filter.label}
@@ -112,7 +112,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
               />
             ))
           ) : (
-            <div className="text-center py-8 text-gray-500 text-sm">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
               {conversations.length === 0
                 ? 'Chưa có đoạn chat nào.'
                 : 'Không tìm thấy cuộc trò chuyện'}
@@ -120,12 +120,12 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
           )}
         </div>
 
-        <div className="shrink-0 border-t border-gray-200 p-3">
+        <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 p-3">
           <button
             onClick={() => {
               navigate('/messages');
               onClose();
-            }} className="w-full text-center text-blue-600 hover:bg-gray-100 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+            }} className="w-full text-center text-blue-600 hover:bg-muted py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             Xem tất cả trong Messenger
           </button>

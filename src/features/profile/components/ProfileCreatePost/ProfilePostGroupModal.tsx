@@ -47,7 +47,7 @@ export function ProfilePostGroupModal({
         <div className="relative flex shrink-0 items-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <button
             onClick={onClose}
-            className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="rounded-full p-2 transition-colors hover:bg-muted"
           >
             <ArrowLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
           </button>
@@ -75,7 +75,7 @@ export function ProfilePostGroupModal({
             className={`flex w-full items-center gap-3 rounded-lg p-3 transition-colors ${
               selectedGroupId === null
                 ? 'bg-emerald-50 dark:bg-emerald-950/30'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                : 'hover:bg-muted'
             }`}
           >
             <div
@@ -122,7 +122,7 @@ export function ProfilePostGroupModal({
                 className={`flex w-full items-center gap-3 rounded-lg p-3 transition-colors ${
                   isSelected
                     ? 'bg-emerald-50 dark:bg-emerald-950/30'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    : 'hover:bg-muted'
                 }`}
               >
                 {group.coverPhotoUrl ? (

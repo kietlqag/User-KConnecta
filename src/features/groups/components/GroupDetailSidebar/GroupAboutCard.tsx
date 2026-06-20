@@ -11,9 +11,9 @@ export function GroupAboutCard({ group, isAdmin, onEditDescription }: GroupAbout
   const hasDescription = !!group.description?.trim();
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-[17px] text-gray-900">Giới thiệu</h3>
+        <h3 className="font-semibold text-[17px] text-gray-900 dark:text-gray-100">Giới thiệu</h3>
         {isAdmin && (
           <button
             type="button"
@@ -26,17 +26,17 @@ export function GroupAboutCard({ group, isAdmin, onEditDescription }: GroupAbout
       </div>
 
       {hasDescription ? (
-        <p className="text-[15px] text-gray-700 leading-snug whitespace-pre-wrap mb-4">{group.description}</p>
+        <p className="text-[15px] text-gray-700 dark:text-gray-300 leading-snug whitespace-pre-wrap mb-4">{group.description}</p>
       ) : isAdmin ? (
         <button
           type="button"
           onClick={onEditDescription}
-          className="w-full text-left text-[15px] text-gray-500 leading-snug mb-4 p-3 rounded-lg border border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+          className="w-full text-left text-[15px] text-gray-500 dark:text-gray-400 leading-snug mb-4 p-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
         >
           Chưa có mô tả. Thêm vài dòng để người mới hiểu nhóm dành cho ai.
         </button>
       ) : (
-        <p className="text-[15px] text-gray-500 leading-snug mb-4">Nhóm chưa có mô tả.</p>
+        <p className="text-[15px] text-gray-500 dark:text-gray-400 leading-snug mb-4">Nhóm chưa có mô tả.</p>
       )}
 
       <GroupPrivacySummary privacy={group.privacy} />

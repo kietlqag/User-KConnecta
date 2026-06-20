@@ -2,11 +2,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Expand, Loader2, MessageCircle, UserPlus, Users, X } from 'lucide-react';
 import { authService, type AuthUser } from '../../../../services/authService';
-import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
-import {
-  PROFILE_DEFAULT_AVATAR,
-  PROFILE_DEFAULT_COVER,
-} from '../../../profile/utils/profileDisplayUtils';
+import { UserAvatar } from '@/components/shared/UserAvatar';
+import { PROFILE_DEFAULT_COVER } from '../../../profile/utils/profileDisplayUtils';
 
 interface ProfilePreviewPanelProps {
   userId: string | null;
@@ -63,10 +60,10 @@ export const ProfilePreviewPanel = ({
   if (!userId) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-20 text-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 dark:bg-background">
           <Users className="h-12 w-12 text-gray-400" />
         </div>
-        <p className="text-[15px] font-medium text-gray-500">
+        <p className="text-[15px] font-medium text-gray-500 dark:text-gray-400">
           Chọn tên của người mà bạn muốn xem trước trang cá nhân.
         </p>
       </div>
@@ -85,7 +82,7 @@ export const ProfilePreviewPanel = ({
   if (!profile) {
     return (
       <div className="flex flex-1 items-center justify-center py-20">
-        <p className="text-gray-500">Không thể tải thông tin người dùng.</p>
+        <p className="text-gray-500 dark:text-gray-400">Không thể tải thông tin người dùng.</p>
       </div>
     );
   }
@@ -100,7 +97,7 @@ export const ProfilePreviewPanel = ({
 
   const profilePath = `/profile/${profile.id}`;
   const coverSrc = profile.coverPhotoUrl || PROFILE_DEFAULT_COVER;
-  const avatarSrc = profile.avatarUrl || PROFILE_DEFAULT_AVATAR;
+  const displayName = profile.fullName?.trim() || profile.username?.trim() || 'Người dùng';
 
   return (
     <div className="flex min-h-0 flex-1 justify-center overflow-y-auto px-4 py-6">
@@ -136,11 +133,11 @@ export const ProfilePreviewPanel = ({
             type="button"
             onClick={() => coverLoaded && setViewerImage(coverSrc)}
             disabled={!coverLoaded}
-            className="group/cover relative block h-44 w-full overflow-hidden rounded-xl bg-gray-200 cursor-pointer disabled:cursor-default"
+            className="group/cover relative block h-44 w-full overflow-hidden rounded-xl bg-gray-200 dark:bg-gray-700 cursor-pointer disabled:cursor-default"
             aria-label={`Xem ảnh bìa của ${profile.fullName}`}
           >
             <div
-              className={`absolute inset-0 bg-gray-300 transition-opacity duration-500 pointer-events-none ${
+              className={`absolute inset-0 bg-gray-300 dark:bg-gray-600 transition-opacity duration-500 pointer-events-none ${
                 coverLoaded ? 'opacity-0' : 'animate-pulse opacity-100'
               }`}
             />
@@ -166,16 +163,17 @@ export const ProfilePreviewPanel = ({
 
           <Link
             to={profilePath}
-            className="absolute bottom-0 left-6 translate-y-1/2 block cursor-pointer rounded-full ring-4 ring-white transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
-            aria-label={`Xem trang cá nhân của ${profile.fullName}`}
+            className="absolute bottom-0 left-6 translate-y-1/2 block cursor-pointer rounded-full ring-4 ring-white dark:ring-card transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/40"
+            aria-label={`Xem trang cá nhân của ${displayName}`}
           >
-            <div className="h-24 w-24 overflow-hidden rounded-full bg-gray-300">
-              <ImageWithFallback
-                src={avatarSrc}
-                alt={profile.fullName}
-                className="h-full w-full object-cover"
-              />
-            </div>
+            <UserAvatar
+              name={displayName}
+              avatarUrl={profile.avatarUrl}
+              userId={profile.id}
+              className="h-24 w-24 shadow-sm"
+              rounded="full"
+              initialsClassName="text-3xl font-bold"
+            />
           </Link>
         </div>
 
@@ -185,15 +183,15 @@ export const ProfilePreviewPanel = ({
             <div>
               <Link
                 to={profilePath}
-                className="text-2xl font-bold leading-tight text-gray-900 transition-colors hover:underline"
+                className="text-2xl font-bold leading-tight text-gray-900 dark:text-gray-100 transition-colors hover:underline"
               >
                 {profile.fullName}
               </Link>
               {profile.username && (
-                <p className="text-sm text-gray-500">@{profile.username}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">@{profile.username}</p>
               )}
               {mutualFriends > 0 && (
-                <p className="mt-1 text-sm font-medium text-gray-600">
+                <p className="mt-1 text-sm font-medium text-gray-600 dark:text-gray-400">
                   {mutualFriends} bạn chung
                 </p>
               )}
@@ -202,7 +200,7 @@ export const ProfilePreviewPanel = ({
               {isFriend ? (
                 <Link
                   to={`/messages/${profile.id}`}
-                  className="flex h-9 items-center gap-2 rounded-lg bg-gray-100 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors"
+                  className="flex h-9 items-center gap-2 rounded-lg bg-gray-100 dark:bg-gray-900 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
                   Nhắn tin
@@ -211,7 +209,7 @@ export const ProfilePreviewPanel = ({
                 <button
                   onClick={handleCancel}
                   disabled={actionLoading}
-                  className="flex h-9 items-center gap-2 rounded-lg bg-gray-100 px-4 text-sm font-semibold text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-60 cursor-pointer"
+                  className="flex h-9 items-center gap-2 rounded-lg bg-gray-100 dark:bg-gray-900 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 cursor-pointer"
                 >
                   {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   Hủy lời mời
@@ -230,7 +228,7 @@ export const ProfilePreviewPanel = ({
               )}
               <Link
                 to={profilePath}
-                className="flex h-9 items-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                className="flex h-9 items-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Xem trang cá nhân
               </Link>
@@ -238,18 +236,18 @@ export const ProfilePreviewPanel = ({
           </div>
 
           {profile.bio && (
-            <p className="mt-3 text-sm text-gray-600 leading-relaxed">{profile.bio}</p>
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{profile.bio}</p>
           )}
         </div>
 
         {/* Divider */}
         {infoItems.length > 0 && (
           <>
-            <hr className="border-gray-200 mb-4" />
+            <hr className="border-gray-200 dark:border-gray-700 mb-4" />
             <div className="px-1 space-y-2">
-              <h3 className="text-base font-semibold text-gray-900 mb-3">Thông tin cá nhân</h3>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-3">Thông tin cá nhân</h3>
               {infoItems.map((item) => (
-                <div key={item.label} className="flex items-center gap-2 text-sm text-gray-700">
+                <div key={item.label} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <span>{item.icon}</span>
                   <span>{item.label}</span>
                 </div>

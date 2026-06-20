@@ -61,7 +61,7 @@ export function ProfileScheduledPage() {
 
   return (
     <div className="max-w-[680px] mx-auto px-4 py-6">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none overflow-hidden">
         <div className="flex items-center gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
           <Calendar className="w-5 h-5 text-blue-600" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Bài viết đã lên lịch</h2>
@@ -86,7 +86,7 @@ export function ProfileScheduledPage() {
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
             {posts.map(post => (
-              <div key={post.id} className="p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+              <div key={post.id} className="p-5 hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-700/50 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
@@ -107,7 +107,7 @@ export function ProfileScheduledPage() {
                             <img key={i} src={m.mediaUrl || m.fileUrl} alt="" className="h-20 w-20 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
                           ) : (
                             <div key={i} className="h-20 w-20 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center border border-gray-200 dark:border-gray-600">
-                              <span className="text-xs text-gray-500">Video</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">Video</span>
                             </div>
                           )
                         )}

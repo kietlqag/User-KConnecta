@@ -177,7 +177,7 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <p className="text-sm text-gray-600">Chọn lý do báo cáo video này:</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Chọn lý do báo cáo video này:</p>
             <div className="space-y-2">
               {REPORT_CATEGORIES.map((cat) => (
                 <label
@@ -185,7 +185,7 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
                   className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                     selectedCategory === cat.value
                       ? 'border-red-400 bg-red-50'
-                      : 'border-gray-200 hover:bg-gray-50'
+                      : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
                 >
                   <input
@@ -202,11 +202,11 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 mb-1 block">
+              <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">
                 Mô tả thêm <span className="text-gray-400">(tuỳ chọn)</span>
               </label>
               <textarea
-                className="w-full rounded-md border border-gray-200 p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full rounded-md border border-gray-200 dark:border-gray-700 p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
                 rows={3}
                 placeholder="Mô tả chi tiết vi phạm..."
                 value={reportReason}

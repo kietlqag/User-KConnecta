@@ -215,7 +215,7 @@ export function LiveCommentPanel({
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${className}`}>
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-gray-100 p-3 text-gray-700">
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-gray-100 dark:bg-gray-900 p-3 text-gray-700 dark:text-gray-300">
         {showDefaultPinned && (
           <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
             <div className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
@@ -242,7 +242,7 @@ export function LiveCommentPanel({
         )}
 
         {sortedComments.length === 0 ? (
-          <div className="flex min-h-[220px] flex-col items-center justify-center p-5 text-center text-gray-500">
+          <div className="flex min-h-[220px] flex-col items-center justify-center p-5 text-center text-gray-500 dark:text-gray-400">
             <MessageCircle className="mb-2 h-7 w-7" />
             <p className="font-semibold">Chưa có bình luận</p>
             <p className="text-sm">Bình luận đầu tiên sẽ hiển thị tại đây.</p>
@@ -314,11 +314,11 @@ export function LiveCommentPanel({
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-2 border-t border-gray-200 pt-3">
+      <div className="mt-3 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700 pt-3">
         <img
           src={inputAvatar}
           alt={currentUserName}
-          className="h-10 w-10 shrink-0 rounded-full object-cover bg-gray-200"
+          className="h-10 w-10 shrink-0 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
         />
         <input
           value={commentText}
@@ -327,14 +327,14 @@ export function LiveCommentPanel({
           onKeyDown={(event) => {
             if (event.key === 'Enter') void handleSubmitComment();
           }}
-          className="flex-1 rounded-full bg-gray-100 px-4 py-2.5 text-sm outline-none disabled:cursor-not-allowed disabled:text-gray-400"
+          className="flex-1 rounded-full bg-gray-100 dark:bg-gray-900 px-4 py-2.5 text-sm outline-none disabled:cursor-not-allowed disabled:text-gray-400"
           placeholder={replyTarget ? 'Viết phản hồi...' : 'Viết bình luận...'}
         />
         <button
           type="button"
           disabled={!commentText.trim() || isSendingComment || disabled || !postId}
           onClick={() => void handleSubmitComment()}
-          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-gray-300"
+          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-gray-300 dark:bg-gray-600"
         >
           Gửi
         </button>

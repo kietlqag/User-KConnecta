@@ -1,10 +1,22 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { Star } from 'lucide-react';
 import { Header } from '../../home/components/Header';
 import { ReelPlayer } from '../components';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { WATCH_FEED_KEY, useWatchFeed } from '../hooks/useWatchFeed';
+
+const WatchSidebar = () => (
+  <aside className="hidden lg:flex fixed top-14 left-0 z-40 h-[calc(100vh-56px)] w-[320px] flex-col gap-1 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-4">
+    <h1 className="px-3 pb-3 text-2xl font-bold text-gray-900 dark:text-white">Watch</h1>
+
+    <div className="flex items-center gap-3 rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2.5 text-gray-900 dark:text-white">
+      <Star className="h-6 w-6 shrink-0" />
+      <span className="text-[15px] font-semibold">Dành cho bạn</span>
+    </div>
+  </aside>
+);
 
 export const WatchPage = () => {
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
@@ -116,18 +128,19 @@ export const WatchPage = () => {
   }, [currentUser?.id, isLoading, isFetchingNextPage, reels.length]);
 
   return (
-    <div className="h-screen bg-white overflow-hidden">
+    <div className="h-screen bg-white dark:bg-gray-800 overflow-hidden">
       <Header />
+      <WatchSidebar />
 
-      <div className="mt-14 h-[calc(100vh-56px)] relative">
+      <div className="mt-14 h-[calc(100vh-56px)] relative lg:pl-[320px]">
         {loadingMessage ? (
-          <div className="flex h-full items-center justify-center text-gray-700">{loadingMessage}</div>
+          <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">{loadingMessage}</div>
         ) : isError ? (
-          <div className="flex h-full items-center justify-center text-gray-700">
+          <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">
             Không thể tải video. Vui lòng thử lại sau.
           </div>
         ) : reels.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-gray-700">Chưa có video nào.</div>
+          <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">Chưa có video nào.</div>
         ) : currentReel ? (
           <ReelPlayer
             reel={currentReel}
@@ -141,7 +154,7 @@ export const WatchPage = () => {
       </div>
 
       {!isLoading && reels.length > 0 && (
-        <div className="fixed top-14 left-0 right-0 h-1 bg-gray-200 z-50">
+        <div className="fixed top-14 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 z-50">
           <div
             className="h-full bg-emerald-600 transition-all duration-300"
             style={{

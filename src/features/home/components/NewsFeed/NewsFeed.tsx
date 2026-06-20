@@ -178,13 +178,13 @@ export function NewsFeed() {
       <CreatePost />
 
       {isLoading && (
-        <div className="rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow">
+        <div className="rounded-xl bg-card p-6 text-center text-sm text-muted-foreground shadow-sm border border-border">
           Đang tải bảng tin...
         </div>
       )}
 
       {!isLoading && error && (
-        <div className="rounded-lg bg-white p-6 text-center text-sm text-red-500 shadow">
+        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 text-center text-sm text-red-500 shadow border border-transparent dark:border-gray-700">
           Không thể tải bảng tin
         </div>
       )}
@@ -202,18 +202,18 @@ export function NewsFeed() {
       {isFetchingNextPage && (
         <div className="p-4 text-center">
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-          <span className="ml-2 text-sm text-gray-500">Đang tải thêm...</span>
+          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Đang tải thêm...</span>
         </div>
       )}
 
       {!isLoading && !error && !hasNextPage && posts.length > 0 && (
-        <div className="p-8 text-center text-sm text-gray-500">
+        <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
           Bạn đã xem hết tất cả bài viết.
         </div>
       )}
 
       {!isLoading && !error && posts.length === 0 && (
-        <div className="rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow">
+        <div className="rounded-xl bg-card p-6 text-center text-sm text-muted-foreground shadow-sm border border-border">
           Chưa có bài viết trong bảng tin.
         </div>
       )}

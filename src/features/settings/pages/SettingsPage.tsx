@@ -25,31 +25,31 @@ function SettingsSidebar({
   onSelect: (s: SettingsSection) => void;
 }) {
   return (
-    <div className="w-[300px] bg-white border-r border-gray-200 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
+    <div className="w-[300px] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
       <div className="p-4">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">Cài đặt</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Cài đặt</h1>
         <div className="space-y-1">
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => onSelect(item.id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
-                active === item.id ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                active === item.id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-muted'
               }`}
             >
-              <span className={active === item.id ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600 transition-colors'}>
+              <span className={active === item.id ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 transition-colors'}>
                 {item.icon}
               </span>
-              <span className={`font-medium ${active === item.id ? 'text-blue-600' : 'text-gray-900'}`}>
+              <span className={`font-medium ${active === item.id ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'}`}>
                 {item.label}
               </span>
             </button>
           ))}
           <Link
             to="/policies"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-gray-100 text-gray-900"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-muted text-gray-900 dark:text-gray-100"
           >
-            <ScrollText className="w-5 h-5 text-gray-600" />
+            <ScrollText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="font-medium">Chính sách cộng đồng</span>
           </Link>
         </div>
@@ -98,14 +98,14 @@ function ChangePasswordSection() {
     }
   };
 
-  const inputClass = 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm pr-11 transition-colors';
+  const inputClass = 'w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm pr-11 transition-colors';
   const btnClass = 'w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
 
   const EyeToggle = ({ show, onToggle }: { show: boolean; onToggle: () => void }) => (
     <button
       type="button"
       onClick={onToggle}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
     >
       {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
     </button>
@@ -114,27 +114,27 @@ function ChangePasswordSection() {
   return (
     <div className="max-w-lg">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
           {isSettingPassword ? 'Đặt mật khẩu' : 'Đổi mật khẩu'}
         </h2>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {isSettingPassword
             ? 'Tài khoản của bạn chưa có mật khẩu. Đặt mật khẩu để đăng nhập bằng email.'
             : 'Nhập mật khẩu hiện tại và mật khẩu mới để cập nhật.'}
         </p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm dark:shadow-none">
         {success ? (
           <div className="flex flex-col items-center text-center py-4 space-y-4">
             <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center">
               <CheckCircle2 className="w-8 h-8 text-green-600" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
                 {isSettingPassword ? 'Đặt mật khẩu thành công!' : 'Đổi mật khẩu thành công!'}
               </h3>
-              <p className="text-sm text-gray-500">Mật khẩu của bạn đã được cập nhật.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Mật khẩu của bạn đã được cập nhật.</p>
             </div>
             <button onClick={() => setSuccess(false)} className={btnClass}>
               {isSettingPassword ? 'Đặt lại mật khẩu khác' : 'Đổi mật khẩu khác'}
@@ -144,7 +144,7 @@ function ChangePasswordSection() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {!isSettingPassword && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu hiện tại</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu hiện tại</label>
                 <div className="relative">
                   <input
                     type={showOld ? 'text' : 'password'}
@@ -160,7 +160,7 @@ function ChangePasswordSection() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu mới</label>
               <div className="relative">
                 <input
                   type={showNew ? 'text' : 'password'}
@@ -178,7 +178,7 @@ function ChangePasswordSection() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu mới</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Xác nhận mật khẩu mới</label>
               <div className="relative">
                 <input
                   type={showConfirm ? 'text' : 'password'}
@@ -296,7 +296,7 @@ function ForgotPasswordSection() {
 
   const formattedExpiry = `${String(Math.floor(otpExpiresIn / 60)).padStart(2, '0')}:${String(otpExpiresIn % 60).padStart(2, '0')}`;
 
-  const inputClass = 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors';
+  const inputClass = 'w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors';
   const btnClass = 'w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
   const flowSteps = ['email', 'otp', 'reset'] as const;
   const stepIndex = step === 'success' ? flowSteps.length : flowSteps.indexOf(step);
@@ -310,11 +310,11 @@ function ForgotPasswordSection() {
               ? 'bg-blue-600 text-white'
               : step === s
               ? 'bg-blue-100 text-blue-600 border-2 border-blue-600'
-              : 'bg-gray-100 text-gray-400'
+              : 'bg-gray-100 dark:bg-gray-900 text-gray-400'
           }`}>
             {i + 1}
           </div>
-          {i < 2 && <div className={`h-0.5 w-8 ${stepIndex > i ? 'bg-blue-600' : 'bg-gray-200'}`} />}
+          {i < 2 && <div className={`h-0.5 w-8 ${stepIndex > i ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`} />}
         </div>
       ))}
     </div>
@@ -323,11 +323,11 @@ function ForgotPasswordSection() {
   return (
     <div className="max-w-lg">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Quên mật khẩu</h2>
-        <p className="text-sm text-gray-500 mt-1">Đặt lại mật khẩu qua email của bạn</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Quên mật khẩu</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Đặt lại mật khẩu qua email của bạn</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm dark:shadow-none">
         {step !== 'success' && stepIndicator}
 
         {step === 'email' && (
@@ -337,13 +337,13 @@ function ForgotPasswordSection() {
                 <Mail className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="font-medium text-gray-800 text-sm">Bước 1: Nhập email</p>
-                <p className="text-xs text-gray-500">Chúng tôi sẽ gửi mã OTP đến email của bạn</p>
+                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">Bước 1: Nhập email</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Chúng tôi sẽ gửi mã OTP đến email của bạn</p>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <div className="flex items-center gap-2 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+              <div className="flex items-center gap-2 px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300">
                 <Mail className="w-4 h-4 text-gray-400 shrink-0" />
                 <span>{email}</span>
               </div>
@@ -363,14 +363,14 @@ function ForgotPasswordSection() {
                 <Lock className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="font-medium text-gray-800 text-sm">Bước 2: Xác thực OTP</p>
-                <p className="text-xs text-gray-500">
+                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">Bước 2: Xác thực OTP</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   Mã đã gửi đến <span className="font-medium text-blue-600">{email}</span>
                 </p>
               </div>
             </div>
             <OTPInput value={otp} onChange={(v) => { setOtp(v); setErrors({}); }} error={errors.otp} />
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
               Mã hết hạn sau:{' '}
               <span className={otpExpiresIn > 10 ? 'font-semibold text-amber-600' : 'font-semibold text-red-500'}>
                 {formattedExpiry}
@@ -399,12 +399,12 @@ function ForgotPasswordSection() {
                 <KeyRound className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="font-medium text-gray-800 text-sm">Bước 3: Đặt mật khẩu mới</p>
-                <p className="text-xs text-gray-500">Tạo mật khẩu mới cho tài khoản của bạn</p>
+                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">Bước 3: Đặt mật khẩu mới</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Tạo mật khẩu mới cho tài khoản của bạn</p>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu mới</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu mới</label>
               <div className="relative">
                 <input type={showPassword ? 'text' : 'password'} placeholder="Ít nhất 8 ký tự" value={password}
                   onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: '' })); }}
@@ -412,7 +412,7 @@ function ForgotPasswordSection() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -420,7 +420,7 @@ function ForgotPasswordSection() {
               {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Xác nhận mật khẩu</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Xác nhận mật khẩu</label>
               <div className="relative">
                 <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Nhập lại mật khẩu mới" value={confirmPassword}
                   onChange={(e) => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: '' })); }}
@@ -428,7 +428,7 @@ function ForgotPasswordSection() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -448,8 +448,8 @@ function ForgotPasswordSection() {
               <CheckCircle2 className="w-9 h-9 text-green-600" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Đặt lại thành công!</h3>
-              <p className="text-sm text-gray-500">Mật khẩu của bạn đã được cập nhật.</p>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Đặt lại thành công!</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Mật khẩu của bạn đã được cập nhật.</p>
             </div>
             <button onClick={reset} className={btnClass}>Đặt lại mật khẩu khác</button>
           </div>
@@ -465,7 +465,7 @@ export default function SettingsPage() {
   const [active, setActive] = useState<SettingsSection>('change-password');
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
       <Header />
       <div className="pt-14 flex">
         <SettingsSidebar active={active} onSelect={setActive} />

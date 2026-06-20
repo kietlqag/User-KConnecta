@@ -75,7 +75,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
   if (loading) {
     return (
       <div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none overflow-hidden mb-4">
           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
             <div className="h-6 w-24 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
           </div>
@@ -88,7 +88,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
 
   return (
     <div>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none overflow-hidden mb-4">
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Bài viết</h2>
         </div>
@@ -105,7 +105,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
                 className={`flex items-center justify-center gap-1.5 px-2 py-3 text-sm font-medium transition-colors sm:gap-2 sm:px-4 ${
                   isActive
                     ? 'text-primary dark:text-primary border-b-4 border-primary dark:border-primary bg-primary/5 dark:bg-primary/10'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-muted'
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -126,7 +126,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
       </div>
 
       {filteredPosts.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-12 flex flex-col items-center text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none p-12 flex flex-col items-center text-center">
           <div className="relative mb-4 h-20 w-20">
             <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
             <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -145,7 +145,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
             <button
               onClick={onLoadMore}
               disabled={loadingMore}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60"
             >
               {loadingMore ? (
                 <>

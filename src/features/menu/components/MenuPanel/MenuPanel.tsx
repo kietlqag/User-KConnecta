@@ -103,42 +103,42 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
   const createItems: CreateItem[] = [
     {
       id: 'post',
-      icon: <Edit className="w-5 h-5 text-gray-700" />,
+      icon: <Edit className="w-5 h-5 text-gray-700 dark:text-gray-300" />,
       title: 'Đăng',
     },
     {
       id: 'story',
-      icon: <BookOpen className="w-5 h-5 text-gray-700" />,
+      icon: <BookOpen className="w-5 h-5 text-gray-700 dark:text-gray-300" />,
       title: 'Tin',
     },
     {
       id: 'reel',
-      icon: <Film className="w-5 h-5 text-gray-700" />,
+      icon: <Film className="w-5 h-5 text-gray-700 dark:text-gray-300" />,
       title: 'Thước phim',
     },
     {
       id: 'page',
-      icon: <Flag className="w-5 h-5 text-gray-700" />,
+      icon: <Flag className="w-5 h-5 text-gray-700 dark:text-gray-300" />,
       title: 'Trang',
     },
     {
       id: 'ad',
-      icon: <TrendingUp className="w-5 h-5 text-gray-700" />,
+      icon: <TrendingUp className="w-5 h-5 text-gray-700 dark:text-gray-300" />,
       title: 'Quảng cáo',
     },
     {
       id: 'group',
-      icon: <UserPlus className="w-5 h-5 text-gray-700" />,
+      icon: <UserPlus className="w-5 h-5 text-gray-700 dark:text-gray-300" />,
       title: 'Nhóm',
     },
     {
       id: 'event',
-      icon: <CalendarPlus className="w-5 h-5 text-gray-700" />,
+      icon: <CalendarPlus className="w-5 h-5 text-gray-700 dark:text-gray-300" />,
       title: 'Sự kiện',
     },
     {
       id: 'marketplace',
-      icon: <Store className="w-5 h-5 text-gray-700" />,
+      icon: <Store className="w-5 h-5 text-gray-700 dark:text-gray-300" />,
       title: 'Bài niệm yết trên Marketplace',
     },
   ];
@@ -164,15 +164,15 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
 
   return (
     <div 
-      className="fixed top-14 right-4 w-[680px] bg-white rounded-lg shadow-2xl z-50 max-h-[calc(100vh-80px)] flex flex-col animate-in fade-in slide-in-from-right-4 duration-200" 
+      className="fixed top-14 right-4 w-[680px] bg-popover rounded-xl shadow-2xl border border-border z-50 max-h-[calc(100vh-80px)] flex flex-col animate-in fade-in slide-in-from-right-4 duration-200" 
       ref={panelRef}
       style={{
         boxShadow: '0 12px 28px 0 rgba(0,0,0,0.2), 0 2px 4px 0 rgba(0,0,0,0.1)'
       }}
     >
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-2xl font-bold mb-3">Menu</h2>
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-2xl font-bold mb-3 text-gray-900 dark:text-gray-100">Menu</h2>
         
         {/* Search */}
         <div className="relative">
@@ -182,7 +182,7 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
             placeholder="Tìm kiếm trong menu"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:bg-gray-200 transition-colors"
+            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full text-sm outline-none focus:bg-gray-200 dark:focus:bg-gray-700 transition-colors"
           />
         </div>
       </div>
@@ -194,8 +194,8 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
           <div className="flex-1 space-y-4">
             {/* Social Section */}
             {filteredSocialItems.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-2">
-                <h3 className="text-sm font-semibold text-gray-600 px-2 py-1 mb-1">Xã hội</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 px-2 py-1 mb-1">Xã hội</h3>
                 <div className="space-y-1">
                   {filteredSocialItems.map((item) => (
                     <MenuItemCard
@@ -210,8 +210,8 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
 
             {/* Entertainment Section */}
             {filteredEntertainmentItems.length > 0 && (
-              <div className="bg-white rounded-lg border border-gray-200 p-2">
-                <h3 className="text-sm font-semibold text-gray-600 px-2 py-1 mb-1">Giải trí</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 px-2 py-1 mb-1">Giải trí</h3>
                 <div className="space-y-1">
                   {filteredEntertainmentItems.map((item) => (
                     <MenuItemCard
@@ -226,7 +226,7 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
 
             {/* No results */}
             {searchQuery && filteredSocialItems.length === 0 && filteredEntertainmentItems.length === 0 && (
-              <div className="text-center py-8 text-gray-500 text-sm">
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
                 Không tìm thấy kết quả
               </div>
             )}
@@ -234,8 +234,8 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
 
           {/* Right Column - Create Section */}
           <div className="w-56 flex-shrink-0">
-            <div className="bg-white rounded-lg border border-gray-200 p-2 sticky top-0">
-              <h3 className="text-sm font-semibold text-gray-900 px-2 py-1 mb-1">Tạo</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2 sticky top-0">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 px-2 py-1 mb-1">Tạo</h3>
               <div className="space-y-1">
                 {createItems.map((item) => (
                   <CreateItemCard

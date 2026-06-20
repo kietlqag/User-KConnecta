@@ -134,7 +134,7 @@ export const MessageList = forwardRef(({
   };
 
   return (
-    <div className="flex-1 relative min-h-0 min-w-0 overflow-hidden bg-white">
+    <div className="flex-1 relative min-h-0 min-w-0 overflow-hidden bg-white dark:bg-gray-800">
       <div
         ref={ref}
         onScroll={onScroll}
@@ -145,7 +145,7 @@ export const MessageList = forwardRef(({
       >
         {hasOlder && (
           <div className="flex justify-center py-2">
-            <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            <div className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-900 px-3 py-1 rounded-full">
               {loadingOlder ? 'Đang tải tin nhắn cũ...' : 'Kéo lên để xem tin nhắn cũ'}
             </div>
           </div>
@@ -158,7 +158,7 @@ export const MessageList = forwardRef(({
             className="min-w-0"
           >
             {message.systemType === 'chat_action' ? (
-              <div className="flex justify-center px-4 py-2 text-center text-[13px] leading-5 text-gray-500">
+              <div className="flex justify-center px-4 py-2 text-center text-[13px] leading-5 text-gray-500 dark:text-gray-400">
                 <span>
                   {formatChatAction(message)}
                   {message.systemActionType === 'pin_message' && (
@@ -202,25 +202,25 @@ export const MessageList = forwardRef(({
               alt={groupName || 'Nhóm chat'}
               className="h-14 w-14 rounded-full object-cover"
             />
-            <h3 className="mt-3 text-2xl font-semibold leading-tight text-gray-900">{groupName || 'Nhóm chat'}</h3>
-            <p className="mt-1.5 text-base text-gray-500">
+            <h3 className="mt-3 text-2xl font-semibold leading-tight text-gray-900 dark:text-gray-100">{groupName || 'Nhóm chat'}</h3>
+            <p className="mt-1.5 text-base text-gray-500 dark:text-gray-400">
               {isGroupCreator ? 'Bạn đã tạo nhóm này' : `${groupCreatorName} đã tạo nhóm này`}
             </p>
             <div className="mt-6 flex items-center gap-7">
-              <button type="button" className="flex flex-col items-center gap-1.5 text-gray-700 cursor-pointer" title="Thêm thành viên">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200">
+              <button type="button" className="flex flex-col items-center gap-1.5 text-gray-700 dark:text-gray-300 cursor-pointer" title="Thêm thành viên">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
                   <UserRoundPlus className="h-5.5 w-5.5" />
                 </span>
                 <span className="text-[14px]">Thêm</span>
               </button>
-              <button type="button" className="flex flex-col items-center gap-1.5 text-gray-700 cursor-pointer" title="Đổi tên nhóm">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200">
+              <button type="button" className="flex flex-col items-center gap-1.5 text-gray-700 dark:text-gray-300 cursor-pointer" title="Đổi tên nhóm">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
                   <Pencil className="h-5 w-5" />
                 </span>
                 <span className="text-[14px]">Tên</span>
               </button>
             </div>
-            <p className="mt-7 text-[15px] text-gray-500">
+            <p className="mt-7 text-[15px] text-gray-500 dark:text-gray-400">
               {isGroupCreator
                 ? `Bạn đã đặt tên nhóm là ${groupName || 'Nhóm chat'}.`
                 : `${groupCreatorName} đã đặt tên nhóm là ${groupName || 'Nhóm chat'}.`}
@@ -232,7 +232,7 @@ export const MessageList = forwardRef(({
       {showJumpToLatest && (
         <button
           onClick={() => scrollToBottom()}
-          className="absolute bottom-20 right-4 z-20 cursor-pointer rounded-full border border-gray-200 bg-white p-2 text-blue-600 shadow-lg transition-all hover:bg-gray-50 animate-bounce"
+          className="absolute bottom-20 right-4 z-20 cursor-pointer rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 text-blue-600 shadow-lg transition-all hover:bg-gray-50 dark:hover:bg-gray-800 animate-bounce"
           title="Cuộn xuống dưới cùng"
         >
           <ChevronDown className="w-5 h-5" />

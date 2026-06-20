@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, SAVED_POSTS_CHANGED_EVENT, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
+import { UserAvatar } from './UserAvatar';
 import { PostDetailModal } from '../posts/PostDetailModal';
 import { PostShareModal } from '../posts/PostShareModal';
 import { EditPostModal } from '../posts/EditPostModal';
@@ -388,39 +389,77 @@ export function Post({
 
   return (
     <>
-      <div id={`post-${id}`} className="bg-surface rounded-2xl shadow-[0_1px_3px_rgba(17,17,38,0.06)] dark:shadow-none border border-border mb-4">
+      <div id={`post-${id}`} className="bg-card rounded-2xl shadow-sm border border-border mb-4">
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">
               <div className="relative">
-                <ImageWithFallback
-                  src={group?.icon || author.avatar}
-                  alt={group?.name || author.name}
-                  className={`w-10 h-10 object-cover cursor-pointer ${group ? 'rounded-lg shadow-sm' : 'rounded-full'}`}
-                  onClick={() => group ? navigate(`/groups/${group.id}`) : navigate(`/profile/${author.id}`)}
-                />
-                {group && (
-                  <ImageWithFallback
-                    src={author.avatar}
-                    alt={author.name}
-                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white object-cover cursor-pointer shadow-sm"
+                {group ? (
+                  <>
+                    {group.icon ? (
+                      <ImageWithFallback
+                        src={group.icon}
+                        alt={group.name}
+                        className="w-10 h-10 object-cover cursor-pointer rounded-lg shadow-sm"
+                        onClick={() => navigate(`/groups/${group.id}`)}
+                      />
+                    ) : (
+                      <div
+                        className="cursor-pointer"
+                        onClick={() => navigate(`/groups/${group.id}`)}
+                      >
+                        <UserAvatar
+                          name={group.name}
+                          userId={group.id}
+                          className="w-10 h-10"
+                          rounded="lg"
+                          initialsClassName="text-sm font-bold"
+                        />
+                      </div>
+                    )}
+                    <div
+                      className="absolute -bottom-1 -right-1 cursor-pointer"
+                      onClick={() => navigate(`/profile/${author.id}`)}
+                    >
+                      <UserAvatar
+                        name={author.name}
+                        avatarUrl={author.avatar}
+                        userId={author.id}
+                        className="w-6 h-6 border-2 border-card shadow-sm"
+                        rounded="full"
+                        initialsClassName="text-[10px] font-bold"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className="cursor-pointer"
                     onClick={() => navigate(`/profile/${author.id}`)}
-                  />
+                  >
+                    <UserAvatar
+                      name={author.name}
+                      avatarUrl={author.avatar}
+                      userId={author.id}
+                      className="w-10 h-10"
+                      rounded="full"
+                      initialsClassName="text-sm font-bold"
+                    />
+                  </div>
                 )}
               </div>
               <div className="flex flex-col">
                 <h3
-                  className="font-bold text-[15px] text-gray-900 cursor-pointer hover:underline leading-tight"
+                  className="font-bold text-[15px] text-gray-900 dark:text-white cursor-pointer hover:underline leading-tight"
                   onClick={() => group ? navigate(`/groups/${group.id}`) : navigate(`/profile/${author.id}`)}
                 >
                   {group?.name || author.name}
                 </h3>
-                <div className="flex items-center gap-1 text-[13px] text-gray-500 leading-tight flex-wrap">
+                <div className="flex items-center gap-1 text-[13px] text-gray-500 dark:text-gray-400 leading-tight flex-wrap">
                   {sharedPost && originalPost ? (
                     <>
                       <span>đã chia sẻ bài viết của</span>
                       <span
-                        className="font-semibold text-gray-700 hover:underline cursor-pointer"
+                        className="font-semibold text-gray-700 dark:text-gray-300 hover:underline cursor-pointer"
                         onClick={(e) => { e.stopPropagation(); navigate(`/profile/${originalPost.author.id}`); }}
                       >
                         {originalPost.author.name}
@@ -468,7 +507,7 @@ export function Post({
           </div>
 
           {(displayContent && !hasLivePreview) || (sharedPost && displayContent) ? (
-            <p className="text-gray-900 mb-3 whitespace-pre-wrap">{displayContent}</p>
+            <p className="text-gray-900 dark:text-gray-100 mb-3 whitespace-pre-wrap">{displayContent}</p>
           ) : null}
 
           {/* Embedded original post card for share wrappers */}
@@ -483,20 +522,27 @@ export function Post({
               >
                 <div className="p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <img
-                      src={originalPost.author.avatar}
-                      alt={originalPost.author.name}
-                      className="w-8 h-8 rounded-full object-cover"
+                    <div
+                      className="cursor-pointer shrink-0"
                       onClick={(e) => { e.stopPropagation(); navigate(`/profile/${originalPost.author.id}`); }}
-                    />
+                    >
+                      <UserAvatar
+                        name={originalPost.author.name}
+                        avatarUrl={originalPost.author.avatar}
+                        userId={originalPost.author.id}
+                        className="w-8 h-8"
+                        rounded="full"
+                        initialsClassName="text-xs font-bold"
+                      />
+                    </div>
                     <div className="flex flex-col">
                       <span
-                        className="text-sm font-semibold text-gray-900 hover:underline cursor-pointer leading-tight"
+                        className="text-sm font-semibold text-gray-900 dark:text-white hover:underline cursor-pointer leading-tight"
                         onClick={(e) => { e.stopPropagation(); navigate(`/profile/${originalPost.author.id}`); }}
                       >
                         {originalPost.author.name}
                       </span>
-                      <span className="text-xs text-gray-500 leading-tight">{originalPost.timestamp}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{originalPost.timestamp}</span>
                     </div>
                   </div>
                   {originalPost.isLivePost ? (
@@ -510,7 +556,7 @@ export function Post({
                     </div>
                   ) : (
                     originalPost.content && (
-                      <p className="text-sm text-gray-800 whitespace-pre-wrap line-clamp-4">{originalPost.content}</p>
+                      <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap line-clamp-4">{originalPost.content}</p>
                     )
                   )}
                 </div>
@@ -575,7 +621,7 @@ export function Post({
           </div>
         ) : null}
 
-        <div className="px-4 py-2 flex items-center justify-between text-sm text-gray-500">
+        <div className="px-4 py-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
           <div className="flex items-center gap-2">
             {totalReactionCount > 0 && (
               <button
@@ -587,7 +633,7 @@ export function Post({
                   {activeReactions.slice(0, 3).map((reaction) => (
                     <span
                       key={reaction.type}
-                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white leading-none"
+                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white dark:bg-gray-800 leading-none"
                     >
                       <img src={reaction.emoji} alt={reaction.label} width={15} height={15} draggable={false} />
                     </span>
@@ -603,7 +649,7 @@ export function Post({
           </div>
         </div>
 
-        <div className="h-px bg-gray-300 mx-4" />
+        <div className="h-px bg-gray-300 dark:bg-gray-700 mx-4" />
 
         <div className="px-4 py-2 grid grid-cols-3 gap-2 items-center">
           <ReactionButton
@@ -750,7 +796,7 @@ export function Post({
                 <div className="flex items-center gap-1 rounded-full bg-black/60 p-1.5 text-white shadow-lg">
               <button
                 type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-white/15"
+                className="cursor-pointer rounded-full p-2 hover:bg-white dark:bg-gray-800/15"
                 aria-label="Thu nhỏ"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -761,7 +807,7 @@ export function Post({
               </button>
               <button
                 type="button"
-                className="min-w-[3.25rem] cursor-pointer rounded-full px-2 py-1.5 text-sm font-semibold tabular-nums hover:bg-white/15"
+                className="min-w-[3.25rem] cursor-pointer rounded-full px-2 py-1.5 text-sm font-semibold tabular-nums hover:bg-white dark:bg-gray-800/15"
                 title="Ctrl + cuộn chuột để zoom"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -773,7 +819,7 @@ export function Post({
               </button>
               <button
                 type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-white/15"
+                className="cursor-pointer rounded-full p-2 hover:bg-white dark:bg-gray-800/15"
                 aria-label="Phóng to"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -784,7 +830,7 @@ export function Post({
               </button>
               <button
                 type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-white/15"
+                className="cursor-pointer rounded-full p-2 hover:bg-white dark:bg-gray-800/15"
                 aria-label="Xoay ảnh 90°"
                 title="Xoay 90°"
                 onClick={(e) => {
@@ -796,7 +842,7 @@ export function Post({
               </button>
               <button
                 type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-white/15"
+                className="cursor-pointer rounded-full p-2 hover:bg-white dark:bg-gray-800/15"
                 aria-label="Vừa khung"
                 onClick={(e) => {
                   e.stopPropagation();

@@ -828,78 +828,78 @@ export default function LiveProducerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
       <Header />
 
       <div className="pt-14 flex min-w-0">
-        <aside className="w-[300px] shrink-0 border-r border-gray-200 bg-white h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900 leading-tight">Bảng điều khiển phát trực tiếp</h2>
-            <p className="mt-3 text-sm text-gray-600">
+        <aside className="w-[300px] shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight">Bảng điều khiển phát trực tiếp</h2>
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
               Hiện tại, khi phát trực tiếp, bạn có thể xem thông tin chi tiết tức thì hoặc thêm công cụ để tăng khả năng phân phối/tương tác.
             </p>
 
             <div className="mt-4 flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
+              <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden">
                 {currentUserAvatar ? (
                   <img src={currentUserAvatar} alt="avatar" className="h-full w-full object-cover" />
                 ) : (
-                  <UserRound className="w-7 h-7 text-gray-600" />
+                  <UserRound className="w-7 h-7 text-gray-600 dark:text-gray-400" />
                 )}
               </div>
               <div>
-                <p className="text-sm"><span className="font-semibold text-gray-900">{currentUserName}</span> đang phát trực tiếp.</p>
-                <p className="text-xs text-gray-500">Vừa xong</p>
+                <p className="text-sm"><span className="font-semibold text-gray-900 dark:text-gray-100">{currentUserName}</span> đang phát trực tiếp.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Vừa xong</p>
               </div>
             </div>
           </div>
 
           <div className="p-2 space-y-1">
-            <button onClick={() => setMainSection('dashboard')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'dashboard' ? 'bg-blue-50 text-gray-900' : 'hover:bg-gray-100 text-gray-900'}`}>
-              <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
+            <button onClick={() => setMainSection('dashboard')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'dashboard' ? 'bg-blue-50 dark:bg-blue-900/30 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
+              <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
                 <Monitor className="w-5 h-5" />
               </span>
               Bảng điều khiển
             </button>
 
-            <button onClick={() => setMainSection('details')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'details' ? 'bg-blue-50 text-gray-900' : 'hover:bg-gray-100 text-gray-900'}`}>
-              <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'details' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
+            <button onClick={() => setMainSection('details')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'details' ? 'bg-blue-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
+              <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'details' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
                 <ChartNoAxesColumn className="w-5 h-5" />
               </span>
               Thông tin chi tiết
             </button>
 
             <div>
-              <button onClick={() => setMainSection('settings')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'settings' ? 'bg-blue-50 text-gray-900' : 'hover:bg-gray-100 text-gray-900'}`}>
-                <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'settings' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}>
+              <button onClick={() => setMainSection('settings')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'settings' ? 'bg-blue-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
+                <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'settings' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
                   <Settings className="w-5 h-5" />
                 </span>
                 Cài đặt
-                <ChevronDown className="ml-auto w-5 h-5 text-gray-500" />
+                <ChevronDown className="ml-auto w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
 
               {mainSection === 'settings' && (
                 <div className="ml-14 mt-1 space-y-1">
-                  <button onClick={() => setSettingsSub('video')} className={`block w-full text-left rounded-lg px-3 py-2 font-medium ${settingsSub === 'video' ? 'bg-blue-50 text-gray-900' : 'hover:bg-gray-100 text-gray-700'}`}>Video đang phát</button>
+                  <button onClick={() => setSettingsSub('video')} className={`block w-full text-left rounded-lg px-3 py-2 font-medium ${settingsSub === 'video' ? 'bg-blue-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-700'}`}>Video đang phát</button>
                 </div>
               )}
             </div>
 
-            <button onClick={() => setMainSection('dashboard')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
-              <span className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center"><Sparkles className="w-5 h-5" /></span>
+            <button onClick={() => setMainSection('dashboard')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-muted text-gray-900 dark:text-gray-100">
+              <span className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center"><Sparkles className="w-5 h-5" /></span>
               Tương tác
             </button>
-            <button onClick={() => setMainSection('dashboard')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
-              <span className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center"><Activity className="w-5 h-5" /></span>
+            <button onClick={() => setMainSection('dashboard')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-muted text-gray-900 dark:text-gray-100">
+              <span className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center"><Activity className="w-5 h-5" /></span>
               Phân phối
             </button>
-            <button onClick={() => setMainSection('details')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-gray-100 text-gray-900">
-              <span className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center"><Bell className="w-5 h-5" /></span>
+            <button onClick={() => setMainSection('details')} className="w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 hover:bg-muted text-gray-900 dark:text-gray-100">
+              <span className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center"><Bell className="w-5 h-5" /></span>
               Báo cáo sự cố
             </button>
           </div>
 
-          <div className="p-4 mt-2 border-t border-gray-200 sticky bottom-0 bg-white">
+          <div className="p-4 mt-2 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
             <div className="flex items-center gap-2 text-red-500 font-semibold text-sm mb-3">
               <span className="h-2 w-2 rounded-full bg-red-500" />
               <LiveTimer startedAt={sessionStartedAt} />
@@ -926,7 +926,7 @@ export default function LiveProducerPage() {
           {mainSection === 'dashboard' && (
             <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-2 xl:items-start">
               <div className="min-w-0 space-y-4">
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="relative aspect-video rounded-xl bg-black overflow-hidden">
                     <video ref={mainVideoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
                     <span className="absolute top-4 left-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</span>
@@ -941,108 +941,108 @@ export default function LiveProducerPage() {
                       </div>
                     )}
                   </div>
-                  <div className="mt-3 text-base font-semibold flex items-center gap-2"><MessageCircle className="w-5 h-5 text-gray-700" /> {liveStatus}</div>
+                  <div className="mt-3 text-base font-semibold flex items-center gap-2"><MessageCircle className="w-5 h-5 text-gray-700 dark:text-gray-300" /> {liveStatus}</div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold">Hoạt động trong Live</h3>
-                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-xl bg-gray-100 p-3 text-center">
-                      <p className="text-xs text-gray-600">Số người đang xem</p>
+                    <div className="rounded-xl bg-gray-100 dark:bg-gray-900 p-3 text-center">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Số người đang xem</p>
                       <p className="text-2xl font-bold mt-1">{viewerCount}</p>
                     </div>
-                    <div className="rounded-xl bg-gray-100 p-3 text-center">
-                      <p className="text-xs text-gray-600">Số bình luận hiện tại</p>
+                    <div className="rounded-xl bg-gray-100 dark:bg-gray-900 p-3 text-center">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Số bình luận hiện tại</p>
                       <p className="text-2xl font-bold mt-1">{commentCount}</p>
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold">Thông tin chi tiết</h3>
-                    <div className="flex items-center gap-2 text-gray-500">
+                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                       <MoreHorizontal className="w-4 h-4" />
                       <ChevronDown className="w-4 h-4" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3">
-                      <Eye className="w-4 h-4 text-gray-500 shrink-0" />
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
+                      <Eye className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xl font-bold leading-none">{viewerCount}</p>
-                        <p className="text-xs text-gray-600 truncate">Người xem</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Người xem</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
                       <MessageCircle className="w-4 h-4 text-green-600 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xl font-bold leading-none">{commentCount}</p>
-                        <p className="text-xs text-gray-600 truncate">Bình luận</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Bình luận</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
                       <ThumbsUp className="w-4 h-4 text-blue-600 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xl font-bold leading-none">{reactionCount}</p>
-                        <p className="text-xs text-gray-600 truncate">Cảm xúc</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Cảm xúc</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
                       <Share2 className="w-4 h-4 text-blue-600 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xl font-bold leading-none">{shareCount}</p>
-                        <p className="text-xs text-gray-600 truncate">Lượt chia sẻ</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Lượt chia sẻ</p>
                       </div>
                     </div>
                   </div>
                   <button onClick={() => setMainSection('details')} className="w-full rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold py-2">Xem thông tin chi tiết</button>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold">Số liệu về video đang phát</h3>
-                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl bg-gray-100 p-3">
-                      <p className="text-xs text-gray-600">Tốc độ bit video</p>
+                    <div className="rounded-xl bg-gray-100 dark:bg-gray-900 p-3">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Tốc độ bit video</p>
                       <p className="mt-1 text-lg font-bold">{mediaStats.videoBitrateKbps == null ? 'Đang đo' : `${mediaStats.videoBitrateKbps} Kbps`}</p>
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                         {mediaStats.width && mediaStats.height ? `${mediaStats.width}×${mediaStats.height}` : 'Chưa có độ phân giải'}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-gray-100 p-3">
-                      <p className="text-xs text-gray-600">Tỷ lệ khung hình</p>
+                    <div className="rounded-xl bg-gray-100 dark:bg-gray-900 p-3">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Tỷ lệ khung hình</p>
                       <p className="mt-1 text-lg font-bold">{mediaStats.fps == null ? 'Đang đo' : `${mediaStats.fps} fps`}</p>
-                      <p className="mt-1 text-xs text-gray-500">WebRTC / camera</p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">WebRTC / camera</p>
                     </div>
-                    <div className="rounded-xl bg-gray-100 p-3 sm:col-span-1">
-                      <p className="text-xs text-gray-600">Tốc độ bit âm thanh</p>
+                    <div className="rounded-xl bg-gray-100 dark:bg-gray-900 p-3 sm:col-span-1">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Tốc độ bit âm thanh</p>
                       <p className="mt-1 text-lg font-bold">{mediaStats.audioBitrateKbps == null ? 'Đang đo' : `${mediaStats.audioBitrateKbps} Kbps`}</p>
-                      <p className="mt-1 text-xs text-gray-500">Cập nhật ~2 giây</p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Cập nhật ~2 giây</p>
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold">Quản lý trên thiết bị thứ hai</h3>
-                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </div>
-                  <p className="text-sm text-gray-700 mb-3">Chia sẻ liên kết video trực tiếp với người kiểm duyệt.</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">Chia sẻ liên kết video trực tiếp với người kiểm duyệt.</p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem live'}</div>
+                    <div className="flex-1 rounded-full bg-gray-100 dark:bg-gray-900 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem live'}</div>
                     <button onClick={() => void handleCopyViewerUrl()} disabled={!viewerUrl} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2 disabled:text-gray-400 disabled:cursor-not-allowed">Sao chép</button>
                   </div>
                 </section>
               </div>
 
               <div className="min-w-0 space-y-4">
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <h3 className="text-lg font-bold mb-3">Bình luận</h3>
                   <LiveCommentPanel
                     postId={postId || undefined}
@@ -1054,44 +1054,44 @@ export default function LiveProducerPage() {
                   />
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">Chi tiết bài viết</h3>
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">Chi tiết bài viết</h3>
 
-                  <div className="rounded-xl border border-gray-100 bg-gradient-to-br from-slate-50 to-white p-4">
+                  <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-gradient-to-br from-slate-50 to-white p-4">
                     <div className="flex items-start gap-3">
-                      <div className="h-11 w-11 rounded-full bg-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
+                      <div className="h-11 w-11 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0 overflow-hidden">
                         {currentUserAvatar ? (
                           <img src={currentUserAvatar} alt="avatar" className="h-full w-full object-cover" />
                         ) : (
-                          <UserRound className="h-6 w-6 text-gray-600" />
+                          <UserRound className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                         )}
                       </div>
                       <div>
-                        <p className="text-base font-semibold text-gray-900 leading-tight">{currentUserName}</p>
+                        <p className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">{currentUserName}</p>
                         <div className="mt-1 flex items-center gap-2">
-                          <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                            <Globe className="mr-1.5 h-3.5 w-3.5 text-gray-500" />
+                          <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                            <Globe className="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                             {sessionPrivacy === 'PRIVATE' ? 'Chỉ mình tôi' : sessionPrivacy === 'FRIENDS' ? 'Bạn bè' : sessionPrivacy === 'FRIENDS_EXCEPT' ? 'Bạn bè trừ...' : 'Công khai'}
                           </div>
-                          <p className="text-xs text-gray-500">Đang phát trực tiếp</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Đang phát trực tiếp</p>
                         </div>
                       </div>
                     </div>
 
                     <div className="mt-3">
-                      <p className="text-base font-semibold text-gray-900 leading-tight">{liveTitle}</p>
-                      {liveDescription && <p className="mt-1 text-sm text-gray-700 leading-snug">{liveDescription}</p>}
+                      <p className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight">{liveTitle}</p>
+                      {liveDescription && <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 leading-snug">{liveDescription}</p>}
                     </div>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold">Cuộc thăm dò ý kiến</h3>
-                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </div>
                   <div className="space-y-3">
-                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                       <input
                         type="checkbox"
                         checked={pollEnabled}
@@ -1108,7 +1108,7 @@ export default function LiveProducerPage() {
                         markToolFormDirty();
                         setPollQuestion(event.target.value);
                       }}
-                      className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
+                      className="w-full rounded-xl bg-gray-100 dark:bg-gray-900 px-4 py-2.5 outline-none"
                       placeholder="Câu hỏi"
                     />
                     {pollOptions.map((option, index) => (
@@ -1119,7 +1119,7 @@ export default function LiveProducerPage() {
                           markToolFormDirty();
                           setPollOptions((prev) => prev.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)));
                         }}
-                        className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
+                        className="w-full rounded-xl bg-gray-100 dark:bg-gray-900 px-4 py-2.5 outline-none"
                         placeholder={`Lựa chọn ${index + 1}`}
                       />
                     ))}
@@ -1133,7 +1133,7 @@ export default function LiveProducerPage() {
                       Thêm lựa chọn
                     </button>
                     <div className="grid grid-cols-2 gap-2">
-                      <button onClick={() => void handleClearPoll()} className="rounded-xl bg-gray-200 text-gray-700 py-2.5 font-semibold">Xóa</button>
+                      <button onClick={() => void handleClearPoll()} className="rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2.5 font-semibold">Xóa</button>
                       <button onClick={() => void handleSavePoll()} className="rounded-xl bg-blue-600 text-white py-2.5 font-semibold">Lưu thăm dò</button>
                     </div>
                     {toolState?.pollEnabled && (
@@ -1146,12 +1146,12 @@ export default function LiveProducerPage() {
                               const total = toolState.pollOptionCounts?.reduce((sum, value) => sum + value, 0) ?? 0;
                               const percent = total > 0 ? Math.round((count / total) * 100) : 0;
                               return (
-                                <div key={`${option}-${index}`} className="rounded-lg bg-white px-3 py-2 text-gray-800">
+                                <div key={`${option}-${index}`} className="rounded-lg bg-white dark:bg-gray-800 px-3 py-2 text-gray-800 dark:text-gray-200">
                                   <div className="flex items-center justify-between text-sm font-medium">
                                     <span>{option}</span>
                                     <span>{percent}% ({count})</span>
                                   </div>
-                                  <div className="mt-1 h-2 rounded-full bg-gray-200">
+                                  <div className="mt-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
                                     <div className="h-2 rounded-full bg-blue-600" style={{ width: `${percent}%` }} />
                                   </div>
                                 </div>
@@ -1164,10 +1164,10 @@ export default function LiveProducerPage() {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold">Thông báo</h3>
-                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </div>
                   <div className="space-y-3">
                     <textarea
@@ -1176,17 +1176,17 @@ export default function LiveProducerPage() {
                         markToolFormDirty();
                         setHostNotice(event.target.value);
                       }}
-                      className="min-h-[110px] w-full resize-none rounded-xl bg-gray-100 px-4 py-3 outline-none"
+                      className="min-h-[110px] w-full resize-none rounded-xl bg-gray-100 dark:bg-gray-900 px-4 py-3 outline-none"
                       placeholder="Ghi chú/thông báo cho host hoặc người kiểm duyệt..."
                     />
                     <button onClick={() => void handleSaveHostNotice()} className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Lưu thông báo</button>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold">Liên kết đáng chú ý</h3>
-                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </div>
                   <div className="space-y-3">
                     <input
@@ -1195,7 +1195,7 @@ export default function LiveProducerPage() {
                         markToolFormDirty();
                         setFeaturedLinkTitle(event.target.value);
                       }}
-                      className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
+                      className="w-full rounded-xl bg-gray-100 dark:bg-gray-900 px-4 py-2.5 outline-none"
                       placeholder="Tiêu đề liên kết"
                     />
                     <input
@@ -1204,11 +1204,11 @@ export default function LiveProducerPage() {
                         markToolFormDirty();
                         setFeaturedLinkUrl(event.target.value);
                       }}
-                      className="w-full rounded-xl bg-gray-100 px-4 py-2.5 outline-none"
+                      className="w-full rounded-xl bg-gray-100 dark:bg-gray-900 px-4 py-2.5 outline-none"
                       placeholder="https://..."
                     />
                     <div className="grid grid-cols-2 gap-2">
-                      <button onClick={() => void handleClearFeaturedLink()} className="rounded-xl bg-gray-200 text-gray-700 py-2.5 font-semibold">Xóa</button>
+                      <button onClick={() => void handleClearFeaturedLink()} className="rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2.5 font-semibold">Xóa</button>
                       <button onClick={() => void handleSaveFeaturedLink()} className="rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Lưu liên kết</button>
                     </div>
                     {hasFeaturedLink && (
@@ -1219,14 +1219,14 @@ export default function LiveProducerPage() {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-gray-200 bg-white p-4">
+                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold">Liên kết xem trước</h3>
-                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </div>
-                  <p className="text-sm text-gray-700 mb-3">Xem trước giao diện người xem (không tính vào lượt xem).</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">Xem trước giao diện người xem (không tính vào lượt xem).</p>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 rounded-full bg-gray-100 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem trước'}</div>
+                    <div className="flex-1 rounded-full bg-gray-100 dark:bg-gray-900 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem trước'}</div>
                     <button onClick={() => navigate(getLiveViewerPreviewUrl(sessionId))} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Xem như người xem</button>
                   </div>
                 </section>
@@ -1236,44 +1236,44 @@ export default function LiveProducerPage() {
 
           {mainSection === 'details' && (
             <div className="space-y-4">
-              <h2 className="text-4xl font-bold text-gray-900">Thông tin chi tiết</h2>
-              <p className="text-gray-600">Một số thông tin chi tiết có thể hiển thị chậm hơn so với những gì bạn đang thấy.</p>
+              <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100">Thông tin chi tiết</h2>
+              <p className="text-gray-600 dark:text-gray-400">Một số thông tin chi tiết có thể hiển thị chậm hơn so với những gì bạn đang thấy.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Số người đang xem</p><p className="text-4xl font-bold mt-2">{viewerCount}</p></div>
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Số người xem đồng thời cao nhất</p><p className="text-4xl font-bold mt-2">{peakViewerCount}</p></div>
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Tổng số bình luận</p><p className="text-4xl font-bold mt-2">{commentCount}</p></div>
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Tổng cảm xúc live</p><p className="text-4xl font-bold mt-2">{reactionCount}</p></div>
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Lượt chia sẻ bài viết</p><p className="text-4xl font-bold mt-2">{shareCount}</p></div>
-                <div className="rounded-2xl border border-gray-200 bg-white p-4"><p className="font-semibold">Video bitrate</p><p className="text-4xl font-bold mt-2">{mediaStats.videoBitrateKbps == null ? '—' : mediaStats.videoBitrateKbps}</p><p className="text-sm text-gray-500">Kbps</p></div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"><p className="font-semibold">Số người đang xem</p><p className="text-4xl font-bold mt-2">{viewerCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"><p className="font-semibold">Số người xem đồng thời cao nhất</p><p className="text-4xl font-bold mt-2">{peakViewerCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"><p className="font-semibold">Tổng số bình luận</p><p className="text-4xl font-bold mt-2">{commentCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"><p className="font-semibold">Tổng cảm xúc live</p><p className="text-4xl font-bold mt-2">{reactionCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"><p className="font-semibold">Lượt chia sẻ bài viết</p><p className="text-4xl font-bold mt-2">{shareCount}</p></div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4"><p className="font-semibold">Video bitrate</p><p className="text-4xl font-bold mt-2">{mediaStats.videoBitrateKbps == null ? '—' : mediaStats.videoBitrateKbps}</p><p className="text-sm text-gray-500 dark:text-gray-400">Kbps</p></div>
               </div>
             </div>
           )}
 
           {mainSection === 'settings' && settingsSub === 'video' && (
             <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-2">
-              <section className="rounded-2xl border border-gray-200 bg-white p-5">
+              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
                 <h3 className="text-2xl font-bold mb-4">Cài đặt phát trực tiếp</h3>
                 <p className="font-semibold mb-1">Độ trễ của video trực tiếp</p>
-                <p className="text-gray-600 mb-6">Độ trễ đang phụ thuộc vào LiveKit/WebRTC và môi trường mạng. UI này chỉ hiển thị trạng thái, chưa đổi cấu hình server.</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">Độ trễ đang phụ thuộc vào LiveKit/WebRTC và môi trường mạng. UI này chỉ hiển thị trạng thái, chưa đổi cấu hình server.</p>
 
                 <div className="space-y-4">
-                  <div className="border-b border-gray-200 pb-3"><p className="font-semibold">LiveKit WebRTC</p><p className="text-gray-600">Luồng camera/mic được publish trực tiếp vào room LiveKit.</p></div>
-                  <div className="border-b border-gray-200 pb-3"><p className="font-semibold">Người xem hiện tại</p><p className="text-gray-600">{viewerCount} người đang kết nối vào phiên live.</p></div>
-                  <div><p className="font-semibold">Chất lượng gửi lên</p><p className="text-gray-600">{mediaStats.videoBitrateKbps == null ? 'Đang đo bitrate video.' : `${mediaStats.videoBitrateKbps} Kbps video`}</p></div>
+                  <div className="border-b border-gray-200 dark:border-gray-700 pb-3"><p className="font-semibold">LiveKit WebRTC</p><p className="text-gray-600 dark:text-gray-400">Luồng camera/mic được publish trực tiếp vào room LiveKit.</p></div>
+                  <div className="border-b border-gray-200 dark:border-gray-700 pb-3"><p className="font-semibold">Người xem hiện tại</p><p className="text-gray-600 dark:text-gray-400">{viewerCount} người đang kết nối vào phiên live.</p></div>
+                  <div><p className="font-semibold">Chất lượng gửi lên</p><p className="text-gray-600 dark:text-gray-400">{mediaStats.videoBitrateKbps == null ? 'Đang đo bitrate video.' : `${mediaStats.videoBitrateKbps} Kbps video`}</p></div>
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-gray-200 bg-white p-5">
+              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
                 <h3 className="text-2xl font-bold mb-4">Kiểm soát camera</h3>
-                <p className="text-gray-600 mb-4">Trước khi phát trực tiếp, hãy kiểm tra xem đầu vào camera và micrô đã hoạt động đúng cách chưa.</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">Trước khi phát trực tiếp, hãy kiểm tra xem đầu vào camera và micrô đã hoạt động đúng cách chưa.</p>
                 <div className="space-y-3">
-                  <label className="block text-sm font-semibold text-gray-700">Camera</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Camera</label>
                   <div className="relative">
-                    <Camera className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Camera className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
                     <select
                       value={selectedCameraId}
                       onChange={(e) => setSelectedCameraId(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-3 text-sm"
+                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 py-2.5 pl-9 pr-3 text-sm"
                     >
                       {cameras.map((camera) => (
                         <option key={camera.deviceId} value={camera.deviceId}>
@@ -1282,13 +1282,13 @@ export default function LiveProducerPage() {
                       ))}
                     </select>
                   </div>
-                  <label className="block text-sm font-semibold text-gray-700">Microphone</label>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Microphone</label>
                   <div className="relative">
-                    <Mic className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                    <Mic className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
                     <select
                       value={selectedMicId}
                       onChange={(e) => setSelectedMicId(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 bg-white py-2.5 pl-9 pr-3 text-sm"
+                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 py-2.5 pl-9 pr-3 text-sm"
                     >
                       {microphones.map((mic) => (
                         <option key={mic.deviceId} value={mic.deviceId}>
@@ -1311,7 +1311,7 @@ export default function LiveProducerPage() {
                       setIsStartingScreenShare(false);
                     }}
                     className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold ${
-                      videoSourceMode === 'screen' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'
+                      videoSourceMode === 'screen' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'
                     }`}
                   >
                     <Monitor className="h-4 w-4" />

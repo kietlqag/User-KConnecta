@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Home, Users, Shapes, Video, Store, Grid3x3, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
@@ -54,6 +54,13 @@ export function Header() {
       notificationService.getUnreadCount(currentUser.id).then(setUnreadNotifications).catch(console.error);
     };
 
+    const onUnreadChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ unreadCount?: number }>).detail;
+      if (typeof detail?.unreadCount === 'number') {
+        setUnreadNotifications(Math.max(0, detail.unreadCount));
+      }
+    };
+
     fetchCount(); // initial fetch
 
     // Fallback poll every 2 minutes in case websocket disconnects silently.
@@ -61,10 +68,12 @@ export function Header() {
 
     // Allow other components to trigger an immediate refresh
     window.addEventListener('notification:refresh', fetchCount);
+    window.addEventListener('notification:unread-changed', onUnreadChanged);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('notification:refresh', fetchCount);
+      window.removeEventListener('notification:unread-changed', onUnreadChanged);
     };
   }, [currentUser, showNotifications]);
 
@@ -90,7 +99,7 @@ export function Header() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-background shadow-sm z-50 border-b border-border">
+    <header className="fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-md shadow-sm z-50 border-b border-border">
       <div className="max-w-[1920px] mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           {/* Left Section - Logo & Search */}
@@ -106,13 +115,13 @@ export function Header() {
                   setShowAccountMenu(false);
                 }}
                 className={`lg:hidden p-2 rounded-full transition-colors cursor-pointer shrink-0 ${
-                  isLeftSidebarOpen ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-muted hover:bg-gray-200 dark:hover:bg-gray-700'
+                  isLeftSidebarOpen ? 'bg-accent text-primary' : 'bg-muted hover:bg-muted/80'
                 }`}
                 title="Menu điều hướng"
                 aria-label="Menu điều hướng"
                 aria-expanded={isLeftSidebarOpen}
               >
-                <Menu className={`w-6 h-6 ${isLeftSidebarOpen ? 'text-emerald-600' : 'text-foreground'}`} />
+                <Menu className={`w-6 h-6 ${isLeftSidebarOpen ? 'text-primary' : 'text-foreground'}`} />
               </button>
             )}
             <Link to="/home" className="flex items-center gap-2 hover:bg-muted rounded-full p-2 transition-colors">
@@ -161,15 +170,15 @@ export function Header() {
                 setShowNotifications(false);
                 setShowAccountMenu(false);
               }}
-              className={`hidden sm:flex p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer ${
-                isMenuOpen ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-muted'
+              className={`hidden sm:flex p-2 hover:bg-muted/80 rounded-full transition-colors cursor-pointer ${
+                isMenuOpen ? 'bg-accent text-primary' : 'bg-muted'
               }`}
               title="Menu"
               aria-label="Menu"
               aria-expanded={isMenuOpen}
               data-menu-toggle
             >
-              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-emerald-600' : 'text-foreground'}`} />
+              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-primary' : 'text-foreground'}`} />
             </button>
             
             <button 
@@ -179,7 +188,7 @@ export function Header() {
                 setShowNotifications(false);
                 setShowAccountMenu(false);
               }}
-              className="hidden sm:flex relative p-2 bg-muted hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer"
+              className="hidden sm:flex relative p-2 bg-muted hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 text-foreground" />
               {unreadMessagesCount > 0 && (
@@ -196,7 +205,7 @@ export function Header() {
                 setShowMessenger(false);
                 setShowAccountMenu(false);
               }}
-              className="hidden sm:flex relative p-2 bg-muted hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer"
+              className="hidden sm:flex relative p-2 bg-muted hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
             >
               <Bell className="w-5 h-5 text-foreground" />
               {unreadNotifications > 0 && (

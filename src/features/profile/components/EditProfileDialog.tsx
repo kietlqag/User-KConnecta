@@ -198,8 +198,8 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                 </div>
 
                 {/* Avatar Section */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700 flex flex-col items-center">
-                  <Label className="mb-4 text-gray-500 uppercase tracking-wider text-[10px] font-bold">Ảnh đại diện</Label>
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm dark:shadow-none border dark:border-gray-700 flex flex-col items-center">
+                  <Label className="mb-4 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-[10px] font-bold">Ảnh đại diện</Label>
                   <div className="relative group">
                     <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-emerald-500 ring-4 ring-white dark:ring-gray-900 shadow-xl">
                       <img 
@@ -230,8 +230,8 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                 </div>
 
                 {/* Cover Section */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
-                  <Label className="mb-4 block text-gray-500 uppercase tracking-wider text-[10px] font-bold">Ảnh bìa</Label>
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm dark:shadow-none border dark:border-gray-700">
+                  <Label className="mb-4 block text-gray-500 dark:text-gray-400 uppercase tracking-wider text-[10px] font-bold">Ảnh bìa</Label>
                   <div className="relative h-44 w-full rounded-xl overflow-hidden border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 group">
                     <img 
                       src={coverPreview || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200'} 
@@ -273,7 +273,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                   
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="fullName" className="text-xs font-bold text-gray-500 uppercase">Họ và tên</Label>
+                      <Label htmlFor="fullName" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Họ và tên</Label>
                       <Input
                         id="fullName"
                         className="h-12 text-lg focus:ring-emerald-500"
@@ -284,10 +284,10 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="bio" className="text-xs font-bold text-gray-500 uppercase">Tiểu sử</Label>
+                      <Label htmlFor="bio" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tiểu sử</Label>
                       <textarea
                         id="bio"
-                        className="w-full min-h-[120px] px-4 py-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl text-md focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm transition-all"
+                        className="w-full min-h-[120px] px-4 py-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl text-md focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none transition-all"
                         {...register('bio')}
                         placeholder="Hãy chia sẻ điều gì đó về bản thân bạn..."
                       />
@@ -304,7 +304,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label htmlFor="location" className="text-xs font-bold text-gray-500 uppercase">Tỉnh/Thành phố hiện tại</Label>
+                      <Label htmlFor="location" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tỉnh/Thành phố hiện tại</Label>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
                         <Input
@@ -317,7 +317,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="hometown" className="text-xs font-bold text-gray-500 uppercase">Quê quán</Label>
+                      <Label htmlFor="hometown" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Quê quán</Label>
                       <div className="relative">
                         <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         <Input
@@ -330,7 +330,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="school" className="text-xs font-bold text-gray-500 uppercase">Nơi học tập</Label>
+                      <Label htmlFor="school" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Nơi học tập</Label>
                       <div className="relative">
                         <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
                         <Input
@@ -353,7 +353,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label htmlFor="workplace" className="text-xs font-bold text-gray-500 uppercase">Nơi làm việc</Label>
+                      <Label htmlFor="workplace" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Nơi làm việc</Label>
                       <div className="relative">
                         <Briefcase className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
                         <Input
@@ -366,7 +366,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="jobTitle" className="text-xs font-bold text-gray-500 uppercase">Chức danh</Label>
+                      <Label htmlFor="jobTitle" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Chức danh</Label>
                       <div className="relative">
                         <Briefcase className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
                         <Input
@@ -389,12 +389,12 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label htmlFor="relationship" className="text-xs font-bold text-gray-500 uppercase">Mối quan hệ</Label>
+                      <Label htmlFor="relationship" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Mối quan hệ</Label>
                       <div className="relative">
                         <Heart className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
                         <select
                           id="relationship"
-                          className="w-full h-12 pl-11 pr-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-md focus:ring-2 focus:ring-emerald-500 appearance-none shadow-sm"
+                          className="w-full h-12 pl-11 pr-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-md focus:ring-2 focus:ring-emerald-500 appearance-none shadow-sm dark:shadow-none"
                           {...register('relationship')}
                         >
                           <option value="">Chọn trạng thái</option>
@@ -407,25 +407,25 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-gray-500 uppercase">Ngày tháng năm sinh</Label>
+                      <Label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Ngày tháng năm sinh</Label>
                       <div className="grid grid-cols-3 gap-2">
                         <select
                           {...register('day')}
-                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
                         >
                           <option value="">Ngày</option>
                           {days.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                         <select
                           {...register('month')}
-                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
                         >
                           <option value="">Tháng</option>
                           {months.map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                         <select
                           {...register('year')}
-                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm"
+                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
                         >
                           <option value="">Năm</option>
                           {years.map(y => <option key={y} value={y}>{y}</option>)}

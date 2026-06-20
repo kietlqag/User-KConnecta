@@ -75,9 +75,7 @@ export function mapApiPost(item: PostResponse): FeedPost {
     author: {
       id: item.authorId,
       name: item.authorFullName,
-      avatar:
-        item.authorAvatarUrl ||
-        `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(item.authorFullName || 'User')}`,
+      avatar: item.authorAvatarUrl || '',
     },
     timestamp: formatPostTimestamp(item.publishedAt || item.createdAt),
     content: item.content || '',

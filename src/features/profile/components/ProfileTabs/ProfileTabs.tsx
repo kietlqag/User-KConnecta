@@ -44,7 +44,7 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
                 className={`whitespace-nowrap px-4 py-4 font-medium transition-colors ${
                   isActive(tab.path)
                     ? 'border-b-4 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-                    : 'rounded-t-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
+                    : 'rounded-t-lg text-gray-600 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-700'
                 }`}
               >
                 {tab.label}

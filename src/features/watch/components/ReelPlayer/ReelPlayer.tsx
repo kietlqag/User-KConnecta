@@ -250,7 +250,7 @@ export const ReelPlayer = ({
                 step="0.01"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-20 h-1 bg-white/30 rounded-full appearance-none outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+                className="w-20 h-1 bg-white dark:bg-gray-800/30 rounded-full appearance-none outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white dark:bg-gray-800 [&::-webkit-slider-thumb]:rounded-full"
                 onClick={(e) => e.stopPropagation()}
               />
             )}
@@ -288,7 +288,7 @@ export const ReelPlayer = ({
               step="any"
               value={progress}
               onChange={handleSeek}
-              className="w-full h-1 bg-white/30 appearance-none outline-none cursor-pointer group-hover/progress:h-2 transition-all [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 [&::-webkit-slider-thumb]:h-0 group-hover/progress:[&::-webkit-slider-thumb]:w-3 group-hover/progress:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+              className="w-full h-1 bg-white dark:bg-gray-800/30 appearance-none outline-none cursor-pointer group-hover/progress:h-2 transition-all [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 [&::-webkit-slider-thumb]:h-0 group-hover/progress:[&::-webkit-slider-thumb]:w-3 group-hover/progress:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white dark:bg-gray-800 [&::-webkit-slider-thumb]:rounded-full"
               style={{
                 background: `linear-gradient(to right, #10b981 ${(progress / (duration || 1)) * 100}%, rgba(255,255,255,0.3) ${(progress / (duration || 1)) * 100}%)`
               }}
@@ -314,20 +314,16 @@ export const ReelPlayer = ({
           />
         </div>
 
-      </div>
+        {/* Navigation - in flow, to the right of the interaction buttons */}
+        <div className="flex-shrink-0 flex items-center">
+          <ReelNavigation
+            onPrevious={onPrevious}
+            onNext={onNext}
+            hasPrevious={hasPrevious}
+            hasNext={hasNext}
+          />
+        </div>
 
-      {/* Navigation - just left of the comments panel when open, flush right when closed */}
-      <div
-        className={`fixed top-1/2 -translate-y-1/2 z-30 transition-all ${
-          showComments ? 'right-[416px]' : 'right-6'
-        }`}
-      >
-        <ReelNavigation
-          onPrevious={onPrevious}
-          onNext={onNext}
-          hasPrevious={hasPrevious}
-          hasNext={hasNext}
-        />
       </div>
 
       {/* Comments Panel - Fixed full-height right corner */}

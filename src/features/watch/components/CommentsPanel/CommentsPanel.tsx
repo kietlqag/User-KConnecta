@@ -166,17 +166,17 @@ function PanelCommentRow({
                 <button
                   onClick={() => setOpenMenu(prev => !prev)}
                   disabled={isDeleting}
-                  className="w-7 h-7 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
+                  className="w-7 h-7 rounded-full hover:bg-muted flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
                 >
-                  <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                  <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </button>
                 {openMenu && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(false)} />
-                    <div className="absolute right-0 top-8 z-50 w-40 rounded-xl bg-white border border-gray-200 shadow-xl py-1">
+                    <div className="absolute right-0 top-8 z-50 w-40 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl py-1">
                       <button
                         onClick={() => void handleDelete()}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
                         Xóa bình luận
@@ -187,8 +187,8 @@ function PanelCommentRow({
               </div>
             )}
 
-            <div className="bg-gray-100 rounded-2xl px-3 py-2 pr-8 w-full">
-              <h4 className="text-gray-900 font-semibold text-sm leading-tight">{comment.userFullName}</h4>
+            <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl px-3 py-2 pr-8 w-full">
+              <h4 className="text-gray-900 dark:text-gray-100 font-semibold text-sm leading-tight">{comment.userFullName}</h4>
               {comment.moderationStatus === 'PENDING' && (
                 <p className="mt-1 text-[11px] font-medium text-amber-600">Đang chờ kiểm duyệt</p>
               )}
@@ -197,26 +197,26 @@ function PanelCommentRow({
                   {comment.moderationFailReason || 'Bình luận không được duyệt'}
                 </p>
               )}
-              <p className="text-gray-800 text-sm mt-0.5 break-words">{comment.content}</p>
+              <p className="text-gray-800 dark:text-gray-200 text-sm mt-0.5 break-words">{comment.content}</p>
             </div>
           </div>
 
           <div className="flex flex-row flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-            <span className="text-xs text-gray-500 shrink-0">{formatPostTimestamp(comment.createdAt)}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{formatPostTimestamp(comment.createdAt)}</span>
             <ReactionButton
               compact
               pickerAlign="right"
               initialReaction={selectedReaction}
               onReactionChange={handleReactionChange}
-              buttonClassName="shrink-0 hover:bg-gray-100 text-gray-600 [&.text-muted-foreground]:text-gray-600"
+              buttonClassName="shrink-0 hover:bg-muted text-gray-600 dark:text-gray-400 [&.text-muted-foreground]:text-gray-600 dark:text-gray-400"
             />
             {comment.likeCount > 0 && (
-              <span className="text-xs text-gray-500 shrink-0">{comment.likeCount}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">{comment.likeCount}</span>
             )}
 
             <button
               onClick={() => setShowReplyInput(v => !v)}
-              className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
+              className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-gray-600 hover:bg-muted hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100 transition-colors cursor-pointer"
             >
               Trả lời
             </button>
@@ -239,7 +239,7 @@ function PanelCommentRow({
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleReplySubmit(); }
                   if (e.key === 'Escape') { setShowReplyInput(false); setReplyText(''); }
                 }}
-                className="flex-1 min-w-0 bg-gray-100 text-gray-900 placeholder-gray-500 rounded-full px-3 py-1.5 text-xs outline-none focus:bg-gray-200 transition-colors"
+                className="flex-1 min-w-0 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 rounded-full px-3 py-1.5 text-xs outline-none focus:bg-gray-200 transition-colors"
               />
             </div>
           )}
@@ -248,9 +248,9 @@ function PanelCommentRow({
             <button
               onClick={() => void handleShowReplies()}
               disabled={isLoadingReplies}
-              className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-700 hover:underline mt-2 py-0.5 cursor-pointer disabled:opacity-60 transition-colors"
+              className="flex items-center gap-2 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300 hover:underline mt-2 py-0.5 cursor-pointer disabled:opacity-60 transition-colors"
             >
-              <div className="w-5 h-px bg-gray-300 shrink-0" />
+              <div className="w-5 h-px bg-gray-300 dark:bg-gray-600 shrink-0" />
               {isLoadingReplies ? 'Đang tải...' : showReplies ? 'Ẩn phản hồi' : `${totalReplies} phản hồi`}
             </button>
           )}
@@ -356,30 +356,30 @@ export const CommentsPanel = ({ postId, creator, caption, onClose, onCommentCoun
   };
 
   return (
-    <div className="w-[400px] bg-white h-full flex flex-col border-l border-gray-200">
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        <h2 className="text-gray-900 font-semibold text-lg">Bình luận ({totalElements})</h2>
+    <div className="w-[400px] bg-white dark:bg-gray-800 h-full flex flex-col border-l border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-gray-900 dark:text-gray-100 font-semibold text-lg">Bình luận ({totalElements})</h2>
         <button
           onClick={onClose}
-          className="w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors cursor-pointer"
+          className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center transition-colors cursor-pointer"
         >
-          <X className="w-5 h-5 text-gray-600" />
+          <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {/* Post header: tác giả + nội dung bài đăng */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <img
               src={creator.avatar}
               alt={creator.name}
               className="w-10 h-10 rounded-full object-cover"
             />
-            <p className="text-gray-900 font-semibold text-sm">{creator.name}</p>
+            <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{creator.name}</p>
           </div>
           {caption && (
-            <p className="text-gray-700 text-sm mt-3 whitespace-pre-line">{caption}</p>
+            <p className="text-gray-700 dark:text-gray-300 text-sm mt-3 whitespace-pre-line">{caption}</p>
           )}
         </div>
 
@@ -388,23 +388,23 @@ export const CommentsPanel = ({ postId, creator, caption, onClose, onCommentCoun
           <div className="relative inline-block">
             <button
               onClick={() => setSortMenuOpen(o => !o)}
-              className="flex items-center gap-1 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-sm font-semibold text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100 transition-colors cursor-pointer"
             >
               {activeSort.label}
               <ChevronDown className="w-4 h-4" />
             </button>
             {sortMenuOpen && (
-              <div className="absolute left-0 top-full mt-1 w-72 bg-white rounded-lg shadow-xl ring-1 ring-black/10 py-2 z-10">
+              <div className="absolute left-0 top-full mt-1 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-xl ring-1 ring-black/10 py-2 z-10">
                 {SORT_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
                     onClick={() => { setSortBy(opt.value); setSortMenuOpen(false); }}
-                    className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-gray-50 transition-colors cursor-pointer"
+                    className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                   >
-                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-blue-600' : 'text-gray-900'}`}>
+                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'}`}>
                       {opt.label}
                     </span>
-                    <span className="text-xs text-gray-500">{opt.desc}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{opt.desc}</span>
                   </button>
                 ))}
               </div>
@@ -414,9 +414,9 @@ export const CommentsPanel = ({ postId, creator, caption, onClose, onCommentCoun
 
         <div className="p-4 space-y-4">
           {isLoading ? (
-            <div className="text-gray-500 text-center text-sm">Đang tải bình luận...</div>
+            <div className="text-gray-500 dark:text-gray-400 text-center text-sm">Đang tải bình luận...</div>
           ) : comments.length === 0 ? (
-            <div className="text-gray-500 text-center text-sm">Chưa có bình luận nào</div>
+            <div className="text-gray-500 dark:text-gray-400 text-center text-sm">Chưa có bình luận nào</div>
           ) : (
             comments.map(comment => (
               <PanelCommentRow
@@ -432,7 +432,7 @@ export const CommentsPanel = ({ postId, creator, caption, onClose, onCommentCoun
         </div>
       </div>
 
-      <div className={`p-4 border-t border-gray-200 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`p-4 border-t border-gray-200 dark:border-gray-700 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex items-center gap-2">
           <img
             src={currentUser?.avatarUrl || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(currentUser?.fullName || 'User')}`}
@@ -445,7 +445,7 @@ export const CommentsPanel = ({ postId, creator, caption, onClose, onCommentCoun
             value={newComment}
             onChange={e => setNewComment(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleAddComment(); } }}
-            className="flex-1 bg-gray-100 text-gray-900 placeholder-gray-500 rounded-full px-4 py-2 text-sm outline-none focus:bg-gray-200 transition-colors"
+            className="flex-1 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-500 rounded-full px-4 py-2 text-sm outline-none focus:bg-gray-200 transition-colors"
           />
         </div>
       </div>

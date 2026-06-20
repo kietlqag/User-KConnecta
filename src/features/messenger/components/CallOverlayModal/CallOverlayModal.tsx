@@ -81,9 +81,9 @@ function GroupVideoTile({
       {stream && joined && participant.cameraEnabled ? (
         <video ref={videoRef} autoPlay muted={isSelf} playsInline className="h-full w-full object-cover" />
       ) : (
-        <div className="flex h-full min-h-[150px] flex-col items-center justify-center gap-2 bg-gray-100">
+        <div className="flex h-full min-h-[150px] flex-col items-center justify-center gap-2 bg-gray-100 dark:bg-background">
           <img src={participant.avatar} alt={participant.name} className="h-16 w-16 rounded-full object-cover" />
-          <span className="text-xs font-medium text-gray-500">{joined ? 'Đang chờ video' : statusLabel(participant.status)}</span>
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{joined ? 'Đang chờ video' : statusLabel(participant.status)}</span>
         </div>
       )}
       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/55 px-3 py-2 text-white">
@@ -153,37 +153,37 @@ export function CallOverlayModal({
   if (!show) return null;
 
   const isWideLayout = mode === 'ongoing' && (isVideoCall || isGroupCall);
-  const cardClassName = `relative rounded-2xl bg-white border border-gray-200 shadow-2xl p-6 ${
+  const cardClassName = `relative rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-2xl p-6 ${
     isWideLayout ? 'w-[min(760px,calc(100vw-32px))]' : 'w-[min(408px,calc(100vw-32px))]'
   }`;
   const iconButtonClassName = 'w-14 h-14 rounded-full transition-colors flex items-center justify-center';
   const closeButton = (
     <button
       onClick={onMinimize}
-      className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-gray-100 cursor-pointer"
+      className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted cursor-pointer"
       title="Thu gọn cuộc gọi"
     >
-      <X className="h-4 w-4 text-gray-600" />
+      <X className="h-4 w-4 text-gray-600 dark:text-gray-400" />
     </button>
   );
 
   const groupParticipantList = (
     <div className="mt-5 max-h-52 overflow-y-auto pr-1">
-      <p className="mb-2 text-left text-sm font-semibold text-gray-700">Thành viên cuộc gọi</p>
+      <p className="mb-2 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Thành viên cuộc gọi</p>
       <div className="space-y-2">
         {groupCallParticipants.map((participant) => (
-          <div key={participant.userId} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2">
+          <div key={participant.userId} className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-900 px-3 py-2">
             <div className="flex min-w-0 items-center gap-3">
               <img src={participant.avatar} alt={participant.name} className="h-10 w-10 rounded-full object-cover" />
               <div className="min-w-0 text-left">
-                <p className="truncate text-sm font-semibold text-gray-900">
+                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {participant.name}
                   {participant.userId === currentUserId ? ' (Bạn)' : ''}
                 </p>
-                <p className="text-xs text-gray-500">{participant.userId === callerUserId ? 'Người bắt đầu cuộc gọi' : statusLabel(participant.status)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{participant.userId === callerUserId ? 'Người bắt đầu cuộc gọi' : statusLabel(participant.status)}</p>
               </div>
             </div>
-            <span className={`h-2.5 w-2.5 rounded-full ${participant.status === 'joined' ? 'bg-green-500' : participant.status === 'ringing' ? 'bg-blue-500' : 'bg-gray-300'}`} />
+            <span className={`h-2.5 w-2.5 rounded-full ${participant.status === 'joined' ? 'bg-green-500' : participant.status === 'ringing' ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
           </div>
         ))}
       </div>
@@ -195,18 +195,18 @@ export function CallOverlayModal({
       <button
         type="button"
         onClick={() => setVideoPage((prev) => Math.max(0, prev - 1))}
-        disabled={videoPage === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={videoPage === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
         title="Trang trước"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
-      <span className="text-sm font-medium text-gray-600">
+      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
         {videoPage + 1}/{videoPageCount}
       </span>
       <button
         type="button"
         onClick={() => setVideoPage((prev) => Math.min(videoPageCount - 1, prev + 1))}
-        disabled={videoPage >= videoPageCount - 1} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={videoPage >= videoPageCount - 1} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
         title="Trang sau"
       >
         <ChevronRight className="h-4 w-4" />
@@ -222,8 +222,8 @@ export function CallOverlayModal({
 
           <div className="pt-8 text-center">
             <img src={user.avatar} alt={user.name} className="mx-auto h-24 w-24 rounded-full object-cover" />
-            <p className="mt-5 text-[22px] font-semibold leading-tight text-gray-900">{user.name}</p>
-            <p className="mt-2 text-[16px] text-gray-500">
+            <p className="mt-5 text-[22px] font-semibold leading-tight text-gray-900 dark:text-gray-100">{user.name}</p>
+            <p className="mt-2 text-[16px] text-gray-500 dark:text-gray-400">
               {isGroupCall
                 ? `${caller?.name || user.name} đang gọi nhóm`
                 : incomingMediaType === 'video'
@@ -265,18 +265,18 @@ export function CallOverlayModal({
               <button
                 type="button"
                 onClick={() => setVideoPage((prev) => Math.max(0, prev - 1))}
-                disabled={videoPage === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={videoPage === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
                 title="Trang trước"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="text-sm font-medium text-gray-600">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                 {videoPage + 1}/{videoPageCount}
               </span>
               <button
                 type="button"
                 onClick={() => setVideoPage((prev) => Math.min(videoPageCount - 1, prev + 1))}
-                disabled={videoPage >= videoPageCount - 1} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+                disabled={videoPage >= videoPageCount - 1} className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-40"
                 title="Trang sau"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -284,8 +284,8 @@ export function CallOverlayModal({
             </div>
           )}
           <div className="mt-3 text-center">
-            <p className="text-lg font-semibold text-gray-900">{videoParticipants.length} người đang trong cuộc gọi</p>
-            <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{videoParticipants.length} người đang trong cuộc gọi</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{callStatusText}</p>
           </div>
         </>
       );
@@ -294,15 +294,15 @@ export function CallOverlayModal({
       <div className="pt-7 text-center">
         <div className={`mx-auto grid w-full ${centeredGroupGridClass} gap-3`}>
           {visibleVideoParticipants.map((participant) => (
-            <div key={participant.userId} className="rounded-xl bg-gray-50 px-2 py-3">
+            <div key={participant.userId} className="rounded-xl bg-gray-50 dark:bg-gray-900 px-2 py-3">
               <img src={participant.avatar} alt={participant.name} className="mx-auto h-16 w-16 rounded-full object-cover" />
-              <p className="mt-2 truncate text-sm font-semibold text-gray-900">{participant.name}</p>
+              <p className="mt-2 truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{participant.name}</p>
               <p className="text-xs text-green-600">Đã tham gia</p>
             </div>
           ))}
         </div>
         {groupPageControls}
-        <p className="mt-4 text-[16px] text-gray-500">{callStatusText}</p>
+        <p className="mt-4 text-[16px] text-gray-500 dark:text-gray-400">{callStatusText}</p>
       </div>
     );
   };
@@ -322,44 +322,44 @@ export function CallOverlayModal({
               {!hasRemoteStream && <div className="absolute inset-0 flex items-center justify-center text-sm text-white/80">Đang chờ video...</div>}
             </div>
             <div className="mt-3 text-center">
-              <p className="text-lg font-semibold text-gray-900">{user.name}</p>
-              <p className="mt-1 text-sm text-gray-500">{callStatusText}</p>
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{user.name}</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{callStatusText}</p>
             </div>
           </>
         ) : (
           <div className="pt-8 text-center">
             <img src={user.avatar} alt={user.name} className="mx-auto h-24 w-24 rounded-full object-cover" />
-            <p className="mt-5 text-[22px] font-semibold leading-tight text-gray-900">{user.name}</p>
-            <p className="mt-2 text-[16px] text-gray-500">{callStatusText}</p>
+            <p className="mt-5 text-[22px] font-semibold leading-tight text-gray-900 dark:text-gray-100">{user.name}</p>
+            <p className="mt-2 text-[16px] text-gray-500 dark:text-gray-400">{callStatusText}</p>
           </div>
         )}
 
         <div className="mt-8 flex items-center justify-center gap-7">
           <button
             onClick={onToggleSpeaker}
-            className={`${`${iconButtonClassName} cursor-pointer` } ${speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+            className={`${`${iconButtonClassName} cursor-pointer` } ${speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
             title={speakerMode === 'outer' ? 'Đang loa ngoài, bấm để chuyển loa trong' : 'Đang loa trong, bấm để chuyển loa ngoài'}
           >
-            {speakerMode === 'outer' ? <Volume2 className="h-6 w-6 text-white" /> : <Volume1 className="h-6 w-6 text-gray-700" />}
+            {speakerMode === 'outer' ? <Volume2 className="h-6 w-6 text-white" /> : <Volume1 className="h-6 w-6 text-gray-700 dark:text-gray-300" />}
           </button>
 
           {isVideoCall && (
             <button
               onClick={onToggleCamera}
-              className={`${`${iconButtonClassName} cursor-pointer` } ${isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 hover:bg-gray-200'}`}
+              className={`${`${iconButtonClassName} cursor-pointer` } ${isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
               title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
             >
-              {isCameraEnabled ? <Video className="h-6 w-6 text-white" /> : <VideoOff className="h-6 w-6 text-gray-700" />}
+              {isCameraEnabled ? <Video className="h-6 w-6 text-white" /> : <VideoOff className="h-6 w-6 text-gray-700 dark:text-gray-300" />}
             </button>
           )}
 
           {callStatus === 'in_call' && (
             <button
               onClick={onToggleMute}
-              className={`${`${iconButtonClassName} cursor-pointer` } ${isMuted ? 'bg-gray-100 hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700'}`}
+              className={`${`${iconButtonClassName} cursor-pointer` } ${isMuted ? 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               title={isMuted ? 'Bật mic' : 'Tắt mic'}
             >
-              {isMuted ? <MicOff className="h-6 w-6 text-gray-700" /> : <Mic className="h-6 w-6 text-white" />}
+              {isMuted ? <MicOff className="h-6 w-6 text-gray-700 dark:text-gray-300" /> : <Mic className="h-6 w-6 text-white" />}
             </button>
           )}
 

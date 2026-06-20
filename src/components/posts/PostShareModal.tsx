@@ -16,6 +16,7 @@ import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
 import { formatLivePostStoryText } from '@/lib/storyShareText';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 const POST_SHARE_PREFIX = '__POST_SHARE__:';
 
@@ -176,7 +177,7 @@ export function PostShareModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-visible bg-white rounded-2xl border-none shadow-2xl">
+      <DialogContent className="sm:max-w-[500px] p-0 overflow-visible bg-white dark:bg-gray-800 rounded-2xl border-none shadow-2xl">
         <DialogDescription className="sr-only">Chia sẻ bài viết lên bảng tin hoặc gửi cho bạn bè</DialogDescription>
         {showFriendPicker ? (
           <>
@@ -185,9 +186,9 @@ export function PostShareModal({
                 <button
                   type="button"
                   onClick={() => { setShowFriendPicker(false); setSearchQuery(''); }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+                  className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted transition-colors cursor-pointer"
                 >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                  <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                 </button>
                 <DialogTitle className="text-lg font-bold">Gửi qua Messenger</DialogTitle>
               </div>
@@ -201,7 +202,7 @@ export function PostShareModal({
                   placeholder="Tìm kiếm bạn bè..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-full bg-gray-100 py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full rounded-full bg-gray-100 dark:bg-gray-900 py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
                 />
               </div>
               <div className="overflow-y-auto flex-1" style={{ maxHeight: '45vh' }}>
@@ -209,22 +210,29 @@ export function PostShareModal({
                   <div className="flex flex-col gap-2">
                     {[1, 2, 3, 4].map((i) => (
                       <div key={i} className="flex items-center gap-3 p-2 animate-pulse">
-                        <div className="w-12 h-12 rounded-full bg-gray-200 shrink-0" />
-                        <div className="flex-1 h-4 bg-gray-200 rounded" />
-                        <div className="w-14 h-8 bg-gray-200 rounded-full" />
+                        <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0" />
+                        <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded" />
+                        <div className="w-14 h-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
                       </div>
                     ))}
                   </div>
                 ) : filteredConversations.length > 0 ? (
                   filteredConversations.map((conv) => (
-                    <div key={conv.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 transition-colors">
+                    <div key={conv.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                       <div className="relative shrink-0">
-                        <img src={conv.user.avatar} alt={conv.user.name} className="w-12 h-12 rounded-full object-cover" />
+                        <UserAvatar
+                          name={conv.user.name}
+                          avatarUrl={conv.user.avatar}
+                          userId={conv.user.id}
+                          className="w-12 h-12"
+                          rounded="full"
+                          initialsClassName="text-sm font-bold"
+                        />
                         {conv.user.isOnline && (
                           <div className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                         )}
                       </div>
-                      <span className="flex-1 text-sm font-semibold text-gray-800 truncate">{conv.user.name}</span>
+                      <span className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{conv.user.name}</span>
                       <button
                         type="button"
                         disabled={sendingToUserId === conv.user.id}
@@ -252,20 +260,20 @@ export function PostShareModal({
             <div className="p-4 flex flex-col gap-4">
               {/* User info + privacy */}
               <div className="flex items-center gap-3">
-                <img
-                  src={
-                    currentUser?.avatarUrl ||
-                    `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(currentUser?.fullName || 'User')}`
-                  }
-                  alt={currentUser?.fullName}
-                  className="w-10 h-10 rounded-full object-cover shrink-0"
+                <UserAvatar
+                  name={currentUser?.fullName || 'Bạn'}
+                  avatarUrl={currentUser?.avatarUrl}
+                  userId={currentUser?.id}
+                  className="w-10 h-10 shrink-0"
+                  rounded="full"
+                  initialsClassName="text-sm font-bold"
                 />
                 <div className="flex flex-col gap-1">
-                  <span className="text-sm font-semibold text-gray-900 leading-tight">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight">
                     {currentUser?.fullName}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                    <span className="rounded-md bg-gray-100 dark:bg-gray-900 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
                       Bảng feed
                     </span>
                     {/* Privacy dropdown */}
@@ -273,20 +281,20 @@ export function PostShareModal({
                       <button
                         type="button"
                         onClick={() => setShowPrivacyMenu((v) => !v)}
-                        className="flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer"
+                        className="flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-900 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
                       >
                         {selectedPrivacy.icon}
                         <span>{selectedPrivacy.label}</span>
                         <ChevronDown className="w-3 h-3" />
                       </button>
                       {showPrivacyMenu && (
-                        <div className="absolute left-0 top-full mt-1 z-50 w-44 rounded-xl border border-gray-100 bg-white shadow-xl py-1">
+                        <div className="absolute left-0 top-full mt-1 z-50 w-44 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-xl py-1">
                           {PRIVACY_OPTIONS.map((opt) => (
                             <button
                               key={opt.value}
                               type="button"
                               onClick={() => { setPrivacy(opt.value); setShowPrivacyMenu(false); }}
-                              className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 transition-colors cursor-pointer ${privacy === opt.value ? 'font-semibold text-blue-600' : 'text-gray-700'}`}
+                              className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer ${privacy === opt.value ? 'font-semibold text-blue-600' : 'text-gray-700 dark:text-gray-300'}`}
                             >
                               {opt.icon}
                               {opt.label}
@@ -309,14 +317,14 @@ export function PostShareModal({
                   placeholder="Hãy nói gì đó về nội dung này..."
                   rows={3}
                   maxLength={1000}
-                  className="w-full resize-none rounded-xl border-none bg-transparent px-0 py-1 text-base text-gray-800 outline-none placeholder:text-gray-400"
+                  className="w-full resize-none rounded-xl border-none bg-transparent px-0 py-1 text-base text-gray-800 dark:text-gray-200 outline-none placeholder:text-gray-400"
                 />
                 {/* Emoji button */}
                 <div className="relative" ref={emojiRef}>
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker((v) => !v)}
-                    className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-yellow-500 transition-colors cursor-pointer"
+                    className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-muted hover:text-yellow-500 transition-colors cursor-pointer"
                   >
                     <Smile className="w-5 h-5" />
                   </button>
@@ -345,11 +353,11 @@ export function PostShareModal({
                 {isSharingNow ? 'Đang đăng...' : 'Đăng bài'}
               </button>
 
-              <div className="h-px bg-gray-100" />
+              <div className="h-px bg-gray-100 dark:bg-gray-900" />
 
               {/* Messenger quick-send */}
               <div>
-                <h3 className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">
+                <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-widest">
                   Gửi bằng Messenger
                 </h3>
                 <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide min-h-[90px] items-center">
@@ -357,8 +365,8 @@ export function PostShareModal({
                     <div className="flex gap-3 w-full">
                       {[1, 2, 3, 4].map((i) => (
                         <div key={i} className="flex flex-col items-center gap-1.5 min-w-[64px] animate-pulse">
-                          <div className="w-14 h-14 rounded-full bg-gray-200" />
-                          <div className="h-2 w-10 bg-gray-200 rounded" />
+                          <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700" />
+                          <div className="h-2 w-10 bg-gray-200 dark:bg-gray-700 rounded" />
                         </div>
                       ))}
                     </div>
@@ -373,16 +381,19 @@ export function PostShareModal({
                           className="flex flex-col items-center gap-1.5 min-w-[64px] hover:opacity-80 transition-opacity cursor-pointer group disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <div className="relative">
-                            <img
-                              src={conv.user.avatar}
-                              alt={conv.user.name}
-                              className="w-14 h-14 rounded-full border-2 border-white shadow-sm object-cover group-hover:scale-105 transition-transform"
+                            <UserAvatar
+                              name={conv.user.name}
+                              avatarUrl={conv.user.avatar}
+                              userId={conv.user.id}
+                              className="w-14 h-14 border-2 border-white shadow-sm dark:shadow-none group-hover:scale-105 transition-transform"
+                              rounded="full"
+                              initialsClassName="text-base font-bold"
                             />
                             {conv.user.isOnline && (
                               <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full" />
                             )}
                           </div>
-                          <span className="text-[11px] text-gray-700 font-medium text-center line-clamp-1 w-full">
+                          <span className="text-[11px] text-gray-700 dark:text-gray-300 font-medium text-center line-clamp-1 w-full">
                             {conv.user.name.split(' ').pop()}
                           </span>
                         </button>
@@ -393,10 +404,10 @@ export function PostShareModal({
                           onClick={() => setShowFriendPicker(true)}
                           className="flex flex-col items-center gap-1.5 min-w-[64px] hover:opacity-80 cursor-pointer"
                         >
-                          <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center">
-                            <span className="text-xl text-gray-500">›</span>
+                          <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                            <span className="text-xl text-gray-500 dark:text-gray-400">›</span>
                           </div>
-                          <span className="text-[11px] text-gray-500">Xem thêm</span>
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400">Xem thêm</span>
                         </button>
                       )}
                     </>
@@ -408,7 +419,7 @@ export function PostShareModal({
                 </div>
               </div>
 
-              <div className="h-px bg-gray-100" />
+              <div className="h-px bg-gray-100 dark:bg-gray-900" />
 
               {/* Secondary options */}
               <div className="grid grid-cols-3 gap-2">
@@ -429,34 +440,34 @@ export function PostShareModal({
                       },
                     });
                   }}
-                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                 >
                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
                     <Newspaper className="w-5 h-5 text-blue-600" />
                   </div>
-                  <span className="text-xs text-gray-600 font-medium text-center leading-tight">Chia sẻ lên tin</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center leading-tight">Chia sẻ lên tin</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShowFriendPicker(true)}
-                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                 >
                   <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
                     <MessageCircle className="w-5 h-5 text-indigo-600" />
                   </div>
-                  <span className="text-xs text-gray-600 font-medium text-center leading-tight">Messenger</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center leading-tight">Messenger</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleCopyLink}
-                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                 >
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                    <Link2 className="w-5 h-5 text-gray-600" />
+                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                    <Link2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                   </div>
-                  <span className="text-xs text-gray-600 font-medium text-center leading-tight">Sao chép liên kết</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center leading-tight">Sao chép liên kết</span>
                 </button>
               </div>
             </div>

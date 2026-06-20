@@ -131,7 +131,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
   const isResetConfirmMismatched = confirmPassword.length > 0 && password !== confirmPassword;
   const canSubmitReset = hasAllRequiredChecks && isResetConfirmMatched && !loading;
 
-  const inputClass = 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm';
+  const inputClass = 'w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm';
   const btnClass = 'w-full py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
 
   return (
@@ -140,15 +140,15 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
       <div className="absolute inset-0 bg-black/50" onClick={step !== 'success' ? onClose : undefined} />
 
       {/* Dialog */}
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">Quên mật khẩu</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Quên mật khẩu</h2>
           <button
             onClick={onClose}
-            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-1.5 hover:bg-muted rounded-full transition-colors"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
           </button>
         </div>
 
@@ -161,7 +161,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
                 <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mb-3">
                   <Mail className="w-7 h-7 text-emerald-600" />
                 </div>
-                <p className="text-sm text-gray-500 text-center">Nhập email để nhận mã xác thực đặt lại mật khẩu</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Nhập email để nhận mã xác thực đặt lại mật khẩu</p>
               </div>
               <div>
                 <input
@@ -187,12 +187,12 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
                 <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mb-3">
                   <Lock className="w-7 h-7 text-emerald-600" />
                 </div>
-                <p className="text-sm text-gray-500 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                   Nhập mã OTP đã gửi đến <span className="font-medium text-emerald-600">{email}</span>
                 </p>
               </div>
               <OTPInput value={otp} onChange={(v) => { setOtp(v); setErrors({}); }} error={errors.otp} />
-              <p className="text-xs text-gray-500 text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
                 Mã hết hạn sau:{' '}
                 <span className={otpExpiresIn > 10 ? 'font-semibold text-amber-600' : 'font-semibold text-red-500'}>
                   {formattedExpiry}
@@ -202,7 +202,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Xác thực
               </button>
-              <div className="text-center text-sm text-gray-600">
+              <div className="text-center text-sm text-gray-600 dark:text-gray-400">
                 Không nhận được mã?{' '}
                 {countdown > 0 ? (
                   <span className="text-gray-400">Gửi lại sau {countdown}s</span>
@@ -220,7 +220,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
               <button
                 type="button"
                 onClick={() => setStep('email')}
-                className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                className="w-full text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300 transition-colors"
               >
                 Quay lại đổi email
               </button>
@@ -234,7 +234,7 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
                 <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mb-3">
                   <Lock className="w-7 h-7 text-emerald-600" />
                 </div>
-                <p className="text-sm text-gray-500 text-center">Tạo mật khẩu mới cho tài khoản của bạn</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Tạo mật khẩu mới cho tài khoản của bạn</p>
               </div>
               <div>
                 <input
@@ -264,11 +264,11 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
                   <p className="text-red-500 text-xs mt-1">{errors.confirmPassword || 'Mật khẩu không khớp'}</p>
                 )}
               </div>
-              <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
-                <p className="text-xs font-medium text-gray-700">Mật khẩu phải có:</p>
-                <p className="text-xs text-gray-600">{hasMinLength ? '✓' : '•'} Ít nhất 8 ký tự</p>
-                <p className="text-xs text-gray-600">{hasUpperAndLower ? '✓' : '•'} Chữ hoa và chữ thường</p>
-                <p className="text-xs text-gray-600">{hasNumber ? '✓' : '•'} Ít nhất một số</p>
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-3 space-y-1.5">
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Mật khẩu phải có:</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{hasMinLength ? '✓' : '•'} Ít nhất 8 ký tự</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{hasUpperAndLower ? '✓' : '•'} Chữ hoa và chữ thường</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{hasNumber ? '✓' : '•'} Ít nhất một số</p>
               </div>
               <button type="submit" disabled={!canSubmitReset} className={btnClass}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
@@ -284,8 +284,8 @@ export function ForgotPasswordDialog({ open, onClose }: ForgotPasswordDialogProp
                 <CheckCircle2 className="w-9 h-9 text-green-600" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-1">Thành công!</h3>
-                <p className="text-sm text-gray-500">Mật khẩu đã được đặt lại thành công.</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">Thành công!</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Mật khẩu đã được đặt lại thành công.</p>
               </div>
               <button onClick={onClose} className={btnClass}>
                 Đóng

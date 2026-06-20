@@ -21,14 +21,14 @@ export function GroupSetupChecklist({ progress, onDismiss, onStepAction }: Group
 
   if (isComplete) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
             <Check className="w-5 h-5 text-green-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-[17px]">Nhóm đã sẵn sàng</h3>
-            <p className="text-[13px] text-gray-500 mt-1">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-[17px]">Nhóm đã sẵn sàng</h3>
+            <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
               Bạn đã hoàn thành {totalCount}/{totalCount} bước. Tiếp tục mời thêm thành viên để phát triển cộng đồng.
             </p>
             <button
@@ -47,21 +47,21 @@ export function GroupSetupChecklist({ progress, onDismiss, onStepAction }: Group
   const visibleSteps = expanded ? steps : steps.filter(s => !s.done || s.id === nextStep?.id);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-4">
       <div className="flex justify-between items-start gap-2 mb-3">
         <div className="min-w-0">
-          <h3 className="font-semibold text-gray-900 text-[17px] leading-tight">Sẵn sàng mở nhóm chưa?</h3>
-          <p className="text-[13px] font-semibold text-gray-900 mt-1">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-[17px] leading-tight">Sẵn sàng mở nhóm chưa?</h3>
+          <p className="text-[13px] font-semibold text-gray-900 dark:text-gray-100 mt-1">
             <span className="text-green-600">{completedCount}/{totalCount}</span> hoàn thành
           </p>
-          <p className="text-[13px] text-gray-500 leading-snug mt-1">
+          <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-snug mt-1">
             Hoàn thành {totalCount} việc nhỏ để thu hút thành viên và bài viết đầu tiên.
           </p>
         </div>
         <button
           type="button"
           onClick={onDismiss}
-          className="text-gray-400 hover:bg-gray-100 p-1.5 rounded-full transition-colors shrink-0"
+          className="text-gray-400 hover:bg-muted p-1.5 rounded-full transition-colors shrink-0"
           aria-label="Ẩn hướng dẫn"
           title="Ẩn hướng dẫn"
         >
@@ -69,7 +69,7 @@ export function GroupSetupChecklist({ progress, onDismiss, onStepAction }: Group
         </button>
       </div>
 
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
+      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-3" role="progressbar" aria-valuenow={progressPercent} aria-valuemin={0} aria-valuemax={100}>
         <div
           className="h-full bg-green-500 rounded-full transition-all duration-300"
           style={{ width: `${progressPercent}%` }}
@@ -78,8 +78,8 @@ export function GroupSetupChecklist({ progress, onDismiss, onStepAction }: Group
 
       {nextStep && (
         <>
-          <p className="text-[13px] text-gray-600 mb-2">
-            Bước tiếp: <span className="font-semibold text-gray-900">{nextStep.label}</span>
+          <p className="text-[13px] text-gray-600 dark:text-gray-400 mb-2">
+            Bước tiếp: <span className="font-semibold text-gray-900 dark:text-gray-100">{nextStep.label}</span>
           </p>
           <button
             type="button"
@@ -100,7 +100,7 @@ export function GroupSetupChecklist({ progress, onDismiss, onStepAction }: Group
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
-        className="w-full mt-2 py-2 text-[13px] font-semibold text-gray-500 hover:text-gray-800 flex items-center justify-center gap-1"
+        className="w-full mt-2 py-2 text-[13px] font-semibold text-gray-500 hover:text-gray-800 dark:text-gray-200 flex items-center justify-center gap-1"
       >
         {expanded ? (
           <>
@@ -120,23 +120,23 @@ function SetupStepRow({ step, onAction }: { step: SetupStep; onAction: () => voi
   const Icon = STEP_ICONS[step.id];
 
   return (
-    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 min-h-[44px]">
+    <div className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 min-h-[44px]">
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-          step.done ? 'bg-green-100' : 'bg-gray-200'
+          step.done ? 'bg-green-100' : 'bg-gray-200 dark:bg-gray-700'
         }`}
       >
         {step.done ? (
           <Check className="w-4 h-4 text-green-600" />
         ) : (
-          <Icon className="w-4 h-4 text-gray-700" />
+          <Icon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
         )}
       </div>
       <div className="flex-1 min-w-0 text-left">
-        <div className={`font-semibold text-[15px] ${step.done ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+        <div className={`font-semibold text-[15px] ${step.done ? 'text-gray-500 line-through' : 'text-gray-900 dark:text-gray-100'}`}>
           {step.label}
         </div>
-        {!step.done && <p className="text-[12px] text-gray-500 leading-snug">{step.helper}</p>}
+        {!step.done && <p className="text-[12px] text-gray-500 dark:text-gray-400 leading-snug">{step.helper}</p>}
       </div>
       {!step.done && (
         <button

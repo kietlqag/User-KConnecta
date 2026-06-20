@@ -4,7 +4,7 @@ export const PROFILE_DEFAULT_AVATAR =
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300';
 
 export const PROFILE_DEFAULT_COVER =
-  'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200';
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='400'%3E%3Crect width='100%25' height='100%25' fill='%23ffffff'/%3E%3C/svg%3E";
 
 export interface ProfileDisplayData {
   id: string;
@@ -71,7 +71,7 @@ export function buildProfileDisplay(
     avatar:
       profile?.avatarUrl ||
       (useCurrentUserMedia ? currentUser?.avatarUrl : undefined) ||
-      PROFILE_DEFAULT_AVATAR,
+      '',
     coverPhoto:
       profile?.coverPhotoUrl ||
       (useCurrentUserMedia ? currentUser?.coverPhotoUrl : undefined) ||

@@ -74,7 +74,7 @@ export function ProfilePostSettingsModal({
             type="button"
             onClick={onClose}
             disabled={isPosting}
-            className="rounded-full p-2 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed dark:hover:bg-gray-700"
+            className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:bg-gray-900 disabled:cursor-not-allowed dark:hover:bg-gray-700"
           >
             <ArrowLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
           </button>
@@ -120,7 +120,7 @@ export function ProfilePostSettingsModal({
                 type="button"
                 disabled={isPosting}
                 onClick={() => onOpenAudienceSelection?.()}
-                className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700"
+                className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
                   <Lock className="h-5 w-5 text-gray-700 dark:text-gray-300" />
@@ -129,7 +129,7 @@ export function ProfilePostSettingsModal({
                   <h4 className="font-semibold text-gray-900 dark:text-white">Đối tượng của bài viết</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{getPrivacyLabel()}</p>
                 </div>
-                <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
@@ -139,7 +139,7 @@ export function ProfilePostSettingsModal({
               type="button"
               disabled={isPosting}
               onClick={() => onOpenScheduleSelection?.()}
-              className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700"
+              className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-gray-700"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700">
                 <Clock className="h-5 w-5 text-gray-700 dark:text-gray-300" />
@@ -148,7 +148,7 @@ export function ProfilePostSettingsModal({
                 <h4 className="font-semibold text-gray-900 dark:text-white">Lựa chọn lịch đăng</h4>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{scheduleSubtitle}</p>
               </div>
-              <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -158,7 +158,7 @@ export function ProfilePostSettingsModal({
                 type="button"
                 disabled={isPosting || !canCrossPostToGroup}
                 onClick={() => onOpenGroupSelection?.()}
-                className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-700"
+                className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-700"
               >
                 <div
                   className={`flex h-10 w-10 items-center justify-center rounded-full ${
@@ -180,7 +180,7 @@ export function ProfilePostSettingsModal({
                   </p>
                 </div>
                 {canCrossPostToGroup && (
-                  <svg className="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 )}

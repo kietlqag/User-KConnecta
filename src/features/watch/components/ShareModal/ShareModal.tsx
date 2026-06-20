@@ -90,13 +90,13 @@ export const ShareModal = ({ isOpen, onClose, onShare, reel }: ShareModalProps) 
       icon: <Link2 className="w-5 h-5" />, 
       label: 'Sao chép liên kết', 
       onClick: handleCopyLink,
-      color: 'bg-gray-100 text-gray-600'
+      color: 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400'
     }
   ];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden bg-white rounded-2xl border-none shadow-2xl">
+      <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden bg-white dark:bg-gray-800 rounded-2xl border-none shadow-2xl">
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-center text-xl font-bold">Chia sẻ</DialogTitle>
         </DialogHeader>
@@ -104,15 +104,15 @@ export const ShareModal = ({ isOpen, onClose, onShare, reel }: ShareModalProps) 
         <div className="p-4">
           {/* Recent Contacts */}
           <div className="mb-6">
-            <h3 className="text-xs font-bold text-gray-500 mb-4 px-2 uppercase tracking-widest">Gửi trong Messenger</h3>
+            <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-4 px-2 uppercase tracking-widest">Gửi trong Messenger</h3>
             
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide min-h-[100px] items-center">
               {loadingFriends ? (
                 <div className="flex gap-4 w-full px-2">
                   {[1, 2, 3, 4].map((i) => (
                     <div key={i} className="flex flex-col items-center gap-2 min-w-[70px] animate-pulse">
-                      <div className="w-14 h-14 rounded-full bg-gray-200" />
-                      <div className="h-2 w-12 bg-gray-200 rounded" />
+                      <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-700" />
+                      <div className="h-2 w-12 bg-gray-200 dark:bg-gray-700 rounded" />
                     </div>
                   ))}
                 </div>
@@ -131,19 +131,19 @@ export const ShareModal = ({ isOpen, onClose, onShare, reel }: ShareModalProps) 
                       toast.success(`Đã gửi cho ${conv.user.name}`);
                       onClose();
                     }}
-                    className="flex flex-col items-center gap-2 min-w-[80px] hover:bg-gray-50 p-2 rounded-xl transition-colors cursor-pointer group"
+                    className="flex flex-col items-center gap-2 min-w-[80px] hover:bg-gray-50 dark:hover:bg-gray-800 p-2 rounded-xl transition-colors cursor-pointer group"
                   >
                     <div className="relative">
                       <img 
                         src={conv.user.avatar} 
                         alt={conv.user.name} 
-                        className="w-14 h-14 rounded-full border-2 border-white shadow-sm object-cover group-hover:scale-105 transition-transform" 
+                        className="w-14 h-14 rounded-full border-2 border-white shadow-sm dark:shadow-none object-cover group-hover:scale-105 transition-transform" 
                       />
                       {conv.user.isOnline && (
                         <div className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
                       )}
                     </div>
-                    <span className="text-[11px] text-gray-700 font-semibold text-center line-clamp-1 w-full">{conv.user.name.split(' ').pop()}</span>
+                    <span className="text-[11px] text-gray-700 dark:text-gray-300 font-semibold text-center line-clamp-1 w-full">{conv.user.name.split(' ').pop()}</span>
                   </button>
                 ))
               ) : (
@@ -160,19 +160,19 @@ export const ShareModal = ({ isOpen, onClose, onShare, reel }: ShareModalProps) 
               <button
                 key={index}
                 onClick={option.onClick}
-                className="flex items-center gap-4 p-3 w-full hover:bg-gray-50 rounded-xl transition-all cursor-pointer group"
+                className="flex items-center gap-4 p-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-all cursor-pointer group"
               >
                 <div className={`w-10 h-10 rounded-full ${option.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
                   {option.icon}
                 </div>
-                <span className="text-gray-700 font-medium">{option.label}</span>
+                <span className="text-gray-700 dark:text-gray-300 font-medium">{option.label}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* External Social Sharing */}
-        <div className="bg-gray-50 p-4 border-t flex justify-center gap-6">
+        <div className="bg-gray-50 dark:bg-gray-900 p-4 border-t flex justify-center gap-6">
           <button className="text-blue-600 hover:scale-110 transition-transform cursor-pointer">
             <Facebook className="w-6 h-6" />
           </button>

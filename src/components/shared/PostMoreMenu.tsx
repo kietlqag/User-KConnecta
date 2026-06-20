@@ -146,8 +146,8 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
     <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className={`p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer ${className}`}>
-          <MoreHorizontal className="w-5 h-5 text-gray-500" />
+        <button className={`p-2 hover:bg-muted rounded-full transition-colors cursor-pointer ${className}`}>
+          <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-2">
@@ -158,11 +158,11 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               onClick={() => handleAction('interested')}
             >
               <div className="mt-1">
-                <Plus className="w-6 h-6 text-gray-900 border-2 border-gray-900 rounded-full p-0.5" />
+                <Plus className="w-6 h-6 text-gray-900 dark:text-gray-100 border-2 border-gray-900 rounded-full p-0.5" />
               </div>
               <div className="flex flex-col">
                 <span className="font-semibold text-[15px]">Quan tâm</span>
-                <span className="text-[13px] text-gray-500">Bạn sẽ nhìn thấy nhiều bài viết tương tự hơn.</span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400">Bạn sẽ nhìn thấy nhiều bài viết tương tự hơn.</span>
               </div>
             </DropdownMenuItem>
 
@@ -171,15 +171,15 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               onClick={() => handleAction('not_interested')}
             >
               <div className="mt-1">
-                <Minus className="w-6 h-6 text-gray-900 border-2 border-gray-900 rounded-full p-0.5" />
+                <Minus className="w-6 h-6 text-gray-900 dark:text-gray-100 border-2 border-gray-900 rounded-full p-0.5" />
               </div>
               <div className="flex flex-col">
                 <span className="font-semibold text-[15px]">Không quan tâm</span>
-                <span className="text-[13px] text-gray-500">Bạn sẽ thấy ít bài viết tương tự hơn.</span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400">Bạn sẽ thấy ít bài viết tương tự hơn.</span>
               </div>
             </DropdownMenuItem>
 
-            <div className="my-1 border-t border-gray-100" />
+            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
 
             <DropdownMenuItem
               className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
@@ -195,7 +195,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               </div>
             </DropdownMenuItem>
 
-            <div className="my-1 border-t border-gray-100" />
+            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
           </>
         )}
 
@@ -204,11 +204,11 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
           onClick={onToggleSave}
         >
           <div className="mt-1">
-            <Bookmark className={`w-6 h-6 ${isSaved ? 'text-blue-600 fill-blue-600' : 'text-gray-900 fill-gray-900'}`} />
+            <Bookmark className={`w-6 h-6 ${isSaved ? 'text-blue-600 fill-blue-600' : 'text-gray-900 dark:text-gray-100 fill-gray-900'}`} />
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-[15px]">{isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết'}</span>
-            <span className="text-[13px] text-gray-500">
+            <span className="text-[13px] text-gray-500 dark:text-gray-400">
               {isSaved ? 'Xóa khỏi danh sách mục đã lưu.' : 'Thêm vào danh sách mục đã lưu.'}
             </span>
           </div>
@@ -216,32 +216,32 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
 
         {isOwner && (
           <>
-            <div className="my-1 border-t border-gray-100" />
+            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
 
             <DropdownMenuItem
               className="flex items-start gap-3 p-3 cursor-pointer"
               onClick={onEdit}
             >
               <div className="mt-1">
-                <Pencil className="w-6 h-6 text-gray-900" />
+                <Pencil className="w-6 h-6 text-gray-900 dark:text-gray-100" />
               </div>
               <div className="flex flex-col">
                 <span className="font-semibold text-[15px]">Chỉnh sửa bài viết</span>
-                <span className="text-[13px] text-gray-500">Thay đổi nội dung hoặc ảnh/video.</span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400">Thay đổi nội dung hoặc ảnh/video.</span>
               </div>
             </DropdownMenuItem>
 
-            <div className="my-1 border-t border-gray-100" />
+            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
 
             {/* Privacy submenu */}
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="flex items-start gap-3 p-3 cursor-pointer rounded-md hover:bg-gray-100 w-full">
+              <DropdownMenuSubTrigger className="flex items-start gap-3 p-3 cursor-pointer rounded-md hover:bg-muted w-full">
                 <div className="mt-1">
-                  <Shield className="w-6 h-6 text-gray-900" />
+                  <Shield className="w-6 h-6 text-gray-900 dark:text-gray-100" />
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="font-semibold text-[15px]">Quyền riêng tư</span>
-                  <span className="text-[13px] text-gray-500">
+                  <span className="text-[13px] text-gray-500 dark:text-gray-400">
                     {PRIVACY_OPTIONS.find((o) => o.value === privacy)?.label ?? 'Công khai'}
                   </span>
                 </div>
@@ -258,10 +258,10 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
                     disabled={updating}
                     onClick={() => handlePrivacySelect(opt.value)}
                   >
-                    <span className="text-gray-700">{opt.icon}</span>
+                    <span className="text-gray-700 dark:text-gray-300">{opt.icon}</span>
                     <div className="flex-1">
                       <p className="font-semibold text-[14px]">{opt.label}</p>
-                      <p className="text-[12px] text-gray-500">{opt.desc}</p>
+                      <p className="text-[12px] text-gray-500 dark:text-gray-400">{opt.desc}</p>
                     </div>
                     {privacy === opt.value && (
                       <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
@@ -271,7 +271,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
 
-            <div className="my-1 border-t border-gray-100" />
+            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
 
             <DropdownMenuItem
               className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
@@ -300,7 +300,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <p className="text-sm text-gray-600">Chọn lý do báo cáo bài viết này:</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Chọn lý do báo cáo bài viết này:</p>
           <div className="space-y-2">
             {REPORT_CATEGORIES.map((cat) => (
               <label
@@ -308,7 +308,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
                 className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                   selectedCategory === cat.value
                     ? 'border-red-400 bg-red-50'
-                    : 'border-gray-200 hover:bg-gray-50'
+                    : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 <input
@@ -325,11 +325,11 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
           </div>
 
           <div>
-            <label className="text-sm text-gray-600 mb-1 block">
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">
               Mô tả thêm <span className="text-gray-400">(tuỳ chọn)</span>
             </label>
             <textarea
-              className="w-full rounded-md border border-gray-200 p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="w-full rounded-md border border-gray-200 dark:border-gray-700 p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
               rows={3}
               placeholder="Mô tả chi tiết vi phạm..."
               value={reportReason}

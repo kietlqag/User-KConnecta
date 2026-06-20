@@ -32,7 +32,7 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
     <div className="group relative">
       <button
         onClick={onClick}
-        className="w-full min-w-0 overflow-hidden px-2 py-2 pr-10 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+        className="w-full min-w-0 overflow-hidden px-2 py-2 pr-10 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors cursor-pointer"
       >
         <div className="relative flex-shrink-0">
           <img
@@ -53,9 +53,9 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
             <h4 className={`text-sm truncate ${conversation.isUnread ? 'font-semibold' : 'font-normal'}`}>
               {conversation.user.name}
             </h4>
-            <span className="text-xs text-gray-500 ml-2 flex-shrink-0">{conversation.timestamp}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2 flex-shrink-0">{conversation.timestamp}</span>
           </div>
-          <p className={`text-sm truncate ${conversation.isUnread ? 'font-medium text-gray-900' : 'text-gray-600'}`}>
+          <p className={`text-sm truncate ${conversation.isUnread ? 'font-medium text-gray-900 dark:text-gray-100' : 'text-gray-600'}`}>
             {conversation.lastMessage}
           </p>
         </div>
@@ -71,7 +71,7 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
           onClick={(e) => {
             e.stopPropagation();
             setShowMenu((prev) => !prev);
-          }} className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 opacity-0 transition hover:bg-gray-100 hover:text-gray-700 group-hover:opacity-100"
+          }} className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 opacity-0 transition hover:bg-muted hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300 group-hover:opacity-100"
           title="Tùy chọn đoạn chat"
         >
           <MoreHorizontal className="h-4 w-4" />
@@ -81,7 +81,7 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
       {showMenu && (
         <div
           ref={menuRef}
-          className="absolute right-2 top-10 z-20 min-w-[150px] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl"
+          className="absolute right-2 top-10 z-20 min-w-[150px] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-xl"
         >
           <button
             type="button"
@@ -89,7 +89,7 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
               e.stopPropagation();
               onTogglePin?.(conversation.user.id);
               setShowMenu(false);
-            }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 hover:bg-gray-100"
+            }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-800 dark:text-gray-200 hover:bg-muted"
           >
             {isPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
             {isPinned ? 'Bỏ ghim' : 'Ghim'}

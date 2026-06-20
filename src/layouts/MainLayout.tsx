@@ -20,7 +20,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   }, [isHomePage, setLeftSidebarOpen]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
       <Header />
       
       {/* Left Sidebar - Only on /home */}

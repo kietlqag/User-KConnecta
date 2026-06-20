@@ -54,7 +54,7 @@ function InfoRow({ icon, label, sub, isOwnProfile, onEdit }: InfoRowProps) {
       {isOwnProfile && onEdit && (
         <button
           onClick={onEdit}
-          className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 rounded-full hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
         >
           <Edit2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
         </button>
@@ -116,7 +116,7 @@ export function ProfileAboutPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto px-4 py-6">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col md:flex-row min-h-[500px]">
 
         <div className="w-full md:w-[260px] border-b md:border-b-0 md:border-r border-gray-200 dark:border-gray-700 pt-4 flex-shrink-0">
           <h2 className="px-4 text-xl font-bold text-gray-900 dark:text-white mb-3">Giới thiệu</h2>
@@ -128,7 +128,7 @@ export function ProfileAboutPage() {
                 className={`w-full text-left px-4 py-2.5 text-[15px] font-medium rounded-lg mx-1 transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-muted'
                 }`}
               >
                 {tab.label}

@@ -292,7 +292,7 @@ export function StoryViewerPage() {
         <p className="text-white text-lg">Không có tin nào để hiển thị</p>
         <button
           onClick={() => navigate('/home')}
-          className="px-6 py-2 bg-white text-black rounded-full font-semibold hover:bg-gray-100 transition"
+          className="px-6 py-2 bg-white dark:bg-gray-800 text-black rounded-full font-semibold hover:bg-muted transition"
         >
           Về trang chủ
         </button>
@@ -303,11 +303,11 @@ export function StoryViewerPage() {
   return (
     <div className="flex h-screen bg-black overflow-hidden">
       {/* ─── Left Sidebar ─────────────────────────────────────────────────── */}
-      <aside className="w-[360px] shrink-0 bg-white flex flex-col h-full overflow-hidden">
+      <aside className="w-[360px] shrink-0 bg-white dark:bg-gray-800 flex flex-col h-full overflow-hidden">
         <div className="flex items-center gap-3 px-4 pt-4 pb-2">
           <button
             onClick={() => navigate('/home')}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition cursor-pointer shrink-0"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition cursor-pointer shrink-0"
           >
             <X className="h-5 w-5" />
           </button>
@@ -315,29 +315,29 @@ export function StoryViewerPage() {
         </div>
 
         <div className="px-4 pb-2">
-          <h1 className="text-2xl font-bold text-gray-900">Tin</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tin</h1>
         </div>
 
         {/* Create Story */}
         <div className="px-4 py-2">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Tin của bạn</p>
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Tin của bạn</p>
           <button
             onClick={() => navigate('/stories/create')}
-            className="flex items-center gap-3 w-full rounded-lg p-2 hover:bg-gray-100 transition cursor-pointer"
+            className="flex items-center gap-3 w-full rounded-lg p-2 hover:bg-muted transition cursor-pointer"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 border-2 border-dashed border-gray-300 text-blue-600 shrink-0">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-blue-600 shrink-0">
               <Plus className="h-6 w-6" />
             </div>
             <div className="text-left">
-              <p className="font-semibold text-gray-900 text-sm">Tạo tin</p>
-              <p className="text-xs text-gray-500">Bạn có thể chia sẻ ảnh hoặc viết gì đó.</p>
+              <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Tạo tin</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Bạn có thể chia sẻ ảnh hoặc viết gì đó.</p>
             </div>
           </button>
         </div>
 
         {/* Story List */}
         <div className="flex-1 overflow-y-auto px-2 pb-4">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide px-2 py-2">Tất cả tin</p>
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 py-2">Tất cả tin</p>
           {authors.length === 0 ? (
             <p className="text-sm text-gray-400 px-2">Chưa có tin nào.</p>
           ) : (
@@ -347,7 +347,7 @@ export function StoryViewerPage() {
                   key={a.userId}
                   onClick={() => handleSelectAuthor(index)}
                   className={`flex items-center gap-3 w-full rounded-lg px-2 py-2 transition cursor-pointer text-left ${
-                    index === currentAuthorIndex ? 'bg-blue-50' : 'hover:bg-gray-100'
+                    index === currentAuthorIndex ? 'bg-blue-50' : 'hover:bg-muted'
                   }`}
                 >
                   <div className="relative shrink-0">
@@ -358,8 +358,8 @@ export function StoryViewerPage() {
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{a.name}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{a.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {a.slides.length} thẻ · {timeAgo(a.slides[0].createdAt)}
                     </p>
                   </div>
@@ -375,7 +375,7 @@ export function StoryViewerPage() {
         {currentAuthorIndex > 0 && (
           <button
             onClick={() => handleSelectAuthor(currentAuthorIndex - 1)}
-            className="absolute left-6 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-lg hover:bg-white transition cursor-pointer"
+            className="absolute left-6 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-white dark:bg-gray-800/90 text-gray-800 dark:text-gray-200 shadow-lg hover:bg-white dark:bg-gray-800 transition cursor-pointer"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
@@ -450,9 +450,9 @@ export function StoryViewerPage() {
           {/* Progress Bars */}
           <div className="absolute top-3 left-3 right-3 z-30 flex gap-1">
             {author.slides.map((s, i) => (
-              <div key={s.id} className="flex-1 h-[3px] rounded-full bg-white/40 overflow-hidden">
+              <div key={s.id} className="flex-1 h-[3px] rounded-full bg-white dark:bg-gray-800/40 overflow-hidden">
                 <div
-                  className="h-full bg-white rounded-full transition-none"
+                  className="h-full bg-white dark:bg-gray-800 rounded-full transition-none"
                   style={{
                     width:
                       i < currentSlideIndex
@@ -501,7 +501,7 @@ export function StoryViewerPage() {
                 {isMenuOpen && (
                   <div
                     ref={menuRef}
-                    className="absolute right-0 top-10 z-50 w-52 overflow-hidden rounded-xl bg-white shadow-xl border border-gray-100 animate-in fade-in slide-in-from-top-1 duration-150"
+                    className="absolute right-0 top-10 z-50 w-52 overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-xl border border-gray-100 dark:border-gray-800 animate-in fade-in slide-in-from-top-1 duration-150"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
@@ -512,9 +512,9 @@ export function StoryViewerPage() {
                         setIsMenuOpen(false);
                         setIsPaused(false);
                       }}
-                      className="group flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      className="group flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 active:bg-gray-100 transition-colors"
                     >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition-all duration-150 group-hover:bg-gray-200 group-hover:scale-105">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 transition-all duration-150 group-hover:bg-gray-200 dark:hover:bg-gray-700 group-hover:scale-105">
                         <Link2 className="h-4 w-4" />
                       </span>
                       <span className="transition-transform duration-150 group-hover:translate-x-0.5">Sao chép liên kết</span>
@@ -574,7 +574,7 @@ export function StoryViewerPage() {
                 e.stopPropagation();
                 handleOpenLinkedPost();
               }}
-              className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-900 shadow-lg transition hover:bg-white cursor-pointer"
+              className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2 rounded-full bg-white dark:bg-gray-800/90 px-4 py-2 text-sm font-semibold text-gray-900 dark:text-gray-100 shadow-lg transition hover:bg-white dark:bg-gray-800 cursor-pointer"
             >
               Xem bài live
             </button>
@@ -595,7 +595,7 @@ export function StoryViewerPage() {
         {/* Reply Bar — only visible when viewing someone else's story */}
         {!isOwnStory && (
           <div className="flex w-[min(360px,calc(100vw-32px))] flex-col gap-2">
-            <div className="flex items-center gap-2 rounded-full bg-white/10 border border-white/30 px-4 py-2">
+            <div className="flex items-center gap-2 rounded-full bg-white dark:bg-gray-800/10 border border-white/30 px-4 py-2">
               <img
                 src={currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14'}
                 alt="me"
@@ -628,7 +628,7 @@ export function StoryViewerPage() {
                   key={label}
                   title={label}
                   onClick={() => handleSendReaction(emoji)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full bg-white/10 hover:bg-white/25 transition cursor-pointer ${color}`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-gray-800/10 hover:bg-white dark:bg-gray-800/25 transition cursor-pointer ${color}`}
                 >
                   <Icon className="h-5 w-5" />
                 </button>
@@ -642,7 +642,7 @@ export function StoryViewerPage() {
         {currentAuthorIndex < authors.length - 1 && (
           <button
             onClick={() => handleSelectAuthor(currentAuthorIndex + 1)}
-            className="absolute right-6 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-gray-800 shadow-lg hover:bg-white transition cursor-pointer"
+            className="absolute right-6 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-white dark:bg-gray-800/90 text-gray-800 dark:text-gray-200 shadow-lg hover:bg-white dark:bg-gray-800 transition cursor-pointer"
           >
             <ChevronRight className="h-6 w-6" />
           </button>

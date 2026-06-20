@@ -22,12 +22,12 @@ export function MarketplaceHeader() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50 border-b border-gray-200">
+    <header className="fixed top-0 left-0 right-0 bg-background shadow-sm dark:shadow-none z-50 border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-[1920px] mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           {/* Left Section - Logo & Search */}
           <div className="flex items-center gap-2 flex-1 max-w-[320px]">
-            <Link to="/home" className="flex items-center gap-2 hover:bg-gray-100 rounded-full p-2 transition-colors">
+            <Link to="/home" className="flex items-center gap-2 hover:bg-muted rounded-full p-2 transition-colors">
               <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 rounded-full flex items-center justify-center">
                 <span className="text-xl font-bold text-white">K</span>
               </div>
@@ -38,7 +38,7 @@ export function MarketplaceHeader() {
               <input
                 type="text"
                 placeholder="Tìm kiếm trên KConnecta"
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full outline-none focus:bg-gray-200 transition-colors"
+                className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-gray-200 dark:focus:bg-gray-700 transition-colors"
               />
             </div>
           </div>
@@ -48,8 +48,8 @@ export function MarketplaceHeader() {
 
           {/* Right Section - User Actions */}
           <div className="flex items-center gap-2 flex-1 justify-end max-w-[320px]">
-            <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors lg:hidden">
-              <Menu className="w-6 h-6 text-gray-700" />
+            <button className="p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors lg:hidden">
+              <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
             </button>
             
             <button 
@@ -58,15 +58,15 @@ export function MarketplaceHeader() {
                 setShowMessenger(false);
                 setShowNotifications(false);
               }}
-              className={`hidden sm:flex p-2 hover:bg-gray-200 rounded-full transition-colors ${
-                isMenuOpen ? 'bg-emerald-100' : 'bg-gray-100'
+              className={`hidden sm:flex p-2 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-full transition-colors ${
+                isMenuOpen ? 'bg-emerald-100' : 'bg-gray-100 dark:bg-gray-900'
               }`}
               title="Menu"
               aria-label="Menu"
               aria-expanded={isMenuOpen}
               data-menu-toggle
             >
-              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-emerald-600' : 'text-gray-700'}`} />
+              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-emerald-600' : 'text-gray-700 dark:text-gray-300'}`} />
             </button>
             
             <button 
@@ -75,9 +75,9 @@ export function MarketplaceHeader() {
                 setMenuOpen(false);
                 setShowNotifications(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              className="hidden sm:flex relative p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
             >
-              <MessageCircle className="w-5 h-5 text-gray-700" />
+              <MessageCircle className="w-5 h-5 text-gray-700 dark:text-gray-300" />
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 3
               </span>
@@ -89,9 +89,9 @@ export function MarketplaceHeader() {
                 setMenuOpen(false);
                 setShowMessenger(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+              className="hidden sm:flex relative p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
             >
-              <Bell className="w-5 h-5 text-gray-700" />
+              <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 5
               </span>

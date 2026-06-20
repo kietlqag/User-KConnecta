@@ -454,21 +454,21 @@ export function ProfileSetupStep({
     <div>
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 px-4">
-          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-800 p-6 text-center shadow-2xl">
             <CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-emerald-500" />
-            <p className="text-lg font-semibold text-gray-900">Tạo tài khoản thành công</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tạo tài khoản thành công</p>
           </div>
         </div>
       )}
 
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors">
+      <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4" />
         <span className="text-sm font-medium">Quay lại</span>
       </button>
 
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Thiết lập hồ sơ</h2>
-        <p className="text-gray-600">Hoàn tất thông tin để tạo tài khoản</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Thiết lập hồ sơ</h2>
+        <p className="text-gray-600 dark:text-gray-400">Hoàn tất thông tin để tạo tài khoản</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -496,7 +496,7 @@ export function ProfileSetupStep({
         />
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Ngày sinh</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Ngày sinh</label>
           <div className="relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
               <Calendar size={20} />
@@ -510,7 +510,7 @@ export function ProfileSetupStep({
               className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl transition-all focus:outline-none ${
                 errors.dateOfBirth
                   ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-                  : 'border-gray-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
+                  : 'border-gray-300 dark:border-gray-700 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
               }`}
             />
           </div>
@@ -518,7 +518,7 @@ export function ProfileSetupStep({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Giới tính</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Giới tính</label>
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: 'Nam', icon: <Mars size={16} /> },
@@ -530,7 +530,7 @@ export function ProfileSetupStep({
                 className={`relative flex items-center justify-center p-3 border-2 rounded-xl cursor-pointer transition-all ${
                   profileData.gender === label
                     ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                    : 'border-gray-300 dark:border-gray-700 hover:border-gray-400'
                 }`}
               >
                 <input
@@ -541,7 +541,7 @@ export function ProfileSetupStep({
                   onChange={handleChange}
                   className="sr-only"
                 />
-                <span className={`text-sm font-medium inline-flex items-center gap-1.5 ${profileData.gender === label ? 'text-emerald-700' : 'text-gray-700'}`}>
+                <span className={`text-sm font-medium inline-flex items-center gap-1.5 ${profileData.gender === label ? 'text-emerald-700' : 'text-gray-700 dark:text-gray-300'}`}>
                   {icon}
                   {label}
                 </span>
@@ -552,15 +552,15 @@ export function ProfileSetupStep({
         </div>
 
         <div ref={locationPickerRef} className="relative">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Vị trí (Tùy chọn)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vị trí (Tùy chọn)</label>
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsLocationPickerOpen((prev) => !prev)}
-              className="relative w-full pl-12 pr-10 py-3 border-2 border-gray-300 rounded-xl text-left text-gray-700 hover:border-gray-400 transition-all focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
+              className="relative w-full pl-12 pr-10 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl text-left text-gray-700 dark:text-gray-300 hover:border-gray-400 transition-all focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
             >
               <MapPin size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <span className={locationDisplay ? 'text-gray-700' : 'text-gray-400'}>{locationDisplay || 'Chọn vị trí'}</span>
+              <span className={locationDisplay ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}>{locationDisplay || 'Chọn vị trí'}</span>
               <ChevronRight size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
             </button>
 
@@ -568,7 +568,7 @@ export function ProfileSetupStep({
               <button
                 type="button"
                 onClick={clearLocation}
-                className="absolute right-11 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-11 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400"
                 aria-label="Xóa vị trí"
               >
                 <X size={16} />
@@ -577,28 +577,28 @@ export function ProfileSetupStep({
           </div>
 
           {isLocationPickerOpen && (
-            <div className={`absolute z-20 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden max-h-[min(22rem,calc(100vh-14rem))] ${openUpward ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
+            <div className={`absolute z-20 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden max-h-[min(22rem,calc(100vh-14rem))] ${openUpward ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
                 {locationStep === 'ward' ? (
-                  <button type="button" onClick={() => setLocationStep('province')} className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800">
+                  <button type="button" onClick={() => setLocationStep('province')} className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-200">
                     <ChevronLeft size={16} />
                     Tỉnh/Thành phố
                   </button>
                 ) : (
-                  <span className="text-sm font-medium text-gray-700">Tỉnh/Thành phố</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Tỉnh/Thành phố</span>
                 )}
                 <span className="text-sm font-semibold text-emerald-700">
                   {locationStep === 'province' ? 'Chọn tỉnh/thành phố' : 'Chọn xã/phường/đặc khu'}
                 </span>
               </div>
 
-              <div className="px-3 py-3 border-b border-gray-100 space-y-2">
+              <div className="px-3 py-3 border-b border-gray-100 dark:border-gray-800 space-y-2">
                 <input
                   type="text"
                   value={locationQuery}
                   onChange={(e) => setLocationQuery(e.target.value)}
                   placeholder={locationStep === 'province' ? 'Tìm tỉnh/thành phố...' : 'Tìm xã/phường/đặc khu...'}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-200 focus:border-emerald-500"
                 />
                 <button
                   type="button"
@@ -612,7 +612,7 @@ export function ProfileSetupStep({
 
               <div className="overflow-y-auto max-h-[min(18rem,calc(100vh-18rem))]">
                 {locationLoading ? (
-                  <p className="px-4 py-3 text-sm text-gray-500">Đang tải dữ liệu...</p>
+                  <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Đang tải dữ liệu...</p>
                 ) : locationError ? (
                   <p className="px-4 py-3 text-sm text-red-600">{locationError}</p>
                 ) : locationStep === 'province' ? (
@@ -622,13 +622,13 @@ export function ProfileSetupStep({
                         key={province.code}
                         type="button"
                         onClick={() => void handleProvinceSelect(province)}
-                        className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                        className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
                       >
                         {province.name}
                       </button>
                     ))
                   ) : (
-                    <p className="px-4 py-3 text-sm text-gray-500">Không tìm thấy tỉnh/thành phố</p>
+                    <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Không tìm thấy tỉnh/thành phố</p>
                   )
                 ) : filteredWards.length > 0 ? (
                   filteredWards.map((ward) => (
@@ -636,13 +636,13 @@ export function ProfileSetupStep({
                       key={ward.code}
                       type="button"
                       onClick={() => handleWardSelect(ward)}
-                      className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                      className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
                     >
                       {ward.name}
                     </button>
                   ))
                 ) : (
-                  <p className="px-4 py-3 text-sm text-gray-500">Không có dữ liệu xã/phường/đặc khu</p>
+                  <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Không có dữ liệu xã/phường/đặc khu</p>
                 )}
               </div>
             </div>
@@ -650,17 +650,17 @@ export function ProfileSetupStep({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Giới thiệu bản thân (Tùy chọn)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Giới thiệu bản thân (Tùy chọn)</label>
           <textarea
             name="bio"
             value={profileData.bio}
             onChange={handleChange}
             placeholder="Viết vài dòng về bản thân bạn..."
             rows={3}
-            className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl transition-all focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 resize-none"
+            className="w-full px-4 py-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl transition-all focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 resize-none"
             maxLength={200}
           />
-          <p className="mt-1.5 text-xs text-gray-500 text-right">{profileData.bio.length}/200</p>
+          <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400 text-right">{profileData.bio.length}/200</p>
         </div>
 
         {submitError && <p className="text-sm text-red-600 text-center">{submitError}</p>}

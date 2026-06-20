@@ -128,7 +128,7 @@ export function ProfilePostAudienceModal({
           <div className="relative flex shrink-0 items-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <button
               onClick={() => setStep(1)}
-              className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="rounded-full p-2 transition-colors hover:bg-muted"
             >
               <ArrowLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
             </button>
@@ -166,7 +166,7 @@ export function ProfilePostAudienceModal({
                     <button
                       key={friend.userId}
                       onClick={() => toggle(friend.userId)}
-                      className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="flex w-full items-center gap-3 rounded-lg p-3 transition-colors hover:bg-muted"
                     >
                       <img
                         src={friend.avatarUrl ?? '/default-avatar.png'}
@@ -195,7 +195,7 @@ export function ProfilePostAudienceModal({
           <div className="flex shrink-0 items-center justify-end gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
             <button
               onClick={() => setStep(1)}
-              className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:text-emerald-400 dark:hover:bg-gray-700"
+              className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:text-emerald-400 dark:hover:bg-gray-700"
             >
               Hủy
             </button>
@@ -217,7 +217,7 @@ export function ProfilePostAudienceModal({
         <div className="sticky top-0 relative flex items-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <button
             onClick={onClose}
-            className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="rounded-full p-2 transition-colors hover:bg-muted"
           >
             <ArrowLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
           </button>
@@ -246,7 +246,7 @@ export function ProfilePostAudienceModal({
                   key={option.id}
                   onClick={() => setTempSelected(option.id)}
                   className={`flex w-full items-center gap-3 rounded-lg p-3 transition-colors ${
-                    isSelected ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    isSelected ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-muted'
                   }`}
                 >
                   <div
@@ -280,7 +280,7 @@ export function ProfilePostAudienceModal({
         <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <button
             onClick={onClose}
-            className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:text-emerald-400 dark:hover:bg-gray-700"
+            className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:text-emerald-400 dark:hover:bg-gray-700"
           >
             Hủy
           </button>

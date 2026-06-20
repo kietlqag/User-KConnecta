@@ -61,7 +61,7 @@ export function ProfileReelsPage() {
 
   return (
     <div className="max-w-[1100px] mx-auto px-4 py-6">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 overflow-hidden">
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
@@ -78,7 +78,7 @@ export function ProfileReelsPage() {
               className={`px-4 py-3 font-semibold text-sm transition-colors border-b-2 ${
                 activeTab === tab
                   ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
-                  : 'text-gray-600 dark:text-gray-400 border-transparent hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'text-gray-600 dark:text-gray-400 border-transparent hover:bg-muted'
               }`}
             >
               {tab === 'yours' ? 'Thước phim của bạn' : 'Thước phim đã lưu'}

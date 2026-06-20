@@ -26,12 +26,12 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
   ];
 
   return (
-    <div className="sticky top-14 hidden min-h-[calc(100vh-56px)] w-[clamp(280px,23vw,360px)] shrink-0 overflow-y-auto border-r border-gray-200 bg-white sidebar-scrollbar md:block">
+    <div className="sticky top-14 hidden min-h-[calc(100vh-56px)] w-[clamp(280px,23vw,360px)] shrink-0 overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sidebar-scrollbar md:block">
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Bạn bè</h1>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer">
-            <Settings className="w-5 h-5 text-gray-600" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bạn bè</h1>
+          <button className="p-2 hover:bg-muted rounded-full transition-colors cursor-pointer">
+            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>
         </div>
 
@@ -43,14 +43,14 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors cursor-pointer group ${
                 activeTab === item.id
                   ? 'bg-emerald-50 text-emerald-600'
-                  : 'hover:bg-gray-100'
+                  : 'hover:bg-muted'
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className={activeTab === item.id ? 'text-emerald-600' : 'text-gray-600 group-hover:text-emerald-600 transition-colors'}>
+                <div className={activeTab === item.id ? 'text-emerald-600' : 'text-gray-600 dark:text-gray-400 group-hover:text-emerald-600 transition-colors'}>
                   {item.icon}
                 </div>
-                <span className={`font-medium ${activeTab === item.id ? 'text-emerald-600' : 'text-gray-900'}`}>
+                <span className={`font-medium ${activeTab === item.id ? 'text-emerald-600' : 'text-gray-900 dark:text-gray-100'}`}>
                   {item.label}
                 </span>
               </div>

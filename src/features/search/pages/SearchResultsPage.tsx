@@ -24,7 +24,7 @@ interface SectionHeaderProps {
 
 const SectionHeader = ({ title, count, onSeeAll }: SectionHeaderProps) => (
   <div className="flex items-center justify-between mb-3">
-    <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">{title}</h3>
     {count > 2 && (
       <button
         onClick={onSeeAll}
@@ -189,12 +189,12 @@ export default function SearchResultsPage() {
 
   const EmptyState = ({ message }: { message: string }) => (
     <div className="text-center py-16">
-      <p className="text-gray-400 text-lg">{message}</p>
+      <p className="text-gray-400 dark:text-gray-500 text-lg">{message}</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-background">
       <Header />
 
       <div className="pt-14 flex">
@@ -231,14 +231,14 @@ export default function SearchResultsPage() {
             <div className="space-y-8">
               {/* Sort bar */}
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-800">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
                   Tìm thấy {totalCount} kết quả{query ? ` cho "${query}"` : ''}
                 </h2>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Sắp xếp:</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Sắp xếp:</span>
                   <button
                     onClick={() => setSortType(sortType === 'relevance' ? 'latest' : 'relevance')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm dark:shadow-none cursor-pointer"
                   >
                     {sortType === 'relevance'
                       ? <><SortAsc className="w-4 h-4" /> Liên quan nhất</>
@@ -306,7 +306,7 @@ export default function SearchResultsPage() {
           {query.trim() && !loading && !error && activeFilter !== 'all' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
                   {activeFilter === 'people'  && `${people.length} người`}
                   {activeFilter === 'groups'  && `${groups.length} nhóm`}
                   {activeFilter === 'posts'   && `${filteredPosts.length} bài viết`}
@@ -316,7 +316,7 @@ export default function SearchResultsPage() {
                 {activeFilter === 'posts' && (
                   <button
                     onClick={() => setSortType(sortType === 'relevance' ? 'latest' : 'relevance')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm dark:shadow-none cursor-pointer"
                   >
                     {sortType === 'relevance'
                       ? <><SortAsc className="w-4 h-4" /> Liên quan nhất</>

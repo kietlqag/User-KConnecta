@@ -40,11 +40,11 @@ export function GroupTabBar({ activeTab, onTabChange, memberCount, pendingCount,
               inline-flex items-center gap-1.5
               ${isActive
                 ? 'text-blue-600 border-b-[3px] border-blue-600 rounded-t'
-                : 'text-gray-500 hover:bg-gray-100 rounded-lg my-0.5'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-muted rounded-lg my-0.5'
               }
             `}
           >
-            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-500'}`} aria-hidden />
+            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400'}`} aria-hidden />
             <span className="inline sm:hidden">{tab.shortLabel}</span>
             <span className="hidden sm:inline">{label}</span>
           </button>

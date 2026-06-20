@@ -134,7 +134,7 @@ const mockProducts: MarketplaceProduct[] = [
 
 export const MarketplacePage = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-background">
       <Header />
 
       {/* Main Layout */}
@@ -155,7 +155,7 @@ export const MarketplacePage = () => {
           </div>
 
           {/* Today's Picks Header */}
-          <h2 className="text-xl font-bold mb-4">Lựa chọn hôm nay</h2>
+          <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Lựa chọn hôm nay</h2>
 
           {/* Products Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">

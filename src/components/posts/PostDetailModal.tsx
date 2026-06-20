@@ -11,6 +11,7 @@ import {
 import { CommentSection } from './CommentSection';
 import { PostMoreMenu } from '../shared/PostMoreMenu';
 import { PostMediaGallery } from '../shared/PostMediaGallery';
+import { UserAvatar } from '../shared/UserAvatar';
 import type { PostGalleryItem } from '../shared/PostMediaGallery';
 
 type Privacy = 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
@@ -130,12 +131,12 @@ export function PostDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white dark:bg-gray-800 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <h2 className="text-lg font-semibold">Bài viết của {post.author.name}</h2>
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 transition-colors hover:bg-gray-300 cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors hover:bg-gray-300 cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -145,10 +146,13 @@ export function PostDetailModal({
           <div className="px-4 pb-3 pt-4">
             <div className="flex items-start justify-between">
               <div className="flex gap-3">
-                <img
-                  src={post.author.avatar}
-                  alt={post.author.name}
-                  className="h-10 w-10 rounded-full object-cover"
+                <UserAvatar
+                  name={post.author.name}
+                  avatarUrl={post.author.avatar}
+                  userId={post.author.id}
+                  className="h-10 w-10"
+                  rounded="full"
+                  initialsClassName="text-sm font-bold"
                 />
                 <div>
                   <div className="flex items-center gap-2">
@@ -156,11 +160,11 @@ export function PostDetailModal({
                     {post.author.status && (
                       <div className="flex items-center gap-1">
                         <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-xs text-gray-600">{post.author.status}</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{post.author.status}</span>
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                     <span>{post.timestamp}</span>
                     <span>·</span>
                     <span className="flex items-center gap-0.5" title={PRIVACY_LABEL[privacy]}>
@@ -210,7 +214,7 @@ export function PostDetailModal({
             </div>
           ) : null}
 
-          <div className="flex items-center justify-between border-b border-gray-200 px-4 py-2 text-sm text-gray-600">
+          <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-400">
             <div className="flex items-center gap-1">
               {totalReactionCount > 0 && (
                 <>
@@ -218,7 +222,7 @@ export function PostDetailModal({
                     {activeReactions.slice(0, 3).map((reaction) => (
                       <span
                         key={reaction.type}
-                        className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white leading-none"
+                        className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white dark:bg-gray-800 leading-none"
                       >
                         <img src={reaction.emoji} alt={reaction.label} width={15} height={15} draggable={false} />
                       </span>
@@ -234,7 +238,7 @@ export function PostDetailModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-1 border-b border-gray-200 px-4 py-1">
+          <div className="grid grid-cols-3 gap-1 border-b border-gray-200 dark:border-gray-700 px-4 py-1">
             <ReactionButton
               initialReaction={selectedReaction}
               onReactionChange={onReactionChange}
@@ -242,18 +246,18 @@ export function PostDetailModal({
               buttonClassName="cursor-pointer disabled:cursor-not-allowed"
             />
 
-            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 cursor-pointer">
-              <MessageCircle className="h-5 w-5 text-gray-600" />
-              <span className="text-[15px] font-semibold text-gray-600">Bình luận</span>
+            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-muted cursor-pointer">
+              <MessageCircle className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <span className="text-[15px] font-semibold text-gray-600 dark:text-gray-400">Bình luận</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsShareModalOpen(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-gray-100 cursor-pointer"
+              className="flex w-full items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-muted cursor-pointer"
             >
-              <Share2 className="h-5 w-5 text-gray-600" />
-              <span className="text-[15px] font-semibold text-gray-600">Chia sẻ</span>
+              <Share2 className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+              <span className="text-[15px] font-semibold text-gray-600 dark:text-gray-400">Chia sẻ</span>
             </button>
           </div>
 

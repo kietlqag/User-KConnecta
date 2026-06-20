@@ -38,13 +38,13 @@ export const SearchSidebar = ({
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 p-4 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto">
+    <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto">
       {/* Header */}
       <h2 className="text-xl font-bold mb-4">Kết quả tìm kiếm</h2>
 
       {/* Filter Menu */}
       <div className="space-y-1 mb-4">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 mb-2">
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mb-2">
           Bộ lọc
         </h3>
         {filterOptions.map((filter) => {
@@ -58,11 +58,11 @@ export const SearchSidebar = ({
               className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer ${
                 isActive
                   ? 'bg-blue-50 text-blue-600'
-                  : 'hover:bg-gray-100 text-gray-700'
+                  : 'hover:bg-muted text-gray-700 dark:text-gray-300'
               }`}
             >
               <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                isActive ? 'bg-blue-100' : 'bg-gray-200'
+                isActive ? 'bg-blue-100' : 'bg-gray-200 dark:bg-gray-700'
               }`}>
                 <Icon className="w-5 h-5" />
               </div>
@@ -74,19 +74,19 @@ export const SearchSidebar = ({
 
       {/* Advanced Filters (shown for all/posts tabs) */}
       {(activeFilter === 'all' || activeFilter === 'posts') && onSortChange && onDateFilterChange && (
-        <div className="border-t border-gray-100 pt-4">
+        <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+            className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-2 text-gray-700">
+            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <SlidersHorizontal className="w-4 h-4" />
               <span className="font-semibold text-sm">Bộ lọc nâng cao</span>
             </div>
             {showAdvanced ? (
-              <ChevronUp className="w-4 h-4 text-gray-500" />
+              <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-500" />
+              <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             )}
           </button>
 
@@ -94,7 +94,7 @@ export const SearchSidebar = ({
             <div className="mt-3 space-y-4 px-2">
               {/* Sort */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Sắp xếp theo
                 </p>
                 <div className="space-y-1">
@@ -104,7 +104,7 @@ export const SearchSidebar = ({
                   ].map((option) => (
                     <label
                       key={option.value}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer"
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                     >
                       <input
                         type="radio"
@@ -114,7 +114,7 @@ export const SearchSidebar = ({
                         onChange={() => onSortChange(option.value)}
                         className="accent-blue-600"
                       />
-                      <span className="text-sm text-gray-700">{option.label}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{option.label}</span>
                     </label>
                   ))}
                 </div>
@@ -122,14 +122,14 @@ export const SearchSidebar = ({
 
               {/* Date Filter */}
               <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                   Thời gian đăng
                 </p>
                 <div className="space-y-1">
                   {dateOptions.map((option) => (
                     <label
                       key={option.value}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer"
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                     >
                       <input
                         type="radio"
@@ -139,7 +139,7 @@ export const SearchSidebar = ({
                         onChange={() => onDateFilterChange(option.value)}
                         className="accent-blue-600"
                       />
-                      <span className="text-sm text-gray-700">{option.label}</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{option.label}</span>
                     </label>
                   ))}
                 </div>
@@ -151,8 +151,8 @@ export const SearchSidebar = ({
 
       {/* People-specific filters */}
       {activeFilter === 'people' && (
-        <div className="border-t border-gray-100 pt-4 px-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+        <div className="border-t border-gray-100 dark:border-gray-800 pt-4 px-2">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             Lọc mọi người
           </p>
           <div className="space-y-2">
@@ -161,9 +161,9 @@ export const SearchSidebar = ({
               { label: 'Bạn của bạn bè', value: 'friends_of_friends' },
               { label: 'Tất cả mọi người', value: 'everyone' },
             ].map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2 py-1.5">
+              <label key={opt.value} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 py-1.5">
                 <input type="radio" name="people_filter" value={opt.value} defaultChecked={opt.value === 'everyone'} className="accent-blue-600" />
-                <span className="text-sm text-gray-700">{opt.label}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
               </label>
             ))}
           </div>
@@ -172,8 +172,8 @@ export const SearchSidebar = ({
 
       {/* Groups-specific filters */}
       {activeFilter === 'groups' && (
-        <div className="border-t border-gray-100 pt-4 px-2">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+        <div className="border-t border-gray-100 dark:border-gray-800 pt-4 px-2">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
             Lọc nhóm
           </p>
           <div className="space-y-2">
@@ -183,9 +183,9 @@ export const SearchSidebar = ({
               { label: 'Nhóm công khai', value: 'public' },
               { label: 'Nhóm riêng tư', value: 'private' },
             ].map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2 py-1.5">
+              <label key={opt.value} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 py-1.5">
                 <input type="radio" name="group_filter" value={opt.value} defaultChecked={opt.value === 'all'} className="accent-blue-600" />
-                <span className="text-sm text-gray-700">{opt.label}</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
               </label>
             ))}
           </div>

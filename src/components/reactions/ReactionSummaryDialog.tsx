@@ -96,7 +96,7 @@ export function ReactionSummaryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[640px] gap-0 overflow-hidden rounded-[20px] border-0 p-0 sm:max-h-[72vh]">
-        <DialogHeader className="border-b border-gray-200 px-5 pt-4">
+        <DialogHeader className="border-b border-gray-200 dark:border-gray-700 px-5 pt-4">
           <DialogTitle className="sr-only">Chi tiết cảm xúc</DialogTitle>
           <DialogDescription className="sr-only">
             Hiển thị tổng số cảm xúc và danh sách người dùng theo từng loại cảm xúc.
@@ -109,8 +109,8 @@ export function ReactionSummaryDialog({
               className={cn(
                 'border-b-[3px] pb-3 text-[16px] font-semibold transition-colors',
                 activeFilter === 'ALL'
-                  ? 'border-blue-500 text-gray-900'
-                  : 'border-transparent text-gray-500 hover:text-gray-800',
+                  ? 'border-blue-500 text-gray-900 dark:text-gray-100'
+                  : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-200',
               )}
             >
               Tất cả
@@ -127,8 +127,8 @@ export function ReactionSummaryDialog({
                 className={cn(
                   'flex items-center gap-1.5 border-b-[3px] pb-3 text-[16px] font-semibold transition-colors',
                   activeFilter === reaction.type
-                    ? 'border-blue-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:text-gray-800',
+                    ? 'border-blue-500 text-gray-900 dark:text-gray-100'
+                    : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-200',
                 )}
               >
                 <img src={reaction.emoji} alt={reaction.label} width={20} height={20} draggable={false} />
@@ -140,7 +140,7 @@ export function ReactionSummaryDialog({
               <button
                 type="button"
                 onClick={() => setShowMoreOpen((open) => !open)}
-                className="flex items-center gap-1 border-b-[3px] border-transparent pb-3 text-[16px] font-semibold text-gray-500 hover:text-gray-800"
+                className="flex items-center gap-1 border-b-[3px] border-transparent pb-3 text-[16px] font-semibold text-gray-500 hover:text-gray-800 dark:text-gray-200"
               >
                 <span>Xem thêm</span>
                 <ChevronDown className="h-4 w-4" />
@@ -148,7 +148,7 @@ export function ReactionSummaryDialog({
             )}
 
             {activeReactions.length > 3 && showMoreOpen && (
-              <div className="absolute left-[120px] top-[52px] z-20 min-w-[160px] rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+              <div className="absolute left-[120px] top-[52px] z-20 min-w-[160px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
                 {activeReactions.slice(3).map((reaction) => (
                   <button
                     key={reaction.type}
@@ -160,13 +160,13 @@ export function ReactionSummaryDialog({
                     className={cn(
                       'flex w-full items-center gap-2 px-3 py-2 text-left text-[14px]',
                       activeFilter === reaction.type
-                        ? 'bg-blue-50 font-semibold text-gray-900'
-                        : 'text-gray-700 hover:bg-gray-100',
+                        ? 'bg-blue-50 font-semibold text-gray-900 dark:text-gray-100'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-muted',
                     )}
                   >
                     <img src={reaction.emoji} alt={reaction.label} width={18} height={18} draggable={false} />
                     <span className="flex-1 truncate">{reaction.label}</span>
-                    <span className="text-[13px] text-gray-500">{resolvedCounts[reaction.type]}</span>
+                    <span className="text-[13px] text-gray-500 dark:text-gray-400">{resolvedCounts[reaction.type]}</span>
                   </button>
                 ))}
               </div>
@@ -175,12 +175,12 @@ export function ReactionSummaryDialog({
         </DialogHeader>
 
         <div className="max-h-[480px] overflow-y-auto px-5 py-3.5">
-          {isLoading && <p className="text-sm text-gray-500">Đang tải danh sách cảm xúc...</p>}
+          {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách cảm xúc...</p>}
 
           {!isLoading && error && <p className="text-sm text-red-500">{error}</p>}
 
           {!isLoading && !error && totalCount <= 0 && (
-            <p className="text-sm text-gray-500">Chưa có cảm xúc nào cho bài viết này.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Chưa có cảm xúc nào cho bài viết này.</p>
           )}
 
           {!isLoading && !error && filteredUsers.length > 0 && (
@@ -199,24 +199,24 @@ export function ReactionSummaryDialog({
                             className="h-12 w-12 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-600">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-gray-600 dark:text-gray-400">
                             {user.fullName.slice(0, 1).toUpperCase()}
                           </div>
                         )}
-                        <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white leading-none">
+                        <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white dark:bg-gray-800 leading-none">
                           {reaction?.emoji && <img src={reaction.emoji} alt={reaction.label} width={14} height={14} draggable={false} />}
                         </span>
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-[14px] font-semibold text-gray-900">{user.fullName}</p>
-                        <p className="truncate text-[13px] text-gray-500">@{user.username}</p>
+                        <p className="truncate text-[14px] font-semibold text-gray-900 dark:text-gray-100">{user.fullName}</p>
+                        <p className="truncate text-[13px] text-gray-500 dark:text-gray-400">@{user.username}</p>
                       </div>
                     </div>
 
                     <button
                       type="button"
-                      className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gray-200 px-4 py-2.5 text-[14px] font-semibold text-gray-900 transition-colors hover:bg-gray-300"
+                      className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gray-200 dark:bg-gray-700 px-4 py-2.5 text-[14px] font-semibold text-gray-900 dark:text-gray-100 transition-colors hover:bg-gray-300"
                     >
                       <UserPlus className="h-4 w-4" />
                       <span>Thêm bạn bè</span>

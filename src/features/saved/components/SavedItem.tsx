@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { PostShareModal } from '@/components/posts/PostShareModal';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { AddToCollectionModal, type Collection } from './AddToCollectionModal';
 import { collectionService } from '@/services/collectionService';
 import { authService } from '@/services/authService';
@@ -75,14 +76,14 @@ export const SavedItem = ({
 
   return (
     <>
-      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 flex gap-4 hover:shadow-sm transition-shadow">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4 flex gap-4 hover:shadow-sm dark:shadow-none transition-shadow">
         {/* Thumbnail */}
         <div
-          className="w-48 h-48 rounded-lg overflow-hidden shrink-0 relative bg-gray-100 border border-gray-100 cursor-pointer"
+          className="w-48 h-48 rounded-lg overflow-hidden shrink-0 relative bg-gray-100 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer"
           onClick={handleOpenPost}
         >
           {!imgLoaded && !imgError && (
-            <div className="absolute inset-0 bg-gray-200 animate-pulse" />
+            <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse" />
           )}
           <img
             src={imgError ? PLACEHOLDER_THUMBNAIL : (thumbnail || PLACEHOLDER_THUMBNAIL)}
@@ -103,24 +104,26 @@ export const SavedItem = ({
         {/* Content */}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 line-clamp-2 mb-1 hover:underline cursor-pointer" onClick={handleOpenPost}>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 line-clamp-2 mb-1 hover:underline cursor-pointer" onClick={handleOpenPost}>
               {title}
             </h2>
-            <div className="text-[13px] text-gray-500 flex items-center gap-1.5 mb-3">
+            <div className="text-[13px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mb-3">
               <span>{type}</span>
               <span>·</span>
               <span className="font-semibold">{source}</span>
             </div>
 
             <div className="flex items-center gap-2 mb-4">
-              <img
-                src={author.avatar}
-                alt={author.name}
-                className="w-6 h-6 rounded-full object-cover"
+              <UserAvatar
+                name={author.name}
+                avatarUrl={author.avatar}
+                className="w-6 h-6"
+                rounded="full"
+                initialsClassName="text-[10px] font-bold"
               />
-              <span className="text-[13px] text-gray-600">
-                Đã lưu từ <span className="font-semibold text-gray-900 hover:underline cursor-pointer">bài viết của {author.name}</span>
-                {savedFrom && <span> trong <span className="font-semibold text-gray-900 hover:underline cursor-pointer">{savedFrom}</span></span>}
+              <span className="text-[13px] text-gray-600 dark:text-gray-400">
+                Đã lưu từ <span className="font-semibold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">bài viết của {author.name}</span>
+                {savedFrom && <span> trong <span className="font-semibold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{savedFrom}</span></span>}
               </span>
             </div>
           </div>
@@ -130,7 +133,7 @@ export const SavedItem = ({
               className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-[15px] transition-colors cursor-pointer ${
                 isAddedToCurrentCollection
                   ? 'bg-blue-50 hover:bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                  : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100'
               }`}
               onClick={handleOpenCollectionModal}
             >
@@ -138,16 +141,16 @@ export const SavedItem = ({
               {isAddedToCurrentCollection ? 'Đã thêm vào bộ sưu tập' : 'Thêm vào bộ sưu tập'}
             </button>
             <button
-              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer"
+              className="p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
               onClick={() => setShareOpen(true)}
             >
-              <Share2 className="w-5 h-5 text-gray-700" />
+              <Share2 className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer">
-                  <MoreHorizontal className="w-5 h-5 text-gray-700" />
+                <button className="p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer">
+                  <MoreHorizontal className="w-5 h-5 text-gray-700 dark:text-gray-300" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">

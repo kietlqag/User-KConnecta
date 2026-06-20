@@ -4,6 +4,7 @@ import { CommentInput } from './CommentInput';
 import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
 import { toast } from 'sonner';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 export interface Comment {
   id: string;
@@ -85,7 +86,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
       userId: r.userId,
       author: {
         name: r.userFullName ?? '',
-        avatar: r.userAvatarUrl || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(r.userFullName || 'User')}`,
+        avatar: r.userAvatarUrl || '',
       },
       content: r.content ?? '',
       timestamp: formatCommentTime(r.createdAt),
@@ -216,8 +217,8 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
   if (pendingDelete) {
     return (
       <div style={{ marginLeft: depth > 0 ? indent : 0 }}>
-        <div className="flex items-center gap-3 rounded-2xl bg-gray-100 px-4 py-3">
-          <p className="flex-1 text-sm text-gray-500 italic">Bình luận đã bị xóa.</p>
+        <div className="flex items-center gap-3 rounded-2xl bg-gray-100 dark:bg-gray-900 px-4 py-3">
+          <p className="flex-1 text-sm text-gray-500 dark:text-gray-400 italic">Bình luận đã bị xóa.</p>
           <button
             onClick={handleUndo}
             className="text-sm font-semibold text-emerald-600 hover:underline cursor-pointer whitespace-nowrap"
@@ -233,7 +234,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
   if (isDeletedState) {
     return (
       <div style={{ marginLeft: depth > 0 ? indent : 0 }}>
-        <div className="text-sm text-gray-400 italic px-1 py-1 border-l-2 border-gray-200 pl-3">
+        <div className="text-sm text-gray-400 italic px-1 py-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
           Bình luận đã bị xóa.
         </div>
 
@@ -242,9 +243,9 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
             <button
               onClick={() => void handleShowReplies()}
               disabled={isLoadingReplies}
-              className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:underline px-3 cursor-pointer disabled:opacity-60"
+              className="flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:underline px-3 cursor-pointer disabled:opacity-60"
             >
-              <div className="w-6 h-0.5 bg-gray-300" />
+              <div className="w-6 h-0.5 bg-gray-300 dark:bg-gray-600" />
               {isLoadingReplies ? 'Đang tải...' : showReplies ? 'Ẩn phản hồi' : `${totalReplies} phản hồi`}
             </button>
 
@@ -280,11 +281,16 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
       )}
 
       <div className="flex gap-2 group">
-        <img
-          src={comment.author.avatar}
-          alt={comment.author.name}
-          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-        />
+        <div className="w-8 h-8 shrink-0">
+          <UserAvatar
+            name={comment.author.name}
+            avatarUrl={comment.author.avatar}
+            userId={comment.userId ?? undefined}
+            className="w-8 h-8"
+            rounded="full"
+            initialsClassName="text-xs font-bold"
+          />
+        </div>
         <div className="flex-1">
           {/* Comment Bubble / Edit mode */}
           {isEditing ? (
@@ -298,9 +304,9 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                 }}
                 rows={2}
                 autoFocus
-                className="w-full rounded-2xl bg-gray-100 px-3 py-2 text-[15px] outline-none resize-none focus:ring-2 focus:ring-emerald-400"
+                className="w-full rounded-2xl bg-gray-100 dark:bg-gray-900 px-3 py-2 text-[15px] outline-none resize-none focus:ring-2 focus:ring-emerald-400"
               />
-              <div className="flex gap-2 mt-1 px-1 text-xs text-gray-500">
+              <div className="flex gap-2 mt-1 px-1 text-xs text-gray-500 dark:text-gray-400">
                 <span>Enter để lưu · Esc để hủy</span>
                 <button
                   onClick={() => void handleSaveEdit()}
@@ -311,14 +317,14 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                 </button>
                 <button
                   onClick={() => { setIsEditing(false); setEditContent(comment.content); }}
-                  className="font-semibold text-gray-600 hover:underline cursor-pointer"
+                  className="font-semibold text-gray-600 dark:text-gray-400 hover:underline cursor-pointer"
                 >
                   Hủy
                 </button>
               </div>
             </div>
           ) : (
-            <div className="bg-gray-100 rounded-2xl px-3 py-2 inline-block max-w-full">
+            <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl px-3 py-2 inline-block max-w-full">
               <p className="font-semibold text-[13px] mb-0.5">{comment.author.name}</p>
               <p className="text-[15px] break-words">{comment.content}</p>
             </div>
@@ -329,23 +335,23 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
             <button
               onClick={() => void handleLike()}
               disabled={isLiking}
-              className={`text-xs font-semibold hover:underline cursor-pointer disabled:opacity-60 ${isLiked ? 'text-blue-600' : 'text-gray-600'}`}
+              className={`text-xs font-semibold hover:underline cursor-pointer disabled:opacity-60 ${isLiked ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400'}`}
             >
               Thích
             </button>
             <button
               onClick={() => setShowReplyInput((v) => !v)}
-              className="text-xs font-semibold text-gray-600 hover:underline cursor-pointer"
+              className="text-xs font-semibold text-gray-600 dark:text-gray-400 hover:underline cursor-pointer"
             >
               Trả lời
             </button>
-            <span className="text-xs text-gray-500">{comment.timestamp}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{comment.timestamp}</span>
             {likeCount > 0 && (
               <div className="flex items-center gap-1">
                 <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
                   <ThumbsUp className="w-2.5 h-2.5 text-white fill-white" />
                 </div>
-                <span className="text-xs text-gray-600">{likeCount}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">{likeCount}</span>
               </div>
             )}
           </div>
@@ -355,6 +361,8 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
             <div className={`mt-2 ${isSubmittingReply ? 'pointer-events-none opacity-70' : ''}`}>
               <CommentInput
                 onSubmit={handleReplySubmit}
+                userName={currentUser?.fullName}
+                userId={currentUser?.id}
                 userAvatar={currentUser?.avatarUrl}
                 placeholder={`Trả lời ${comment.author.name}...`}
                 autoFocus
@@ -368,7 +376,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
               <button
                 onClick={() => void handleShowReplies()}
                 disabled={isLoadingReplies}
-                className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:underline px-3 cursor-pointer disabled:opacity-60"
+                className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:underline px-3 cursor-pointer disabled:opacity-60"
               >
                 <div className="w-6 h-0.5 bg-gray-400" />
                 {isLoadingReplies
@@ -401,18 +409,18 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
           <div className="relative h-fit" ref={menuRef}>
             <button
               onClick={() => setShowMenu((v) => !v)}
-              className="p-1 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              className="p-1 hover:bg-muted rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
             >
-              <MoreHorizontal className="w-4 h-4 text-gray-600" />
+              <MoreHorizontal className="w-4 h-4 text-gray-600 dark:text-gray-400" />
             </button>
 
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                <div className="absolute right-0 top-7 z-20 w-40 rounded-xl bg-white shadow-lg border border-gray-200 py-1 overflow-hidden">
+                <div className="absolute right-0 top-7 z-20 w-40 rounded-xl bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 py-1 overflow-hidden">
                   <button
                     onClick={() => { setShowMenu(false); setIsEditing(true); setEditContent(comment.content); }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-muted transition-colors cursor-pointer"
                   >
                     <Pencil className="w-4 h-4" />
                     Chỉnh sửa

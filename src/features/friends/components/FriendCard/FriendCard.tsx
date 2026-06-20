@@ -67,7 +67,7 @@ export const FriendCard = ({
   const isSuggestion = showRemove && onRemoveSuggestion && !friend.isFriend && !pendingFriendshipId;
 
   return (
-    <div className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+    <div className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:shadow-none transition-all hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
       <Link
         to={`/profile/${friend.userId}`}
         className="relative block aspect-square w-full overflow-hidden bg-gray-100 dark:bg-gray-700"
@@ -125,7 +125,7 @@ export const FriendCard = ({
             <button
               onClick={handleCancel}
               disabled={loading !== null}
-              className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-200 px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-200 dark:bg-gray-700 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading === 'cancel' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -140,7 +140,7 @@ export const FriendCard = ({
                 <button
                   onClick={handleAdd}
                   disabled={loading !== null}
-                  className="flex h-10 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="flex h-10 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-2 text-sm font-semibold text-white shadow-sm dark:shadow-none transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading === 'add' ? (
                     <Loader2 className="h-4 w-4 shrink-0 animate-spin" />

@@ -289,7 +289,7 @@ export function EditPostModal({
             type="button"
             onClick={handleClose}
             disabled={isSaving}
-            className="absolute right-4 rounded-full p-2 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-700"
+            className="absolute right-4 rounded-full p-2 transition-colors hover:bg-gray-100 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-700"
           >
             <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
           </button>
@@ -370,7 +370,7 @@ export function EditPostModal({
                     type="button"
                     onClick={() => removeMedia(item.id)}
                     disabled={isSaving}
-                    className="absolute right-2 top-2 rounded-full bg-white/90 p-1 text-gray-700 shadow hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="absolute right-2 top-2 rounded-full bg-white dark:bg-gray-800/90 p-1 text-gray-700 dark:text-gray-300 shadow hover:bg-white dark:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -392,7 +392,7 @@ export function EditPostModal({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isSaving}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             <Image className="h-4 w-4" />
             Thêm ảnh/video

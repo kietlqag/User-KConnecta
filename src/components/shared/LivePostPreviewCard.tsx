@@ -304,7 +304,7 @@ export function LivePostPreviewCard({
     return (
       <>
         <div className={className}>
-          <div className="rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40">
             <div className="flex items-start justify-between gap-3">
               <button
                 type="button"
@@ -315,11 +315,11 @@ export function LivePostPreviewCard({
                 <div className="mb-2 inline-flex rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
                   {scheduledLiveAt ? 'Đã lên lịch' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
                 </div>
-                <p className="font-semibold text-gray-900 line-clamp-1">{liveTitle}</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">{liveTitle}</p>
                 {liveDescription && (
-                  <p className="mt-1 text-sm text-gray-600 line-clamp-2">{liveDescription}</p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{liveDescription}</p>
                 )}
-                <p className="mt-2 text-xs text-gray-500">
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                   {scheduledLiveAt
                     ? `Bắt đầu lúc ${scheduledLiveAt}`
                     : liveReplayUrl
@@ -389,9 +389,9 @@ export function LivePostPreviewCard({
               <DialogDescription className="sr-only">Danh sách người đăng ký nhắc nhở trước khi live bắt đầu</DialogDescription>
             </DialogHeader>
             {isSubscribersLoading ? (
-              <p className="py-6 text-center text-sm text-gray-500">Đang tải...</p>
+              <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</p>
             ) : eventSubscribers.length === 0 ? (
-              <p className="py-6 text-center text-sm text-gray-500">Chưa có ai đăng ký nhắc nhở.</p>
+              <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Chưa có ai đăng ký nhắc nhở.</p>
             ) : (
               <div className="max-h-80 space-y-2 overflow-y-auto">
                 {eventSubscribers.map((subscriber) => (
@@ -402,7 +402,7 @@ export function LivePostPreviewCard({
                       setIsSubscribersOpen(false);
                       navigate(`/profile/${subscriber.userId}`);
                     }}
-                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-gray-100"
+                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-muted"
                   >
                     <ImageWithFallback
                       src={subscriber.avatarUrl || ''}
@@ -410,10 +410,10 @@ export function LivePostPreviewCard({
                       className="h-10 w-10 rounded-full object-cover"
                     />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-gray-900">
+                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                         {subscriber.fullName || subscriber.username}
                       </p>
-                      <p className="text-xs text-gray-500">@{subscriber.username}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">@{subscriber.username}</p>
                     </div>
                   </button>
                 ))}
@@ -428,7 +428,7 @@ export function LivePostPreviewCard({
   return (
     <>
       <div className={className}>
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-zinc-950 shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-zinc-950 shadow-sm dark:shadow-none">
           <button
             ref={livePreviewRootRef}
             type="button"
@@ -460,7 +460,7 @@ export function LivePostPreviewCard({
               } [background:radial-gradient(circle_at_25%_25%,rgba(239,68,68,.45),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(37,99,235,.38),transparent_30%),linear-gradient(135deg,rgba(15,23,42,.2),rgba(0,0,0,.9))]`}
             />
             <div className={`absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow ${isLiveEnded ? 'bg-gray-700' : 'bg-red-600'}`}>
-              <span className={`h-2 w-2 rounded-full bg-white ${isLiveEnded ? '' : 'animate-pulse'}`} />
+              <span className={`h-2 w-2 rounded-full bg-white dark:bg-gray-800 ${isLiveEnded ? '' : 'animate-pulse'}`} />
               {scheduledLiveAt ? 'Đã lên lịch' : liveReplayUrl ? 'Phát lại' : isRecordingProcessing ? 'Đang xử lý' : isRecordingFailed ? 'Lỗi bản ghi' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
             </div>
             {isLivePreviewConnecting && (
@@ -472,7 +472,7 @@ export function LivePostPreviewCard({
             )}
             {!showLiveVideo && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`flex h-16 w-16 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur ${
+                <span className={`flex h-16 w-16 items-center justify-center rounded-full bg-white dark:bg-gray-800/15 text-white ring-1 ring-white/25 backdrop-blur ${
                   isScheduledLockedForHost ? '' : 'transition-transform group-hover:scale-105'
                 }`}>
                   {isScheduledLockedForHost ? (
@@ -512,8 +512,8 @@ export function LivePostPreviewCard({
           {!compact && (
             <div className="flex items-center justify-between gap-3 bg-surface px-4 py-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-gray-900">{liveTitle}</p>
-                <p className="text-xs text-gray-500">
+                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{liveTitle}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {scheduledLiveAt
                     ? isOwner && !canStartScheduledLive
                       ? `Có thể bắt đầu phát lúc ${scheduledLiveAt}`
@@ -597,9 +597,9 @@ export function LivePostPreviewCard({
             <DialogDescription className="sr-only">Danh sách người đăng ký nhắc nhở trước khi live bắt đầu</DialogDescription>
           </DialogHeader>
           {isSubscribersLoading ? (
-            <p className="py-6 text-center text-sm text-gray-500">Đang tải...</p>
+            <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</p>
           ) : eventSubscribers.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-500">Chưa có ai đăng ký nhắc nhở.</p>
+            <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Chưa có ai đăng ký nhắc nhở.</p>
           ) : (
             <div className="max-h-80 space-y-2 overflow-y-auto">
               {eventSubscribers.map((subscriber) => (
@@ -610,7 +610,7 @@ export function LivePostPreviewCard({
                     setIsSubscribersOpen(false);
                     navigate(`/profile/${subscriber.userId}`);
                   }}
-                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-gray-100"
+                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-muted"
                 >
                   <ImageWithFallback
                     src={subscriber.avatarUrl || ''}
@@ -618,10 +618,10 @@ export function LivePostPreviewCard({
                     className="h-10 w-10 rounded-full object-cover"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-gray-900">
+                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {subscriber.fullName || subscriber.username}
                     </p>
-                    <p className="text-xs text-gray-500">@{subscriber.username}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">@{subscriber.username}</p>
                   </div>
                 </button>
               ))}

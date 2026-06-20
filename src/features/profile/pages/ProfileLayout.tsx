@@ -155,7 +155,7 @@ export function ProfileLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
       <Header />
       <div className="pt-14">
         <ProfileHeader

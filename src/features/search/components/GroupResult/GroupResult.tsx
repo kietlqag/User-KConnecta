@@ -12,9 +12,9 @@ export const GroupResult = ({ group, onJoinToggle }: GroupResultProps) => {
   const goToGroup = () => navigate(`/groups/${group.id}`);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none overflow-hidden hover:shadow-md transition-shadow">
       {/* Cover Image */}
-      <div className="h-32 w-full overflow-hidden bg-gray-200 cursor-pointer" onClick={goToGroup}>
+      <div className="h-32 w-full overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer" onClick={goToGroup}>
         <img
           src={group.coverImage}
           alt={group.name}
@@ -32,7 +32,7 @@ export const GroupResult = ({ group, onJoinToggle }: GroupResultProps) => {
         </h3>
 
         {/* Privacy and Member Count */}
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
           {group.privacy === 'public' ? (
             <Globe className="w-4 h-4" />
           ) : (
@@ -49,9 +49,9 @@ export const GroupResult = ({ group, onJoinToggle }: GroupResultProps) => {
           disabled={group.isPending}
           className={`w-full px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer ${
             group.isPending
-              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+              ? 'bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               : group.isMember
-              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
         >

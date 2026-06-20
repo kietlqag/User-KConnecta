@@ -86,8 +86,6 @@ const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low'];
 
 interface SeverityConfig {
   label: string;
-  shortConsequence: string;
-  fullConsequence: string;
   borderColor: string;
   badgeBg: string;
   badgeText: string;
@@ -100,8 +98,6 @@ interface SeverityConfig {
 const SEVERITY_CONFIG: Record<string, SeverityConfig> = {
   critical: {
     label: 'Nghiêm trọng',
-    shortConsequence: 'Khóa vĩnh viễn',
-    fullConsequence: 'Khóa tài khoản vĩnh viễn — không có ngoại lệ',
     borderColor: 'border-l-red-500',
     badgeBg: 'bg-red-100',
     badgeText: 'text-red-700',
@@ -112,8 +108,6 @@ const SEVERITY_CONFIG: Record<string, SeverityConfig> = {
   },
   high: {
     label: 'Cao',
-    shortConsequence: 'Tạm khóa 7–30 ngày',
-    fullConsequence: 'Tạm khóa tài khoản từ 7–30 ngày để xem xét',
     borderColor: 'border-l-orange-500',
     badgeBg: 'bg-orange-100',
     badgeText: 'text-orange-700',
@@ -124,8 +118,6 @@ const SEVERITY_CONFIG: Record<string, SeverityConfig> = {
   },
   medium: {
     label: 'Trung bình',
-    shortConsequence: 'Cảnh báo + ẩn bài',
-    fullConsequence: 'Nội dung bị ẩn và nhận cảnh báo. Vi phạm thêm sẽ bị hạn chế tài khoản',
     borderColor: 'border-l-yellow-500',
     badgeBg: 'bg-yellow-100',
     badgeText: 'text-yellow-700',
@@ -136,14 +128,12 @@ const SEVERITY_CONFIG: Record<string, SeverityConfig> = {
   },
   low: {
     label: 'Thấp',
-    shortConsequence: 'Nhắc nhở',
-    fullConsequence: 'Nhận nhắc nhở, không bị phạt ngay — nhưng cần điều chỉnh',
     borderColor: 'border-l-gray-400',
-    badgeBg: 'bg-gray-100',
-    badgeText: 'text-gray-600',
-    headerBg: 'bg-gray-50',
-    headerText: 'text-gray-700',
-    headerBorder: 'border-gray-200',
+    badgeBg: 'bg-gray-100 dark:bg-gray-900',
+    badgeText: 'text-gray-600 dark:text-gray-400',
+    headerBg: 'bg-gray-50 dark:bg-gray-900',
+    headerText: 'text-gray-700 dark:text-gray-300',
+    headerBorder: 'border-gray-200 dark:border-gray-700',
     icon: <Info className="w-4 h-4" />,
   },
 };
@@ -151,14 +141,12 @@ const SEVERITY_CONFIG: Record<string, SeverityConfig> = {
 function getSeverityConfig(severity: string): SeverityConfig {
   return SEVERITY_CONFIG[severity.toLowerCase()] ?? {
     label: severity,
-    shortConsequence: 'Tùy mức độ',
-    fullConsequence: 'Xử lý tùy theo mức độ vi phạm',
     borderColor: 'border-l-gray-300',
-    badgeBg: 'bg-gray-100',
-    badgeText: 'text-gray-600',
-    headerBg: 'bg-gray-50',
-    headerText: 'text-gray-700',
-    headerBorder: 'border-gray-200',
+    badgeBg: 'bg-gray-100 dark:bg-gray-900',
+    badgeText: 'text-gray-600 dark:text-gray-400',
+    headerBg: 'bg-gray-50 dark:bg-gray-900',
+    headerText: 'text-gray-700 dark:text-gray-300',
+    headerBorder: 'border-gray-200 dark:border-gray-700',
     icon: <Info className="w-4 h-4" />,
   };
 }
@@ -197,9 +185,6 @@ function RuleGroup({ severity, rules }: { severity: string; rules: PublicCommuni
             {cfg.icon}
             {cfg.label}
           </span>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.badgeBg} ${cfg.badgeText}`}>
-            {cfg.shortConsequence}
-          </span>
         </div>
         {open
           ? <ChevronUp className={`w-4 h-4 ${cfg.headerText}`} />
@@ -207,24 +192,15 @@ function RuleGroup({ severity, rules }: { severity: string; rules: PublicCommuni
         }
       </button>
 
-      {/* Consequence explanation */}
-      {open && (
-        <div className={`px-4 py-2 border-b ${cfg.headerBorder} ${cfg.headerBg}`}>
-          <p className={`text-xs ${cfg.headerText} opacity-80`}>
-            ⚠ Hình thức xử lý: <span className="font-medium">{cfg.fullConsequence}</span>
-          </p>
-        </div>
-      )}
-
       {/* Rule list */}
       {open && (
         <ul className="divide-y divide-gray-100">
           {rules.map((rule) => {
             const detail = getRuleDetail(rule.label);
             return (
-              <li key={rule.id} className={`border-l-4 ${cfg.borderColor} px-4 py-4 bg-white`}>
-                <p className="font-semibold text-gray-900 mb-1">{rule.label}</p>
-                <p className="text-sm text-gray-600 mb-2">
+              <li key={rule.id} className={`border-l-4 ${cfg.borderColor} px-4 py-4 bg-white dark:bg-gray-800`}>
+                <p className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{rule.label}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                   {detail?.what ?? rule.description}
                 </p>
                 {(detail?.examples ?? (rule.description ? [rule.description] : [])).length > 0 && (
@@ -232,8 +208,8 @@ function RuleGroup({ severity, rules }: { severity: string; rules: PublicCommuni
                     <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Ví dụ thực tế</p>
                     <ul className="space-y-1">
                       {(detail?.examples ?? [rule.description]).map((ex) => (
-                        <li key={ex} className="flex items-start gap-1.5 text-sm text-gray-500">
-                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0" />
+                        <li key={ex} className="flex items-start gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
                           {ex}
                         </li>
                       ))}
@@ -249,18 +225,52 @@ function RuleGroup({ severity, rules }: { severity: string; rules: PublicCommuni
   );
 }
 
+// ─── Escalation ladder (đọc từ violationPolicies của admin) ──────────────────
+
+interface ViolationStep {
+  offense: number;
+  action: string;
+  lockDays?: number;
+}
+
+const ACTION_TEXT: Record<string, string> = {
+  warning: 'Cảnh cáo',
+  lock_temp: 'Khóa tạm',
+  ban_permanent: 'Ban vĩnh viễn',
+};
+
+function getEscalationSteps(fullConfig?: Record<string, unknown>): ViolationStep[] {
+  const policies = fullConfig?.violationPolicies;
+  if (!Array.isArray(policies) || policies.length === 0) return [];
+  const def =
+    (policies.find((p) => (p as { id?: string }).id === 'default') ?? policies[0]) as
+      | { steps?: unknown }
+      | undefined;
+  const steps = def?.steps;
+  if (!Array.isArray(steps)) return [];
+  return (steps as ViolationStep[]).slice().sort((a, b) => a.offense - b.offense);
+}
+
+function stepText(step: ViolationStep): string {
+  const action = ACTION_TEXT[step.action] ?? step.action;
+  return step.action === 'lock_temp' && step.lockDays != null
+    ? `${action} ${step.lockDays} ngày`
+    : action;
+}
+
 // ─── Main page ───────────────────────────────────────────────────────────────
 
 export default function CommunityPoliciesPage() {
   const { data: policy, isLoading, isError } = usePublicPolicies();
+  const escalationSteps = getEscalationSteps(policy?.fullConfig);
 
   return (
     <div className="min-h-screen bg-[#f0f2f5]">
       <Header />
       <div className="max-w-3xl mx-auto px-4 pt-20 pb-8">
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Chính sách cộng đồng</h1>
-        <p className="text-sm text-gray-600 mb-1">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">Chính sách cộng đồng</h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
           Đọc để biết điều gì bị cấm và bạn sẽ bị xử lý thế nào nếu vi phạm.
         </p>
         {policy?.updatedAt && (
@@ -270,21 +280,42 @@ export default function CommunityPoliciesPage() {
         )}
 
         {isLoading ? (
-          <p className="text-gray-500">Đang tải chính sách…</p>
+          <p className="text-gray-500 dark:text-gray-400">Đang tải chính sách…</p>
         ) : isError ? (
           <p className="text-red-600">Không tải được chính sách. Thử lại sau.</p>
         ) : policy ? (
           <div className="space-y-4">
 
             {/* Quy tắc cộng đồng */}
-            <section className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-1">
                 <Shield className="w-5 h-5 text-blue-600" />
                 Quy tắc cộng đồng
               </h2>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                 Vi phạm nhiều lần sẽ bị nâng mức xử phạt. Bấm vào từng mục để xem chi tiết.
               </p>
+
+              {escalationSteps.length > 0 && (
+                <div className="mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400 mb-2">
+                    Mức xử phạt theo số lần vi phạm
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {escalationSteps.map((step, i) => (
+                      <React.Fragment key={step.offense}>
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1 text-sm">
+                          <span className="font-semibold text-gray-700 dark:text-gray-300">Lần {step.offense}:</span>
+                          <span className="text-gray-600 dark:text-gray-400">{stepText(step)}</span>
+                        </span>
+                        {i < escalationSteps.length - 1 && (
+                          <span className="text-gray-300" aria-hidden>→</span>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-3">
                 {groupRules(policy.communityRules).map(({ severity, rules }) => (
@@ -294,12 +325,12 @@ export default function CommunityPoliciesPage() {
             </section>
 
             {/* Bài viết & media */}
-            <section className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-1">
                 <FileText className="w-5 h-5 text-blue-600" />
                 Giới hạn bài viết &amp; media
               </h2>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                 Mỗi bài đăng phải nằm trong giới hạn sau để đảm bảo trải nghiệm cho tất cả mọi người.
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -310,21 +341,21 @@ export default function CommunityPoliciesPage() {
                   { label: 'Định dạng cho phép', value: policy.postPolicy.allowedFileTypes },
                   { label: 'Tần suất đăng', value: `Tối đa ${policy.postPolicy.postsPerMinute} bài / phút` },
                 ].map(({ label, value }) => (
-                  <div key={label} className="flex justify-between items-start rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5 gap-2">
-                    <span className="text-sm text-gray-500 flex-shrink-0">{label}</span>
-                    <span className="text-sm font-medium text-gray-800 text-right">{value}</span>
+                  <div key={label} className="flex justify-between items-start rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 px-3 py-2.5 gap-2">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{label}</span>
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200 text-right">{value}</span>
                   </div>
                 ))}
               </div>
             </section>
 
             {/* Chat */}
-            <section className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-1">
                 <MessageSquare className="w-5 h-5 text-blue-600" />
                 Quy định nhắn tin
               </h2>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                 Hệ thống tự động bảo vệ bạn khỏi spam và nội dung nguy hiểm trong tin nhắn.
               </p>
               <div className="space-y-2">
@@ -347,27 +378,27 @@ export default function CommunityPoliciesPage() {
                 ].map(({ label, note, enabled }) => (
                   <div
                     key={label}
-                    className={`rounded-lg border px-3 py-2.5 ${enabled ? 'bg-green-50 border-green-100' : 'bg-gray-50 border-gray-100'}`}
+                    className={`rounded-lg border px-3 py-2.5 ${enabled ? 'bg-green-50 border-green-100' : 'bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-800'}`}
                   >
                     <div className="flex justify-between items-center gap-2">
-                      <span className="text-sm font-medium text-gray-800">{label}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${enabled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{label}</span>
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${enabled ? 'bg-green-100 text-green-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
                         {enabled ? 'Đang bật' : 'Đang tắt'}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">{note}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{note}</p>
                   </div>
                 ))}
               </div>
             </section>
 
             {/* Quyền riêng tư */}
-            <section className="bg-white rounded-xl border border-gray-200 p-5">
-              <h2 className="flex items-center gap-2 font-semibold text-gray-900 mb-1">
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+              <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-1">
                 <Lock className="w-5 h-5 text-blue-600" />
                 Quyền riêng tư &amp; dữ liệu của bạn
               </h2>
-              <p className="text-sm text-gray-500 mb-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                 KConnecta lưu dữ liệu có thời hạn và cho phép bạn kiểm soát tài khoản của mình.
               </p>
               <div className="space-y-2">
@@ -401,10 +432,10 @@ export default function CommunityPoliciesPage() {
                 ].map(({ label, value, highlight }) => (
                   <div
                     key={label}
-                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5 gap-0.5"
+                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 px-3 py-2.5 gap-0.5"
                   >
-                    <span className="text-sm text-gray-500">{label}</span>
-                    <span className={`text-sm font-medium ${highlight ? 'text-green-700' : 'text-gray-800'}`}>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
+                    <span className={`text-sm font-medium ${highlight ? 'text-green-700' : 'text-gray-800 dark:text-gray-200'}`}>
                       {value}
                     </span>
                   </div>

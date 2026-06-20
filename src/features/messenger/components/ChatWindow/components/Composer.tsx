@@ -127,7 +127,7 @@ export const Composer: React.FC<ComposerProps> = ({
   };
 
   return (
-    <div className="p-3 bg-white border-t border-gray-200">
+    <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
       {cooldownSeconds > 0 && (
         <div className="mb-2 px-1 text-[11px] font-medium text-red-600">
           Tạm dừng gửi tin — thử lại sau {cooldownSeconds}s
@@ -135,12 +135,12 @@ export const Composer: React.FC<ComposerProps> = ({
       )}
 
       {replyToMessage && (
-        <div className="mb-2 px-3 py-2 bg-gray-50 rounded-xl border-l-4 border-blue-500 flex items-center justify-between group">
+        <div className="mb-2 px-3 py-2 bg-gray-50 dark:bg-gray-900 rounded-xl border-l-4 border-blue-500 flex items-center justify-between group">
           <div className="min-w-0">
             <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Đang trả lời</p>
-            <p className="text-sm text-gray-600 truncate">{replyToMessage.text}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{replyToMessage.text}</p>
           </div>
-          <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 rounded-full cursor-pointer">
+          <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-full cursor-pointer">
             <X className="w-4 h-4 text-gray-400" />
           </button>
         </div>
@@ -163,13 +163,13 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onStopAndSendVoice}
                 disabled={isSendingVoice}
-                className="w-7 h-7 flex items-center justify-center rounded-full bg-white text-blue-600 cursor-pointer"
+                className="w-7 h-7 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-blue-600 cursor-pointer"
               >
                 <Pause className="w-4 h-4 fill-current" />
               </button>
               <div className="flex-1 flex items-center gap-[3px] overflow-hidden">
                 {Array.from({ length: 30 }).map((_, i) => (
-                  <span key={i} className="h-1 w-1 rounded-full bg-white/90" />
+                  <span key={i} className="h-1 w-1 rounded-full bg-white dark:bg-gray-800/90" />
                 ))}
               </div>
               <span className="text-[11px] font-medium tabular-nums">
@@ -193,7 +193,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onStartVoice}
                 disabled={!connected || isSendingVoice}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 cursor-pointer"
+                className="p-2 hover:bg-muted rounded-full transition-colors disabled:opacity-50 cursor-pointer"
                 title="Gửi tin nhắn thoại"
               >
                 <Mic className="w-5 h-5 text-blue-600" />
@@ -203,7 +203,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onImageClick}
                 disabled={!connected || isSendingImage}
-                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
+                className="p-2 hover:bg-muted rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
                 title="Đính kèm ảnh"
               >
                 <ImageIcon className="w-5 h-5" />
@@ -212,7 +212,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onCameraClick}
                 disabled={!connected || isOpeningCamera}
-                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
+                className="p-2 hover:bg-muted rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
                 title="Chụp ảnh"
               >
                 <Camera className="w-5 h-5" />
@@ -229,14 +229,14 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onFileClick}
                 disabled={!connected || isSendingFile}
-                className="p-2 hover:bg-gray-100 rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
+                className="p-2 hover:bg-muted rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
                 title="Gửi file"
               >
                 <FileUp className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 relative bg-gray-100 rounded-2xl">
+            <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 rounded-2xl">
               <textarea
                 ref={textareaRef}
                 value={inputText}
@@ -275,7 +275,7 @@ export const Composer: React.FC<ComposerProps> = ({
                     onEmojiClick();
                     setShowEmojiPicker((prev) => !prev);
                   }}
-                  className="cursor-pointer rounded-full p-1.5 text-blue-600 hover:bg-gray-200"
+                  className="cursor-pointer rounded-full p-1.5 text-blue-600 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700"
                   title="Emoji"
                 >
                   <Smile className="w-5 h-5" />

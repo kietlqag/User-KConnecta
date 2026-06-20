@@ -73,7 +73,7 @@ export function ProfilePostScheduleModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+            className="rounded-full p-2 transition-colors hover:bg-muted"
           >
             <ArrowLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
           </button>
@@ -92,7 +92,7 @@ export function ProfilePostScheduleModal({
               type="button"
               onClick={() => setMode('now')}
               className={`flex w-full items-center gap-3 rounded-lg p-3 transition-colors ${
-                mode === 'now' ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                mode === 'now' ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-muted'
               }`}
             >
               <div
@@ -124,7 +124,7 @@ export function ProfilePostScheduleModal({
                 if (!scheduledAtLocal) setScheduledAtLocal(toDatetimeLocalValue(new Date()));
               }}
               className={`flex w-full items-center gap-3 rounded-lg p-3 transition-colors ${
-                mode === 'scheduled' ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                mode === 'scheduled' ? 'bg-emerald-50 dark:bg-emerald-950/30' : 'hover:bg-muted'
               }`}
             >
               <div
@@ -173,7 +173,7 @@ export function ProfilePostScheduleModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:text-emerald-400 dark:hover:bg-gray-700"
+            className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:text-emerald-400 dark:hover:bg-gray-700"
           >
             Hủy
           </button>

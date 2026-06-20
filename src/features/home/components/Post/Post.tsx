@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { PostDetailModal } from '../../../../components/posts/PostDetailModal';
 import { PostShareModal } from '../../../../components/posts/PostShareModal';
 import {
@@ -95,6 +96,7 @@ export function Post({
     () => ({
       id,
       author: {
+        id: authorId,
         name: userName,
         avatar: userAvatar,
       },
@@ -106,7 +108,7 @@ export function Post({
       image,
       reactionCounts,
     }),
-    [commentCount, content, id, image, likeCount, reactionCounts, shareCount, timestamp, userAvatar, userName],
+    [authorId, commentCount, content, id, image, likeCount, reactionCounts, shareCount, timestamp, userAvatar, userName],
   );
 
   const handleReactionChange = async (reaction: ReactionOption | null) => {
@@ -171,36 +173,43 @@ export function Post({
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-4">
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">
-              <ImageWithFallback
-                src={userAvatar}
-                alt={userName}
-                className="w-10 h-10 rounded-full object-cover cursor-pointer"
+              <div
+                className="cursor-pointer"
                 onClick={() => navigate(`/profile/${authorId}`)}
-              />
+              >
+                <UserAvatar
+                  name={userName}
+                  avatarUrl={userAvatar}
+                  userId={authorId}
+                  className="w-10 h-10"
+                  rounded="full"
+                  initialsClassName="text-sm font-bold"
+                />
+              </div>
               <div 
                 className="cursor-pointer"
                 onClick={() => navigate(`/profile/${authorId}`)}
               >
-                <h3 className="font-semibold text-gray-900 group-hover:underline">{userName}</h3>
-                <p className="text-sm text-gray-500">{timestamp}</p>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:underline">{userName}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{timestamp}</p>
               </div>
             </div>
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsMoreMenuOpen((prev) => !prev)}
-                className="cursor-pointer rounded-full p-2 transition-colors hover:bg-gray-100"
+                className="cursor-pointer rounded-full p-2 transition-colors hover:bg-muted"
               >
-                <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
               {isMoreMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setIsMoreMenuOpen(false)} />
-                  <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                  <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
                     {isOwner && (
                       <button
                         type="button"
@@ -221,7 +230,7 @@ export function Post({
             </div>
           </div>
 
-          <p className="text-gray-900 mb-3">{content}</p>
+          <p className="text-gray-900 dark:text-gray-100 mb-3">{content}</p>
         </div>
 
         {image && (
@@ -234,7 +243,7 @@ export function Post({
           </div>
         )}
 
-        <div className="px-4 py-2 flex items-center justify-between text-sm text-gray-500">
+        <div className="px-4 py-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
           <div className="flex items-center gap-2">
             {totalReactionCount > 0 && (
               <button
@@ -246,7 +255,7 @@ export function Post({
                   {activeReactions.slice(0, 3).map((reaction) => (
                     <span
                       key={reaction.type}
-                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white leading-none"
+                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white dark:bg-gray-800 leading-none"
                     >
                       <img src={reaction.emoji} alt={reaction.label} width={15} height={15} draggable={false} />
                     </span>
@@ -262,7 +271,7 @@ export function Post({
           </div>
         </div>
 
-        <div className="h-px bg-gray-300 mx-4" />
+        <div className="h-px bg-gray-300 dark:bg-gray-600 mx-4" />
 
         <div className="px-4 py-2 grid grid-cols-3 gap-2 items-center">
           <ReactionButton
@@ -276,7 +285,7 @@ export function Post({
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 dark:text-gray-400 transition-colors hover:bg-muted"
           >
             <MessageCircle className="w-5 h-5" />
             <span className="font-medium">Bình luận</span>
@@ -285,7 +294,7 @@ export function Post({
           <button
             type="button"
             onClick={() => setIsShareModalOpen(true)}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 transition-colors hover:bg-gray-100"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 dark:text-gray-400 transition-colors hover:bg-muted"
           >
             <Share2 className="w-5 h-5" />
             <span className="font-medium">Chia sẻ</span>

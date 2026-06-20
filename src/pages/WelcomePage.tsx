@@ -179,10 +179,10 @@ export function WelcomePage() {
               <WelcomePreview />
             </div>
 
-            <div className="hidden overflow-hidden rounded-xl border border-white/10 bg-white shadow-xl shadow-black/20 lg:block">
-              <div className="border-b border-gray-100 bg-emerald-50 px-5 py-4 sm:px-6">
-                <p className="text-sm font-semibold text-gray-900">Vì sao dùng KConnecta?</p>
-                <p className="mt-1 text-sm text-gray-500">Những điều bạn có ngay sau khi tham gia</p>
+            <div className="hidden overflow-hidden rounded-xl border border-white/10 bg-white dark:bg-gray-800 shadow-xl shadow-black/20 lg:block">
+              <div className="border-b border-gray-100 dark:border-gray-800 bg-emerald-50 px-5 py-4 sm:px-6">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Vì sao dùng KConnecta?</p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Những điều bạn có ngay sau khi tham gia</p>
               </div>
               <ul className="divide-y divide-gray-100 px-5 sm:px-6">
                 {features.map((feature) => {
@@ -193,8 +193,8 @@ export function WelcomePage() {
                         <Icon className="h-5 w-5" />
                       </span>
                       <div className="min-w-0 pt-0.5">
-                        <p className="text-sm font-semibold text-gray-900">{feature.title}</p>
-                        <p className="mt-0.5 text-sm leading-relaxed text-gray-500">{feature.desc}</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{feature.title}</p>
+                        <p className="mt-0.5 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{feature.desc}</p>
                       </div>
                     </li>
                   );

@@ -25,7 +25,7 @@ export const DiscoverGroupsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100 dark:bg-background flex flex-col">
       <Header />
 
       <div className="flex flex-1 pt-14 h-full">
@@ -46,13 +46,13 @@ export const DiscoverGroupsPage = () => {
                 <Compass className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Khám phá nhóm</h1>
-                <p className="text-gray-500">Tìm kiếm các cộng đồng mới mà bạn có thể quan tâm.</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Khám phá nhóm</h1>
+                <p className="text-gray-500 dark:text-gray-400">Tìm kiếm các cộng đồng mới mà bạn có thể quan tâm.</p>
               </div>
             </div>
 
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[17px] font-semibold text-gray-900">
+              <h2 className="text-[17px] font-semibold text-gray-900 dark:text-gray-100">
                 {loadingDiscover
                   ? 'Đang tải các nhóm gợi ý...'
                   : `Gợi ý cho bạn (${discoverGroups.length})`}
@@ -62,24 +62,24 @@ export const DiscoverGroupsPage = () => {
             {loadingDiscover ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-lg border border-gray-200 h-[280px] animate-pulse" />
+                  <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 h-[280px] animate-pulse" />
                 ))}
               </div>
             ) : discoverGroups.length === 0 ? (
-              <div className="bg-white rounded-xl p-12 text-center border border-gray-200">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-12 text-center border border-gray-200 dark:border-gray-700">
                 <Compass className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Không tìm thấy nhóm mới</h3>
-                <p className="text-gray-500">Có vẻ như bạn đã tham gia tất cả các nhóm hiện có!</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Không tìm thấy nhóm mới</h3>
+                <p className="text-gray-500 dark:text-gray-400">Có vẻ như bạn đã tham gia tất cả các nhóm hiện có!</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {discoverGroups.map(group => (
                   <div
                     key={group.id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col hover:shadow-md transition-all duration-200 group"
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col hover:shadow-md transition-all duration-200 group"
                   >
                     {/* Cover Photo or Placeholder */}
-                    <div className="h-32 bg-gray-200 relative overflow-hidden">
+                    <div className="h-32 bg-gray-200 dark:bg-gray-700 relative overflow-hidden">
                       {group.icon ? (
                         <img
                           src={group.icon}
@@ -95,13 +95,13 @@ export const DiscoverGroupsPage = () => {
                     </div>
 
                     <div className="p-4 flex-1 flex flex-col">
-                      <h3 className="font-bold text-gray-900 text-[17px] leading-tight line-clamp-2 mb-1 group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-[17px] leading-tight line-clamp-2 mb-1 group-hover:text-blue-600 transition-colors">
                         {group.name}
                       </h3>
-                      <div className="flex items-center text-[13px] text-gray-500 gap-1.5 mb-3">
+                      <div className="flex items-center text-[13px] text-gray-500 dark:text-gray-400 gap-1.5 mb-3">
                         <span>{group.privacy === 'public' ? 'Nhóm công khai' : 'Nhóm riêng tư'}</span>
                         <span>·</span>
-                        <span className="font-medium text-gray-700">{group.members} thành viên</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{group.members} thành viên</span>
                       </div>
                       
                       <div className="mt-auto space-y-2">
@@ -117,7 +117,7 @@ export const DiscoverGroupsPage = () => {
                         </button>
                         <button
                           onClick={() => navigate(`/groups/${group.id}`)}
-                          className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold py-2 rounded-lg transition-colors text-[15px]"
+                          className="w-full bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold py-2 rounded-lg transition-colors text-[15px]"
                         >
                           Xem thông tin
                         </button>

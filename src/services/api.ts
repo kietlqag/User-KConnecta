@@ -37,10 +37,20 @@ axiosInstance.interceptors.response.use(
       const isAuthEndpoint = url.startsWith('/auth/');
 
       if ((status === 401 || status === 403) && !isAuthEndpoint) {
+        const data = error.response?.data;
+        const locked =
+          typeof data === 'object' && data !== null &&
+          (data as { accountStatus?: string }).accountStatus === 'BLOCKED';
         localStorage.removeItem('authUser');
         sessionStorage.removeItem('authUser');
+        if (locked) {
+          // Carry the lock reason to the login screen so a force-logged-out user can see why.
+          sessionStorage.setItem('blockedInfo', JSON.stringify(data));
+        }
         window.location.href = '/auth/login';
-        return Promise.reject(new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.'));
+        return Promise.reject(
+          new Error(locked ? 'Tài khoản của bạn đã bị khóa.' : 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.'),
+        );
       }
 
       const data = error.response?.data;

@@ -71,10 +71,10 @@ export function OTPInput({ length = 6, value, onChange, error }: OTPInputProps) 
             onChange={(e) => handleChange(e.target, index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             onPaste={handlePaste}
-            className={`w-12 h-14 text-center text-2xl font-bold bg-gray-50 border ${
-              error ? 'border-red-500' : 'border-gray-300'
-            } rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 ${
-              digit ? 'scale-105 border-emerald-500 bg-white' : ''
+            className={`w-12 h-14 text-center text-2xl font-bold bg-gray-50 dark:bg-gray-900 border ${
+              error ? 'border-red-500' : 'border-gray-300 dark:border-gray-700'
+            } rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 ${
+              digit ? 'scale-105 border-emerald-500 bg-white dark:bg-gray-800' : ''
             }`}
             autoFocus={index === 0}
           />

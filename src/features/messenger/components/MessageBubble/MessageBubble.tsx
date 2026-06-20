@@ -264,7 +264,7 @@ export const MessageBubble = ({
     <button
       key={`${imageUrl}-${index}`}
       type="button"
-      onClick={() => setLightboxIndex(index)} className={`block overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm ${className}`}
+      onClick={() => setLightboxIndex(index)} className={`block overflow-hidden rounded-2xl border border-black/5 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none ${className}`}
       title="Mở ảnh"
     >
       <img
@@ -296,24 +296,24 @@ export const MessageBubble = ({
           style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
         >
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
               {isCompleted ? (
                 isVideoCall ? (
-                  <Video className="w-4.5 h-4.5 text-gray-700" />
+                  <Video className="w-4.5 h-4.5 text-gray-700 dark:text-gray-300" />
                 ) : (
-                  <Phone className="w-4.5 h-4.5 text-gray-700" />
+                  <Phone className="w-4.5 h-4.5 text-gray-700 dark:text-gray-300" />
                 )
               ) : (
                 isVideoCall ? (
-                  <VideoOff className="w-4.5 h-4.5 text-gray-700" />
+                  <VideoOff className="w-4.5 h-4.5 text-gray-700 dark:text-gray-300" />
                 ) : (
-                  <PhoneMissed className="w-4.5 h-4.5 text-gray-700" />
+                  <PhoneMissed className="w-4.5 h-4.5 text-gray-700 dark:text-gray-300" />
                 )
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[15px] leading-tight text-gray-900 font-semibold break-words [overflow-wrap:anywhere]">{message.text}</p>
-              <p className="mt-0.5 text-xs text-gray-600">
+              <p className="text-[15px] leading-tight text-gray-900 dark:text-gray-100 font-semibold break-words [overflow-wrap:anywhere]">{message.text}</p>
+              <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
                 {isCompleted && typeof message.callDurationSec === 'number'
                   ? formatDuration(message.callDurationSec)
                   : formatTime(message.timestamp)}
@@ -321,7 +321,7 @@ export const MessageBubble = ({
             </div>
           </div>
           <button
-            onClick={() => onCallAgain?.(isVideoCall ? 'video' : 'audio')} className="mt-2.5 w-full rounded-xl bg-gray-200 hover:bg-gray-300 transition-colors py-2 text-[15px] font-semibold text-gray-900 flex items-center justify-center gap-2"
+            onClick={() => onCallAgain?.(isVideoCall ? 'video' : 'audio')} className="mt-2.5 w-full rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 transition-colors py-2 text-[15px] font-semibold text-gray-900 dark:text-gray-100 flex items-center justify-center gap-2"
           >
             {isVideoCall ? <Video className="w-3.5 h-3.5" /> : <Phone className="w-3.5 h-3.5" />}
             {isVideoCall ? 'Gọi video lại' : 'Gọi lại'}
@@ -361,14 +361,14 @@ export const MessageBubble = ({
       )}
 
       {showTimestamp && message.isOwn && (
-        <span className="hidden shrink-0 self-end pb-0.5 text-xs text-gray-500 sm:inline">{formatTime(message.timestamp)}</span>
+        <span className="hidden shrink-0 self-end pb-0.5 text-xs text-gray-500 dark:text-gray-400 sm:inline">{formatTime(message.timestamp)}</span>
       )}
 
       <div className={`min-w-0 max-w-[78%] lg:max-w-[70%] flex flex-col ${message.isOwn ? 'items-end' : 'items-start'}`}>
         {message.replyPreview && (
           <div className={`${message.isOwn ? 'text-right' : 'text-left'}`}>
             <div
-              className={`flex items-center gap-1 text-xs text-gray-500 ${
+              className={`flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 ${
                 message.isOwn ? 'justify-end pr-1' : 'justify-start pl-1'
               }`}
             >
@@ -381,7 +381,7 @@ export const MessageBubble = ({
               disabled={!message.replyToMessageId} className={`relative z-[1] mt-0.5 inline-flex min-h-[48px] w-auto max-w-full rounded-2xl border px-2.5 py-2 text-left text-sm leading-tight transition-colors ${
                 message.isOwn
                   ? 'ml-auto border-blue-200/90 bg-blue-100 text-blue-900 hover:bg-blue-200'
-                  : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               } disabled:cursor-default disabled:opacity-80`}
               title={message.replyToMessageId ? 'Nhấn để đến tin nhắn gốc' : undefined}
             >
@@ -398,7 +398,7 @@ export const MessageBubble = ({
                   onClick={() => navigate(`/stories/${storyCtx.authorId}`)}
                   onMouseEnter={() => setIsStoryPreviewHovering(true)}
                   onMouseLeave={() => setIsStoryPreviewHovering(false)}
-                  className="group/story relative w-[min(132px,36vw)] aspect-[9/16] overflow-hidden rounded-2xl border border-black/10 bg-white/75"
+                  className="group/story relative w-[min(132px,36vw)] aspect-[9/16] overflow-hidden rounded-2xl border border-black/10 bg-white dark:bg-gray-800/75"
                   title={`Xem tin của ${storyCtx.authorName}`}
                 >
                   <div className="absolute inset-0 opacity-90" style={getStoryBgStyle(storyCtx.slideImageUrl, storyCtx.slideBackgroundColor)} />
@@ -414,7 +414,7 @@ export const MessageBubble = ({
                 <div
                   onMouseEnter={() => setIsStoryPreviewHovering(true)}
                   onMouseLeave={() => setIsStoryPreviewHovering(false)}
-                  className="h-9 w-fit max-w-[min(210px,62vw)] rounded-2xl border border-black/5 bg-white/75 px-3 text-xs italic text-gray-600 flex items-center"
+                  className="h-9 w-fit max-w-[min(210px,62vw)] rounded-2xl border border-black/5 bg-white dark:bg-gray-800/75 px-3 text-xs italic text-gray-600 dark:text-gray-400 flex items-center"
                 >
                   Story unavailable
                 </div>
@@ -423,7 +423,7 @@ export const MessageBubble = ({
                 className={`relative z-[2] -mt-3 inline-block w-fit max-w-full overflow-hidden rounded-2xl px-3 py-2 break-all text-left [overflow-wrap:anywhere] ${
                   message.isOwn ? 'mr-1' : 'ml-1'
                 } ${
-                  message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
+                  message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                 }`}
                 style={ownBubbleStyle}
               >
@@ -434,10 +434,10 @@ export const MessageBubble = ({
             <button
               type="button"
               onClick={() => navigate(`/home?post=${message.sharedPostId}`)}
-              className="flex w-[min(300px,72vw)] max-w-full flex-col overflow-hidden rounded-xl border border-gray-200/90 bg-white text-left shadow-[0_1px_2px_rgba(0,0,0,0.08)] transition hover:shadow-md group/post-share"
+              className="flex w-[min(300px,72vw)] max-w-full flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700/90 bg-white dark:bg-gray-800 text-left shadow-[0_1px_2px_rgba(0,0,0,0.08)] transition hover:shadow-md group/post-share"
               title="Xem bài viết"
             >
-              <div className="relative aspect-[1.91/1] w-full overflow-hidden bg-gray-100">
+              <div className="relative aspect-[1.91/1] w-full overflow-hidden bg-gray-100 dark:bg-background">
                 {message.sharedPostImage ? (
                   <img
                     src={message.sharedPostImage}
@@ -451,11 +451,11 @@ export const MessageBubble = ({
                   </div>
                 )}
               </div>
-              <div className="border-t border-gray-100 px-3 py-2.5">
-                <p className="truncate text-xs font-semibold text-gray-500">
+              <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2.5">
+                <p className="truncate text-xs font-semibold text-gray-500 dark:text-gray-400">
                   {message.sharedPostAuthorName?.trim() || 'KConnecta'}
                 </p>
-                <p className="mt-0.5 text-sm font-semibold leading-snug text-gray-900 line-clamp-2">
+                <p className="mt-0.5 text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100 line-clamp-2">
                   {message.sharedPostContent?.trim() || 'Xem bài viết trên KConnecta'}
                 </p>
               </div>
@@ -474,7 +474,7 @@ export const MessageBubble = ({
               {message.imageCaption && (
                 <div
                   className={`inline-block max-w-full overflow-hidden rounded-2xl px-3 py-2 text-sm leading-relaxed break-all [overflow-wrap:anywhere] sm:max-w-[260px] ${
-                    message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-900'
+                    message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   }`}
                   style={ownBubbleStyle}
                 >
@@ -489,7 +489,7 @@ export const MessageBubble = ({
               } ${
                 message.isOwn
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-900'
+                  : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
               }`}
               style={ownBubbleStyle}
             >
@@ -501,7 +501,7 @@ export const MessageBubble = ({
                 <button
                   type="button"
                   onClick={toggleVoicePlayback} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
-                    message.isOwn ? 'bg-white/20 hover:bg-white/30' : 'bg-white hover:bg-gray-50'
+                    message.isOwn ? 'bg-white dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/30' : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
                   title={isVoicePlaying ? 'Tạm dừng' : 'Phát tin nhắn thoại'}
                 >
@@ -511,13 +511,13 @@ export const MessageBubble = ({
                     <Play className={`h-4 w-4 ${message.isOwn ? 'text-white' : 'text-blue-600'}`} />
                   )}
                 </button>
-                <div className={`h-1.5 flex-1 overflow-hidden rounded-full ${message.isOwn ? 'bg-white/25' : 'bg-gray-300'}`}>
+                <div className={`h-1.5 flex-1 overflow-hidden rounded-full ${message.isOwn ? 'bg-white dark:bg-gray-800/25' : 'bg-gray-300'}`}>
                   <div
-                    className={`h-full rounded-full ${message.isOwn ? 'bg-white' : 'bg-blue-600'}`}
+                    className={`h-full rounded-full ${message.isOwn ? 'bg-white dark:bg-gray-800' : 'bg-blue-600'}`}
                     style={{ width: `${voiceProgress}%` }}
                   />
                 </div>
-                <span className={`w-10 shrink-0 text-right text-xs tabular-nums ${message.isOwn ? 'text-white/90' : 'text-gray-600'}`}>
+                <span className={`w-10 shrink-0 text-right text-xs tabular-nums ${message.isOwn ? 'text-white/90' : 'text-gray-600 dark:text-gray-400'}`}>
                   {formatDuration(message.voiceDurationSec ?? 0)}
                 </span>
                 <audio
@@ -556,7 +556,7 @@ export const MessageBubble = ({
                     className="h-full w-full object-cover transition-transform group-hover/video-share:scale-110"
                   />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/video-share:bg-black/40 transition-colors">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/30 backdrop-blur-md text-white shadow-lg">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white dark:bg-gray-800/30 backdrop-blur-md text-white shadow-lg">
                       <Play className="h-6 w-6 fill-current ml-1" />
                     </div>
                   </div>
@@ -565,11 +565,11 @@ export const MessageBubble = ({
                     REELS
                   </div>
                 </div>
-                <div className={`p-3 text-left ${message.isOwn ? 'bg-blue-700' : 'bg-gray-100'}`}>
-                  <p className={`text-sm font-semibold line-clamp-2 ${message.isOwn ? 'text-white' : 'text-gray-900'}`}>
+                <div className={`p-3 text-left ${message.isOwn ? 'bg-blue-700' : 'bg-gray-100 dark:bg-gray-900'}`}>
+                  <p className={`text-sm font-semibold line-clamp-2 ${message.isOwn ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
                     {message.videoShareTitle || 'Xem video này trên KConnecta'}
                   </p>
-                  <p className={`mt-1 text-[11px] font-medium uppercase tracking-wider ${message.isOwn ? 'text-blue-100/70' : 'text-gray-500'}`}>
+                  <p className={`mt-1 text-[11px] font-medium uppercase tracking-wider ${message.isOwn ? 'text-blue-100/70' : 'text-gray-500 dark:text-gray-400'}`}>
                     Nhấn để xem nội dung
                   </p>
                 </div>
@@ -582,7 +582,7 @@ export const MessageBubble = ({
               >
                 <span
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                    message.isOwn ? 'bg-white/20' : 'bg-white'
+                    message.isOwn ? 'bg-white dark:bg-gray-800/20' : 'bg-white dark:bg-gray-800'
                   }`}
                 >
                   <FileText className={`h-5 w-5 ${message.isOwn ? 'text-white' : 'text-blue-600'}`} />
@@ -591,7 +591,7 @@ export const MessageBubble = ({
                   <span className="block truncate text-sm font-semibold">
                     {message.fileName || message.text || 'File'}
                   </span>
-                  <span className={`block text-xs ${message.isOwn ? 'text-white/80' : 'text-gray-500'}`}>
+                  <span className={`block text-xs ${message.isOwn ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
                     {formatFileSize(message.fileSizeBytes) || message.fileMimeType || 'File'}
                   </span>
                 </span>
@@ -601,7 +601,7 @@ export const MessageBubble = ({
                     event.stopPropagation();
                     void downloadFile(message.fileUrl, message.fileName);
                   }} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${
-                    message.isOwn ? 'hover:bg-white/20' : 'hover:bg-blue-50'
+                    message.isOwn ? 'hover:bg-white dark:bg-gray-800/20' : 'hover:bg-blue-50'
                   }`}
                   title="Tải xuống"
                 >
@@ -618,7 +618,7 @@ export const MessageBubble = ({
 
           {message.reactions && message.reactions.length > 0 && (
             <div
-              className={`absolute -bottom-2 bg-white rounded-full px-1.5 py-0.5 shadow-md border border-gray-200 flex items-center gap-0.5 z-[1] ${
+              className={`absolute -bottom-2 bg-white dark:bg-gray-800 rounded-full px-1.5 py-0.5 shadow-md border border-gray-200 dark:border-gray-700 flex items-center gap-0.5 z-[1] ${
                 message.isOwn ? 'left-2' : 'right-2'
               }`}
             >
@@ -638,7 +638,7 @@ export const MessageBubble = ({
               onMouseLeave={() => {
                 setIsHovering(false);
               }}
-              className={`absolute flex items-center gap-0.5 bg-white rounded-full shadow-sm ring-1 ring-gray-200/70 px-1 py-1 z-20 ${
+              className={`absolute flex items-center gap-0.5 bg-white dark:bg-gray-800 rounded-full shadow-sm dark:shadow-none ring-1 ring-gray-200 dark:ring-gray-700/70 px-1 py-1 z-20 ${
                 isStoryReply ? 'top-[calc(100%-52px)]' : 'top-0 -translate-y-1/2'
               } ${
                 message.isOwn ? 'right-[calc(100%+6px)]' : 'left-[calc(100%+6px)]'
@@ -649,35 +649,35 @@ export const MessageBubble = ({
                 onClick={() => {
                   if (message.deleted) return;
                   setShowReactions(!showReactions);
-                }} className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                }} className="p-1 hover:bg-muted rounded-full transition-colors cursor-pointer"
                 title="Thả cảm xúc"
                 disabled={message.deleted}
               >
-                <Smile className="w-3.5 h-3.5 text-gray-600" />
+                <Smile className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
               </button>
 
               <button
-                onClick={() => !message.deleted && onReply?.(message)} className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                onClick={() => !message.deleted && onReply?.(message)} className="p-1 hover:bg-muted rounded-full transition-colors cursor-pointer"
                 title="Trả lời"
                 disabled={message.deleted}
               >
-                <Reply className="w-3.5 h-3.5 text-gray-600" />
+                <Reply className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
               </button>
 
               <button
                 onClick={openActionMenu}
                 ref={menuTriggerRef}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors cursor-pointer relative"
+                className="p-1 hover:bg-muted rounded-full transition-colors cursor-pointer relative"
                 title="Tùy chọn khác"
               >
-                <MoreVertical className="w-3.5 h-3.5 text-gray-600" />
+                <MoreVertical className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
           )}
 
           {!message.deleted && showReactions && (
             <div
-              className={`absolute bottom-full mb-2 bg-white rounded-full shadow-xl border border-gray-200 px-3 py-2 flex items-center gap-2 z-10 ${
+              className={`absolute bottom-full mb-2 bg-white dark:bg-gray-800 rounded-full shadow-xl border border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center gap-2 z-10 ${
                 message.isOwn ? 'right-0' : 'left-0'
               }`}
               ref={reactionRef}
@@ -690,18 +690,18 @@ export const MessageBubble = ({
                   {emoji}
                 </button>
               ))}
-              <div className="w-px h-6 bg-gray-300 mx-1" />
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
               <button
-                onClick={() => setShowExtraReactions((prev) => !prev)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => setShowExtraReactions((prev) => !prev)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors cursor-pointer"
                 title="Thêm emoji khác"
               >
-                <span className="text-xl text-gray-600">+</span>
+                <span className="text-xl text-gray-600 dark:text-gray-400">+</span>
               </button>
             </div>
           )}
           {!message.deleted && showReactions && showExtraReactions && (
             <div
-              className={`absolute bottom-full mb-16 bg-white rounded-xl shadow-xl border border-gray-200 px-3 py-2 flex items-center gap-2 z-10 ${
+              className={`absolute bottom-full mb-16 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 px-3 py-2 flex items-center gap-2 z-10 ${
                 message.isOwn ? 'right-0' : 'left-0'
               }`}
               ref={reactionRef}
@@ -719,7 +719,7 @@ export const MessageBubble = ({
 
           {!message.deleted && showMenu && menuPosition && createPortal(
             <div
-              className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[184px] z-[260]"
+              className="fixed bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 min-w-[184px] z-[260]"
               ref={menuRef}
               style={{
                 fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif',
@@ -731,7 +731,7 @@ export const MessageBubble = ({
                 onClick={() => {
                   onPinMessage?.(message);
                   setShowMenu(false);
-                }} className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
+                }} className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors cursor-pointer"
               >
                 {isPinnedMessage ? 'Bỏ ghim tin nhắn' : 'Ghim tin nhắn'}
               </button>
@@ -739,7 +739,7 @@ export const MessageBubble = ({
                 onClick={() => {
                   onForward?.(message);
                   setShowMenu(false);
-                }} className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
+                }} className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors cursor-pointer"
               >
                 Chuyển tiếp
               </button>
@@ -747,13 +747,13 @@ export const MessageBubble = ({
                 onClick={() => {
                   onReport?.(message);
                   setShowMenu(false);
-                }} className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 transition-colors cursor-pointer"
+                }} className="w-full px-4 py-2 text-left text-sm hover:bg-muted transition-colors cursor-pointer"
               >
                 Báo cáo
               </button>
               {message.isOwn && (
                 <>
-                  <div className="my-1 h-px bg-gray-200" />
+                  <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
                   <button
                       onClick={() => {
                       onDeleteForMe?.(message.id);
@@ -781,7 +781,7 @@ export const MessageBubble = ({
 
         {showDeliveryStatus && message.isOwn && !message.systemType && (
           <p
-            className="mt-0.5 pr-1 text-right text-[11px] leading-4 text-gray-500"
+            className="mt-0.5 pr-1 text-right text-[11px] leading-4 text-gray-500 dark:text-gray-400"
             style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
           >
             {deliveryStatusLabel}
@@ -790,7 +790,7 @@ export const MessageBubble = ({
       </div>
 
       {showTimestamp && !message.isOwn && (
-        <span className="hidden shrink-0 self-end pb-0.5 text-xs text-gray-500 sm:inline">{formatTime(message.timestamp)}</span>
+        <span className="hidden shrink-0 self-end pb-0.5 text-xs text-gray-500 dark:text-gray-400 sm:inline">{formatTime(message.timestamp)}</span>
       )}
 
       {activeLightboxImage && (
@@ -803,7 +803,7 @@ export const MessageBubble = ({
             onClick={(event) => {
               event.stopPropagation();
               setLightboxIndex(null);
-            }} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+            }} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-gray-800/15 text-white hover:bg-white dark:bg-gray-800/25"
             title="Đóng"
           >
             <X className="h-6 w-6" />
@@ -815,7 +815,7 @@ export const MessageBubble = ({
               onClick={(event) => {
                 event.stopPropagation();
                 setLightboxIndex((prev) => (prev === null ? 0 : (prev - 1 + imageUrls.length) % imageUrls.length));
-              }} className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              }} className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white dark:bg-gray-800/15 text-white hover:bg-white dark:bg-gray-800/25"
               title="Ảnh trước"
             >
               <ChevronLeft className="h-7 w-7" />
@@ -835,7 +835,7 @@ export const MessageBubble = ({
               onClick={(event) => {
                 event.stopPropagation();
                 setLightboxIndex((prev) => (prev === null ? 0 : (prev + 1) % imageUrls.length));
-              }} className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+              }} className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white dark:bg-gray-800/15 text-white hover:bg-white dark:bg-gray-800/25"
               title="Ảnh sau"
             >
               <ChevronRight className="h-7 w-7" />

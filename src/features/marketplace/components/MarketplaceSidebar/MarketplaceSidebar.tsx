@@ -2,13 +2,13 @@ import { Search, Plus, Settings, Bell, MessageSquare, ShoppingBag, Tag, MapPin, 
 
 export const MarketplaceSidebar = () => {
   return (
-    <div className="w-80 bg-white border-r border-gray-200 h-screen sticky top-14 overflow-y-auto">
+    <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen sticky top-14 overflow-y-auto">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold">Marketplace</h1>
-          <button className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors">
-            <Settings className="w-5 h-5 text-gray-600" />
+          <button className="w-10 h-10 rounded-full hover:bg-muted flex items-center justify-center transition-colors">
+            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
           </button>
         </div>
 
@@ -18,51 +18,51 @@ export const MarketplaceSidebar = () => {
           <input
             type="text"
             placeholder="Tìm kiếm trên Marketplace"
-            className="w-full pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm outline-none focus:bg-gray-200 transition-colors"
+            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full text-sm outline-none focus:bg-gray-200 dark:focus:bg-gray-700 transition-colors"
           />
         </div>
       </div>
 
       {/* Navigation */}
       <div className="py-2">
-        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors">
-          <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center">
-            <ShoppingBag className="w-5 h-5 text-gray-700" />
+        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-muted transition-colors">
+          <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </div>
           <span className="font-medium">Lướt xem tất cả</span>
         </button>
 
-        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors">
-          <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center">
-            <Bell className="w-5 h-5 text-gray-700" />
+        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-muted transition-colors">
+          <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </div>
           <span className="font-medium">Thông báo</span>
         </button>
 
-        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors">
-          <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center">
-            <MessageSquare className="w-5 h-5 text-gray-700" />
+        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-muted transition-colors">
+          <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <MessageSquare className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </div>
           <span className="font-medium">Hộp thư</span>
         </button>
 
-        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors">
-          <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center">
-            <ShoppingBag className="w-5 h-5 text-gray-700" />
+        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-muted transition-colors">
+          <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </div>
           <span className="font-medium">Quyền truy cập Marketplace</span>
         </button>
 
-        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors">
-          <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center">
-            <Tag className="w-5 h-5 text-gray-700" />
+        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-muted transition-colors">
+          <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <Tag className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </div>
           <span className="font-medium">Đang mua</span>
         </button>
 
-        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-gray-100 transition-colors">
-          <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center">
-            <ShoppingBag className="w-5 h-5 text-gray-700" />
+        <button className="w-full px-4 py-2 flex items-center gap-3 hover:bg-muted transition-colors">
+          <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5 text-gray-700 dark:text-gray-300" />
           </div>
           <span className="font-medium">Đang bán</span>
         </button>
@@ -77,7 +77,7 @@ export const MarketplaceSidebar = () => {
       </div>
 
       {/* Location Filter */}
-      <div className="px-4 py-4 border-t border-gray-200">
+      <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
         <h3 className="text-sm font-semibold mb-2">Vị trí</h3>
         <button className="w-full text-left text-sm text-blue-500 hover:underline flex items-center gap-2">
           <MapPin className="w-4 h-4" />
@@ -86,43 +86,43 @@ export const MarketplaceSidebar = () => {
       </div>
 
       {/* Categories */}
-      <div className="px-4 py-4 border-t border-gray-200">
+      <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
         <h3 className="text-sm font-semibold mb-3">Hạng mục</h3>
         <div className="space-y-1">
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <Car className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <Car className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Xe cộ</span>
           </button>
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <Home className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <Home className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Tài sản cho thuê</span>
           </button>
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <Home className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <Home className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Bán nhà</span>
           </button>
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <Wrench className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <Wrench className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Dụng cụ sửa chữa nhà cửa</span>
           </button>
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <Sofa className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <Sofa className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Vật dụng gia đình</span>
           </button>
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <Smartphone className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <Smartphone className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Điện tử</span>
           </button>
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <Shirt className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <Shirt className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Quần áo & phụ kiện</span>
           </button>
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <Gamepad2 className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <Gamepad2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Đồ chơi & trò chơi</span>
           </button>
-          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors">
-            <BookOpen className="w-5 h-5 text-gray-600" />
+          <button className="w-full px-2 py-2 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors">
+            <BookOpen className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             <span className="text-sm">Sách & tạp chí</span>
           </button>
         </div>

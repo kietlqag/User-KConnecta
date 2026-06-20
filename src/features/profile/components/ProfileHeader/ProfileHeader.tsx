@@ -7,9 +7,11 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { friendService, FRIENDSHIP_CHANGED_EVENT, type FriendshipStatusResponse } from '@/services/friendService';
 import { authService } from '@/services/authService';
+import { UserAvatar } from '@/components/shared';
+import { isPlaceholderAvatar } from '@/utils/userAvatarUtils';
+import { PROFILE_DEFAULT_COVER } from '../../utils/profileDisplayUtils';
 
-const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300';
-const DEFAULT_COVER  = 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200';
+const DEFAULT_COVER = PROFILE_DEFAULT_COVER;
 
 interface ProfileHeaderProps {
   coverPhoto?: string;
@@ -52,15 +54,13 @@ export function ProfileHeader({
   const [friendActionLoading, setFriendActionLoading] = useState(false);
 
   // Image load tracking — prevents flash of default image
-  const [coverLoaded, setCoverLoaded]       = useState(false);
-  const [avatarImgLoaded, setAvatarImgLoaded] = useState(false);
+  const [coverLoaded, setCoverLoaded] = useState(false);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef  = useRef<HTMLInputElement>(null);
 
   // Reset loaded flags whenever the image URL changes (e.g. after upload)
   useEffect(() => { setCoverLoaded(false); }, [coverPhoto]);
-  useEffect(() => { setAvatarImgLoaded(false); }, [avatar]);
 
   /* -------- friend actions -------- */
   const handleSendFriendRequest = async () => {
@@ -156,14 +156,14 @@ export function ProfileHeader({
   };
 
   /* -------- derived -------- */
-  const resolvedAvatar = avatar  || DEFAULT_AVATAR;
-  const resolvedCover  = coverPhoto || DEFAULT_COVER;
+  const hasRealAvatar = !isPlaceholderAvatar(avatar);
+  const resolvedCover = coverPhoto || DEFAULT_COVER;
+  const displayName = fullName?.trim() || username?.trim() || 'Người dùng';
 
-  const showCoverSkeleton  = loading || (!coverLoaded && !coverUploading);
-  const showAvatarSkeleton = loading || (!avatarImgLoaded && !avatarUploading);
+  const showCoverSkeleton = loading || (!coverLoaded && !coverUploading);
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-none border-b border-gray-200 dark:border-gray-700">
 
       {/* ── Lightbox ── */}
       {viewerImage && (
@@ -228,7 +228,7 @@ export function ProfileHeader({
               <button
                 onClick={e => { e.stopPropagation(); coverInputRef.current?.click(); }}
                 disabled={coverUploading}
-                className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-100 text-gray-900 rounded-lg shadow-sm font-medium text-sm transition-colors disabled:opacity-70"
+                className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-muted text-gray-900 dark:text-gray-100 rounded-lg shadow-sm dark:shadow-none font-medium text-sm transition-colors disabled:opacity-70"
               >
                 {coverUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 {coverUploading ? 'Đang tải...' : 'Chỉnh sửa ảnh bìa'}
@@ -244,34 +244,26 @@ export function ProfileHeader({
             {/* ── Avatar ── */}
             <div
               className="relative group/avatar flex-shrink-0"
-              style={{ cursor: avatarImgLoaded && !loading ? 'pointer' : 'default' }}
-              onClick={() => avatarImgLoaded && !loading && setViewerImage(resolvedAvatar)}
+              style={{ cursor: hasRealAvatar && !loading ? 'pointer' : 'default' }}
+              onClick={() => hasRealAvatar && avatar && !loading && setViewerImage(avatar)}
             >
-              <div className="relative w-[168px] h-[168px] rounded-full border-[5px] border-white dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
-                {/* Shimmer circle */}
-                <div
-                  className={`absolute inset-0 bg-gray-300 dark:bg-gray-600 transition-opacity duration-300 pointer-events-none ${
-                    showAvatarSkeleton ? 'opacity-100 animate-pulse' : 'opacity-0'
-                  }`}
-                />
-
-                {/* Real avatar */}
-                {!loading && !avatarUploading && (
-                  <img
-                    src={resolvedAvatar}
-                    alt={fullName}
-                    className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 group-hover/avatar:brightness-95 ${
-                      avatarImgLoaded ? 'opacity-100' : 'opacity-0'
-                    }`}
-                    onLoad={() => setAvatarImgLoaded(true)}
-                    onError={e => { e.currentTarget.src = DEFAULT_AVATAR; setAvatarImgLoaded(true); }}
+              <div className="relative w-[168px] h-[168px] rounded-full border-[5px] border-white dark:border-card bg-white dark:bg-card overflow-hidden shadow-sm">
+                {loading ? (
+                  <div className="absolute inset-0 bg-muted animate-pulse" />
+                ) : (
+                  <UserAvatar
+                    name={displayName}
+                    avatarUrl={avatar}
+                    userId={profileUserId}
+                    className="absolute inset-0 h-full w-full group-hover/avatar:brightness-95 transition-[filter]"
+                    rounded="full"
+                    initialsClassName="text-5xl font-bold tracking-wide"
                   />
                 )}
 
-                {/* Upload spinner */}
                 {avatarUploading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 dark:bg-gray-700/80">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+                    <Loader2 className="w-8 h-8 animate-spin text-gray-500 dark:text-gray-400" />
                   </div>
                 )}
               </div>
@@ -283,7 +275,7 @@ export function ProfileHeader({
                   <button
                     onClick={e => { e.stopPropagation(); avatarInputRef.current?.click(); }}
                     disabled={avatarUploading}
-                    className="absolute bottom-3 right-3 w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-full flex items-center justify-center transition-colors border-2 border-white dark:border-gray-800 shadow-sm cursor-pointer disabled:opacity-70"
+                    className="absolute bottom-3 right-3 w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-full flex items-center justify-center transition-colors border-2 border-white dark:border-gray-800 shadow-sm dark:shadow-none cursor-pointer disabled:opacity-70"
                   >
                     <Camera className="w-5 h-5 text-gray-700 dark:text-gray-300" />
                   </button>
@@ -402,7 +394,7 @@ export function ProfileHeader({
                     <button
                       disabled
                       title="Kết bạn để nhắn tin"
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-400 rounded-lg font-medium cursor-not-allowed"
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 rounded-lg font-medium cursor-not-allowed"
                     >
                       <MessageCircle className="w-4 h-4" />
                       Nhắn tin

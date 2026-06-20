@@ -84,8 +84,8 @@ export const NotificationItem = ({
   return (
     <div
       onClick={handleClick}
-      className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer ${
-        notification.isUnread ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+      className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-muted transition-colors cursor-pointer ${
+        notification.isUnread ? 'bg-accent' : ''
       }`}
     >
       {/* Avatar */}
@@ -189,7 +189,7 @@ export const NotificationItem = ({
                   setFriendLoading(null);
                 }
               }}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-200 hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed text-gray-700 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               {friendLoading === 'reject' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Từ chối

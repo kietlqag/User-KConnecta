@@ -438,7 +438,7 @@ export function ProfileCreatePostModal({
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tạo bài viết</h2>
             <button
               onClick={handleCancel}
-              className="absolute right-4 rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="absolute right-4 rounded-full p-2 transition-colors hover:bg-muted"
             >
               <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
             </button>
@@ -557,14 +557,14 @@ export function ProfileCreatePostModal({
                 <div className="absolute right-2 top-2 z-10 flex gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 rounded bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
+                    className="flex items-center gap-2 rounded bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm dark:shadow-none hover:bg-gray-50 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
                   >
                     <Image className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     Thêm ảnh/video
                   </button>
                   <button
                     onClick={() => setShowImagePicker(false)}
-                    className="rounded-full bg-white p-1.5 text-gray-500 shadow-sm hover:bg-gray-50 border border-gray-200 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 dark:border-gray-500"
+                    className="rounded-full bg-white p-1.5 text-gray-500 shadow-sm dark:shadow-none hover:bg-gray-50 border border-gray-200 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 dark:border-gray-500"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -573,7 +573,7 @@ export function ProfileCreatePostModal({
                 {selectedImages.length === 0 ? (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-md border-2 border-transparent hover:bg-gray-100 transition-colors dark:hover:bg-gray-600"
+                    className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-md border-2 border-transparent hover:bg-gray-100 dark:bg-gray-900 transition-colors dark:hover:bg-gray-600"
                   >
                     <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
                       <Image className="h-6 w-6 text-green-600" />
@@ -618,7 +618,7 @@ export function ProfileCreatePostModal({
                         )}
                         <button
                           onClick={() => removeImage(img.id)}
-                          className="absolute right-1 top-1 z-10 rounded-full border border-gray-200 bg-white p-1 text-gray-500 shadow-sm hover:bg-gray-50 dark:border-gray-500 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
+                          className="absolute right-1 top-1 z-10 rounded-full border border-gray-200 bg-white p-1 text-gray-500 shadow-sm dark:shadow-none hover:bg-gray-50 dark:border-gray-500 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -627,7 +627,7 @@ export function ProfileCreatePostModal({
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex aspect-square min-h-0 w-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-100 dark:border-gray-500 dark:hover:bg-gray-600"
+                      className="flex aspect-square min-h-0 w-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:border-gray-500 dark:hover:bg-gray-600"
                     >
                       <div className="flex flex-col items-center">
                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 mb-1">
@@ -665,7 +665,7 @@ export function ProfileCreatePostModal({
                     }
                     setShowEmojiPicker(prev => !prev);
                   }}
-                  className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                  className="rounded-full p-2 transition-colors hover:bg-muted"
                 >
                   <Smile className="h-6 w-6 text-gray-500 dark:text-gray-400" />
                 </button>
@@ -689,17 +689,17 @@ export function ProfileCreatePostModal({
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setShowImagePicker(true)}
-                    className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="rounded-full p-2 transition-colors hover:bg-muted"
                   >
                     <Image className="h-6 w-6 text-green-500" />
                   </button>
                   <button
                     onClick={() => setShowImagePicker(true)}
-                    className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                    className="rounded-full p-2 transition-colors hover:bg-muted"
                   >
                     <Video className="h-6 w-6 text-red-500" />
                   </button>
-                  <button className="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <button className="rounded-full p-2 transition-colors hover:bg-muted">
                     <Users className="h-6 w-6 text-emerald-500" />
                   </button>
                 </div>

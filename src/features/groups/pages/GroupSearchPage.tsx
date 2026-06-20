@@ -70,7 +70,7 @@ export function GroupSearchPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100 dark:bg-background flex flex-col">
       <Header />
 
       <div className="flex flex-1 pt-14 h-full">
@@ -90,39 +90,39 @@ export function GroupSearchPage() {
                 <Search className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Tìm kiếm nhóm</h1>
-                <p className="text-gray-500">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tìm kiếm nhóm</h1>
+                <p className="text-gray-500 dark:text-gray-400">
                   {query.trim()
-                    ? <>Kết quả cho &quot;<span className="font-medium text-gray-700">{query}</span>&quot;</>
+                    ? <>Kết quả cho &quot;<span className="font-medium text-gray-700 dark:text-gray-300">{query}</span>&quot;</>
                     : 'Nhập tên nhóm để bắt đầu tìm kiếm'}
                 </p>
               </div>
             </div>
 
             {!query.trim() && (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
                 <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-[15px]">Dùng ô tìm kiếm bên trái hoặc gõ tên nhóm rồi nhấn Enter.</p>
+                <p className="text-gray-500 dark:text-gray-400 text-[15px]">Dùng ô tìm kiếm bên trái hoặc gõ tên nhóm rồi nhấn Enter.</p>
               </div>
             )}
 
             {query.trim() && loading && (
-              <div className="flex items-center justify-center gap-2 py-16 text-gray-500">
+              <div className="flex items-center justify-center gap-2 py-16 text-gray-500 dark:text-gray-400">
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Đang tìm kiếm...
               </div>
             )}
 
             {query.trim() && error && (
-              <div className="bg-white rounded-xl border border-red-200 p-6 text-center text-red-600 text-sm">
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-red-200 p-6 text-center text-red-600 text-sm">
                 {error}
               </div>
             )}
 
             {query.trim() && !loading && !error && resultCards.length === 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Không tìm thấy nhóm</h3>
-                <p className="text-gray-500 text-sm mb-4">Thử từ khóa khác hoặc khám phá nhóm gợi ý.</p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Không tìm thấy nhóm</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">Thử từ khóa khác hoặc khám phá nhóm gợi ý.</p>
                 <button
                   type="button"
                   onClick={() => navigate('/groups/discover')}
@@ -135,7 +135,7 @@ export function GroupSearchPage() {
 
             {query.trim() && !loading && !error && resultCards.length > 0 && (
               <>
-                <p className="text-[15px] font-semibold text-gray-700 mb-4">
+                <p className="text-[15px] font-semibold text-gray-700 dark:text-gray-300 mb-4">
                   {resultCards.length} nhóm
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

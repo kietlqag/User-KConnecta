@@ -12,7 +12,7 @@ export const PeopleResult = ({ person, onFollowToggle }: PeopleResultProps) => {
   const goToProfile = () => navigate(`/profile/${person.id}`);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <img
@@ -30,11 +30,11 @@ export const PeopleResult = ({ person, onFollowToggle }: PeopleResultProps) => {
           >
             {person.name}
           </h3>
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 line-clamp-2">
             {person.bio}
           </p>
           {person.mutualFriends && person.mutualFriends > 0 && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {person.mutualFriends} bạn chung
             </p>
           )}
@@ -45,7 +45,7 @@ export const PeopleResult = ({ person, onFollowToggle }: PeopleResultProps) => {
           onClick={(e) => { e.stopPropagation(); onFollowToggle(person.id); }}
           className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2 flex-shrink-0 cursor-pointer ${
             person.isFollowing
-              ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
               : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
         >

@@ -1,27 +1,10 @@
 import { useEffect, useState } from 'react';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
+import { UserAvatar } from './UserAvatar';
 
 interface CurrentUserAvatarProps {
   className?: string;
   fallbackClassName?: string;
-}
-
-function getInitials(fullName?: string) {
-  if (!fullName) {
-    return 'U';
-  }
-
-  const parts = fullName
-    .split(' ')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(-2);
-
-  if (parts.length === 0) {
-    return 'U';
-  }
-
-  return parts.map((part) => part.charAt(0).toUpperCase()).join('');
 }
 
 export function CurrentUserAvatar({
@@ -40,23 +23,14 @@ export function CurrentUserAvatar({
     };
   }, []);
 
-  const initials = getInitials(currentUser?.fullName);
-
-  if (currentUser?.avatarUrl) {
-    return (
-      <img
-        src={currentUser.avatarUrl}
-        alt={currentUser.fullName || 'User avatar'}
-        className={`${className} rounded-full object-cover`}
-      />
-    );
-  }
-
   return (
-    <div
-      className={`${className} rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white ${fallbackClassName || ''}`}
-    >
-      <span className="text-sm font-semibold">{initials}</span>
-    </div>
+    <UserAvatar
+      name={currentUser?.fullName || 'Bạn'}
+      avatarUrl={currentUser?.avatarUrl}
+      userId={currentUser?.id}
+      className={className}
+      rounded="full"
+      initialsClassName={`text-sm font-semibold ${fallbackClassName || ''}`}
+    />
   );
 }

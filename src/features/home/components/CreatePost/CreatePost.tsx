@@ -35,39 +35,39 @@ export function CreatePost() {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+      <div className="bg-card rounded-xl shadow-sm p-4 mb-4 border border-border">
         <div className="flex items-center gap-3 mb-4">
           <CurrentUserAvatar />
 
           <button
             type="button"
             onClick={() => openCreateModal(false)}
-            className="flex-1 text-left px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-500 transition-colors cursor-pointer"
+            className="flex-1 text-left px-4 py-3 bg-muted hover:bg-muted/80 rounded-full text-muted-foreground transition-colors cursor-pointer"
           >
             Bạn đang nghĩ gì?
           </button>
         </div>
 
-        <div className="border-t border-gray-200 my-3" />
+        <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
 
         <div className="flex items-center justify-around">
           <Link
             to="/live"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors flex-1 justify-center cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors flex-1 justify-center cursor-pointer"
           >
             <Video className="w-6 h-6 text-red-500" />
-            <span className="text-gray-600 font-medium hidden sm:inline">Video trực tiếp</span>
-            <span className="text-gray-600 font-medium sm:hidden">Video</span>
+            <span className="text-gray-600 dark:text-gray-300 font-medium hidden sm:inline">Video trực tiếp</span>
+            <span className="text-gray-600 dark:text-gray-300 font-medium sm:hidden">Video</span>
           </Link>
 
           <button
             type="button"
             onClick={() => openCreateModal(true)}
-            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors hover:bg-gray-100"
+            className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors hover:bg-muted"
           >
             <Image className="w-6 h-6 text-green-500" />
-            <span className="text-gray-600 font-medium hidden sm:inline">Ảnh/video</span>
-            <span className="text-gray-600 font-medium sm:hidden">Ảnh</span>
+            <span className="text-gray-600 dark:text-gray-300 font-medium hidden sm:inline">Ảnh/video</span>
+            <span className="text-gray-600 dark:text-gray-300 font-medium sm:hidden">Ảnh</span>
           </button>
 
 

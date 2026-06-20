@@ -28,6 +28,7 @@ export interface AuthUser {
   token?: string;
   accountStatus?: 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'DELETED';
   blockedReason?: string;
+  lockedUntil?: string;
   hasPassword?: boolean;
   bio?: string;
   gender?: string;

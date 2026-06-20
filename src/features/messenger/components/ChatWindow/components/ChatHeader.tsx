@@ -38,15 +38,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const presenceLabel = formatLastActiveLabel(user.isOnline, user.lastActiveAt);
 
   return (
-    <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+    <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
         {fullScreen && (
           <button
             onClick={onClose}
-            className="-ml-2 cursor-pointer rounded-full p-2 transition-colors hover:bg-gray-100"
+            className="-ml-2 cursor-pointer rounded-full p-2 transition-colors hover:bg-muted"
             title="Quay lại danh sách chat"
           >
-            <ArrowLeft className="h-5 w-5 text-gray-700" />
+            <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
           </button>
         )}
         <div className="relative">
@@ -58,8 +58,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           {user.isOnline && <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />}
         </div>
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-gray-900">{user.name}</h3>
-          {presenceLabel ? <p className="truncate text-xs text-gray-500">{presenceLabel}</p> : null}
+          <h3 className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{user.name}</h3>
+          {presenceLabel ? <p className="truncate text-xs text-gray-500 dark:text-gray-400">{presenceLabel}</p> : null}
         </div>
       </div>
 
@@ -67,7 +67,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           onClick={hasActiveVoiceCall ? onEndVoiceCall : onStartVoiceCall}
           disabled={hasActiveVoiceCall ? false : !connected || !canStartVoiceCall}
-          className="cursor-pointer rounded-full p-2.5 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="cursor-pointer rounded-full p-2.5 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           title={voiceCallTitle}
         >
           {hasActiveVoiceCall ? (
@@ -79,13 +79,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           onClick={onStartVideoCall}
           disabled={hasActiveVoiceCall || !connected || !canStartVideoCall}
-          className="cursor-pointer rounded-full p-2.5 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+          className="cursor-pointer rounded-full p-2.5 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           title="Gọi video"
         >
           <Video className={`h-[22px] w-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-blue-600'}`} />
         </button>
         {fullScreen && (
-          <button className="cursor-pointer rounded-full p-2.5 transition-colors hover:bg-gray-100" title="Thông tin">
+          <button className="cursor-pointer rounded-full p-2.5 transition-colors hover:bg-muted" title="Thông tin">
             <Info className="h-5 w-5 text-blue-600" />
           </button>
         )}

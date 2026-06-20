@@ -1074,21 +1074,21 @@ export default function LiveSetupPage() {
   const progressPercent = (completedCount / checklist.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 dark:bg-background">
       <Header />
 
       <div className="pt-14 flex">
-        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-gray-200 bg-white">
+        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-5 border-b border-gray-200 pb-4">
-            <h1 className="text-2xl leading-tight font-bold text-gray-900 mb-2">Tạo video trực tiếp</h1>
-            <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+          <div className="mb-5 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <h1 className="text-2xl leading-tight font-bold text-gray-900 dark:text-gray-100 mb-2">Tạo video trực tiếp</h1>
+            <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
               <div className="h-full bg-green-600 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
             <div className="mt-3 space-y-2">
               {checklist.map((item) => (
-                <div key={item.label} className="flex items-center gap-3 text-sm text-gray-900">
-                  {item.done ? <CircleCheck className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5 text-gray-500" />}
+                <div key={item.label} className="flex items-center gap-3 text-sm text-gray-900 dark:text-gray-100">
+                  {item.done ? <CircleCheck className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
                   {item.label}
                 </div>
               ))}
@@ -1096,27 +1096,27 @@ export default function LiveSetupPage() {
           </div>
 
           <div className="mb-3 flex items-center gap-2.5">
-            <div className="h-11 w-11 overflow-hidden rounded-full bg-gray-200 flex items-center justify-center">
+            <div className="h-11 w-11 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
-                <UserRound className="w-6 h-6 text-gray-600" />
+                <UserRound className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               )}
             </div>
             <div className="leading-snug">
-              <p className="text-base font-bold text-gray-900">{currentUserName}</p>
-              <p className="text-xs text-gray-700">Người tổ chức - Trang cá nhân của bạn</p>
+              <p className="text-base font-bold text-gray-900 dark:text-gray-100">{currentUserName}</p>
+              <p className="text-xs text-gray-700 dark:text-gray-300">Người tổ chức - Trang cá nhân của bạn</p>
             </div>
           </div>
 
-          <div className="space-y-3 border-b border-gray-200 pb-4">
+          <div className="space-y-3 border-b border-gray-200 dark:border-gray-700 pb-4">
             <div className="relative">
               <button
                 onClick={() => setIsDestinationOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-left bg-white hover:bg-gray-50"
+                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
-                <p className="text-sm text-gray-500">Chọn nơi đăng</p>
-                <div className="flex items-center justify-between text-base font-semibold text-gray-900">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Chọn nơi đăng</p>
+                <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
                   <span>
                     {selectedDestination === 'page' && selectedPages.length > 0
                       ? `${selectedPages.length} trang đã chọn`
@@ -1129,7 +1129,7 @@ export default function LiveSetupPage() {
               </button>
 
               {isDestinationOpen && (
-                <div className="absolute top-full left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div className="absolute top-full left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none overflow-hidden">
                   {destinationOptions.map((option) => (
                     <button
                       key={option.id}
@@ -1147,12 +1147,12 @@ export default function LiveSetupPage() {
                         (option.id === 'page' && !hasPageItems) ||
                         (option.id === 'group' && !hasGroupItems)
                       }
-                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">{option.icon}</div>
+                      <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">{option.icon}</div>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900">{option.label}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
                           {(option.id === 'page' && !hasPageItems) || (option.id === 'group' && !hasGroupItems)
                             ? 'Chưa có dữ liệu để chọn'
                             : option.description}
@@ -1166,8 +1166,8 @@ export default function LiveSetupPage() {
             </div>
 
             {(selectedDestination === 'page' || selectedDestination === 'group') && isDestinationItemsOpen && (
-              <div className="rounded-xl border border-gray-200 bg-white p-3">
-                <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
                   <Search className="h-4 w-4 text-gray-400" />
                   <input
                     value={destinationSearch}
@@ -1178,9 +1178,9 @@ export default function LiveSetupPage() {
                 </div>
 
                 <div className="max-h-48 space-y-1 overflow-auto">
-                  {isDestinationLoading && <p className="px-2 py-1 text-sm text-gray-500">Đang tải dữ liệu...</p>}
+                  {isDestinationLoading && <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Đang tải dữ liệu...</p>}
                   {!isDestinationLoading && filteredDestinationItems.length === 0 && (
-                    <p className="px-2 py-1 text-sm text-gray-500">Không có dữ liệu phù hợp.</p>
+                    <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Không có dữ liệu phù hợp.</p>
                   )}
                   {!isDestinationLoading &&
                     filteredDestinationItems.map((item) => {
@@ -1207,13 +1207,13 @@ export default function LiveSetupPage() {
                             }
                           }}
                           className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-start gap-2 ${
-                            isSelected ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 text-gray-800'
+                            isSelected ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
                           }`}
                         >
                           {(selectedDestination === 'group' || selectedDestination === 'page') && (
                             <span
                               className={`mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded border ${
-                                isSelected ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 bg-white'
+                                isSelected ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
                               }`}
                             >
                               {isSelected ? <Check className="h-3 w-3" /> : null}
@@ -1221,7 +1221,7 @@ export default function LiveSetupPage() {
                           )}
                           <span className="block">
                             <p className="font-medium">{item.name}</p>
-                            {item.description ? <p className="text-xs text-gray-500">{item.description}</p> : null}
+                            {item.description ? <p className="text-xs text-gray-500 dark:text-gray-400">{item.description}</p> : null}
                           </span>
                         </button>
                       );
@@ -1234,10 +1234,10 @@ export default function LiveSetupPage() {
               <button
                 type="button"
                 onClick={() => setIsPrivacyOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-300 px-4 py-2.5 text-left bg-white hover:bg-gray-50"
+                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
-                <p className="text-sm text-gray-500">Quyền riêng tư</p>
-                <div className="flex items-center justify-between text-base font-semibold text-gray-900">
+                <p className="text-sm text-gray-500 dark:text-gray-400">Quyền riêng tư</p>
+                <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
                   <span className="inline-flex items-center gap-2">
                     <selectedPrivacyOption.icon className="w-5 h-5" />
                     {selectedPrivacy === 'FRIENDS_EXCEPT'
@@ -1248,7 +1248,7 @@ export default function LiveSetupPage() {
                 </div>
               </button>
               {isPrivacyOpen && (
-                <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+                <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none overflow-hidden">
                   {privacyOptions.map((option) => {
                     const Icon = option.icon;
                     return (
@@ -1265,14 +1265,14 @@ export default function LiveSetupPage() {
                             setIsExceptEditorOpen(false);
                           }
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
                       >
-                        <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-gray-700" />
+                        <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900">{option.label}</p>
-                          <p className="text-xs text-gray-500">{option.description}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{option.description}</p>
                         </div>
                         {selectedPrivacy === option.id && <Check className="w-4 h-4 text-green-600" />}
                       </button>
@@ -1282,8 +1282,8 @@ export default function LiveSetupPage() {
               )}
             </div>
             {selectedPrivacy === 'FRIENDS_EXCEPT' && isExceptEditorOpen && (
-              <div className="rounded-xl border border-gray-200 bg-white p-3">
-                <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
                   <Search className="h-4 w-4 text-gray-400" />
                   <input
                     value={friendSearch}
@@ -1293,9 +1293,9 @@ export default function LiveSetupPage() {
                   />
                 </div>
                 <div className="max-h-44 space-y-1 overflow-auto">
-                  {isFriendsLoading && <p className="px-2 py-1 text-sm text-gray-500">Đang tải bạn bè...</p>}
+                  {isFriendsLoading && <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Đang tải bạn bè...</p>}
                   {!isFriendsLoading && filteredFriends.length === 0 && (
-                    <p className="px-2 py-1 text-sm text-gray-500">Không có bạn bè phù hợp.</p>
+                    <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Không có bạn bè phù hợp.</p>
                   )}
                   {!isFriendsLoading &&
                     filteredFriends.map((friend) => {
@@ -1312,12 +1312,12 @@ export default function LiveSetupPage() {
                             )
                           }
                           className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-center gap-2 ${
-                            isChecked ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 text-gray-800'
+                            isChecked ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
                           }`}
                         >
                           <span
                             className={`inline-flex h-4 w-4 items-center justify-center rounded border ${
-                              isChecked ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 bg-white'
+                              isChecked ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
                             }`}
                           >
                             {isChecked ? <Check className="h-3 w-3" /> : null}
@@ -1334,7 +1334,7 @@ export default function LiveSetupPage() {
                       setPendingExcludedFriendIds(excludedFriendIds);
                       setIsExceptEditorOpen(false);
                     }}
-                    className="flex-1 rounded-lg bg-gray-200 py-2 text-sm font-semibold text-gray-800"
+                    className="flex-1 rounded-lg bg-gray-200 dark:bg-gray-700 py-2 text-sm font-semibold text-gray-800 dark:text-gray-200"
                   >
                     Hủy
                   </button>
@@ -1360,12 +1360,12 @@ export default function LiveSetupPage() {
                 <button
                   key={item.label}
                   className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-base font-semibold ${
-                    item.active ? 'bg-green-50 text-gray-900' : 'hover:bg-gray-100 text-gray-900'
+                    item.active ? 'bg-green-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'
                   }`}
                 >
                   <span
                     className={`h-11 w-11 rounded-full flex items-center justify-center ${
-                      item.active ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-800'
+                      item.active ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -1377,12 +1377,12 @@ export default function LiveSetupPage() {
           </div>
           </div>
 
-          <div className="shrink-0 border-t border-gray-200 bg-white p-4">
+          <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/live/video')}
-              className="flex-1 rounded-xl bg-gray-200 py-2.5 text-base font-semibold text-gray-900"
+              className="flex-1 rounded-xl bg-gray-200 dark:bg-gray-700 py-2.5 text-base font-semibold text-gray-900 dark:text-gray-100"
             >
               Quay lại
             </button>
@@ -1403,9 +1403,9 @@ export default function LiveSetupPage() {
         <main className="flex-1 p-6">
           <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-4 xl:grid-cols-[1.15fr_1fr]">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-gray-200 bg-white p-4">
-                <h2 className="mb-3 text-2xl font-bold text-gray-900">Kiểm soát camera</h2>
-                <p className="mb-4 text-base text-gray-700">Trước khi phát trực tiếp, hãy kiểm tra xem đầu vào camera và micrô đã hoạt động đúng cách chưa.</p>
+              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+                <h2 className="mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">Kiểm soát camera</h2>
+                <p className="mb-4 text-base text-gray-700 dark:text-gray-300">Trước khi phát trực tiếp, hãy kiểm tra xem đầu vào camera và micrô đã hoạt động đúng cách chưa.</p>
 
                 <div className="space-y-3">
                   <div className="relative">
@@ -1415,7 +1415,7 @@ export default function LiveSetupPage() {
                         setIsCameraOpen((prev) => !prev);
                         setIsMicOpen(false);
                       }}
-                      className="h-11 w-full flex items-center gap-2.5 overflow-hidden rounded-xl bg-gray-100 px-3"
+                      className="h-11 w-full flex items-center gap-2.5 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900 px-3"
                     >
                       <Camera className="w-5 h-5 text-green-600 shrink-0" />
                       <span
@@ -1427,14 +1427,14 @@ export default function LiveSetupPage() {
                       <ChevronDown className={`w-5 h-5 shrink-0 transition-transform ${isCameraOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {isCameraOpen && cameras.length > 0 && (
-                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-md">
+                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md">
                         {cameras.map((camera) => (
                           <button
                             key={camera.deviceId}
                             type="button"
                             onClick={() => handleSelectCamera(camera)}
-                            className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-gray-50 ${
-                              selectedCameraId === camera.deviceId ? 'bg-green-50 text-green-700' : 'text-gray-800'
+                            className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                              selectedCameraId === camera.deviceId ? 'bg-green-50 text-green-700' : 'text-gray-800 dark:text-gray-200'
                             }`}
                           >
                             <span className="min-w-0 flex-1">
@@ -1457,7 +1457,7 @@ export default function LiveSetupPage() {
                         setIsMicOpen((prev) => !prev);
                         setIsCameraOpen(false);
                       }}
-                      className="h-11 w-full flex items-center gap-2.5 overflow-hidden rounded-xl bg-gray-100 px-3"
+                      className="h-11 w-full flex items-center gap-2.5 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900 px-3"
                     >
                       <Mic className="w-5 h-5 text-green-600 shrink-0" />
                       <span
@@ -1469,21 +1469,21 @@ export default function LiveSetupPage() {
                       <ChevronDown className={`w-5 h-5 shrink-0 transition-transform ${isMicOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {isMicOpen && microphones.length > 0 && (
-                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 bg-white shadow-md">
+                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md">
                         {microphones.map((mic) => (
                           <button
                             key={mic.deviceId}
                             type="button"
                             onClick={() => handleSelectMic(mic)}
-                            className={`w-full px-3 py-2 text-left text-xs hover:bg-gray-50 ${
-                              selectedMicId === mic.deviceId ? 'bg-green-50 text-green-700' : 'text-gray-800'
+                            className={`w-full px-3 py-2 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                              selectedMicId === mic.deviceId ? 'bg-green-50 text-green-700' : 'text-gray-800 dark:text-gray-200'
                             }`}
                           >
                             <div className="flex items-center justify-between gap-2">
                               <span className="truncate">{mic.label || 'Microphone mặc định'}</span>
-                              <span className="shrink-0 text-[11px] text-gray-500">{`${micLevels[mic.deviceId] ?? 0}%`}</span>
+                              <span className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400">{`${micLevels[mic.deviceId] ?? 0}%`}</span>
                             </div>
-                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                               <div
                                 className="h-full rounded-full bg-green-600 transition-[width] duration-100"
                                 style={{ width: `${micLevels[mic.deviceId] ?? 0}%` }}
@@ -1498,16 +1498,16 @@ export default function LiveSetupPage() {
                     type="button"
                     onClick={() => void handleShareScreen()}
                     disabled={isStartingShare}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gray-200 py-2.5 text-base font-semibold hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gray-200 dark:bg-gray-700 py-2.5 text-base font-semibold hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <MonitorSmartphone className="w-5 h-5" />
                     {isStartingShare ? 'Đang mở chia sẻ...' : isScreenSharing ? 'Đang chia sẻ màn hình' : 'Chia sẻ màn hình'}
                   </button>
-                  {!!mediaError && !isSwitchingCamera && <p className="text-xs text-gray-500">{mediaError}</p>}
+                  {!!mediaError && !isSwitchingCamera && <p className="text-xs text-gray-500 dark:text-gray-400">{mediaError}</p>}
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-gray-200 bg-white p-4">
+              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                 <h2 className="mb-3 text-2xl font-bold">Video</h2>
                 <div className="relative h-[300px] rounded-xl bg-black flex items-center justify-center overflow-hidden">
                   <video
@@ -1542,36 +1542,36 @@ export default function LiveSetupPage() {
                   />
                 </div>
                 <button className="mt-4 inline-flex items-center gap-3 text-base font-semibold">
-                  <MessageSquare className="w-8 h-8 text-gray-600" /> Nhật ký sự kiện
+                  <MessageSquare className="w-8 h-8 text-gray-600 dark:text-gray-400" /> Nhật ký sự kiện
                 </button>
               </section>
             </div>
 
             <div className="space-y-4">
-              <section className="rounded-2xl border border-gray-200 bg-white p-4">
+              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                 <h2 className="mb-4 text-2xl font-bold">Thêm chi tiết về bài viết</h2>
                 <div className="mb-4 space-y-3">
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-gray-700">Tiêu đề</label>
+                    <label className="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-300">Tiêu đề</label>
                     <input
                       value={postTitle}
                       onChange={(e) => setPostTitle(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-500 outline-none ring-2 ring-transparent focus:border-green-400 focus:ring-green-100"
+                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-500 outline-none ring-2 ring-transparent focus:border-green-400 focus:ring-green-100"
                       placeholder="Nhập tiêu đề buổi phát trực tiếp"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-gray-700">Mô tả</label>
+                    <label className="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-300">Mô tả</label>
                     <textarea
                       value={postDescription}
                       onChange={(e) => setPostDescription(e.target.value)}
                       rows={3}
-                      className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-500 outline-none ring-2 ring-transparent focus:border-green-400 focus:ring-green-100"
+                      className="w-full resize-none rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-500 outline-none ring-2 ring-transparent focus:border-green-400 focus:ring-green-100"
                       placeholder="Mô tả ngắn về nội dung buổi phát trực tiếp"
                     />
                   </div>
                 </div>
-                <div className="mb-1 border-t border-gray-200 pt-3 flex items-center justify-center gap-16 text-sm">
+                <div className="mb-1 border-t border-gray-200 dark:border-gray-700 pt-3 flex items-center justify-center gap-16 text-sm">
                   <button
                     type="button"
                     onClick={() => {
@@ -1586,7 +1586,7 @@ export default function LiveSetupPage() {
                       });
                     }}
                     className={`flex items-center gap-2 ${
-                      isTagPeopleOpen ? 'text-green-700 font-semibold' : 'text-gray-700'
+                      isTagPeopleOpen ? 'text-green-700 font-semibold' : 'text-gray-700 dark:text-gray-300'
                     }`}
                   >
                     <Users className="w-5 h-5 text-green-600" /> Gắn thẻ người khác
@@ -1608,35 +1608,35 @@ export default function LiveSetupPage() {
                       });
                     }}
                     className={`flex items-center gap-2 ${
-                      isCheckInOpen ? 'text-green-700 font-semibold' : 'text-gray-700'
+                      isCheckInOpen ? 'text-green-700 font-semibold' : 'text-gray-700 dark:text-gray-300'
                     }`}
                   >
                     <MapPin className="w-5 h-5 text-green-600" /> Check in
                   </button>
                 </div>
                 {(taggedFriends.length > 0 || checkInLocation.trim()) && (
-                  <div className="mb-3 rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2">
+                  <div className="mb-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-2.5 space-y-2">
                     {taggedFriends.length > 0 && (
                       <div>
-                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Đã gắn thẻ</p>
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Đã gắn thẻ</p>
                         <div className="flex flex-wrap gap-1.5">
                           {taggedFriends.slice(0, 3).map((friend) => (
                             <span
                               key={friend.userId}
-                              className="inline-flex items-center gap-1.5 rounded-full bg-white border border-gray-200 px-2 py-1 text-xs text-gray-700"
+                              className="inline-flex items-center gap-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs text-gray-700 dark:text-gray-300"
                             >
-                              <span className="h-5 w-5 shrink-0 overflow-hidden rounded-full bg-gray-200 flex items-center justify-center">
+                              <span className="h-5 w-5 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                                 {friend.avatarUrl ? (
                                   <img src={friend.avatarUrl} alt={friend.fullName || friend.username} className="h-full w-full object-cover" />
                                 ) : (
-                                  <UserRound className="h-3 w-3 text-gray-500" />
+                                  <UserRound className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                                 )}
                               </span>
                               <span className="max-w-[140px] truncate">{friend.fullName || friend.username}</span>
                             </span>
                           ))}
                           {taggedFriends.length > 3 && (
-                            <span className="inline-flex items-center rounded-full bg-white border border-gray-200 px-2 py-1 text-xs text-gray-600">
+                            <span className="inline-flex items-center rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs text-gray-600 dark:text-gray-400">
                               +{taggedFriends.length - 3} người khác
                             </span>
                           )}
@@ -1645,8 +1645,8 @@ export default function LiveSetupPage() {
                     )}
                     {checkInLocation.trim() && (
                       <div>
-                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Check in</p>
-                        <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white border border-gray-200 px-2 py-1 text-xs text-gray-700">
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Check in</p>
+                        <span className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2 py-1 text-xs text-gray-700 dark:text-gray-300">
                           <MapPin className="h-3.5 w-3.5 text-green-600 shrink-0" />
                           <span className="truncate">{checkInLocation.trim()}</span>
                         </span>
@@ -1656,8 +1656,8 @@ export default function LiveSetupPage() {
                 )}
 
                 {isTagPeopleOpen && (
-                  <div className="mb-3 rounded-xl border border-gray-200 bg-white p-3">
-                    <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+                  <div className="mb-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                    <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
                       <Search className="h-4 w-4 text-gray-400" />
                       <input
                         value={tagFriendSearch}
@@ -1667,9 +1667,9 @@ export default function LiveSetupPage() {
                       />
                     </div>
                     <div className="h-64 space-y-1 overflow-y-auto pr-1">
-                      {isFriendsLoading && <p className="px-2 py-1 text-sm text-gray-500">Đang tải bạn bè...</p>}
+                      {isFriendsLoading && <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Đang tải bạn bè...</p>}
                       {!isFriendsLoading && filteredTagFriends.length === 0 && (
-                        <p className="px-2 py-1 text-sm text-gray-500">Không có bạn bè phù hợp.</p>
+                        <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Không có bạn bè phù hợp.</p>
                       )}
                       {!isFriendsLoading &&
                         orderedTagFriends.map((friend) => {
@@ -1686,21 +1686,21 @@ export default function LiveSetupPage() {
                                 )
                               }
                               className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-center gap-2 ${
-                                isChecked ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 text-gray-800'
+                                isChecked ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
                               }`}
                             >
                               <span
                                 className={`inline-flex h-4 w-4 items-center justify-center rounded border ${
-                                  isChecked ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 bg-white'
+                                  isChecked ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
                                 }`}
                               >
                                 {isChecked ? <Check className="h-3 w-3" /> : null}
                               </span>
-                              <span className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gray-200 flex items-center justify-center">
+                              <span className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                                 {friend.avatarUrl ? (
                                   <img src={friend.avatarUrl} alt={friend.fullName || friend.username} className="h-full w-full object-cover" />
                                 ) : (
-                                  <UserRound className="h-4 w-4 text-gray-500" />
+                                  <UserRound className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                                 )}
                               </span>
                               <span className="truncate">{friend.fullName || friend.username}</span>
@@ -1715,7 +1715,7 @@ export default function LiveSetupPage() {
                           setPendingTaggedFriendIds(taggedFriendIds);
                           setIsTagPeopleOpen(false);
                         }}
-                        className="flex-1 rounded-lg bg-gray-200 py-2 text-sm font-semibold text-gray-800"
+                        className="flex-1 rounded-lg bg-gray-200 dark:bg-gray-700 py-2 text-sm font-semibold text-gray-800 dark:text-gray-200"
                       >
                         Hủy
                       </button>
@@ -1734,13 +1734,13 @@ export default function LiveSetupPage() {
                 )}
 
                 {isCheckInOpen && (
-                  <div className="mb-3 rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+                  <div className="mb-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 space-y-3">
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                       <button
                         type="button"
                         onClick={handleGetCurrentCheckInLocation}
                         disabled={isDetectingCheckInLocation}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <LocateFixed className="h-4 w-4 text-green-600" />
                         {isDetectingCheckInLocation ? 'Đang lấy vị trí...' : 'Lấy vị trí hiện tại'}
@@ -1749,7 +1749,7 @@ export default function LiveSetupPage() {
                         type="button"
                         onClick={() => void handleSuggestCheckInLocations()}
                         disabled={isDetectingCheckInLocation || isSuggestingCheckIn}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-3 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <Lightbulb className="h-4 w-4 text-green-600" />
                         {isSuggestingCheckIn ? 'Đang gợi ý...' : 'Gợi ý vị trí'}
@@ -1758,14 +1758,14 @@ export default function LiveSetupPage() {
 
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-xs font-semibold text-gray-600">Tỉnh/Thành phố</label>
+                        <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Tỉnh/Thành phố</label>
                         <select
                           value={selectedCheckInProvince?.code ?? ''}
                           onChange={(e) => {
                             void handleCheckInProvinceChange(e.target.value);
                           }}
                           disabled={isCheckInLocationLoading}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-green-400 disabled:cursor-not-allowed disabled:bg-gray-100"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm outline-none focus:border-green-400 disabled:cursor-not-allowed disabled:bg-gray-100"
                         >
                           <option value="">Chọn tỉnh/thành phố</option>
                           {checkInProvinces.map((province) => (
@@ -1774,7 +1774,7 @@ export default function LiveSetupPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-xs font-semibold text-gray-600">Xã/Phường</label>
+                        <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Xã/Phường</label>
                         <select
                           value={selectedCheckInWard?.code ?? ''}
                           onChange={(e) => {
@@ -1783,7 +1783,7 @@ export default function LiveSetupPage() {
                             setSelectedCheckInSuggestion('');
                           }}
                           disabled={!selectedCheckInProvince || isCheckInLocationLoading}
-                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-green-400 disabled:cursor-not-allowed disabled:bg-gray-100"
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm outline-none focus:border-green-400 disabled:cursor-not-allowed disabled:bg-gray-100"
                         >
                           <option value="">Chọn xã/phường</option>
                           {checkInWards.map((ward) => (
@@ -1794,7 +1794,7 @@ export default function LiveSetupPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-semibold text-gray-600">Địa chỉ chi tiết (tùy chọn)</label>
+                      <label className="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Địa chỉ chi tiết (tùy chọn)</label>
                       <input
                         value={checkInDetailDraft}
                         maxLength={255}
@@ -1803,9 +1803,9 @@ export default function LiveSetupPage() {
                           setSelectedCheckInSuggestion('');
                         }}
                         placeholder="Ví dụ: 123 Trần Hưng Đạo"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-green-400"
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm outline-none focus:border-green-400"
                       />
-                      <p className="mt-1 text-xs text-gray-500">Tối đa 255 ký tự</p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Tối đa 255 ký tự</p>
                     </div>
                     {checkInError && <p className="text-xs text-red-600">{checkInError}</p>}
                     <div className="flex items-center gap-2">
@@ -1815,7 +1815,7 @@ export default function LiveSetupPage() {
                           setCheckInDetailDraft(checkInDetail);
                           setIsCheckInOpen(false);
                         }}
-                        className="flex-1 rounded-lg bg-gray-200 py-2 text-sm font-semibold text-gray-800"
+                        className="flex-1 rounded-lg bg-gray-200 dark:bg-gray-700 py-2 text-sm font-semibold text-gray-800 dark:text-gray-200"
                       >
                         Hủy
                       </button>
@@ -1839,20 +1839,20 @@ export default function LiveSetupPage() {
 
                 {isCheckInOpen && isCheckInSuggestionsOpen && (
                   <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4">
-                    <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
-                      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                        <h3 className="text-base font-bold text-gray-900">Gợi ý vị trí check in</h3>
+                    <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-gray-800 shadow-xl">
+                      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Gợi ý vị trí check in</h3>
                         <button
                           type="button"
                           onClick={() => setIsCheckInSuggestionsOpen(false)}
-                          className="rounded-full p-1 text-gray-500 hover:bg-gray-100"
+                          className="rounded-full p-1 text-gray-500 dark:text-gray-400 hover:bg-muted"
                         >
                           <X className="h-5 w-5" />
                         </button>
                       </div>
 
                       <div className="space-y-3 p-4">
-                        <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2">
+                        <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
                           <Search className="h-4 w-4 text-gray-400" />
                           <input
                             value={checkInSuggestionSearch}
@@ -1862,12 +1862,12 @@ export default function LiveSetupPage() {
                           />
                         </div>
 
-                        <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 p-2">
+                        <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 p-2">
                           {isSuggestingCheckIn && (
-                            <p className="px-2 py-1.5 text-sm text-gray-500">Đang tải gợi ý vị trí...</p>
+                            <p className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">Đang tải gợi ý vị trí...</p>
                           )}
                           {!isSuggestingCheckIn && filteredCheckInSuggestions.length === 0 && (
-                            <p className="px-2 py-1.5 text-sm text-gray-500">Không có địa điểm phù hợp gần đây.</p>
+                            <p className="px-2 py-1.5 text-sm text-gray-500 dark:text-gray-400">Không có địa điểm phù hợp gần đây.</p>
                           )}
                           {!isSuggestingCheckIn && filteredCheckInSuggestions.length > 0 && (
                             <div className="space-y-1">
@@ -1883,7 +1883,7 @@ export default function LiveSetupPage() {
                                   className={`flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-sm ${
                                     selectedCheckInSuggestion === item.locationText
                                       ? 'border-green-600 bg-green-50 text-green-700'
-                                      : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                                   }`}
                                 >
                                   <MapPin className="h-4 w-4 shrink-0" />
@@ -1899,10 +1899,10 @@ export default function LiveSetupPage() {
                 )}
               </section>
 
-              <section className="rounded-2xl border border-gray-200 bg-white p-4">
+              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
                 <h2 className="mb-3 text-2xl font-bold">Bình luận ghim sẵn</h2>
-                <p className="text-sm text-gray-700">Bình luận này sẽ tự động được ghim trong đoạn chat của tất cả video trực tiếp mà bạn đăng.</p>
-                <div className="my-4 flex items-center justify-between border-y border-gray-200 py-2.5">
+                <p className="text-sm text-gray-700 dark:text-gray-300">Bình luận này sẽ tự động được ghim trong đoạn chat của tất cả video trực tiếp mà bạn đăng.</p>
+                <div className="my-4 flex items-center justify-between border-y border-gray-200 dark:border-gray-700 py-2.5">
                   <p className="text-sm font-semibold">Bật bình luận ghim sẵn</p>
                   <button
                     type="button"
@@ -1914,23 +1914,23 @@ export default function LiveSetupPage() {
                       pinnedEnabled ? 'bg-green-600' : 'bg-gray-400'
                     } disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
-                    <div className={`h-5 w-5 rounded-full bg-white transition-transform ${pinnedEnabled ? 'translate-x-7' : ''}`} />
+                    <div className={`h-5 w-5 rounded-full bg-white dark:bg-gray-800 transition-transform ${pinnedEnabled ? 'translate-x-7' : ''}`} />
                   </button>
                 </div>
                 <p className="mb-3 text-sm font-semibold">Xem trước</p>
                 <div className="mb-3 flex items-center gap-2 text-green-600 text-sm"><Pin className="w-4 h-4" /> Bình luận ghim</div>
-                <div className="rounded-2xl bg-gray-100 p-3">
+                <div className="rounded-2xl bg-gray-100 dark:bg-gray-900 p-3">
                   <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-300 flex items-center justify-center">
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                       ) : (
-                        <UserRound className="w-5 h-5 text-gray-600" />
+                        <UserRound className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                       )}
                     </div>
                     <div>
                       <p className="text-sm font-semibold">{currentUserName}</p>
-                      <p className="text-sm text-gray-800">{pinnedCommentText}</p>
+                      <p className="text-sm text-gray-800 dark:text-gray-200">{pinnedCommentText}</p>
                     </div>
                   </div>
                 </div>
@@ -1940,7 +1940,7 @@ export default function LiveSetupPage() {
                       value={pinnedDraftText}
                       onChange={(e) => setPinnedDraftText(e.target.value)}
                       rows={3}
-                      className="w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none focus:border-green-400"
+                      className="w-full resize-none rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-green-400"
                       placeholder="Nhập nội dung bình luận ghim..."
                     />
                     <div className="flex gap-2">
@@ -1950,7 +1950,7 @@ export default function LiveSetupPage() {
                           setPinnedDraftText(pinnedCommentText);
                           setIsPinnedEditMode(false);
                         }}
-                        className="flex-1 rounded-xl bg-gray-200 py-2 text-sm font-semibold text-gray-700"
+                        className="flex-1 rounded-xl bg-gray-200 dark:bg-gray-700 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
                       >
                         Hủy
                       </button>

@@ -31,11 +31,17 @@ function useBlinkTimer(setBlinking: (v: boolean) => void) {
 }
 
 function BlockedLoginContent({ user, onLogout }: { user: AuthUser; onLogout: () => Promise<void> }) {
+  const lockedUntilDate = user.lockedUntil ? new Date(user.lockedUntil) : null;
+  const isTempLock = !!lockedUntilDate && lockedUntilDate.getTime() > Date.now();
+  const remainingDays = isTempLock
+    ? Math.ceil((lockedUntilDate!.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+    : 0;
   const blockedReason =
-    user.blockedReason?.startsWith("Tai khoan cua ban")
-      ? "Tài khoản của bạn đang bị khóa tạm thời do bị báo cáo hoặc admin cần xem xét thủ công."
-      : user.blockedReason ||
-        "Tài khoản có thể đã bị báo cáo, bị admin khóa thủ công, hoặc đang cần xem xét thêm trước khi mở lại.";
+    user.blockedReason ||
+    "Tài khoản có thể đã bị báo cáo, bị admin khóa thủ công, hoặc đang cần xem xét thêm trước khi mở lại.";
+  const scheduleText = isTempLock
+    ? `Khóa đến ${lockedUntilDate!.toLocaleString("vi-VN", { dateStyle: "medium", timeStyle: "short" })} (còn ${remainingDays} ngày), sẽ tự mở lại sau đó.`
+    : null;
   const [reason, setReason] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -64,9 +70,12 @@ function BlockedLoginContent({ user, onLogout }: { user: AuthUser; onLogout: () 
         <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-red-500/10 text-red-500">
           <Lock className="size-7" />
         </div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-red-500">Tài khoản bị khóa tạm thời</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-red-500">{isTempLock ? "Tài khoản bị khóa tạm thời" : "Tài khoản bị khóa"}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Bạn chưa thể truy cập KConnecta</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">{blockedReason}</p>
+        {scheduleText && (
+          <p className="mt-2 text-sm font-medium leading-6 text-foreground">{scheduleText}</p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm">
@@ -106,7 +115,18 @@ export function LoginPage() {
   const authLockRef = useRef(false);
   const [blockedUser, setBlockedUser] = useState<AuthUser | null>(() => {
     const currentUser = authService.getCurrentUser();
-    return currentUser?.accountStatus === "BLOCKED" ? currentUser : null;
+    if (currentUser?.accountStatus === "BLOCKED") return currentUser;
+    // Force-logged-out mid-session because the account got locked: show the reason here.
+    const raw = sessionStorage.getItem("blockedInfo");
+    if (raw) {
+      sessionStorage.removeItem("blockedInfo");
+      try {
+        return JSON.parse(raw) as AuthUser;
+      } catch {
+        return null;
+      }
+    }
+    return null;
   });
 
   const [formData, setFormData] = useState<LoginFormData>({
@@ -386,7 +406,7 @@ export function LoginPage() {
           style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
         />
         <div className="relative z-20">
-          <div className="inline-flex items-center rounded-xl bg-white/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
+          <div className="inline-flex items-center rounded-xl bg-white dark:bg-gray-800/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
             <img src={logoV1} alt="KConnecta Logo V1" className="h-9 w-auto" />
           </div>
         </div>

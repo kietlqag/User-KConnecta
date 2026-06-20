@@ -76,17 +76,17 @@ export function LiveCommentItem({
   };
 
   return (
-    <div className={`rounded-xl px-3 py-2.5 ${isPinned || isSessionPinned ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-white shadow-sm'}`}>
+    <div className={`rounded-xl px-3 py-2.5 ${isPinned || isSessionPinned ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-white dark:bg-gray-800 shadow-sm dark:shadow-none'}`}>
       <div className="flex gap-2.5">
         <img
           src={getCommentAvatar(comment)}
           alt={displayName}
-          className="h-9 w-9 shrink-0 rounded-full object-cover bg-gray-200"
+          className="h-9 w-9 shrink-0 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <p className="text-sm font-semibold text-gray-900">{displayName}</p>
-            <span className="text-xs text-gray-500">{formatLiveCommentTime(comment.createdAt)}</span>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{displayName}</p>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{formatLiveCommentTime(comment.createdAt)}</span>
             {(isPinned || isSessionPinned) && (
               <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                 <Pin className="h-3 w-3" />
@@ -94,7 +94,7 @@ export function LiveCommentItem({
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-sm text-gray-700 break-words">{comment.content}</p>
+          <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-300 break-words">{comment.content}</p>
 
           <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs font-semibold">
             <button
@@ -102,7 +102,7 @@ export function LiveCommentItem({
               disabled={disabled || isLiking}
               onClick={() => void handleLike()}
               className={`inline-flex items-center gap-1 transition-colors disabled:cursor-not-allowed ${
-                isLiked ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                isLiked ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400 hover:text-blue-600'
               }`}
             >
               <ThumbsUp className={`h-3.5 w-3.5 ${isLiked ? 'fill-current' : ''}`} />
@@ -112,7 +112,7 @@ export function LiveCommentItem({
               type="button"
               disabled={disabled}
               onClick={() => onReply?.(comment)}
-              className="inline-flex items-center gap-1 text-gray-500 transition-colors hover:text-blue-600 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400 transition-colors hover:text-blue-600 disabled:cursor-not-allowed"
             >
               <Reply className="h-3.5 w-3.5" />
               Trả lời
@@ -123,7 +123,7 @@ export function LiveCommentItem({
                 disabled={disabled}
                 onClick={() => void onPin(isSessionPinned ? null : comment.id)}
                 className={`inline-flex items-center gap-1 transition-colors disabled:cursor-not-allowed ${
-                  isSessionPinned ? 'text-amber-700' : 'text-gray-500 hover:text-amber-700'
+                  isSessionPinned ? 'text-amber-700' : 'text-gray-500 dark:text-gray-400 hover:text-amber-700'
                 }`}
               >
                 <Pin className="h-3.5 w-3.5" />
