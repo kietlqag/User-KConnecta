@@ -29,7 +29,7 @@ interface ActiveCall {
 
 interface UseVoiceCallOptions {
   currentUserId?: string | null;
-  sendCallSignal: (signal: OutgoingCallSignal) => void;
+  sendCallSignal: (signal: OutgoingCallSignal) => boolean;
 }
 
 const CALL_RING_TIMEOUT_MS = 30000;
@@ -161,7 +161,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
   const sendSignal = useCallback(
     (receiverId: string, callId: string, type: CallSignalType, extra?: Partial<OutgoingCallSignal>) => {
-      sendCallSignal({
+      return sendCallSignal({
         receiverId,
         callId,
         type,
@@ -662,7 +662,13 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       setAuthoritativeSessionStatus('RINGING');
       setAuthoritativeDurationSec(null);
       setStatus('calling');
-      sendSignal(peerUserId, callId, 'CALL_INVITE', { mediaType });
+      const inviteSent = sendSignal(peerUserId, callId, 'CALL_INVITE', { mediaType });
+      if (!inviteSent) {
+        setErrorMessage('Mất kết nối realtime. Vui lòng đợi vài giây rồi thử gọi lại.');
+        setStatus('error');
+        cleanup(true);
+        return;
+      }
       logWebRtc('send CALL_INVITE', { callId, peerUserId, mediaType });
 
       clearCallTimeout();
@@ -812,13 +818,16 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
         await Promise.all(
           receivers.map(async (receiverId) => {
-            sendSignal(receiverId, callId, 'CALL_INVITE', {
+            const inviteSent = sendSignal(receiverId, callId, 'CALL_INVITE', {
               mediaType,
               conversationId,
               conversationName: groupDisplayName,
               conversationAvatarUrl: groupAvatarUrl,
               groupParticipants: participants,
             });
+            if (!inviteSent) {
+              throw new Error('Mất kết nối realtime. Vui lòng đợi vài giây rồi thử gọi lại.');
+            }
             const pc = createPeerConnection(callId, receiverId);
             local.getTracks().forEach((track) => pc.addTrack(track, local));
             const offer = await pc.createOffer({

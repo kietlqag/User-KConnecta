@@ -17,8 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from 'sonner';
 import { useFriendConversations } from '@/features/messenger/hooks/useFriendConversations';
-import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
-import { authService } from '@/services/authService';
+import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { Reel } from '../../types/watch.types';
 
 interface ShareModalProps {
@@ -32,15 +31,7 @@ const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 
 export const ShareModal = ({ isOpen, onClose, onShare, reel }: ShareModalProps) => {
   const { conversations, loading: loadingFriends } = useFriendConversations();
-  const token = authService.getCurrentUser()?.token;
-  
-  const { sendMessage } = useChatSocket(
-    token,
-    () => {}, // onMessage
-    () => {}, // onCallSignal
-    () => {}, // onMessageStatus
-    () => {}  // onPresenceStatus
-  );
+  const { sendMessage } = useRealtimeCall();
 
   const handleCopyLink = () => {
     const link = `${window.location.origin}/watch?id=${reel.id}`;

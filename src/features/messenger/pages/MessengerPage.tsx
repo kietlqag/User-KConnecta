@@ -2931,6 +2931,10 @@ export default function MessengerPage() {
 
   const handleStartVoiceCall = useCallback(() => {
     if (!activeChatUserId) return;
+    if (!connected) {
+      toast.error('Chưa kết nối realtime. Vui lòng đợi vài giây rồi thử lại.');
+      return;
+    }
     if (activeChatUserId.startsWith('group:')) {
       const members = groupMembersById[activeChatUserId] ?? [];
       const memberIds = members.map((member) => member.id).filter((id) => id !== currentUser?.id);
@@ -2971,10 +2975,14 @@ export default function MessengerPage() {
       return;
     }
     void voiceCall.startCall(activeChatUserId, 'audio', activeChatUser?.name, activeChatUser?.avatar);
-  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, currentUser, groupMembersById, voiceCall]);
+  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, connected, currentUser, groupMembersById, voiceCall]);
 
   const handleStartVideoCall = useCallback(() => {
     if (!activeChatUserId) return;
+    if (!connected) {
+      toast.error('Chưa kết nối realtime. Vui lòng đợi vài giây rồi thử lại.');
+      return;
+    }
     if (activeChatUserId.startsWith('group:')) {
       const members = groupMembersById[activeChatUserId] ?? [];
       const memberIds = members.map((member) => member.id).filter((id) => id !== currentUser?.id);
@@ -3015,7 +3023,7 @@ export default function MessengerPage() {
       return;
     }
     void voiceCall.startCall(activeChatUserId, 'video', activeChatUser?.name, activeChatUser?.avatar);
-  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, currentUser, groupMembersById, voiceCall]);
+  }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, connected, currentUser, groupMembersById, voiceCall]);
 
   const handleCallAgain = useCallback(
     (mediaType: 'audio' | 'video' = 'audio') => {

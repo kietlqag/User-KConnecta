@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useFriendConversations } from '@/features/messenger/hooks/useFriendConversations';
-import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
+import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
 import { formatLivePostStoryText } from '@/lib/storyShareText';
@@ -66,9 +66,7 @@ export function PostShareModal({
   const emojiRef = useRef<HTMLDivElement>(null);
 
   const { conversations, loading: loadingFriends } = useFriendConversations();
-  const token = currentUser?.token;
-
-  const selectedPrivacy = PRIVACY_OPTIONS.find((o) => o.value === privacy)!;
+  const { sendMessage } = useRealtimeCall();
 
   const filteredConversations = useMemo(
     () =>
@@ -80,9 +78,7 @@ export function PostShareModal({
     [conversations, searchQuery],
   );
 
-  const { sendMessage } = useChatSocket(token, () => {}, () => {}, () => {}, () => {});
-
-  // Close dropdowns when clicking outside
+  const selectedPrivacy = PRIVACY_OPTIONS.find((o) => o.value === privacy)!;
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (privacyRef.current && !privacyRef.current.contains(e.target as Node)) {

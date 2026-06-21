@@ -1,6 +1,7 @@
 ﻿import { useEffect, useRef, useState, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import { getWsBaseUrl } from '@/utils/apiBaseUrl';
+import { authService } from '@/services/authService';
 import type {
   IncomingCallError,
   IncomingChatError,
@@ -56,6 +57,16 @@ export function useChatSocket(
       brokerURL: wsUrl,
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      connectionTimeout: 15000,
+      beforeConnect: () => {
+        const freshToken = authService.getCurrentUser()?.token?.trim();
+        if (!freshToken) {
+          throw new Error('Missing auth token for WebSocket');
+        }
+        client.connectHeaders = { Authorization: `Bearer ${freshToken}` };
+      },
       onConnect: () => {
         setConnected(true);
 
@@ -139,9 +150,10 @@ export function useChatSocket(
       onDisconnect: () => setConnected(false),
       onStompError: (frame) => {
         console.error('[useChatSocket] STOMP error:', frame.headers?.message);
+        setConnected(false);
       },
-      onWebSocketError: (e) => {
-        console.error('[useChatSocket] WebSocket error:', e);
+      onWebSocketError: () => {
+        setConnected(false);
       },
     });
 
@@ -161,9 +173,10 @@ export function useChatSocket(
         destination: '/app/chat.private',
         body: JSON.stringify({ receiverId, content }),
       });
-    } else {
-      console.warn('[useChatSocket] Not connected, cannot send message');
+      return true;
     }
+    console.warn('[useChatSocket] Not connected, cannot send message');
+    return false;
   }, []);
 
   const sendGroupMessage = useCallback((conversationId: string, content: string) => {
@@ -172,9 +185,10 @@ export function useChatSocket(
         destination: '/app/chat.group',
         body: JSON.stringify({ conversationId, content }),
       });
-    } else {
-      console.warn('[useChatSocket] Not connected, cannot send group message');
+      return true;
     }
+    console.warn('[useChatSocket] Not connected, cannot send group message');
+    return false;
   }, []);
 
   const sendCallSignal = useCallback((signal: OutgoingCallSignal) => {
@@ -183,9 +197,10 @@ export function useChatSocket(
         destination: '/app/call.signal',
         body: JSON.stringify(signal),
       });
-    } else {
-      console.warn('[useChatSocket] Not connected, cannot send call signal');
+      return true;
     }
+    console.warn('[useChatSocket] Not connected, cannot send call signal');
+    return false;
   }, []);
 
   const sendMessageDelivered = useCallback((messageId: string) => {

@@ -5,7 +5,7 @@ function normalizeOrigin(origin?: string) {
     return DEFAULT_API_ORIGIN;
   }
 
-  return origin.replace(/\/+$/, '');
+  return origin.replace(/\/+$/, '').replace(/\/api\/?$/, '');
 }
 
 export function getApiBaseUrl() {
@@ -15,11 +15,21 @@ export function getApiBaseUrl() {
   return `${normalizeOrigin(import.meta.env.VITE_API_URL)}/api`;
 }
 
-/** ws:// pointing to the same host as the page when no VITE_API_URL (goes through Vite proxy /ws) */
+/** WebSocket base URL — same host proxy in dev, backend origin in production */
 export function getWsBaseUrl() {
+  const pageProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const pageHost = `${pageProtocol}//${window.location.host}`;
+
   if (!import.meta.env.VITE_API_URL) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${window.location.host}`;
+    return pageHost;
   }
-  return normalizeOrigin(import.meta.env.VITE_API_URL).replace(/^http/, 'ws');
+
+  const apiOrigin = normalizeOrigin(import.meta.env.VITE_API_URL);
+
+  // Local dev: route WS through Vite proxy (/ws) instead of cross-origin :8080
+  if (import.meta.env.DEV && /^https?:\/\/(localhost|127\.0\.0\.1):8080$/i.test(apiOrigin)) {
+    return pageHost;
+  }
+
+  return apiOrigin.replace(/^http/i, 'ws');
 }

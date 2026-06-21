@@ -64,34 +64,34 @@ const getSupportedRecordingMimeType = () => {
   ].find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
 };
 
-function LiveTimer({ startedAt }: { startedAt?: string | null }) {
-  const formatted = useMemo(() => {
-    if (!startedAt) return '00:00:00';
-    const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+function LiveTimer({ startedAt, paused = false }: { startedAt?: string | null; paused?: boolean }) {
+  const formatElapsed = useCallback((at: string) => {
+    const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(at).getTime()) / 1000));
     const hours = Math.floor(elapsedSec / 3600);
     const minutes = Math.floor((elapsedSec % 3600) / 60);
     const seconds = elapsedSec % 60;
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }, [startedAt]);
+  }, []);
+
+  const formatted = useMemo(() => {
+    if (!startedAt) return '00:00:00';
+    return formatElapsed(startedAt);
+  }, [formatElapsed, startedAt]);
 
   const [display, setDisplay] = useState(formatted);
 
   useEffect(() => {
-    const tick = () => {
-      if (!startedAt) {
-        setDisplay('00:00:00');
-        return;
-      }
-      const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
-      const hours = Math.floor(elapsedSec / 3600);
-      const minutes = Math.floor((elapsedSec % 3600) / 60);
-      const seconds = elapsedSec % 60;
-      setDisplay(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
-    };
+    setDisplay(formatted);
+  }, [formatted]);
+
+  useEffect(() => {
+    if (paused || !startedAt) return;
+
+    const tick = () => setDisplay(formatElapsed(startedAt));
     tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, [startedAt]);
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [formatElapsed, paused, startedAt]);
 
   return <span>{display}</span>;
 }
@@ -901,8 +901,8 @@ export default function LiveProducerPage() {
 
           <div className="p-4 mt-2 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800">
             <div className="flex items-center gap-2 text-red-500 font-semibold text-sm mb-3">
-              <span className="h-2 w-2 rounded-full bg-red-500" />
-              <LiveTimer startedAt={sessionStartedAt} />
+              <span className={`h-2 w-2 rounded-full bg-red-500 ${isEndingLive ? '' : 'animate-pulse'}`} />
+              <LiveTimer startedAt={sessionStartedAt} paused={isEndingLive} />
             </div>
             <button
               onClick={() => void handleEndLive()}

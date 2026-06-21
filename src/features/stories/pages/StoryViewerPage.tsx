@@ -25,7 +25,7 @@ import {
 import { authService } from '@/services/authService';
 import { storyService, type StoryResponse } from '@/services/storyService';
 import { resolveStoryTextSize } from '@/lib/storyShareText';
-import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
+import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -137,7 +137,7 @@ export function StoryViewerPage() {
   const menuRef = useRef<HTMLDivElement>(null);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
 
-  const { sendMessage } = useChatSocket(currentUser?.token ?? null, () => {});
+  const { sendMessage } = useRealtimeCall();
   const emojiIdRef = useRef(0);
   const progressIntervalRef = useRef<number | null>(null);
   const progressRef = useRef(0);
