@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../../home/components/Header';
 import {
   GroupsLeftSidebar,
+  GroupsRightSidebar,
   GroupFeed,
   InviteFriendsModal,
   GroupDetailSidebar,
@@ -238,14 +239,16 @@ export const GroupDetailPage = () => {
     <div className="min-h-screen bg-gray-100 dark:bg-background flex flex-col">
       <Header />
       
-      <div className="flex flex-1 pt-14 h-full">
-        {/* Left Sidebar */}
-        <div className="sticky top-14 h-[calc(100vh-56px)] shrink-0 z-10 w-[360px]">
-          <GroupsLeftSidebar joinedGroups={joinedGroups} managedGroups={managedGroups} />
+      <div className="flex h-full min-w-[940px] flex-1 overflow-x-auto pt-14">
+        <div className="sticky top-14 z-10 h-[calc(100vh-56px)] w-[300px] shrink-0">
+          <GroupsLeftSidebar
+            joinedGroups={joinedGroups}
+            managedGroups={managedGroups}
+            showGroupLists={false}
+          />
         </div>
-        
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto w-full max-w-full">
+
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <div className="bg-white dark:bg-gray-800 px-0 lg:px-8 xl:px-16 shadow-sm dark:shadow-none border-b border-gray-200 dark:border-gray-700">
             <div className="max-w-[1050px] mx-auto">
               {/* Banner */}
@@ -564,6 +567,10 @@ export const GroupDetailPage = () => {
              )}
           </div>
         </main>
+
+        <div className="sticky top-14 z-10 h-[calc(100vh-56px)] w-[320px] shrink-0">
+          <GroupsRightSidebar joinedGroups={joinedGroups} managedGroups={managedGroups} />
+        </div>
       </div>
 
       {groupId && group && (

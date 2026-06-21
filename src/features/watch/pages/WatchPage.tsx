@@ -20,7 +20,6 @@ const WatchSidebar = () => (
 
 export const WatchPage = () => {
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
-  const [slideDirection, setSlideDirection] = useState<'up' | 'down'>('up');
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -65,14 +64,12 @@ export const WatchPage = () => {
 
   const handlePrevious = () => {
     if (currentReelIndex > 0) {
-      setSlideDirection('down');
       setCurrentReelIndex(currentReelIndex - 1);
     }
   };
 
   const handleNext = () => {
     if (currentReelIndex < reels.length - 1) {
-      setSlideDirection('up');
       setCurrentReelIndex(currentReelIndex + 1);
     }
   };
@@ -144,7 +141,6 @@ export const WatchPage = () => {
         ) : currentReel ? (
           <ReelPlayer
             reel={currentReel}
-            slideDirection={slideDirection}
             onPrevious={handlePrevious}
             onNext={handleNext}
             hasPrevious={currentReelIndex > 0}

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Post } from '../../../components/shared';
-import { Header } from '../../home/components/Header';
-import { GroupsLeftSidebar } from '../components';
+import { GroupsHubLayout } from '../components';
 import { useJoinedGroups, useManagedGroups } from '../hooks/useGroups';
 import { postService } from '@/services/postService';
 import { authService } from '@/services/authService';
@@ -10,7 +9,7 @@ import { mapApiPost, type FeedPost } from '@/utils/postUtils';
 export const GroupsPage = () => {
   const { data: joinedGroups = [] } = useJoinedGroups();
   const { data: managedGroups = [] } = useManagedGroups();
-  
+
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +34,7 @@ export const GroupsPage = () => {
       }
     };
 
-    fetchGroupFeed();
+    void fetchGroupFeed();
 
     return () => {
       isMounted = false;
@@ -43,65 +42,48 @@ export const GroupsPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background">
-      <Header />
-      
-      <div className="max-w-[1920px] mx-auto">
-        <div className="flex pt-14">
-          {/* Left Sidebar */}
-          <div className="sticky top-14 h-[calc(100vh-56px)] shrink-0 z-10 w-[360px]">
-            <GroupsLeftSidebar 
-              joinedGroups={joinedGroups} 
-              managedGroups={managedGroups}
-              activeSectionId="feed"
-            />
+    <GroupsHubLayout
+      joinedGroups={joinedGroups}
+      managedGroups={managedGroups}
+      activeSectionId="feed"
+    >
+      <div className="space-y-4">
+        {isLoading && (
+          <div className="rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow dark:bg-gray-800 dark:text-gray-400">
+            Đang tải bảng tin nhóm...
           </div>
-          
-          {/* Main Content */}
-          <main className="flex-1 max-w-[680px] mx-auto p-4">
-            <div className="space-y-4">
-              {isLoading && (
-                <div className="rounded-lg bg-white dark:bg-gray-800 p-6 text-center text-sm text-gray-500 dark:text-gray-400 shadow">
-                  Đang tải bảng tin nhóm...
-                </div>
-              )}
+        )}
 
-              {!isLoading && error && (
-                <div className="rounded-lg bg-white dark:bg-gray-800 p-6 text-center text-sm text-red-500 shadow">
-                  {error}
-                </div>
-              )}
+        {!isLoading && error && (
+          <div className="rounded-lg bg-white p-6 text-center text-sm text-red-500 shadow dark:bg-gray-800">
+            {error}
+          </div>
+        )}
 
-              {!isLoading && !error && posts.length === 0 && (
-                <div className="rounded-lg bg-white dark:bg-gray-800 p-12 text-center shadow">
-                  <div className="bg-gray-100 dark:bg-gray-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl">👥</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Chưa có bài viết nào</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm max-w-[300px] mx-auto">
-                    Hãy tham gia thêm các nhóm hoặc mời bạn bè đăng bài để bảng tin của bạn phong phú hơn.
-                  </p>
-                </div>
-              )}
-
-              {!isLoading && !error && posts.map((post) => (
-                <Post key={post.id} {...post} />
-              ))}
+        {!isLoading && !error && posts.length === 0 && (
+          <div className="rounded-lg bg-white p-12 text-center shadow dark:bg-gray-800">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
+              <span className="text-2xl">👥</span>
             </div>
+            <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-gray-100">Chưa có bài viết nào</h3>
+            <p className="mx-auto max-w-[300px] text-sm text-gray-500 dark:text-gray-400">
+              Hãy tham gia thêm các nhóm hoặc mời bạn bè đăng bài để bảng tin của bạn phong phú hơn.
+            </p>
+          </div>
+        )}
 
-            {!isLoading && !error && posts.length > 0 && (
-              <div className="text-center py-8">
-                <button className="text-blue-600 hover:text-blue-700 font-medium">
-                  Xem thêm bài viết
-                </button>
-              </div>
-            )}
-          </main>
-
-          {/* Right Side - Whitespace for balance */}
-          <div className="w-[360px] hidden xl:block" />
-        </div>
+        {!isLoading && !error && posts.map((post) => (
+          <Post key={post.id} {...post} />
+        ))}
       </div>
-    </div>
+
+      {!isLoading && !error && posts.length > 0 && (
+        <div className="py-8 text-center">
+          <button type="button" className="font-medium text-blue-600 hover:text-blue-700">
+            Xem thêm bài viết
+          </button>
+        </div>
+      )}
+    </GroupsHubLayout>
   );
 };

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, Video, Smile } from 'lucide-react';
+import { Image, Smile } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ProfileCreatePostModal } from '../../../profile/components/ProfileCreatePost/ProfileCreatePostModal';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
-import { CurrentUserAvatar } from '@/components/shared';
+import { CurrentUserAvatar, LiveFeatureIcon, LIVE_NAV_LABEL } from '@/components/shared';
 import { POSTS_FEED_KEY } from '../../hooks/usePosts';
 
 export function CreatePost() {
@@ -55,9 +55,9 @@ export function CreatePost() {
             to="/live"
             className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors flex-1 justify-center cursor-pointer"
           >
-            <Video className="w-6 h-6 text-red-500" />
-            <span className="text-gray-600 dark:text-gray-300 font-medium hidden sm:inline">Video trực tiếp</span>
-            <span className="text-gray-600 dark:text-gray-300 font-medium sm:hidden">Video</span>
+            <LiveFeatureIcon />
+            <span className="text-gray-600 dark:text-gray-300 font-medium hidden sm:inline">{LIVE_NAV_LABEL}</span>
+            <span className="text-gray-600 dark:text-gray-300 font-medium sm:hidden">Live</span>
           </Link>
 
           <button

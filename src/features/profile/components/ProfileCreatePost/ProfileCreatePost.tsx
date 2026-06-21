@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Image, Video } from 'lucide-react';
+import { Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ProfileCreatePostModal } from './ProfileCreatePostModal';
-import { CurrentUserAvatar } from '@/components/shared';
+import { CurrentUserAvatar, LiveFeatureIcon, LIVE_NAV_LABEL } from '@/components/shared';
 
 interface ProfileCreatePostProps {
   username: string;
@@ -43,9 +43,9 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
             to="/live"
             className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors justify-center"
           >
-            <Video className="w-6 h-6 text-red-500" />
+            <LiveFeatureIcon />
             <span className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">
-              Video trực tiếp
+              {LIVE_NAV_LABEL}
             </span>
           </Link>
 

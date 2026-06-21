@@ -56,6 +56,7 @@ export function mapPostToReel(post: PostResponse): Reel | null {
     shares: post.shareCount,
     views: 0,
     duration: 0,
+    postedAt: post.publishedAt || post.createdAt,
     isLiked: !!post.currentUserReactionType,
     currentUserReactionType: post.currentUserReactionType ?? null,
     isSaved: post.savedByCurrentUser ?? false,

@@ -366,21 +366,30 @@ export default function LiveViewerPage() {
     if (useHlsPlayback || isAtLiveEdge || !dvrUrl) return;
     const video = dvrVideoRef.current;
     if (!video) return;
+
+    let cancelled = false;
+
+    const seekAndPlay = () => {
+      if (cancelled) return;
+      if (Math.abs(video.currentTime - playbackSeconds) > 0.25) {
+        video.currentTime = playbackSeconds;
+      }
+      void video.play().catch(() => undefined);
+    };
+
     if (video.src !== dvrUrl) {
       video.src = dvrUrl;
-      video.currentTime = playbackSeconds;
+      video.load();
+      video.addEventListener('loadedmetadata', seekAndPlay, { once: true });
+      video.addEventListener('canplay', seekAndPlay, { once: true });
+    } else {
+      seekAndPlay();
     }
-    void video.play().catch(() => undefined);
-  }, [dvrUrl, isAtLiveEdge, useHlsPlayback]);
 
-  useEffect(() => {
-    if (useHlsPlayback || isAtLiveEdge || !dvrUrl) return;
-    const video = dvrVideoRef.current;
-    if (!video) return;
-    if (Math.abs(video.currentTime - playbackSeconds) > 0.35) {
-      video.currentTime = playbackSeconds;
-    }
-  }, [playbackSeconds, isAtLiveEdge, dvrUrl, useHlsPlayback]);
+    return () => {
+      cancelled = true;
+    };
+  }, [dvrUrl, isAtLiveEdge, playbackSeconds, useHlsPlayback]);
 
   useEffect(() => {
     if (useHlsPlayback || isAtLiveEdge) return;
@@ -534,11 +543,16 @@ export default function LiveViewerPage() {
                 {!isAtLiveEdge && dvrUrl && (
                   <video
                     ref={dvrVideoRef}
-                    src={dvrUrl}
                     autoPlay
                     playsInline
+                    muted={isMuted}
                     className="h-full w-full object-contain"
                   />
+                )}
+                {!isAtLiveEdge && !dvrUrl && canScrub && (
+                  <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-white/70">
+                    Đang chuẩn bị bản ghi để tua lại...
+                  </div>
                 )}
               </>
             )}

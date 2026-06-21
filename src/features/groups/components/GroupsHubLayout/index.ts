@@ -1,0 +1,1 @@
+export { GroupsHubLayout } from './GroupsHubLayout';

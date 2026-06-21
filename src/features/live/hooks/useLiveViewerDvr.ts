@@ -171,11 +171,6 @@ export function useLiveViewerDvr(enabled: boolean) {
     return () => window.clearInterval(interval);
   }, [enabled, isAtLiveEdge, refreshDvrUrl]);
 
-  useEffect(() => {
-    if (!enabled || isAtLiveEdge || !dvrUrl) return;
-    refreshDvrUrl();
-  }, [dvrUrl, enabled, isAtLiveEdge, refreshDvrUrl]);
-
   useEffect(() => () => {
     void stopRecorder();
     revokeDvrUrl();

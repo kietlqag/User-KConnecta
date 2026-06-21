@@ -1,5 +1,6 @@
 import { Music, CheckCircle, Globe, Users, Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { formatPostTimestamp } from '@/utils/postUtils';
 import type { Reel } from '../../types/watch.types';
 
 interface ReelOverlayProps {
@@ -10,6 +11,7 @@ interface ReelOverlayProps {
     verified?: boolean;
   };
   caption: string;
+  postedAt: string;
   privacy: Reel['privacy'];
   group?: Reel['group'];
   music?: {
@@ -26,8 +28,9 @@ const PRIVACY_META: Record<Reel['privacy'], { label: string; Icon: typeof Globe 
   PRIVATE: { label: 'Chỉ mình tôi', Icon: Lock },
 };
 
-export const ReelOverlay = ({ creator, caption, privacy, group, music }: ReelOverlayProps) => {
+export const ReelOverlay = ({ creator, caption, postedAt, privacy, group, music }: ReelOverlayProps) => {
   const { label: privacyLabel, Icon: PrivacyIcon } = PRIVACY_META[privacy] ?? PRIVACY_META.PUBLIC;
+  const postedAtLabel = formatPostTimestamp(postedAt);
   const navigate = useNavigate();
   const goToProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -77,25 +80,30 @@ export const ReelOverlay = ({ creator, caption, privacy, group, music }: ReelOve
               <PrivacyIcon className="w-3.5 h-3.5 text-white/80 flex-shrink-0" aria-label={privacyLabel}>
                 <title>{privacyLabel}</title>
               </PrivacyIcon>
+              <span>·</span>
+              <span className="text-white/70 shrink-0">{postedAtLabel}</span>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <h3
-              onClick={goToProfile}
-              className="font-semibold text-white text-lg cursor-pointer hover:underline"
-            >
-              {creator.name}
-            </h3>
-            {creator.verified && (
-              <CheckCircle className="w-5 h-5 text-blue-500 fill-blue-500" />
-            )}
-            <PrivacyIcon
-              className="w-4 h-4 text-white/80"
-              aria-label={privacyLabel}
-            >
-              <title>{privacyLabel}</title>
-            </PrivacyIcon>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3
+                onClick={goToProfile}
+                className="font-semibold text-white text-lg cursor-pointer hover:underline truncate"
+              >
+                {creator.name}
+              </h3>
+              {creator.verified && (
+                <CheckCircle className="w-5 h-5 text-blue-500 fill-blue-500 shrink-0" />
+              )}
+              <PrivacyIcon
+                className="w-4 h-4 text-white/80 shrink-0"
+                aria-label={privacyLabel}
+              >
+                <title>{privacyLabel}</title>
+              </PrivacyIcon>
+            </div>
+            <p className="mt-0.5 text-xs text-white/70">{postedAtLabel}</p>
           </div>
         )}
 

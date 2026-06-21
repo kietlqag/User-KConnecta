@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Calendar, Users, Flag, Rss, FileText, Gamepad2, Video, Play, Edit, BookOpen, Image as ImageIcon, Film, PlusCircle, Store, TrendingUp, UserPlus, CalendarPlus } from 'lucide-react';
+import { Search, Calendar, Users, Flag, Rss, FileText, Gamepad2, Video, Play, Edit, BookOpen, Image as ImageIcon, Film, PlusCircle, Store, TrendingUp, UserPlus, CalendarPlus, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MenuItemCard } from '../MenuItemCard';
 import { CreateItemCard } from '../CreateItemCard';
@@ -91,10 +91,17 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
       description: 'Khám phá các trò chơi trên Facebook.',
     },
     {
+      id: 'live',
+      icon: <Radio className="w-5 h-5 text-primary" />,
+      title: 'Phát trực tuyến',
+      description: 'Phát trực tiếp hoặc xem các buổi live đang diễn ra.',
+      href: '/live',
+    },
+    {
       id: 'watch',
       icon: <Video className="w-5 h-5 text-purple-600" />,
-      title: 'Video trực tiếp',
-      description: 'Xem video phát trực tiếp phổ biến từ khắp nơi trên Facebook.',
+      title: 'Video',
+      description: 'Xem video phổ biến từ bạn bè và cộng đồng.',
       href: '/watch',
     },
   ];

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MoreHorizontal, Link2, Bookmark, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { reelActionIconClass } from '../ReelActionButton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,11 +123,11 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 cursor-pointer outline-none"
+            className="flex flex-col items-center gap-1.5 outline-none"
             aria-label="Tùy chọn khác"
           >
-            <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-gray-600 transition-colors">
-              <MoreHorizontal className="w-6 h-6 text-white" />
+            <div className={reelActionIconClass}>
+              <MoreHorizontal className="h-5 w-5" strokeWidth={2.25} />
             </div>
           </button>
         </DropdownMenuTrigger>

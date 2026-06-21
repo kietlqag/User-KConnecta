@@ -17,6 +17,7 @@ import { notificationService } from '@/services/notificationService';
 import { searchHistoryService } from '@/services/searchHistoryService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
+import { LIVE_NAV_LABEL } from '@/components/shared';
 
 export function Header() {
   const [showMessenger, setShowMessenger] = useState(false);
@@ -95,7 +96,7 @@ export function Header() {
     { icon: <Users className="w-6 h-6" />, href: '/friends', label: 'Bạn bè' },
     { icon: <Video className="w-6 h-6" />, href: '/watch', label: 'Watch' },
     { icon: <Shapes className="w-6 h-6" />, href: '/groups', label: 'Groups' },
-    { icon: <Radio className="w-6 h-6" />, href: '/live', label: 'LiveStream' },
+    { icon: <Radio className="w-6 h-6" />, href: '/live', label: LIVE_NAV_LABEL },
   ];
 
   return (

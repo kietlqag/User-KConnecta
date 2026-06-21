@@ -10,6 +10,7 @@ interface CommentsPanelProps {
   postId: string;
   creator: { name: string; avatar: string };
   caption: string;
+  postedAt?: string;
   onClose: () => void;
   onCommentCountChange?: (delta: number) => void;
 }
@@ -283,7 +284,7 @@ const SORT_OPTIONS = [
 
 type SortValue = (typeof SORT_OPTIONS)[number]['value'];
 
-export const CommentsPanel = ({ postId, creator, caption, onClose, onCommentCountChange }: CommentsPanelProps) => {
+export const CommentsPanel = ({ postId, creator, caption, postedAt, onClose, onCommentCountChange }: CommentsPanelProps) => {
   const [comments, setComments] = useState<PostCommentResponse[]>([]);
   const [totalElements, setTotalElements] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -376,7 +377,12 @@ export const CommentsPanel = ({ postId, creator, caption, onClose, onCommentCoun
               alt={creator.name}
               className="w-10 h-10 rounded-full object-cover"
             />
-            <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{creator.name}</p>
+            <div className="min-w-0">
+              <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{creator.name}</p>
+              {postedAt && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">{formatPostTimestamp(postedAt)}</p>
+              )}
+            </div>
           </div>
           {caption && (
             <p className="text-gray-700 dark:text-gray-300 text-sm mt-3 whitespace-pre-line">{caption}</p>

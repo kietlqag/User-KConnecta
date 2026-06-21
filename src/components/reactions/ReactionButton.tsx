@@ -225,7 +225,7 @@ export function ReactionButton({
   if (variant === 'reel') {
     return (
       <div
-        className={`relative flex flex-col items-center gap-1 ${className}`}
+        className={`relative flex flex-col items-center gap-1.5 ${className}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
@@ -238,17 +238,19 @@ export function ReactionButton({
           style={likeAnimStyle}
         >
           <div
-            className={`flex h-12 w-12 items-center justify-center rounded-full bg-gray-800/50 backdrop-blur-sm transition-colors group-hover:bg-gray-700/80 ${
-              selectedReaction ? 'ring-2 ring-white/30' : ''
+            className={`flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-800 shadow-sm border border-gray-200/80 transition-all group-hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:group-hover:bg-gray-700 ${
+              selectedReaction ? 'ring-2 ring-primary/30' : ''
             }`}
           >
             {selectedReaction ? (
-              <img src={selectedReaction.emoji} alt={selectedReaction.label} width={24} height={24} draggable={false} />
+              <img src={selectedReaction.emoji} alt={selectedReaction.label} width={22} height={22} draggable={false} />
             ) : (
-              <ThumbsUp className="h-6 w-6 text-white" />
+              <ThumbsUp className="h-5 w-5" strokeWidth={2.25} />
             )}
           </div>
-          <span className="text-sm font-semibold text-black">{formatReelCount(count)}</span>
+          <span className="text-[11px] font-semibold leading-none text-gray-700 tabular-nums dark:text-gray-300">
+            {formatReelCount(count)}
+          </span>
         </button>
       </div>
     );

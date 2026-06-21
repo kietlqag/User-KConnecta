@@ -1,6 +1,7 @@
-import { MessageCircle, Share2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, MessageCircle, Share2 } from 'lucide-react';
 import { ReactionButton, type ReactionOption } from '@/components/reactions';
 import { ReelMoreMenu } from '../ReelMoreMenu';
+import { ReelActionButton, reelActionIconClass } from '../ReelActionButton';
 
 interface ReelInteractionPanelProps {
   postId: string;
@@ -14,6 +15,10 @@ interface ReelInteractionPanelProps {
   isOwner?: boolean;
   onComment: () => void;
   onShare: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
 }
 
 export const ReelInteractionPanel = ({
@@ -28,6 +33,10 @@ export const ReelInteractionPanel = ({
   postId,
   onComment,
   onShare,
+  onPrevious,
+  onNext,
+  hasPrevious = false,
+  hasNext = false,
 }: ReelInteractionPanelProps) => {
   const formatCount = (count: number): string => {
     if (count >= 1000000) {
@@ -39,8 +48,10 @@ export const ReelInteractionPanel = ({
     return count.toString();
   };
 
+  const showNavigation = Boolean(onPrevious && onNext);
+
   return (
-    <div className="flex flex-col gap-6 items-center">
+    <div className="flex flex-col items-center gap-4">
       <ReactionButton
         variant="reel"
         initialReaction={selectedReaction}
@@ -49,33 +60,41 @@ export const ReelInteractionPanel = ({
         disabled={isReacting}
       />
 
-      <button
-        onClick={onComment}
-        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 cursor-pointer"
-        type="button"
-      >
-        <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-blue-600 transition-colors">
-          <MessageCircle className="w-6 h-6 text-white" />
-        </div>
-        <span className="text-sm font-semibold text-black">
-          {formatCount(comments)}
-        </span>
-      </button>
+      <ReelActionButton onClick={onComment} count={formatCount(comments)} ariaLabel="Bình luận">
+        <MessageCircle className="h-5 w-5" strokeWidth={2.25} />
+      </ReelActionButton>
 
-      <button
-        onClick={onShare}
-        className="flex flex-col items-center gap-1 group transition-transform hover:scale-110 cursor-pointer"
-        type="button"
-      >
-        <div className="w-12 h-12 rounded-full bg-gray-800/50 backdrop-blur-sm flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-          <Share2 className="w-6 h-6 text-white" />
-        </div>
-        <span className="text-sm font-semibold text-black">
-          {formatCount(shares)}
-        </span>
-      </button>
+      <ReelActionButton onClick={onShare} count={formatCount(shares)} ariaLabel="Chia sẻ">
+        <Share2 className="h-5 w-5" strokeWidth={2.25} />
+      </ReelActionButton>
 
       <ReelMoreMenu postId={postId} isSaved={isSaved} isOwner={isOwner} />
+
+      {showNavigation && (
+        <>
+          <div className="my-0.5 h-px w-9 bg-gray-200 dark:bg-gray-700" aria-hidden />
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={onPrevious}
+              disabled={!hasPrevious}
+              aria-label="Video trước"
+              className={reelActionIconClass}
+            >
+              <ChevronUp className="h-5 w-5" strokeWidth={2.5} />
+            </button>
+            <button
+              type="button"
+              onClick={onNext}
+              disabled={!hasNext}
+              aria-label="Video tiếp theo"
+              className={reelActionIconClass}
+            >
+              <ChevronDown className="h-5 w-5" strokeWidth={2.5} />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

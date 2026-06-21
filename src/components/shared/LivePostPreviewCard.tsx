@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Lock, Play, Radio } from 'lucide-react';
+import { Bell, Loader2, Radio } from 'lucide-react';
 import { Room, RoomEvent, Track, type RemoteTrack } from 'livekit-client';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
@@ -45,7 +45,7 @@ export function LivePostPreviewCard({
   const currentUser = authService.getCurrentUser();
   const isOwner = !!currentUser && currentUser.id === authorId;
 
-  const livePreviewRootRef = useRef<HTMLButtonElement | null>(null);
+  const livePreviewRootRef = useRef<HTMLDivElement | null>(null);
   const livePreviewVideoRef = useRef<HTMLVideoElement | null>(null);
   const livePreviewRoomRef = useRef<Room | null>(null);
   const livePreviewConnectingRef = useRef(false);
@@ -79,6 +79,11 @@ export function LivePostPreviewCard({
     || liveReplayUrl,
   );
   const showLivePlaceholder = liveSessionStatus === 'LIVE' && !isLivePreviewReady && !isLivePreviewConnecting;
+  const isPrimaryActionDisabled =
+    isScheduledLockedForHost
+    || isRecordingProcessing
+    || isRecordingFailed
+    || (isLiveEnded && !liveReplayUrl);
 
   useEffect(() => {
     let cancelled = false;
@@ -265,6 +270,68 @@ export function LivePostPreviewCard({
     }
   };
 
+  const renderPrimaryActionButton = (size: 'sm' | 'md' = 'md') => {
+    const sizeClass = size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm';
+
+    if (scheduledLiveAt && isOwner) {
+      return (
+        <button
+          type="button"
+          disabled={!canStartScheduledLive}
+          onClick={() => void handleOpenLive()}
+          className={`shrink-0 rounded-lg font-semibold text-white ${sizeClass} ${
+            canStartScheduledLive
+              ? 'bg-emerald-600 hover:bg-emerald-700'
+              : 'cursor-not-allowed bg-gray-400'
+          }`}
+        >
+          {canStartScheduledLive ? 'Bắt đầu phát' : 'Chưa đến giờ'}
+        </button>
+      );
+    }
+
+    if (scheduledLiveAt) {
+      return (
+        <button
+          type="button"
+          disabled={isSubscribeLoading}
+          onClick={() => void handleToggleLiveSubscription()}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg font-semibold ${sizeClass} ${
+            isLiveSubscribed
+              ? 'border border-green-600 bg-green-50 text-green-700 hover:bg-green-100'
+              : 'bg-green-600 text-white hover:bg-green-700'
+          } disabled:cursor-not-allowed disabled:opacity-60`}
+        >
+          <Bell className={size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+          {isSubscribeLoading ? 'Đang lưu...' : isLiveSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        disabled={isPrimaryActionDisabled}
+        onClick={() => void handleOpenLive()}
+        className={`shrink-0 rounded-lg font-semibold text-white ${sizeClass} ${
+          isPrimaryActionDisabled
+            ? 'cursor-not-allowed bg-gray-700 opacity-80'
+            : isLiveEnded
+              ? 'bg-gray-700 hover:bg-gray-800'
+              : 'bg-red-600 hover:bg-red-700'
+        }`}
+      >
+        {liveReplayUrl
+          ? 'Xem lại'
+          : isRecordingProcessing
+            ? 'Đang xử lý'
+            : isLiveEnded
+              ? 'Đã kết thúc'
+              : 'Xem trực tiếp'}
+      </button>
+    );
+  };
+
   const handleOpenLive = async () => {
     try {
       const session = await liveService.getSessionByPost(postId);
@@ -306,12 +373,7 @@ export function LivePostPreviewCard({
         <div className={className}>
           <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40">
             <div className="flex items-start justify-between gap-3">
-              <button
-                type="button"
-                disabled={isScheduledLockedForHost}
-                onClick={isScheduledLockedForHost ? undefined : () => void handleOpenLive()}
-                className={`min-w-0 flex-1 text-left ${isScheduledLockedForHost ? 'cursor-default' : ''}`}
-              >
+              <div className="min-w-0 flex-1 text-left">
                 <div className="mb-2 inline-flex rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
                   {scheduledLiveAt ? 'Đã lên lịch' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
                 </div>
@@ -323,10 +385,12 @@ export function LivePostPreviewCard({
                   {scheduledLiveAt
                     ? `Bắt đầu lúc ${scheduledLiveAt}`
                     : liveReplayUrl
-                      ? 'Nhấn để xem lại'
-                      : isLiveEnded
-                        ? 'Phiên live đã kết thúc'
-                        : 'Nhấn để xem trực tiếp'}
+                      ? 'Có bản ghi phát lại'
+                      : isRecordingProcessing
+                        ? 'Bản ghi đang được xử lý'
+                        : isLiveEnded
+                          ? 'Phiên live đã kết thúc'
+                          : 'Đang phát trực tiếp'}
                 </p>
                 {scheduledLiveAt && isOwner && liveSubscriptionCount > 0 && (
                   <button
@@ -340,45 +404,8 @@ export function LivePostPreviewCard({
                     {liveSubscriptionCount} người quan tâm
                   </button>
                 )}
-              </button>
-              {scheduledLiveAt && isOwner ? (
-                <button
-                  type="button"
-                  disabled={!canStartScheduledLive}
-                  onClick={() => void handleOpenLive()}
-                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${
-                    canStartScheduledLive
-                      ? 'bg-emerald-600 hover:bg-emerald-700'
-                      : 'cursor-not-allowed bg-gray-400'
-                  }`}
-                >
-                  {canStartScheduledLive ? 'Bắt đầu phát' : 'Chưa đến giờ'}
-                </button>
-              ) : scheduledLiveAt ? (
-                <button
-                  type="button"
-                  disabled={isSubscribeLoading}
-                  onClick={() => void handleToggleLiveSubscription()}
-                  className={`inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold ${
-                    isLiveSubscribed
-                      ? 'border border-green-600 bg-green-50 text-green-700 hover:bg-green-100'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  } disabled:cursor-not-allowed disabled:opacity-60`}
-                >
-                  <Bell className="h-3.5 w-3.5" />
-                  {isSubscribeLoading ? '...' : isLiveSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void handleOpenLive()}
-                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold text-white ${
-                    isLiveEnded ? 'bg-gray-700 hover:bg-gray-800' : 'bg-red-600 hover:bg-red-700'
-                  }`}
-                >
-                  {liveReplayUrl ? 'Xem lại' : isLiveEnded ? 'Đã kết thúc' : 'Xem'}
-                </button>
-              )}
+              </div>
+              {renderPrimaryActionButton('sm')}
             </div>
           </div>
         </div>
@@ -429,14 +456,9 @@ export function LivePostPreviewCard({
     <>
       <div className={className}>
         <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-zinc-950 shadow-sm dark:shadow-none">
-          <button
+          <div
             ref={livePreviewRootRef}
-            type="button"
-            disabled={isScheduledLockedForHost}
-            onClick={isScheduledLockedForHost ? undefined : () => void handleOpenLive()}
-            className={`group relative block aspect-video w-full overflow-hidden bg-black text-left ${
-              isScheduledLockedForHost ? 'cursor-default' : ''
-            }`}
+            className="group relative block aspect-video w-full overflow-hidden bg-black"
           >
             {(liveSessionStatus === 'LIVE' || liveReplayUrl) && (
               <video
@@ -470,17 +492,9 @@ export function LivePostPreviewCard({
                 </span>
               </div>
             )}
-            {!showLiveVideo && (
+            {isRecordingProcessing && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`flex h-16 w-16 items-center justify-center rounded-full bg-white dark:bg-gray-800/15 text-white ring-1 ring-white/25 backdrop-blur ${
-                  isScheduledLockedForHost ? '' : 'transition-transform group-hover:scale-105'
-                }`}>
-                  {isScheduledLockedForHost ? (
-                    <Lock className="h-7 w-7" />
-                  ) : (
-                    <Play className="ml-1 h-8 w-8 fill-white" />
-                  )}
-                </span>
+                <Loader2 className="h-10 w-10 animate-spin text-white/70" aria-hidden />
               </div>
             )}
             <div className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/80 to-transparent p-4 text-white transition-opacity duration-300 ${
@@ -507,7 +521,12 @@ export function LivePostPreviewCard({
               <h2 className="line-clamp-2 text-xl font-bold leading-tight">{liveTitle}</h2>
               {liveDescription && <p className="mt-1 line-clamp-2 text-sm text-white/75">{liveDescription}</p>}
             </div>
-          </button>
+            {compact && (
+              <div className="absolute bottom-3 right-3 z-20">
+                {renderPrimaryActionButton('sm')}
+              </div>
+            )}
+          </div>
 
           {!compact && (
             <div className="flex items-center justify-between gap-3 bg-surface px-4 py-3">
@@ -519,12 +538,14 @@ export function LivePostPreviewCard({
                       ? `Có thể bắt đầu phát lúc ${scheduledLiveAt}`
                       : scheduledLiveAt
                     : liveReplayUrl
-                      ? 'Nhấn để xem lại phiên live đã phát'
+                      ? 'Có bản ghi phát lại'
                       : isRecordingProcessing
                         ? 'Vui lòng quay lại sau ít phút'
-                        : isLivePreviewReady
-                          ? 'Video live đang phát ngay trên bảng tin'
-                          : 'Nhấn để xem phiên live và tham gia bình luận'}
+                        : isLiveEnded
+                          ? 'Phiên live đã kết thúc'
+                          : isLivePreviewReady
+                            ? 'Video live đang phát trên bảng tin'
+                            : 'Tham gia phòng live qua nút bên phải'}
                 </p>
                 {scheduledLiveAt && isOwner && liveSubscriptionCount > 0 && (
                   <button
@@ -539,52 +560,7 @@ export function LivePostPreviewCard({
                   <p className="mt-1 text-xs text-gray-400">Chưa có người quan tâm</p>
                 )}
               </div>
-              {scheduledLiveAt && isOwner ? (
-                <button
-                  type="button"
-                  disabled={!canStartScheduledLive}
-                  onClick={() => void handleOpenLive()}
-                  className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold text-white ${
-                    canStartScheduledLive
-                      ? 'bg-emerald-600 hover:bg-emerald-700'
-                      : 'cursor-not-allowed bg-gray-400'
-                  }`}
-                >
-                  {canStartScheduledLive ? 'Bắt đầu phát' : 'Chưa đến giờ'}
-                </button>
-              ) : scheduledLiveAt ? (
-                <button
-                  type="button"
-                  disabled={isSubscribeLoading}
-                  onClick={() => void handleToggleLiveSubscription()}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold ${
-                    isLiveSubscribed
-                      ? 'border border-green-600 bg-green-50 text-green-700 hover:bg-green-100'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  } disabled:cursor-not-allowed disabled:opacity-60`}
-                >
-                  <Bell className="h-4 w-4" />
-                  {isSubscribeLoading ? 'Đang lưu...' : isLiveSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => void handleOpenLive()}
-                  className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold text-white ${
-                    isLiveEnded
-                      ? 'bg-gray-700 hover:bg-gray-800'
-                      : 'bg-red-600 hover:bg-red-700'
-                  }`}
-                >
-                  {liveReplayUrl
-                    ? 'Xem lại'
-                    : isRecordingProcessing
-                      ? 'Đang xử lý'
-                      : isLiveEnded
-                        ? 'Đã kết thúc'
-                        : 'Xem trực tiếp'}
-                </button>
-              )}
+              {renderPrimaryActionButton()}
             </div>
           )}
         </div>

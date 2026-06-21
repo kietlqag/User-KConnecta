@@ -26,6 +26,7 @@ export interface Reel {
   shares: number;
   views: number;
   duration: number;
+  postedAt: string;
   isLiked?: boolean;
   currentUserReactionType?: ReactionType | null;
   isSaved?: boolean;

@@ -5,7 +5,6 @@ import { ReelOverlay } from '../ReelOverlay';
 import { ReelInteractionPanel } from '../ReelInteractionPanel';
 import { CommentsPanel } from '../CommentsPanel';
 import { PostShareModal } from '@/components/posts/PostShareModal';
-import { ReelNavigation } from '../ReelNavigation';
 import { authService } from '@/services/authService';
 import { postService, SAVED_POSTS_CHANGED_EVENT, type ReactionType } from '@/services/postService';
 import { reactions, type ReactionOption } from '@/components/reactions';
@@ -13,7 +12,6 @@ import { toast } from 'sonner';
 
 interface ReelPlayerProps {
   reel: Reel;
-  slideDirection: 'up' | 'down';
   onPrevious: () => void;
   onNext: () => void;
   hasPrevious: boolean;
@@ -22,7 +20,6 @@ interface ReelPlayerProps {
 
 export const ReelPlayer = ({
   reel,
-  slideDirection,
   onPrevious,
   onNext,
   hasPrevious,
@@ -82,6 +79,9 @@ export const ReelPlayer = ({
 
   useEffect(() => {
     setIsMuted(true);
+    setProgress(0);
+    setDuration(0);
+    setIsPaused(false);
   }, [reel.id]);
 
   useEffect(() => {
@@ -204,14 +204,11 @@ export const ReelPlayer = ({
   };
 
   return (
-    <div className={`flex items-center justify-center h-full px-8 relative transition-[padding] duration-200 ${showComments ? 'pr-[424px]' : ''}`}>
-      <div
-        key={reel.id}
-        className={`flex items-center gap-6 ${slideDirection === 'up' ? 'reel-slide-up' : 'reel-slide-down'}`}
-      >
-        {/* Video Container */}
-        <div className="relative w-full max-w-[500px] h-[calc(100vh-120px)] bg-black rounded-lg overflow-hidden group flex-shrink-0">
+    <div className={`flex items-center justify-center h-full px-6 relative transition-[padding] duration-200 ${showComments ? 'pr-[424px]' : ''}`}>
+      <div className="flex items-center gap-5">
+        <div className="relative h-[calc(100vh-120px)] w-[500px] max-w-[calc(100vw-8rem)] shrink-0 overflow-hidden rounded-xl bg-black shadow-[0_8px_40px_rgba(0,0,0,0.18)] group">
           <video
+            key={reel.id}
             ref={videoRef}
             src={reel.videoUrl}
             className="w-full h-full object-contain"
@@ -270,6 +267,7 @@ export const ReelPlayer = ({
           <ReelOverlay
             creator={reel.creator}
             caption={reel.caption}
+            postedAt={reel.postedAt}
             privacy={reel.privacy}
             group={reel.group}
             music={reel.music}
@@ -277,7 +275,6 @@ export const ReelPlayer = ({
 
           {/* Progress Bar Scrubber */}
           <div className="absolute bottom-0 left-0 right-0 h-4 z-20 flex items-end pb-1 px-0 group/progress">
-            {/* Time Indicator */}
             <div className="absolute bottom-4 left-4 text-white text-xs font-semibold drop-shadow-md opacity-0 group-hover/progress:opacity-100 transition-opacity pointer-events-none bg-black/40 px-2 py-1 rounded">
               {formatTime(progress)} / {formatTime(duration)}
             </div>
@@ -288,7 +285,7 @@ export const ReelPlayer = ({
               step="any"
               value={progress}
               onChange={handleSeek}
-              className="w-full h-1 bg-white dark:bg-gray-800/30 appearance-none outline-none cursor-pointer group-hover/progress:h-2 transition-all [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 [&::-webkit-slider-thumb]:h-0 group-hover/progress:[&::-webkit-slider-thumb]:w-3 group-hover/progress:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white dark:bg-gray-800 [&::-webkit-slider-thumb]:rounded-full"
+              className="w-full h-1 bg-white/30 appearance-none outline-none cursor-pointer group-hover/progress:h-2 transition-all [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 [&::-webkit-slider-thumb]:h-0 group-hover/progress:[&::-webkit-slider-thumb]:w-3 group-hover/progress:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
               style={{
                 background: `linear-gradient(to right, #10b981 ${(progress / (duration || 1)) * 100}%, rgba(255,255,255,0.3) ${(progress / (duration || 1)) * 100}%)`
               }}
@@ -297,8 +294,7 @@ export const ReelPlayer = ({
           </div>
         </div>
 
-        {/* Interaction Buttons - Always next to video */}
-        <div className="flex-shrink-0 flex items-center">
+        <div className="flex-shrink-0 self-center">
           <ReelInteractionPanel
             postId={reel.id}
             likes={likeCount}
@@ -311,19 +307,12 @@ export const ReelPlayer = ({
             isOwner={authService.getCurrentUser()?.id === reel.creator.id}
             onComment={handleComment}
             onShare={handleShare}
-          />
-        </div>
-
-        {/* Navigation - in flow, to the right of the interaction buttons */}
-        <div className="flex-shrink-0 flex items-center">
-          <ReelNavigation
             onPrevious={onPrevious}
             onNext={onNext}
             hasPrevious={hasPrevious}
             hasNext={hasNext}
           />
         </div>
-
       </div>
 
       {/* Comments Panel - Fixed full-height right corner */}
@@ -333,6 +322,7 @@ export const ReelPlayer = ({
             postId={reel.id}
             creator={reel.creator}
             caption={reel.caption}
+            postedAt={reel.postedAt}
             onClose={() => setShowComments(false)}
             onCommentCountChange={(delta) => {
               setCommentCount(prev => prev + delta);
