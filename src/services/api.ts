@@ -18,6 +18,7 @@ function getToken(): string | null {
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
+  timeout: 45000,
 });
 
 axiosInstance.interceptors.request.use(config => {
@@ -56,6 +57,9 @@ axiosInstance.interceptors.response.use(
       const data = error.response?.data;
       const message =
         (typeof data === 'object' && data !== null && 'message' in data ? (data as { message?: string }).message : null)
+        || (error.code === 'ECONNABORTED'
+          ? 'Server phản hồi quá chậm. Backend có thể đang khởi động — vui lòng đợi vài giây rồi thử lại.'
+          : null)
         || error.message
         || 'Có lỗi xảy ra';
       const err = new Error(message) as Error & { status?: number };

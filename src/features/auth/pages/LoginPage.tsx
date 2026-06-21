@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, LogOut, MailCheck } from "lucide-react";
 import { authService, type AuthUser } from "@/services/authService";
@@ -157,6 +157,11 @@ export function LoginPage() {
 
   const redirectTo = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || "/home";
 
+  const resetGoogleAuth = useCallback(() => {
+    authLockRef.current = false;
+    setIsGoogleLoading(false);
+  }, []);
+
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) {
@@ -206,8 +211,7 @@ export function LoginPage() {
           } catch (err) {
             setGoogleError(err instanceof Error ? err.message : "Đăng nhập Google thất bại");
           } finally {
-            authLockRef.current = false;
-            setIsGoogleLoading(false);
+            resetGoogleAuth();
           }
         },
       });
@@ -240,7 +244,7 @@ export function LoginPage() {
       cancelled = true;
       if (script) script.removeEventListener("load", renderGoogleButton);
     };
-  }, [formData.rememberMe, navigate, redirectTo]);
+  }, [formData.rememberMe, navigate, redirectTo, resetGoogleAuth]);
 
   useEffect(() => {
     const prevHtmlOverflow = document.documentElement.style.overflow;
@@ -706,7 +710,24 @@ export function LoginPage() {
                   ref={googleButtonRef}
                   className={`flex min-h-[44px] items-center justify-center ${isAuthenticating ? "pointer-events-none opacity-60" : ""}`}
                 />
-                {isGoogleLoading && <p className="text-center text-sm text-muted-foreground">Đang xác thực với Google...</p>}
+                {isGoogleLoading && (
+                  <div className="space-y-2 text-center">
+                    <p className="text-sm text-muted-foreground">Đang xác thực với Google...</p>
+                    <p className="text-xs text-muted-foreground">
+                      Nếu chờ quá lâu, backend có thể đang khởi động trên Render.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetGoogleAuth();
+                        setGoogleError("Đã hủy. Vui lòng thử lại sau vài giây.");
+                      }}
+                      className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+                    >
+                      Hủy và thử lại
+                    </button>
+                  </div>
+                )}
                 {googleError && <p className="text-center text-sm text-red-500">{googleError}</p>}
               </div>
 
