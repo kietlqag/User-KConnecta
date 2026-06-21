@@ -28,7 +28,7 @@ public interface PostCommentRepository extends JpaRepository<PostComment, UUID> 
     // Comment cấp 1 hiển thị: đã duyệt & chưa xóa, HOẶC của chính người xem, HOẶC soft-deleted/pending nhưng còn con (giữ thread)
     @Query("SELECT c FROM PostComment c WHERE c.post.id = :postId AND c.share IS NULL AND c.parentComment IS NULL " +
            "AND ((c.status = project.kconnecta.user.backend.feature.post.entity.CommentStatus.APPROVED AND c.isDeleted = false) " +
-           "OR (:currentUserId IS NOT NULL AND c.user.id = :currentUserId) " +
+           "OR (:currentUserId IS NOT NULL AND c.user.id = :currentUserId AND c.status <> project.kconnecta.user.backend.feature.post.entity.CommentStatus.REJECTED) " +
            "OR EXISTS (SELECT r FROM PostComment r WHERE r.parentComment = c))")
     Page<PostComment> findTopLevelVisible(@Param("postId") UUID postId,
                                           @Param("currentUserId") UUID currentUserId,
@@ -36,7 +36,7 @@ public interface PostCommentRepository extends JpaRepository<PostComment, UUID> 
 
     @Query("SELECT c FROM PostComment c WHERE c.share.id = :shareId AND c.parentComment IS NULL " +
            "AND ((c.status = project.kconnecta.user.backend.feature.post.entity.CommentStatus.APPROVED AND c.isDeleted = false) " +
-           "OR (:currentUserId IS NOT NULL AND c.user.id = :currentUserId) " +
+           "OR (:currentUserId IS NOT NULL AND c.user.id = :currentUserId AND c.status <> project.kconnecta.user.backend.feature.post.entity.CommentStatus.REJECTED) " +
            "OR EXISTS (SELECT r FROM PostComment r WHERE r.parentComment = c))")
     Page<PostComment> findTopLevelVisibleByShareId(@Param("shareId") UUID shareId,
                                                    @Param("currentUserId") UUID currentUserId,
@@ -45,7 +45,7 @@ public interface PostCommentRepository extends JpaRepository<PostComment, UUID> 
     // Replies hiển thị: cùng quy tắc với cấp 1
     @Query("SELECT c FROM PostComment c WHERE c.parentComment.id = :parentId " +
            "AND ((c.status = project.kconnecta.user.backend.feature.post.entity.CommentStatus.APPROVED AND c.isDeleted = false) " +
-           "OR (:currentUserId IS NOT NULL AND c.user.id = :currentUserId) " +
+           "OR (:currentUserId IS NOT NULL AND c.user.id = :currentUserId AND c.status <> project.kconnecta.user.backend.feature.post.entity.CommentStatus.REJECTED) " +
            "OR EXISTS (SELECT r FROM PostComment r WHERE r.parentComment = c)) " +
            "ORDER BY c.createdAt ASC")
     List<PostComment> findVisibleReplies(@Param("parentId") UUID parentId,

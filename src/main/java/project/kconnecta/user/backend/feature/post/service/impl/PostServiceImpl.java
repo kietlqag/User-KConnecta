@@ -88,6 +88,8 @@ public class PostServiceImpl implements PostService {
     private final PostShareRepository postShareRepository;
     private final PostSavedRepository postSavedRepository;
     private final PostReportRepository postReportRepository;
+    private final project.kconnecta.user.backend.feature.post.repository.CommentReportRepository commentReportRepository;
+    private final project.kconnecta.user.backend.feature.post.service.CommentViolationService commentViolationService;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
@@ -120,10 +122,12 @@ public class PostServiceImpl implements PostService {
         );
 
         if (aiModerationPolicyReader.isEnabled()
-                && request.getContent() != null && !request.getContent().isBlank()) {
+                && request.getContent() != null
+                && !request.getContent().isBlank()
+                && policyContentValidator.isSuspect(request.getContent())) {
             geminiModerationService.moderate(request.getContent()).ifPresent(moderation -> {
                 if (!moderation.safe()) {
-                    throw new project.kconnecta.user.backend.exception.ValidationException(
+                    throw new ValidationException(
                             "Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderation.reason());
                 }
             });
@@ -271,7 +275,13 @@ public class PostServiceImpl implements PostService {
 
         policyContentValidator.validatePostUpdate(userId, newContent, mediaRequests.size());
 
-        if (aiModerationPolicyReader.isEnabled() && newContent != null && !newContent.isBlank()) {
+        boolean contentChanged = request.getContent() != null
+                && !Objects.equals(newContent, post.getContent());
+        if (contentChanged
+                && aiModerationPolicyReader.isEnabled()
+                && newContent != null
+                && !newContent.isBlank()
+                && policyContentValidator.isSuspect(newContent)) {
             geminiModerationService.moderate(newContent).ifPresent(moderation -> {
                 if (!moderation.safe()) {
                     throw new ValidationException(
@@ -361,7 +371,9 @@ public class PostServiceImpl implements PostService {
             // Re-moderate content at publish time — catches cases where the API key
             // was missing at creation time or policy has since changed.
             if (aiModerationPolicyReader.isEnabled()
-                    && post.getContent() != null && !post.getContent().isBlank()) {
+                    && post.getContent() != null
+                    && !post.getContent().isBlank()
+                    && policyContentValidator.isSuspect(post.getContent())) {
                 var moderation = geminiModerationService.moderate(post.getContent());
                 if (moderation.isPresent() && !moderation.get().safe()) {
                     post.setStatus(PostStatus.REJECTED);
@@ -388,6 +400,10 @@ public class PostServiceImpl implements PostService {
     private static final int COMMENT_MODERATION_BATCH = 8;
     /** After this many failed AI attempts a comment drops out of the queue (stays PENDING for admin), so it can't starve newer ones. */
     private static final int MAX_MODERATION_ATTEMPTS = 3;
+    /** Bao lâu thì một comment đã được AI duyệt mới được phép gọi AI lại khi bị report. */
+    private static final java.time.Duration REPORT_RECHECK_AFTER = java.time.Duration.ofHours(24);
+    /** Đủ số reporter KHÁC NHAU này thì ép AI duyệt lại ngay, bất kể vừa duyệt. */
+    private static final int REPORT_FORCE_RECHECK_REPORTERS = 3;
 
     @Override
     public int moderatePendingComments() {
@@ -403,21 +419,35 @@ public class PostServiceImpl implements PostService {
         int resolved = 0;
         for (PostComment comment : pending.getContent()) {
             try {
+                // Report có thể đã gọi AI sync (SAFE) trước khi job chạy — không gọi lại API.
+                if (comment.getAiModerationStatus() == AiModerationStatus.SAFE) {
+                    comment.setStatus(CommentStatus.APPROVED);
+                    comment.setModerationFailReason(null);
+                    postCommentRepository.save(comment);
+                    publishCommentNotification(comment);
+                    resolved++;
+                    continue;
+                }
                 var moderation = geminiModerationService.moderate(comment.getContent());
                 if (moderation.isEmpty()) {
                     // Hết quota / mọi model fail → fail-closed: giữ PENDING (ẩn) cho admin duyệt tay.
                     comment.setModerationAttempts(comment.getModerationAttempts() + 1);
+                    comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.FAILED);
                     postCommentRepository.save(comment);
                     continue;
                 }
                 if (moderation.get().safe()) {
                     comment.setStatus(CommentStatus.APPROVED);
                     comment.setModerationFailReason(null);
+                    comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.SAFE);
+                    comment.setLastModeratedAt(LocalDateTime.now());
                     postCommentRepository.save(comment);
                     publishCommentNotification(comment);
                 } else {
                     comment.setStatus(CommentStatus.REJECTED);
                     comment.setModerationFailReason(moderation.get().reason());
+                    comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.UNSAFE);
+                    comment.setLastModeratedAt(LocalDateTime.now());
                     postCommentRepository.save(comment);
                     notificationEventPublisher.publish(
                             null,
@@ -427,6 +457,8 @@ public class PostServiceImpl implements PostService {
                             comment.getId()
                     );
                     log.warn("comment moderation reject: commentId={}, reason={}", comment.getId(), moderation.get().reason());
+                    commentViolationService.recordAiUnsafeViolation(
+                            comment.getUser().getId(), comment.getId(), null, comment.getContent(), moderation.get().reason());
                 }
                 resolved++;
             } catch (Exception e) {
@@ -831,8 +863,10 @@ public class PostServiceImpl implements PostService {
 
     private PostCommentResponse toCommentResponse(PostComment comment, UUID parentCommentId, UUID currentUserId) {
         boolean isAuthor = currentUserId != null && comment.getUser().getId().equals(currentUserId);
-        // Ẩn nội dung nếu: đã xóa, HOẶC chưa duyệt (PENDING/REJECTED) và người xem không phải tác giả.
+        // Ẩn nội dung nếu: đã xóa, HOẶC bị từ chối (REJECTED) — ẩn với mọi người kể cả tác giả,
+        // HOẶC đang chờ duyệt (PENDING) và người xem không phải tác giả.
         boolean masked = comment.isDeleted()
+                || comment.getStatus() == CommentStatus.REJECTED
                 || (comment.getStatus() != CommentStatus.APPROVED && !isAuthor);
         return PostCommentResponse.builder()
                 .id(comment.getId())
@@ -901,6 +935,10 @@ public class PostServiceImpl implements PostService {
         InteractionTarget target = resolveInteractionTarget(postId);
         User user = getUser(request.getUserId(), "Comment user not found");
 
+        if (commentViolationService.isCommentLocked(user.getId())) {
+            throw new ValidationException("Bạn đang bị tạm cấm bình luận do vi phạm nhiều lần. Vui lòng thử lại sau.");
+        }
+
         PostComment parentComment = null;
         if (request.getParentCommentId() != null) {
             parentComment = postCommentRepository.findById(request.getParentCommentId())
@@ -916,7 +954,15 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        policyContentValidator.validateComment(request.getContent());
+        try {
+            policyContentValidator.validateComment(request.getContent());
+        } catch (ValidationException e) {
+            // Ghi nhận vi phạm khi nội dung chứa từ cấm/link bị chặn (bỏ qua lỗi độ dài).
+            policyContentValidator.findCommentViolationKeyword(request.getContent())
+                    .ifPresent(mk -> commentViolationService.recordBlacklistViolation(
+                            user.getId(), request.getContent(), mk.id(), mk.value()));
+            throw e;
+        }
 
         CommentStatus status = aiModerationPolicyReader.isEnabled()
                 && policyContentValidator.isSuspect(request.getContent())
@@ -949,16 +995,40 @@ public class PostServiceImpl implements PostService {
         if (!comment.getUser().getId().equals(userId)) {
             throw new ForbiddenException("Bạn không có quyền chỉnh sửa bình luận này");
         }
-        // Sửa comment cũng phải qua kiểm duyệt (trước đây bị bỏ sót hoàn toàn).
-        policyContentValidator.validateComment(request.getContent());
-        comment.setContent(request.getContent().trim());
+
+        User user = comment.getUser();
+        if (commentViolationService.isCommentLocked(user.getId())) {
+            throw new ValidationException("Bạn đang bị tạm cấm bình luận do vi phạm nhiều lần. Vui lòng thử lại sau.");
+        }
+
+        String trimmed = request.getContent().trim();
+        if (trimmed.equals(comment.getContent())) {
+            return toCommentResponse(comment, comment.getParentComment() == null ? null : comment.getParentComment().getId(), userId);
+        }
+
+        try {
+            policyContentValidator.validateComment(request.getContent());
+        } catch (ValidationException e) {
+            policyContentValidator.findCommentViolationKeyword(request.getContent())
+                    .ifPresent(mk -> commentViolationService.recordBlacklistViolation(
+                            user.getId(), request.getContent(), mk.id(), mk.value()));
+            throw e;
+        }
+
+        comment.setContent(trimmed);
 
         if (aiModerationPolicyReader.isEnabled() && policyContentValidator.isSuspect(request.getContent())) {
             comment.setStatus(CommentStatus.PENDING);
+            comment.setModerationFailReason(null);
+            comment.setModerationAttempts(0);
+            comment.setAiModerationStatus(AiModerationStatus.NOT_CHECKED);
+            comment.setLastModeratedAt(null);
         } else {
             comment.setStatus(CommentStatus.APPROVED);
             comment.setModerationFailReason(null);
             comment.setModerationAttempts(0);
+            comment.setAiModerationStatus(AiModerationStatus.NOT_CHECKED);
+            comment.setLastModeratedAt(null);
         }
         PostComment saved = postCommentRepository.save(comment);
         return toCommentResponse(saved, saved.getParentComment() == null ? null : saved.getParentComment().getId(), userId);
@@ -1172,6 +1242,102 @@ public class PostServiceImpl implements PostService {
                 reporter.getUsername(),
                 request.getReason()
         );
+    }
+
+    @Override
+    public void reportComment(UUID commentId, project.kconnecta.user.backend.feature.post.dto.request.ReportCommentRequest request) {
+        if (request == null || request.getReporterId() == null) {
+            throw new ValidationException("Reporter is required");
+        }
+
+        PostComment comment = postCommentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        User reporter = getUser(request.getReporterId(), "Reporter not found");
+
+        if (comment.getUser().getId().equals(reporter.getId())) {
+            throw new ValidationException("Bạn không thể báo cáo bình luận của chính mình");
+        }
+        if (commentReportRepository.existsByCommentIdAndReporterId(commentId, reporter.getId())) {
+            throw new ValidationException("Bạn đã báo cáo bình luận này");
+        }
+
+        commentReportRepository.save(project.kconnecta.user.backend.feature.post.entity.CommentReport.builder()
+                .comment(comment)
+                .reporter(reporter)
+                .reason(trimToNull(request.getReason()))
+                .category(request.getCategory())
+                .status(project.kconnecta.user.backend.feature.post.entity.enums.CommentReportStatus.PENDING)
+                .build());
+
+        long distinctReporters = commentReportRepository.countDistinctReportersByCommentId(commentId);
+
+        // Report chỉ là tín hiệu — comment chỉ bị ẩn khi AI kết luận unsafe.
+        if (aiModerationPolicyReader.isEnabled() && shouldRecheck(comment, distinctReporters)) {
+            recheckReportedComment(comment);
+        }
+    }
+
+    private boolean shouldRecheck(PostComment comment, long distinctReporters) {
+        if (comment.getAiModerationStatus() == project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.NOT_CHECKED) {
+            return true;
+        }
+        if (distinctReporters >= REPORT_FORCE_RECHECK_REPORTERS) {
+            return true;
+        }
+        LocalDateTime last = comment.getLastModeratedAt();
+        if (last == null) {
+            return true;
+        }
+        return last.isBefore(LocalDateTime.now().minus(REPORT_RECHECK_AFTER));
+    }
+
+    private void recheckReportedComment(PostComment comment) {
+        var moderation = geminiModerationService.moderate(comment.getContent());
+        if (moderation.isEmpty()) {
+            // AI bí (hết quota/lỗi) → đẩy comment về PENDING: ẩn tạm + vào hàng đợi admin duyệt
+            // (listPendingComments). Job nền mỗi phút cũng sẽ tự thử lại AI; report giữ PENDING.
+            comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.FAILED);
+            comment.setStatus(CommentStatus.PENDING);
+            postCommentRepository.save(comment);
+            return;
+        }
+        if (moderation.get().safe()) {
+            comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.SAFE);
+            comment.setLastModeratedAt(LocalDateTime.now());
+            if (comment.getStatus() == CommentStatus.PENDING) {
+                comment.setStatus(CommentStatus.APPROVED);
+                comment.setModerationFailReason(null);
+                postCommentRepository.save(comment);
+                publishCommentNotification(comment);
+            } else {
+                postCommentRepository.save(comment);
+            }
+            commentReportRepository.updateStatusByCommentIdAndStatus(
+                    comment.getId(), project.kconnecta.user.backend.feature.post.entity.enums.CommentReportStatus.PENDING, project.kconnecta.user.backend.feature.post.entity.enums.CommentReportStatus.DISMISSED);
+        } else {
+            comment.setStatus(CommentStatus.REJECTED);
+            comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.UNSAFE);
+            comment.setModerationFailReason(moderation.get().reason());
+            comment.setLastModeratedAt(LocalDateTime.now());
+            postCommentRepository.save(comment);
+            commentReportRepository.updateStatusByCommentIdAndStatus(
+                    comment.getId(), project.kconnecta.user.backend.feature.post.entity.enums.CommentReportStatus.PENDING, project.kconnecta.user.backend.feature.post.entity.enums.CommentReportStatus.ACTIONED);
+            notificationEventPublisher.publish(
+                    null,
+                    comment.getUser().getId(),
+                    NotificationType.SYSTEM,
+                    "Cảnh báo: bình luận của bạn đã bị ẩn do vi phạm tiêu chuẩn cộng đồng. Vui lòng tuân thủ chính sách để tránh bị hạn chế.",
+                    comment.getId()
+            );
+            log.warn("comment report reject: commentId={}, reason={}", comment.getId(), moderation.get().reason());
+            try {
+                commentViolationService.recordAiUnsafeViolation(
+                        comment.getUser().getId(), comment.getId(), null, comment.getContent(), moderation.get().reason());
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                // Race scheduler-vs-report: thread kia đã ghi dòng AI_UNSAFE cho comment này → bỏ qua.
+                log.debug("AI_UNSAFE violation already recorded for comment {} (race)", comment.getId());
+            }
+        }
     }
 
     @Override

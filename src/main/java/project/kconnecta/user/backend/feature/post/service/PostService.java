@@ -7,6 +7,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest
 import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.ReportCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PendingCommentResponse;
@@ -53,6 +54,7 @@ public interface PostService {
     List<CheckInSuggestionResponse> getCheckInSuggestions(UUID currentUserId, String province, String ward);
     PostResponse updatePrivacy(UUID postId, UUID userId, PostPrivacy privacy);
     void reportPost(UUID postId, ReportPostRequest request);
+    void reportComment(UUID commentId, ReportCommentRequest request);
     List<PostReportResponse> getMyReports(UUID userId);
 
     List<PostResponse> getPostsByIds(List<UUID> postIds, UUID currentUserId);

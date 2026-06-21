@@ -61,6 +61,14 @@ public class PostComment {
     @Column(name = "moderation_attempts", nullable = false)
     private int moderationAttempts = 0;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ai_moderation_status", nullable = false, length = 20)
+    private AiModerationStatus aiModerationStatus = AiModerationStatus.NOT_CHECKED;
+
+    @Column(name = "last_moderated_at")
+    private LocalDateTime lastModeratedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

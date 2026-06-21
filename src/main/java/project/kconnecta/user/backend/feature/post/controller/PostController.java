@@ -18,6 +18,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostRequest
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.ReportCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
@@ -222,6 +223,16 @@ public class PostController {
             @RequestBody ReportPostRequest request) {
         request.setReporterId(principal.getUserId());
         postService.reportPost(id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/comments/{commentId}/reports")
+    public ResponseEntity<Void> reportComment(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID commentId,
+            @RequestBody ReportCommentRequest request) {
+        request.setReporterId(principal.getUserId());
+        postService.reportComment(commentId, request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

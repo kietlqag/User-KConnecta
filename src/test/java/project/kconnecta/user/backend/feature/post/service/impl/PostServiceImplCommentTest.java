@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.kconnecta.user.backend.feature.policy.service.AiModerationPolicyReader;
+import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
@@ -16,10 +17,12 @@ import project.kconnecta.user.backend.feature.notification.entity.enums.Notifica
 import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
 import project.kconnecta.user.backend.feature.policy.service.PolicyContentValidator;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.entity.CommentStatus;
 import project.kconnecta.user.backend.feature.post.entity.Post;
 import project.kconnecta.user.backend.feature.post.entity.PostComment;
+import project.kconnecta.user.backend.feature.post.service.CommentViolationService;
 import project.kconnecta.user.backend.feature.post.repository.PostCommentLikeRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostCommentRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostRepository;
@@ -27,6 +30,7 @@ import project.kconnecta.user.backend.feature.post.repository.PostShareRepositor
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -65,6 +69,8 @@ class PostServiceImplCommentTest {
     private NotificationEventPublisher notificationEventPublisher;
     @Mock
     private AiModerationPolicyReader aiModerationPolicyReader;
+    @Mock
+    private CommentViolationService commentViolationService;
 
     @InjectMocks
     private PostServiceImpl service;
@@ -74,6 +80,9 @@ class PostServiceImplCommentTest {
         // AI on by default so the keyword `isSuspect` gate is exercised; lenient because
         // some tests throw before reaching it.
         lenient().when(aiModerationPolicyReader.isEnabled()).thenReturn(true);
+        lenient().when(postCommentRepository.countByParentCommentId(any())).thenReturn(0L);
+        lenient().when(postCommentLikeRepository.countByCommentId(any())).thenReturn(0L);
+        lenient().when(postCommentLikeRepository.existsByCommentIdAndUserId(any(), any())).thenReturn(false);
     }
 
     // --- helpers -----------------------------------------------------------
@@ -92,6 +101,24 @@ class PostServiceImplCommentTest {
         req.setContent(content);
         req.setParentCommentId(parentCommentId);
         return req;
+    }
+
+    private UpdateCommentRequest updateRequest(String content) {
+        UpdateCommentRequest req = new UpdateCommentRequest();
+        req.setContent(content);
+        return req;
+    }
+
+    private PostComment existingComment(UUID commentId, UUID userId, String content, CommentStatus status) {
+        User author = user(userId, "commenter");
+        Post post = post(UUID.randomUUID(), user(UUID.randomUUID(), "postAuthor"));
+        return PostComment.builder()
+                .id(commentId)
+                .post(post)
+                .user(author)
+                .content(content)
+                .status(status)
+                .build();
     }
 
     /** Make save() echo back the entity with a generated id, like the DB would. */
@@ -305,6 +332,98 @@ class PostServiceImplCommentTest {
 
         assertThatThrownBy(() -> service.addComment(postId, request(commenterId, "banned content", null)))
                 .isInstanceOf(ValidationException.class);
+
+        verify(postCommentRepository, never()).save(any());
+    }
+
+    @Test
+    void updateComment_bannedUser_throwsValidation() {
+        UUID commentId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        User author = user(userId, "commenter");
+        PostComment comment = existingComment(commentId, userId, "old content", CommentStatus.APPROVED);
+        comment.setUser(author);
+
+        when(postCommentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(commentViolationService.isCommentLocked(userId)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.updateComment(commentId, userId, updateRequest("new content")))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("tạm cấm bình luận");
+
+        verify(postCommentRepository, never()).save(any());
+    }
+
+    @Test
+    void updateComment_unchangedContent_skipsValidationAndSave() {
+        UUID commentId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        PostComment comment = existingComment(commentId, userId, "same content", CommentStatus.APPROVED);
+
+        when(postCommentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+
+        PostCommentResponse response = service.updateComment(commentId, userId, updateRequest("same content"));
+
+        assertThat(response.getContent()).isEqualTo("same content");
+        verify(policyContentValidator, never()).validateComment(anyString());
+        verify(postCommentRepository, never()).save(any());
+    }
+
+    @Test
+    void updateComment_suspectContent_resetsModerationAndSetsPending() {
+        UUID commentId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        PostComment comment = existingComment(commentId, userId, "clean content", CommentStatus.APPROVED);
+        comment.setModerationAttempts(2);
+        comment.setLastModeratedAt(LocalDateTime.now().minusDays(1));
+
+        when(postCommentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        when(policyContentValidator.isSuspect("suspicious edit")).thenReturn(true);
+        when(postCommentRepository.save(any(PostComment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PostCommentResponse response = service.updateComment(commentId, userId, updateRequest("suspicious edit"));
+
+        assertThat(response.getModerationStatus()).isEqualTo(CommentStatus.PENDING.name());
+
+        ArgumentCaptor<PostComment> captor = ArgumentCaptor.forClass(PostComment.class);
+        verify(postCommentRepository).save(captor.capture());
+        PostComment saved = captor.getValue();
+        assertThat(saved.getStatus()).isEqualTo(CommentStatus.PENDING);
+        assertThat(saved.getContent()).isEqualTo("suspicious edit");
+        assertThat(saved.getModerationAttempts()).isZero();
+        assertThat(saved.getLastModeratedAt()).isNull();
+    }
+
+    @Test
+    void updateComment_policyViolation_recordsViolationAndDoesNotSave() {
+        UUID commentId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        PostComment comment = existingComment(commentId, userId, "clean content", CommentStatus.APPROVED);
+
+        when(postCommentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+        org.mockito.Mockito.doThrow(new ValidationException("Nội dung chứa từ khóa không được phép"))
+                .when(policyContentValidator).validateComment("banned edit");
+        when(policyContentValidator.findCommentViolationKeyword("banned edit"))
+                .thenReturn(Optional.of(new PolicyContentValidator.MatchedKeyword("kw-1", "banned", "blacklist")));
+
+        assertThatThrownBy(() -> service.updateComment(commentId, userId, updateRequest("banned edit")))
+                .isInstanceOf(ValidationException.class);
+
+        verify(commentViolationService).recordBlacklistViolation(userId, "banned edit", "kw-1", "banned");
+        verify(postCommentRepository, never()).save(any());
+    }
+
+    @Test
+    void updateComment_notOwner_throwsForbidden() {
+        UUID commentId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        UUID otherId = UUID.randomUUID();
+        PostComment comment = existingComment(commentId, ownerId, "content", CommentStatus.APPROVED);
+
+        when(postCommentRepository.findById(commentId)).thenReturn(Optional.of(comment));
+
+        assertThatThrownBy(() -> service.updateComment(commentId, otherId, updateRequest("new content")))
+                .isInstanceOf(ForbiddenException.class);
 
         verify(postCommentRepository, never()).save(any());
     }

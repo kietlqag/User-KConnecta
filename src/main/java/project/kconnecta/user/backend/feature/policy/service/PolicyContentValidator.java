@@ -13,6 +13,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -53,7 +54,7 @@ public class PolicyContentValidator {
             throw new ValidationException("Tối đa " + maxImages + " ảnh/video mỗi bài");
         }
 
-        // Watchlist (vùng xám) không chặn cứng — PostServiceImpl gọi Gemini ngay sau bước này.
+        // Watchlist (vùng xám) không chặn cứng — PostServiceImpl chỉ gọi Gemini khi isSuspect.
         checkKeywords(text, config, false, "đăng bài viết");
         checkRateLimit(authorId, postsPerMinute, postTimestamps, "đăng bài");
     }
@@ -107,6 +108,42 @@ public class PolicyContentValidator {
             }
         }
         return false;
+    }
+
+    /** Từ cấm đã khớp khi bình luận vi phạm (để audit vi phạm). */
+    public record MatchedKeyword(String id, String value, String category) {}
+
+    /**
+     * Trả về từ cấm (blacklist / blocked_domain) đầu tiên mà nội dung bình luận khớp,
+     * rỗng nếu không vi phạm (KHÔNG tính lỗi độ dài, watchlist là vùng xám nên bỏ qua).
+     * Dùng để ghi vi phạm kèm từ khóa đã khớp, không làm thay đổi luồng chặn của
+     * {@link #validateComment}.
+     */
+    public Optional<MatchedKeyword> findCommentViolationKeyword(String content) {
+        String text = content == null ? "" : content;
+        if (text.isBlank()) {
+            return Optional.empty();
+        }
+        JsonNode keywords = policyService.getConfigJson().path("keywords");
+        if (!keywords.isArray()) {
+            return Optional.empty();
+        }
+        String lower = text.toLowerCase(Locale.ROOT);
+        String norm = normalizeForMatch(text);
+        for (JsonNode kw : keywords) {
+            String category = kw.path("category").asText("");
+            if ("watchlist".equals(category)) {
+                continue; // vùng xám: không tính vi phạm cứng
+            }
+            String value = kw.path("value").asText("");
+            if (value.isBlank()) {
+                continue;
+            }
+            if (keywordMatches(lower, norm, value)) {
+                return Optional.of(new MatchedKeyword(kw.path("id").asText(null), value, category));
+            }
+        }
+        return Optional.empty();
     }
 
     public void validateComment(String content) {

@@ -39,7 +39,7 @@ logging:
 
 # Local-only fallbacks when .env keys are missing. Do not rely on these outside `local` profile.
 jwt:
-  secret: ${JWT_SECRET:local-dev-jwt-secret-change-in-production-must-be-at-least-64-chars-long!!}
+  secret: ${JWT_SECRET:local-dev-jwt-secret-change-in-production-must-be-at-least-64-chars-long}
 
 admin-service:
   internal-key: ${INTERNAL_API_KEY:local-dev-internal-api-key}
