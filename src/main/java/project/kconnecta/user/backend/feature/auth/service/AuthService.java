@@ -34,6 +34,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -41,6 +42,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Transactional
 public class AuthService {
+
+    private static final HttpClient GOOGLE_HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     private final UserRepository userRepository;
     private final AccountRepository accountRepository;
@@ -266,10 +271,11 @@ public class AuthService {
             String encodedToken = URLEncoder.encode(idToken, StandardCharsets.UTF_8);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodedToken))
+                    .timeout(Duration.ofSeconds(15))
                     .GET()
                     .build();
 
-            HttpResponse<String> response = HttpClient.newHttpClient()
+            HttpResponse<String> response = GOOGLE_HTTP_CLIENT
                     .send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
