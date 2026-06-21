@@ -100,6 +100,8 @@ function validateTextKeywords(
     if (!value) continue;
     // blocked_domain chỉ kiểm tra trong URL — khớp backend PolicyContentValidator
     if (category === 'blocked_domain') continue;
+    // watchlist là vùng xám — backend để isSuspect + AI xử lý, không chặn cứng
+    if (category === 'watchlist') continue;
     if (normalized.includes(value)) {
       return buildPostPolicyViolationMessage(category, action);
     }

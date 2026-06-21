@@ -10,39 +10,6 @@ import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidation';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 
-const MODERATION_URL = import.meta.env.VITE_MODERATION_URL
-  ?? 'http://localhost:8082/api/v1/internal/moderation/check';
-
-const AI_BLOCK_CATEGORIES = new Set([
-  'sexual/minors',
-  'violence/graphic',
-  'hate/threatening',
-  'illicit/violent',
-  'self-harm/instructions',
-]);
-
-async function checkAiModeration(text: string): Promise<string | null> {
-  try {
-    const res = await fetch(MODERATION_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, imageUrl: null }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json() as { flagged: boolean; categories: Record<string, boolean> };
-    if (!data.flagged) return null;
-    const flaggedCats = Object.entries(data.categories).filter(([, v]) => v).map(([k]) => k);
-    const blockedCats = flaggedCats.filter((c) => AI_BLOCK_CATEGORIES.has(c));
-    if (blockedCats.length > 0) {
-      return `Không thể lưu thay đổi bài viết. Lý do: nội dung vi phạm tiêu chuẩn cộng đồng (${blockedCats.join(', ')}). Vui lòng chỉnh sửa và thử lại.`;
-    }
-    toast.warning(`Cảnh báo AI: Nội dung có dấu hiệu ${flaggedCats.join(', ')} — vui lòng cân nhắc trước khi lưu`);
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 type MediaItem = {
   id: string;
   type: 'image' | 'video';
@@ -231,12 +198,6 @@ export function EditPostModal({
 
     setIsSaving(true);
     try {
-      const aiError = await checkAiModeration(content.trim());
-      if (aiError) {
-        toast.error(aiError);
-        return;
-      }
-
       const media: CreatePostMediaRequest[] = mediaItems.map((m, i) => ({
         mediaType: m.type === 'video' ? 'VIDEO' : 'IMAGE',
         fileUrl: m.url,

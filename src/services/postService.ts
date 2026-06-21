@@ -333,6 +333,12 @@ export const postService = {
       category: category ?? null,
       reason: reason?.trim() || null,
     }),
+  reportComment: (commentId: string, reporterId: string, category?: ReportCategory, reason?: string) =>
+    api.post<void>(`/posts/comments/${commentId}/reports`, {
+      reporterId,
+      category: category ?? null,
+      reason: reason?.trim() || null,
+    }),
   getMyReports: () =>
     api.get<PostReportResponse[]>('/posts/reports/my'),
 };

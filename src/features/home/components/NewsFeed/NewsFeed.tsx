@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
+import { Newspaper } from 'lucide-react';
 import { Stories } from '../Stories';
 import { CreatePost } from '../CreatePost';
 import { Post } from '../../../../components/shared';
 import { FriendSuggestions } from '../FriendSuggestions';
+import { FeedErrorState } from './FeedErrorState';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { type PaginatedResponse, type PostResponse } from '@/services/postService';
 import { mapApiPost } from '@/utils/postUtils';
@@ -13,6 +15,12 @@ import { POSTS_FEED_KEY, useHighlightedPost, usePostsFeed } from '../../hooks/us
 
 // Khi rời tab ≥ ngưỡng này rồi quay lại → reload feed tươi mới (về đầu).
 const AWAY_RELOAD_MS = 60_000;
+
+function getFeedErrorDetail(error: unknown): string | null {
+  if (!error) return null;
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return null;
+}
 
 export function NewsFeed() {
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
@@ -59,7 +67,7 @@ export function NewsFeed() {
     return () => document.removeEventListener('visibilitychange', onVisibility);
   }, [queryClient]);
 
-  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error } =
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error, refetch, isRefetching } =
     usePostsFeed(currentUser?.id);
 
   // Keep refs in sync every render so the observer callback always reads fresh values
@@ -184,9 +192,11 @@ export function NewsFeed() {
       )}
 
       {!isLoading && error && (
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 text-center text-sm text-red-500 shadow border border-transparent dark:border-gray-700">
-          Không thể tải bảng tin
-        </div>
+        <FeedErrorState
+          onRetry={() => void refetch()}
+          isRetrying={isRefetching}
+          detail={getFeedErrorDetail(error)}
+        />
       )}
 
       {posts.map((post, index) => (
@@ -213,8 +223,14 @@ export function NewsFeed() {
       )}
 
       {!isLoading && !error && posts.length === 0 && (
-        <div className="rounded-xl bg-card p-6 text-center text-sm text-muted-foreground shadow-sm border border-border">
-          Chưa có bài viết trong bảng tin.
+        <div className="rounded-xl border border-border bg-card px-6 py-10 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <Newspaper className="h-7 w-7 text-muted-foreground" aria-hidden />
+          </div>
+          <h2 className="text-base font-semibold text-foreground">Chưa có bài viết</h2>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
+            Hãy theo dõi bạn bè hoặc đăng bài đầu tiên để bảng tin bắt đầu có nội dung.
+          </p>
         </div>
       )}
     </div>

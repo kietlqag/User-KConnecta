@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ThumbsUp, MoreHorizontal, Trash2, Pencil } from 'lucide-react';
+import { ThumbsUp, MoreHorizontal, Trash2, Pencil, Flag, Clock } from 'lucide-react';
 import { CommentInput } from './CommentInput';
 import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
@@ -21,6 +21,8 @@ export interface Comment {
   isDeleted: boolean;
   replyCount: number;
   replies?: Comment[];
+  /** Chỉ có giá trị cho comment của chính người xem: APPROVED | PENDING | REJECTED. */
+  moderationStatus?: string | null;
 }
 
 interface CommentItemProps {
@@ -95,6 +97,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
       isDeleted: r.isDeleted,
       replyCount: r.replyCount,
       replies: [],
+      moderationStatus: r.moderationStatus,
     }));
     return mapped;
   };
@@ -196,6 +199,17 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
 
   const handleUpdateReply = (replyId: string, newContent: string) => {
     setReplies((prev) => prev.map((r) => r.id === replyId ? { ...r, content: newContent } : r));
+  };
+
+  const handleReport = async () => {
+    setShowMenu(false);
+    if (!currentUser) return;
+    try {
+      await postService.reportComment(comment.id, currentUser.id);
+      toast.success('Đã gửi báo cáo. Cảm ơn bạn đã góp phần giữ cộng đồng an toàn!');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Không thể gửi báo cáo');
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -345,6 +359,12 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
             >
               Trả lời
             </button>
+            {comment.moderationStatus === 'PENDING' && (
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-500 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Đang chờ duyệt
+              </span>
+            )}
             <span className="text-xs text-gray-500 dark:text-gray-400">{comment.timestamp}</span>
             {likeCount > 0 && (
               <div className="flex items-center gap-1">
@@ -404,8 +424,8 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
           )}
         </div>
 
-        {/* More menu — chỉ hiện khi là chủ comment */}
-        {isOwner && (
+        {/* More menu — chủ comment thấy Sửa/Xóa, người khác thấy Báo cáo */}
+        {currentUser && (
           <div className="relative h-fit" ref={menuRef}>
             <button
               onClick={() => setShowMenu((v) => !v)}
@@ -418,20 +438,32 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
                 <div className="absolute right-0 top-7 z-20 w-40 rounded-xl bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 py-1 overflow-hidden">
-                  <button
-                    onClick={() => { setShowMenu(false); setIsEditing(true); setEditContent(comment.content); }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-muted transition-colors cursor-pointer"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Chỉnh sửa
-                  </button>
-                  <button
-                    onClick={startDeleteCountdown}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Xóa bình luận
-                  </button>
+                  {isOwner ? (
+                    <>
+                      <button
+                        onClick={() => { setShowMenu(false); setIsEditing(true); setEditContent(comment.content); }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-muted transition-colors cursor-pointer"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Chỉnh sửa
+                      </button>
+                      <button
+                        onClick={startDeleteCountdown}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Xóa bình luận
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => void handleReport()}
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-muted transition-colors cursor-pointer"
+                    >
+                      <Flag className="w-4 h-4" />
+                      Báo cáo
+                    </button>
+                  )}
                 </div>
               </>
             )}

@@ -46,6 +46,7 @@ function mapToComment(r: PostCommentResponse): Comment {
     isDeleted: r.isDeleted,
     replyCount: r.replyCount,
     replies: [],
+    moderationStatus: r.moderationStatus,
   };
 }
 
@@ -131,6 +132,8 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
         isLikedByCurrentUser: false,
         replyCount: 0,
         replies: [],
+        isDeleted: false,
+        moderationStatus: response.moderationStatus,
       };
 
       setComments((prev) => [...prev, newComment]);
