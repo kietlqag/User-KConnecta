@@ -31,6 +31,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostReactionUser
 import project.kconnecta.user.backend.feature.post.dto.response.PostPollOptionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostPollResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.SharedAlbumResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.SharedGroupResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.entity.*;
@@ -49,6 +50,9 @@ import project.kconnecta.user.backend.feature.post.service.PostService;
 import project.kconnecta.user.backend.feature.search.redis.RedisSearchIndexer;
 import project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus;
 import project.kconnecta.user.backend.feature.friend.repository.FriendshipRepository;
+import project.kconnecta.user.backend.feature.album.entity.Album;
+import project.kconnecta.user.backend.feature.album.repository.AlbumMediaRepository;
+import project.kconnecta.user.backend.feature.album.repository.AlbumRepository;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
@@ -112,6 +116,8 @@ public class PostServiceImpl implements PostService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final project.kconnecta.user.backend.feature.ai.GeminiModerationService geminiModerationService;
     private final FriendshipRepository friendshipRepository;
+    private final AlbumRepository albumRepository;
+    private final AlbumMediaRepository albumMediaRepository;
     private final PostPollRepository postPollRepository;
     private final PostPollOptionRepository postPollOptionRepository;
     private final PostPollVoteRepository postPollVoteRepository;
@@ -237,11 +243,18 @@ public class PostServiceImpl implements PostService {
                     .orElseThrow(() -> new ResourceNotFoundException("Shared group not found: " + request.getSharedGroupId()));
         }
 
+        Album sharedAlbum = null;
+        if (request.getSharedAlbumId() != null) {
+            sharedAlbum = albumRepository.findById(request.getSharedAlbumId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Shared album not found: " + request.getSharedAlbumId()));
+        }
+
         Post post = Post.builder()
                 .author(author)
                 .group(group)
                 .page(userPage)
                 .sharedGroup(sharedGroup)
+                .sharedAlbum(sharedAlbum)
                 .content(trimToNull(request.getContent()))
                 .privacy(privacy)
                 .status(status)
@@ -1574,6 +1587,27 @@ public class PostServiceImpl implements PostService {
                 .updatedAt(post.getUpdatedAt())
                 .poll(poll)
                 .sharedGroup(buildSharedGroupSummary(post.getSharedGroup()))
+                .sharedAlbum(buildSharedAlbumSummary(post.getSharedAlbum()))
+                .build();
+    }
+
+    private SharedAlbumResponse buildSharedAlbumSummary(Album album) {
+        if (album == null) {
+            return null;
+        }
+        Album resolved = albumRepository.findActiveById(album.getId()).orElse(album);
+        String coverUrl = null;
+        if (resolved.getCoverMediaId() != null) {
+            coverUrl = albumMediaRepository.findById(resolved.getCoverMediaId())
+                    .map(m -> m.getThumbnailUrl() != null ? m.getThumbnailUrl() : m.getUrl())
+                    .orElse(null);
+        }
+        return SharedAlbumResponse.builder()
+                .id(resolved.getId())
+                .title(resolved.getTitle())
+                .coverUrl(coverUrl)
+                .mediaCount(resolved.getMediaCount())
+                .ownerName(resolved.getOwner().getFullName())
                 .build();
     }
 

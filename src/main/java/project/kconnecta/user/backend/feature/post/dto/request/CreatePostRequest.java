@@ -25,6 +25,9 @@ public class CreatePostRequest {
     // Set when sharing a group to the feed — the group being shared.
     private UUID sharedGroupId;
 
+    // Set when sharing an album to the feed.
+    private UUID sharedAlbumId;
+
     private String content;
     private String imageUrl;
 

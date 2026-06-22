@@ -96,6 +96,23 @@ public class CloudinaryService {
         }
     }
 
+    public String uploadAlbumMedia(MultipartFile file, String mediaType) {
+        try {
+            boolean isVideo = "VIDEO".equalsIgnoreCase(mediaType);
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/albums",
+                            "resource_type", isVideo ? "video" : "image",
+                            "public_id", "album-" + mediaType.toLowerCase() + "-" + UUID.randomUUID()
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload album media failed", e);
+        }
+    }
+
     public String uploadChatFile(MultipartFile file) {
         try {
             String publicId = "chat-file-" + System.currentTimeMillis() + "-" + normalizeFilename(file.getOriginalFilename());
@@ -144,6 +161,22 @@ public class CloudinaryService {
             return result.get("secure_url").toString();
         } catch (IOException e) {
             throw new RuntimeException("Upload voice message failed", e);
+        }
+    }
+
+    public String uploadChatVideo(MultipartFile file) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/chat-videos",
+                            "resource_type", "video",
+                            "public_id", "chat-video-" + System.currentTimeMillis()
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload chat video failed", e);
         }
     }
 

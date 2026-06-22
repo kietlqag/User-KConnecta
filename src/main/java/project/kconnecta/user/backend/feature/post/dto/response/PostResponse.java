@@ -53,5 +53,8 @@ public class PostResponse {
     // Embedded group summary (non-null only when this post shares a group to the feed)
     private SharedGroupResponse sharedGroup;
 
+    // Embedded album summary (non-null when this post shares an album to the feed)
+    private SharedAlbumResponse sharedAlbum;
+
     private PostPollResponse poll;
 }

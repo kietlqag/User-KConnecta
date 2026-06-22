@@ -33,6 +33,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversatio
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSessionResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.VideoMessageUploadResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.VoiceMessageUploadResponse;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 
@@ -51,6 +52,7 @@ import project.kconnecta.user.backend.config.security.UserPrincipal;
 public class ChatController {
 
     private static final long MAX_VOICE_MESSAGE_BYTES = 8L * 1024L * 1024L;
+    private static final long MAX_CHAT_VIDEO_BYTES = 25L * 1024L * 1024L;
     private static final long MAX_CHAT_IMAGE_BYTES = 10L * 1024L * 1024L;
     private static final long MAX_CHAT_FILE_BYTES = 25L * 1024L * 1024L;
 
@@ -385,6 +387,40 @@ public class ChatController {
         return ResponseEntity.ok(
                 VoiceMessageUploadResponse.builder()
                         .audioUrl(audioUrl)
+                        .mimeType(contentType)
+                        .fileSizeBytes(file.getSize())
+                        .durationSec(safeDurationSec)
+                        .build()
+        );
+    }
+
+    @PostMapping(value = "/messages/videos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<VideoMessageUploadResponse> uploadChatVideo(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "durationSec", required = false) Integer durationSec,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        if (file == null || file.isEmpty()) {
+            throw new ValidationException("Video message file is required");
+        }
+        if (file.getSize() > MAX_CHAT_VIDEO_BYTES) {
+            throw new ValidationException("Video message file is too large");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("video/")) {
+            throw new ValidationException("Unsupported video message content type");
+        }
+
+        String videoUrl = cloudinaryService.uploadChatVideo(file);
+        Integer safeDurationSec = durationSec == null ? null : Math.max(0, durationSec);
+
+        return ResponseEntity.ok(
+                VideoMessageUploadResponse.builder()
+                        .videoUrl(videoUrl)
                         .mimeType(contentType)
                         .fileSizeBytes(file.getSize())
                         .durationSec(safeDurationSec)

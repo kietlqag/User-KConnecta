@@ -571,6 +571,12 @@ public class ChatServiceImpl implements ChatService {
         String previousThemeColor = conversation.getThemeColor();
 
         if (request != null) {
+            if (request.getMemberApprovalRequired() != null) {
+                if (!conversation.getCreatedBy().getId().equals(actor.getId())) {
+                    throw new RuntimeException("Only the group creator can change member approval settings");
+                }
+                conversation.setMemberApprovalRequired(request.getMemberApprovalRequired());
+            }
             if (request.getName() != null) {
                 String name = request.getName().trim();
                 if (!name.isBlank()) {
@@ -711,6 +717,10 @@ public class ChatServiceImpl implements ChatService {
             throw new RuntimeException("One or more users not found");
         }
 
+        boolean isCreator = conversation.getCreatedBy().getId().equals(actor.getId());
+        boolean requiresApproval = conversation.isMemberApprovalRequired() && !isCreator;
+        ChatMemberStatus memberStatus = requiresApproval ? ChatMemberStatus.PENDING : ChatMemberStatus.APPROVED;
+
         LocalDateTime joinedAt = LocalDateTime.now();
         List<ChatConversationMember> newMembers = users.stream()
                 .filter(user -> !chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, user.getId()))
@@ -718,7 +728,7 @@ public class ChatServiceImpl implements ChatService {
                         .conversation(conversation)
                         .user(user)
                         .joinedAt(joinedAt)
-                        .memberStatus(ChatMemberStatus.APPROVED)
+                        .memberStatus(memberStatus)
                         .build())
                 .toList();
 
@@ -729,7 +739,7 @@ public class ChatServiceImpl implements ChatService {
                     .map(this::displayName)
                     .collect(Collectors.joining(", "));
             sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
-                    "add_members",
+                    requiresApproval ? "add_members_pending" : "add_members",
                     actor,
                     null,
                     addedNames

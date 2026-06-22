@@ -5,6 +5,7 @@ import lombok.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import org.hibernate.annotations.BatchSize;
+import project.kconnecta.user.backend.feature.album.entity.Album;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.page.entity.Page;
 import project.kconnecta.user.backend.feature.search.redis.PostSearchListener;
@@ -45,6 +46,10 @@ public class Post {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shared_group_id")
     private Group sharedGroup;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shared_album_id")
+    private Album sharedAlbum;
 
     @Column(columnDefinition = "TEXT")
     private String content;
