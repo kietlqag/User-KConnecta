@@ -1136,9 +1136,13 @@ export default function LiveProducerPage() {
                       <button onClick={() => void handleClearPoll()} className="rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2.5 font-semibold">Xóa</button>
                       <button onClick={() => void handleSavePoll()} className="rounded-xl bg-blue-600 text-white py-2.5 font-semibold">Lưu thăm dò</button>
                     </div>
-                    {toolState?.pollEnabled && (
+                    {toolState?.pollQuestion && toolState.pollOptions.length > 0 && (
                       <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800 space-y-2">
-                        <p>Thăm dò đang bật: {toolState.pollQuestion}</p>
+                        <p>
+                          {toolState.pollEnabled
+                            ? `Thăm dò đang bật: ${toolState.pollQuestion}`
+                            : `Kết quả thăm dò: ${toolState.pollQuestion}`}
+                        </p>
                         {toolState.pollOptionCounts && toolState.pollOptions.length > 0 && (
                           <div className="space-y-2">
                             {toolState.pollOptions.map((option, index) => {

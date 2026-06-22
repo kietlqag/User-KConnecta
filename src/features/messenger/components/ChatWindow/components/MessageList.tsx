@@ -30,6 +30,7 @@ interface MessageListProps {
   peerAvatar?: string;
   peerName?: string;
   themeColor?: string | null;
+  onGroupJoinLinkClick?: (token: string) => void;
 }
 
 export const MessageList = forwardRef(({
@@ -59,6 +60,7 @@ export const MessageList = forwardRef(({
   peerAvatar = '',
   peerName = 'Người dùng',
   themeColor,
+  onGroupJoinLinkClick,
 }: MessageListProps, ref: ForwardedRef<HTMLDivElement>) => {
   const senderById = new Map(groupMembers.map((member) => [member.id, member]));
   const pinnedMessageIdSet = new Set(pinnedMessageIds);
@@ -124,6 +126,18 @@ export const MessageList = forwardRef(({
         return `${actor} đã thêm ${value || 'người mới'} vào nhóm.`;
       case 'add_members_pending':
         return `${actor} đã mời ${value || 'người mới'} — đang chờ phê duyệt.`;
+      case 'approve_member':
+        return `${actor} đã phê duyệt ${target} tham gia nhóm.`;
+      case 'reject_member':
+        return `${actor} đã từ chối ${target} tham gia nhóm.`;
+      case 'leave_group':
+        return `${actor} đã rời khỏi nhóm.`;
+      case 'transfer_admin':
+        return `${actor} đã chuyển quyền quản trị cho ${target}.`;
+      case 'join_via_link':
+        return `${actor} đã tham gia nhóm qua liên kết.`;
+      case 'join_via_link_pending':
+        return `${actor} đã yêu cầu tham gia qua liên kết — đang chờ phê duyệt.`;
       case 'pin_message':
         return `${actor} đã ghim một tin nhắn.`;
       case 'unpin_message':
@@ -190,6 +204,7 @@ export const MessageList = forwardRef(({
                 onReport={onReportMessage}
                 onJumpToMessage={onJumpToMessage}
                 themeColor={themeColor}
+                onGroupJoinLinkClick={onGroupJoinLinkClick}
               />
             )}
           </div>

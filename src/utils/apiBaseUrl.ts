@@ -33,3 +33,12 @@ export function getWsBaseUrl() {
 
   return apiOrigin.replace(/^http/i, 'ws');
 }
+
+/** Origin for shareable in-app links. Uses VITE_APP_URL when set, otherwise current page origin. */
+export function getAppOrigin() {
+  const configured = import.meta.env.VITE_APP_URL?.trim();
+  if (configured) {
+    return configured.replace(/\/+$/, '');
+  }
+  return window.location.origin;
+}

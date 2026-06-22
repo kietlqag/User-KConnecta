@@ -56,6 +56,7 @@ interface ChatWindowProps {
   jumpToMessageRequest?: { messageId: string; nonce: number } | null;
   isFriend?: boolean;
   rateLimitUntil?: number | null;
+  onGroupJoinLinkClick?: (token: string) => void;
 }
 
 function formatVoiceDuration(totalSec: number) {
@@ -103,6 +104,7 @@ export const ChatWindow = ({
   jumpToMessageRequest = null,
   isFriend = true,
   rateLimitUntil = null,
+  onGroupJoinLinkClick,
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
@@ -353,6 +355,7 @@ export const ChatWindow = ({
         groupName={user.name}
         groupAvatar={user.avatar}
         themeColor={themeColor}
+        onGroupJoinLinkClick={onGroupJoinLinkClick}
       />
 
       {isFriend ? (

@@ -3,6 +3,11 @@ import { friendService, FRIENDSHIP_CHANGED_EVENT } from '@/services/friendServic
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { chatService } from '@/services/chatService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
+import {
+  buildConversationPreviewFromContent,
+  formatConversationPreview,
+  mapContentToConversationPreview,
+} from '../utils/conversationPreview';
 import type { Conversation } from '../types/messenger.types';
 
 interface UseFriendConversationsResult {
@@ -14,100 +19,6 @@ interface UseFriendConversationsResult {
 
 interface UseFriendConversationsOptions {
   includeGroups?: boolean;
-}
-
-const CALL_LOG_PREFIX = '__CALL_LOG__:';
-const REPLY_PREFIX = '__REPLY__:';
-const VOICE_MESSAGE_PREFIX = '__VOICE__:';
-const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
-const FILE_MESSAGE_PREFIX = '__FILE__:';
-const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
-const POST_SHARE_PREFIX = '__POST_SHARE__:';
-const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
-const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
-
-function mapBackendContentToPreview(content?: string | null) {
-  const raw = content?.trim();
-  if (!raw) return '';
-
-  if (raw.startsWith(VOICE_MESSAGE_PREFIX)) {
-    return 'Tin nhắn thoại';
-  }
-
-  if (raw.startsWith(IMAGE_MESSAGE_PREFIX)) {
-    return 'Ảnh';
-  }
-  
-  if (raw.startsWith(VIDEO_SHARE_PREFIX)) {
-    return 'Video';
-  }
-
-  if (raw.startsWith(POST_SHARE_PREFIX)) {
-    return 'Đã chia sẻ một bài viết';
-  }
-
-  if (raw.startsWith(FILE_MESSAGE_PREFIX)) {
-    try {
-      const payload = JSON.parse(raw.slice(FILE_MESSAGE_PREFIX.length));
-      return typeof payload?.fileName === 'string' && payload.fileName.trim() ? payload.fileName.trim() : 'File';
-    } catch {
-      return 'File';
-    }
-  }
-
-  if (raw.startsWith(CHAT_ACTION_PREFIX)) {
-    return '';
-  }
-
-  if (raw.startsWith(STORY_REPLY_PREFIX) || raw.includes('STORY_REPLY')) {
-    try {
-      const rawPayload = raw.includes(':') ? raw.slice(raw.indexOf(':') + 1) : '';
-      const payload = rawPayload ? JSON.parse(rawPayload) : null;
-      if (typeof payload?.text === 'string' && payload.text.trim()) {
-        return payload.text.trim();
-      }
-    } catch {
-      // ignore invalid payload and fallback
-    }
-    return 'Đã trả lời tin';
-  }
-
-  if (raw.startsWith(REPLY_PREFIX)) {
-    try {
-      const payload = JSON.parse(raw.slice(REPLY_PREFIX.length));
-      return typeof payload?.text === 'string' ? payload.text.trim() : raw;
-    } catch {
-      return raw;
-    }
-  }
-
-  if (!raw.startsWith(CALL_LOG_PREFIX)) {
-    return raw;
-  }
-
-  try {
-    const payload = JSON.parse(raw.slice(CALL_LOG_PREFIX.length));
-    const mediaType: 'audio' | 'video' =
-      payload?.mediaType === 'video' || String(payload?.label || '').toLowerCase().includes('video')
-        ? 'video'
-        : 'audio';
-
-    if (typeof payload?.label === 'string' && payload.label.trim()) {
-      return payload.label.trim();
-    }
-    if (payload?.kind === 'completed') {
-      return mediaType === 'video' ? 'Cuộc gọi video hoàn thành' : 'Cuộc gọi thoại hoàn thành';
-    }
-    return mediaType === 'video' ? 'Đã bỏ lỡ cuộc gọi video' : 'Đã bỏ lỡ cuộc gọi thoại';
-  } catch {
-    return 'Đã bỏ lỡ cuộc gọi thoại';
-  }
-}
-
-function formatConversationPreview(text: string, isOwn: boolean) {
-  const normalized = text.trim();
-  if (!normalized) return '';
-  return isOwn ? `Bạn: ${normalized}` : normalized;
 }
 
 function parseBackendDate(value?: string | Date | null) {
@@ -195,7 +106,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
 
         const friendItems = friends.map((friend) => {
           const summary = privateSummaryByPeer.get(friend.userId);
-          const rawPreview = mapBackendContentToPreview(summary?.lastMessageContent);
+          const rawPreview = mapContentToConversationPreview(summary?.lastMessageContent);
           const isOwnLastMessage = Boolean(
             summary?.lastMessageSenderId && currentUser.id && summary.lastMessageSenderId === currentUser.id,
           );
@@ -231,7 +142,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
 
         const groupItems = groups.map((group) => {
           const summary = groupSummaryByConversation.get(group.id);
-          const rawPreview = mapBackendContentToPreview(summary?.lastMessageContent);
+          const rawPreview = mapContentToConversationPreview(summary?.lastMessageContent);
           const isOwnLastMessage = Boolean(
             summary?.lastMessageSenderId && currentUser.id && summary.lastMessageSenderId === currentUser.id,
           );
@@ -253,7 +164,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
                   )}`,
                 isOnline: false,
               },
-              lastMessage: formatConversationPreview(rawPreview, isOwnLastMessage) || 'Nhóm chat đã được tạo.',
+              lastMessage: formatConversationPreview(rawPreview, isOwnLastMessage) || 'Chưa có tin nhắn',
               timestamp: formatTimestamp(previewTimestamp),
               lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
               isUnread: unreadCount > 0,
@@ -303,9 +214,31 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
     };
 
     const unsubMsg = subscribeMessages((msg) => {
-      if (msg.senderId !== currentUser.id) {
-        scheduleReload();
+      const preview = buildConversationPreviewFromContent(msg.content, msg.senderId, currentUser.id);
+      if (preview) {
+        const chatUserId = msg.conversationId ? `group:${msg.conversationId}` : (msg.senderId === currentUser.id ? msg.receiverId : msg.senderId);
+        if (chatUserId) {
+          setConversations((prev) => {
+            const index = prev.findIndex((item) => item.user.id === chatUserId);
+            if (index === -1) {
+              scheduleReload();
+              return prev;
+            }
+            const next = [...prev];
+            next[index] = {
+              ...next[index],
+              lastMessage: preview,
+              timestamp: 'Vừa xong',
+              lastActivityAt: Date.now(),
+              isUnread: msg.senderId !== currentUser.id,
+              unreadCount: msg.senderId !== currentUser.id ? Math.max(1, next[index].unreadCount ?? 0) : next[index].unreadCount,
+            };
+            return next.sort((first, second) => (second.lastActivityAt ?? 0) - (first.lastActivityAt ?? 0));
+          });
+          return;
+        }
       }
+      scheduleReload();
     });
 
     return () => {

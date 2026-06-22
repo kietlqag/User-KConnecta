@@ -469,12 +469,12 @@ export default function LiveViewerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background">
+    <div className="h-screen overflow-hidden bg-gray-100 dark:bg-background">
       <Header />
 
-      <div className="pt-14 grid grid-cols-1 xl:grid-cols-[1.35fr_380px] gap-0">
+      <div className="mt-14 grid h-[calc(100vh-3.5rem)] grid-cols-1 gap-0 overflow-hidden xl:grid-cols-[1.35fr_380px]">
         <section
-          className="group/player bg-black min-h-[calc(100vh-56px)] relative"
+          className="group/player relative h-full bg-black"
           onMouseEnter={() => setShowControls(true)}
           onMouseLeave={() => setShowControls(false)}
           onFocus={() => setShowControls(true)}
@@ -625,8 +625,8 @@ export default function LiveViewerPage() {
           )}
         </section>
 
-        <aside className="relative border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[calc(100vh-56px)] p-4 flex flex-col">
-          <div className="flex items-start gap-3 pb-4 border-b border-gray-200 dark:border-gray-700">
+        <aside className="relative flex h-full flex-col overflow-hidden border-l border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex shrink-0 items-start gap-3 border-b border-gray-200 pb-4 dark:border-gray-700">
             <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700" />
             <div className="flex-1 min-w-0">
               <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">{hostLabel}</p>
@@ -655,7 +655,7 @@ export default function LiveViewerPage() {
           )}
 
           {(toolState?.hostNotice || toolState?.featuredLinkUrl || toolState?.pollEnabled) && (
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 shrink-0 space-y-3">
               {toolState.hostNotice && (
                 <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">
                   {toolState.hostNotice}
@@ -730,7 +730,7 @@ export default function LiveViewerPage() {
             disabled={isLiveEnded}
             toolState={toolState}
             onToolStateChange={setToolState}
-            className="mt-4 min-h-0 flex-1"
+            className="mt-4 min-h-0 flex-1 overflow-hidden"
           />
         </aside>
       </div>

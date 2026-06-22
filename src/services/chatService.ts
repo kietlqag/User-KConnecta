@@ -1,19 +1,6 @@
 import { api } from './api';
 import type { IncomingChatMessage } from '@/features/messenger/types/message.types';
 
-export interface CallRecordingResponse {
-  id: string;
-  callId: string;
-  ownerUserId: string;
-  fileUrl: string;
-  recordingMediaType?: 'audio' | 'video';
-  hasVideo?: boolean;
-  mimeType?: string;
-  fileSizeBytes: number;
-  durationSec?: number;
-  createdAt: string;
-}
-
 export interface VoiceMessageUploadResponse {
   audioUrl: string;
   mimeType?: string;
@@ -62,6 +49,28 @@ export interface GroupConversationMemberResponse {
   avatarUrl?: string | null;
   nickname?: string | null;
   memberStatus?: 'APPROVED' | 'PENDING';
+}
+
+export interface GroupJoinLinkResponse {
+  conversationId: string;
+  token: string;
+  memberApprovalRequired: boolean;
+}
+
+export interface GroupJoinLinkPreviewResponse {
+  conversationId: string;
+  conversationName: string;
+  avatarUrl?: string | null;
+  memberCount: number;
+  memberApprovalRequired: boolean;
+  membershipStatus: 'NONE' | 'MEMBER' | 'PENDING';
+}
+
+export interface JoinGroupViaLinkResponse {
+  status: 'JOINED' | 'PENDING' | 'ALREADY_MEMBER' | 'ALREADY_PENDING';
+  conversationId: string;
+  conversationName: string;
+  message: string;
 }
 
 export interface GroupConversationResponse {
@@ -203,18 +212,6 @@ export const chatService = {
     );
   },
 
-  uploadCallRecording: (callId: string, file: File, durationSec?: number, mediaType?: 'audio' | 'video') => {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (typeof durationSec === 'number' && Number.isFinite(durationSec)) {
-      formData.append('durationSec', String(Math.max(0, Math.floor(durationSec))));
-    }
-    if (mediaType) {
-      formData.append('mediaType', mediaType);
-    }
-    return api.postMultipart<CallRecordingResponse>(`/chat/calls/${callId}/recordings`, formData);
-  },
-
   uploadVoiceMessage: (file: File, durationSec?: number) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -259,6 +256,21 @@ export const chatService = {
     api.post<GroupConversationResponse>(`/chat/conversations/${conversationId}/members/${memberUserId}/approve`, {}),
   rejectGroupMember: (conversationId: string, memberUserId: string) =>
     api.delete<GroupConversationResponse>(`/chat/conversations/${conversationId}/members/${memberUserId}/pending`),
+
+  leaveGroupConversation: (conversationId: string, payload?: { newAdminUserId?: string }) =>
+    api.post<GroupConversationResponse>(`/chat/conversations/${conversationId}/leave`, payload ?? {}),
+
+  dissolveGroupConversation: (conversationId: string) =>
+    api.delete<void>(`/chat/conversations/${conversationId}`),
+
+  getGroupJoinLink: (conversationId: string) =>
+    api.get<GroupJoinLinkResponse>(`/chat/conversations/${conversationId}/join-link`),
+
+  previewGroupJoinLink: (token: string) =>
+    api.get<GroupJoinLinkPreviewResponse>(`/chat/join/${encodeURIComponent(token)}/preview`),
+
+  joinGroupViaLink: (token: string) =>
+    api.post<JoinGroupViaLinkResponse>(`/chat/join/${encodeURIComponent(token)}`, {}),
 
   updateGroupConversation: (conversationId: string, payload: { name?: string; avatarUrl?: string | null; themeColor?: string | null; memberApprovalRequired?: boolean }) => {
     return api.put<GroupConversationResponse>(`/chat/conversations/${conversationId}`, payload);

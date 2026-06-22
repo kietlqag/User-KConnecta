@@ -20,6 +20,7 @@ import {
   Image as ImageIcon,
   FileText,
   Link as LinkIcon,
+  Copy,
   Video,
   Pin,
   Pencil,
@@ -28,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Header } from '../../home/components';
 import { ConversationItem, ChatWindow } from '../components';
+import { GroupJoinLinkModal } from '../components/GroupJoinLinkModal/GroupJoinLinkModal';
 import type { PinnedChatMessage } from '../components/ChatWindow/components/PinnedMessagesModal';
 import { Conversation, MessengerFilter } from '../types/messenger.types';
 import { ChatUser, IncomingChatMessage, IncomingMessageStatus, Message } from '../types/message.types';
@@ -36,10 +38,16 @@ import { authService } from '@/services/authService';
 import { chatService, type GroupConversationMemberResponse } from '@/services/chatService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { formatLastActiveLabel } from '../utils/presenceLabel';
-import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '../utils/callDuration';
+import { normalizeCallDurationSeconds } from '../utils/callDuration';
+import {
+  buildConversationPreviewFromContent,
+  formatConversationPreview,
+  mapContentToConversationPreview,
+} from '../utils/conversationPreview';
 import { toast } from 'sonner';
 import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { validateChatAgainstPolicy } from '@/utils/policyValidation';
+import { getAppOrigin } from '@/utils/apiBaseUrl';
 import { Switch } from '@/components/ui/switch';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
@@ -323,12 +331,6 @@ function mapBackendContentToMessageFields(
   }
 }
 
-function formatConversationPreview(text: string, isOwn: boolean) {
-  const normalized = text.trim();
-  if (!normalized) return '';
-  return isOwn ? `Bạn: ${normalized}` : normalized;
-}
-
 function parseBackendDate(value?: string | Date | null) {
   if (!value) return null;
   if (value instanceof Date) {
@@ -521,6 +523,9 @@ function ChatInfoPanel({
   onMemberApprovalChange,
   onApproveMember,
   onRejectMember,
+  onLeaveGroup,
+  onDissolveGroup,
+  isGroupCreator = false,
 }: {
   user: ChatUser;
   messages: Message[];
@@ -543,6 +548,9 @@ function ChatInfoPanel({
   onMemberApprovalChange?: (enabled: boolean) => void;
   onApproveMember?: (memberId: string) => void;
   onRejectMember?: (memberId: string) => void;
+  onLeaveGroup?: () => void;
+  onDissolveGroup?: () => void;
+  isGroupCreator?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<InfoPanelTab>('media');
   const [infoView, setInfoView] = useState<'overview' | 'files'>('overview');
@@ -551,8 +559,12 @@ function ChatInfoPanel({
     info: false,
     customize: false,
     options: false,
+    joinLink: false,
     members: false,
   });
+  const [joinLink, setJoinLink] = useState('');
+  const [joinLinkLoading, setJoinLinkLoading] = useState(false);
+  const groupConversationId = isGroupChat && user.id.startsWith('group:') ? user.id.replace('group:', '') : '';
   const [visibleLimits, setVisibleLimits] = useState<Record<InfoPanelTab, number>>({
     media: INFO_PANEL_PAGE_SIZE,
     files: INFO_PANEL_PAGE_SIZE,
@@ -602,9 +614,32 @@ function ChatInfoPanel({
       info: false,
       customize: false,
       options: false,
+      joinLink: false,
       members: false,
     });
+    setJoinLink('');
   }, [user.id]);
+
+  useEffect(() => {
+    if (!groupSectionsOpen.joinLink || !groupConversationId) return;
+    let cancelled = false;
+    setJoinLinkLoading(true);
+    void chatService
+      .getGroupJoinLink(groupConversationId)
+      .then((data) => {
+        if (cancelled) return;
+        setJoinLink(`${getAppOrigin()}/messages?join=${encodeURIComponent(data.token)}`);
+      })
+      .catch(() => {
+        if (!cancelled) setJoinLink('');
+      })
+      .finally(() => {
+        if (!cancelled) setJoinLinkLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [groupConversationId, groupSectionsOpen.joinLink]);
 
   const mediaItems = useMemo(
     () =>
@@ -1170,6 +1205,7 @@ function ChatInfoPanel({
     const pendingMembers = [...groupMembers]
       .filter((member) => member.memberStatus === 'PENDING')
       .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    const approvedMemberCount = groupMembers.filter((member) => member.memberStatus !== 'PENDING').length;
 
     const renderGroupSectionHeader = (
       section: keyof typeof groupSectionsOpen,
@@ -1197,7 +1233,12 @@ function ChatInfoPanel({
             className="mx-auto h-24 w-24 rounded-full object-cover"
           />
           <h3 className="mt-3 truncate text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">{user.name}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{groupMembers.length} thành viên</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {approvedMemberCount} thành viên
+            {canManageMemberApproval && pendingMembers.length > 0
+              ? ` · ${pendingMembers.length} chờ duyệt`
+              : ''}
+          </p>
         </div>
 
         <div className="flex shrink-0 items-start justify-center gap-8 pb-5 text-center">
@@ -1265,7 +1306,7 @@ function ChatInfoPanel({
                     <div className="min-w-0 flex-1">
                       <p className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Phê duyệt thành viên</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Thành viên tự tham gia cần được bạn duyệt. Người do quản trị viên thêm sẽ vào nhóm ngay.
+                        Thành viên tham gia qua liên kết hoặc được mời cần được bạn duyệt. Người do quản trị viên thêm sẽ vào nhóm ngay.
                       </p>
                     </div>
                     <Switch
@@ -1277,6 +1318,46 @@ function ChatInfoPanel({
                 </div>
               )}
             </>
+          )}
+
+          {renderGroupSectionHeader('joinLink', 'Liên kết tham gia')}
+          {groupSectionsOpen.joinLink && (
+            <div className="space-y-3 px-3 pb-3 text-sm">
+              {joinLinkLoading ? (
+                <p className="text-gray-500 dark:text-gray-400">Đang tải liên kết...</p>
+              ) : joinLink ? (
+                <>
+                  <div className="relative">
+                    <input
+                      readOnly
+                      value={joinLink}
+                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-10 text-xs text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                    />
+                    <button
+                      type="button"
+                      aria-label="Sao chép liên kết"
+                      title="Sao chép liên kết"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(joinLink).then(
+                          () => toast.success('Đã sao chép liên kết tham gia.'),
+                          () => toast.error('Không thể sao chép liên kết.'),
+                        );
+                      }}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 cursor-pointer"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {memberApprovalRequired && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Người tham gia qua liên kết này cần được quản trị viên phê duyệt trước khi vào nhóm.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">Không thể tải liên kết tham gia.</p>
+              )}
+            </div>
           )}
 
           {renderGroupSectionHeader('members', 'Thành viên trong đoạn chat')}
@@ -1406,6 +1487,25 @@ function ChatInfoPanel({
               </div>
             )}
           </section>
+
+          <div className="mt-4 space-y-2 border-t border-gray-200 px-1 pt-4 dark:border-gray-700">
+            {isGroupCreator && (
+              <button
+                type="button"
+                onClick={onDissolveGroup}
+                className="w-full rounded-xl py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 cursor-pointer"
+              >
+                Giải tán nhóm
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onLeaveGroup}
+              className="w-full rounded-xl py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 cursor-pointer"
+            >
+              Rời nhóm
+            </button>
+          </div>
         </div>
       </aside>
       {activeLightboxMedia && (
@@ -1691,18 +1791,13 @@ export default function MessengerPage() {
   const [groupMembersById, setGroupMembersById] = useState<Record<string, ChatUser[]>>({});
   const [groupCreatorById, setGroupCreatorById] = useState<Record<string, string>>({});
   const [groupMemberApprovalById, setGroupMemberApprovalById] = useState<Record<string, boolean>>({});
-  const callRecorderRef = useRef<MediaRecorder | null>(null);
-  const callRecorderChunksRef = useRef<Blob[]>([]);
-  const callRecorderAudioCtxRef = useRef<AudioContext | null>(null);
-  const callRecorderMetaRef = useRef<{ callId: string; startedAt: number; mediaType: 'audio' | 'video' } | null>(null);
-  const callRecorderCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const callRecorderCanvasStreamRef = useRef<MediaStream | null>(null);
-  const callRecorderAnimationFrameRef = useRef<number | null>(null);
-  const callRecorderVideoElementsRef = useRef<{ local: HTMLVideoElement | null; remote: HTMLVideoElement | null }>({
-    local: null,
-    remote: null,
-  });
-  const isUploadingRecordingRef = useRef(false);
+  const [leaveGroupModalMode, setLeaveGroupModalMode] = useState<'confirm' | 'transfer' | null>(null);
+  const [isDissolveGroupModalOpen, setIsDissolveGroupModalOpen] = useState(false);
+  const [isDissolvingGroup, setIsDissolvingGroup] = useState(false);
+  const [groupJoinModalToken, setGroupJoinModalToken] = useState<string | null>(null);
+  const [leaveGroupNewAdminId, setLeaveGroupNewAdminId] = useState('');
+  const [isLeavingGroup, setIsLeavingGroup] = useState(false);
+  const joinTokenHandledRef = useRef<string | null>(null);
   const historyByUserRef = useRef<Record<string, HistoryState>>({});
   const messagesByUserRef = useRef<Record<string, Message[]>>({});
   const initialHistoryInFlightRef = useRef<Set<string>>(new Set());
@@ -1897,9 +1992,10 @@ export default function MessengerPage() {
 
       const mapped: Conversation[] = groups.map((group) => {
         const summary = summaryByConversationId.get(group.id);
-        const previewRaw = summary?.lastMessageContent?.trim() || '';
-        const previewText = previewRaw ? mapBackendContentToMessageFields(previewRaw).text : '';
-        const preview = previewText ? formatConversationPreview(previewText, summary?.lastMessageSenderId === currentUser?.id) : '';
+        const previewText = mapContentToConversationPreview(summary?.lastMessageContent);
+        const preview = previewText
+          ? formatConversationPreview(previewText, summary?.lastMessageSenderId === currentUser?.id)
+          : '';
         const parsed = parseBackendDate(summary?.lastMessageCreatedAt || group.createdAt);
         const timestamp = parsed ? formatRelativeConversationTime(parsed) : '';
         const lastActivityAt = parsed ? parsed.getTime() : 0;
@@ -1938,8 +2034,17 @@ export default function MessengerPage() {
         const next = { ...prev };
         mapped.forEach((conversation) => {
           const conversationId = conversation.user.id;
+          const existing = prev[conversationId];
+          const serverActivity = conversation.lastActivityAt ?? 0;
+          const existingActivity = existing?.lastActivityAt ?? 0;
+          if (existingActivity > serverActivity && existing?.lastMessage) {
+            next[conversationId] = {
+              ...existing,
+            };
+            return;
+          }
           next[conversationId] = {
-            ...(next[conversationId] ?? {}),
+            ...(existing ?? {}),
             lastMessage: conversation.lastMessage,
             timestamp: conversation.timestamp,
             lastActivityAt: conversation.lastActivityAt,
@@ -1958,6 +2063,35 @@ export default function MessengerPage() {
   useEffect(() => {
     void loadGroupConversations();
   }, [loadGroupConversations]);
+
+  useEffect(() => {
+    const token = searchParams.get('join');
+    if (!token || !currentUser?.id) return;
+    if (joinTokenHandledRef.current === token) return;
+    joinTokenHandledRef.current = token;
+    setGroupJoinModalToken(token);
+    setSearchParams({}, { replace: true });
+  }, [currentUser?.id, searchParams, setSearchParams]);
+
+  const handleGroupJoinLinkClick = useCallback((token: string) => {
+    setGroupJoinModalToken(token);
+  }, []);
+
+  const handleGroupJoinedFromLink = useCallback(
+    async (conversationId: string) => {
+      await loadGroupConversations();
+      setSearchParams({ with: `group:${conversationId}` });
+      toast.success('Bạn đã tham gia nhóm chat.');
+    },
+    [loadGroupConversations, setSearchParams],
+  );
+
+  const handleOpenGroupFromJoinLink = useCallback(
+    (conversationId: string) => {
+      setSearchParams({ with: `group:${conversationId}` });
+    },
+    [setSearchParams],
+  );
 
   const applyGroupConversationResponse = useCallback((group: Awaited<ReturnType<typeof chatService.getMyGroupConversations>>[number]) => {
     const chatUserId = `group:${group.id}`;
@@ -2031,7 +2165,7 @@ export default function MessengerPage() {
             ...prev,
             [peerUserId]: {
               ...(prev[peerUserId] ?? {}),
-              lastMessage: formatConversationPreview(last.text, last.isOwn),
+              lastMessage: buildConversationPreviewFromContent(last.text, last.senderId, currentUser.id),
               timestamp: formatRelativeConversationTime(last.timestamp),
               lastActivityAt: last.timestamp.getTime(),
             },
@@ -2188,13 +2322,19 @@ export default function MessengerPage() {
         })(),
       }));
 
+      const previewMessage = buildConversationPreviewFromContent(msg.content, msg.senderId, myId);
+
       setOverrides((prev) => ({
         ...prev,
         [otherUserId]: {
           ...(prev[otherUserId] ?? {}),
-          lastMessage: formatConversationPreview(newMsg.text, msg.senderId === myId),
-          timestamp: 'Vừa xong',
-          lastActivityAt: newMsg.timestamp.getTime(),
+          ...(previewMessage
+            ? {
+                lastMessage: previewMessage,
+                timestamp: 'Vừa xong',
+                lastActivityAt: newMsg.timestamp.getTime(),
+              }
+            : {}),
           isUnread: activeChatUserId !== otherUserId,
         },
       }));
@@ -2315,234 +2455,6 @@ export default function MessengerPage() {
     if (!connected) return;
     sendConversationSeen(activeChatUserId);
   }, [activeChatUserId, connected, sendConversationSeen]);
-
-  const stopAndUploadCallRecording = useCallback(
-    async (finalCallId?: string | null) => {
-      if (callRecorderAnimationFrameRef.current) {
-        window.cancelAnimationFrame(callRecorderAnimationFrameRef.current);
-        callRecorderAnimationFrameRef.current = null;
-      }
-      callRecorderCanvasStreamRef.current?.getTracks().forEach((track) => track.stop());
-      callRecorderCanvasStreamRef.current = null;
-      callRecorderCanvasRef.current = null;
-      const localVideo = callRecorderVideoElementsRef.current.local;
-      const remoteVideo = callRecorderVideoElementsRef.current.remote;
-      if (localVideo) {
-        localVideo.pause();
-        localVideo.srcObject = null;
-      }
-      if (remoteVideo) {
-        remoteVideo.pause();
-        remoteVideo.srcObject = null;
-      }
-      callRecorderVideoElementsRef.current = { local: null, remote: null };
-
-      const recorder = callRecorderRef.current;
-      const meta = callRecorderMetaRef.current;
-      if (!recorder || !meta) {
-        return;
-      }
-
-      if (recorder.state !== 'inactive') {
-        await new Promise<void>((resolve) => {
-          recorder.onstop = () => resolve();
-          recorder.stop();
-        });
-      }
-
-      const fallbackMimeType = meta.mediaType === 'video' ? 'video/webm' : 'audio/webm';
-      const mimeType = recorder.mimeType || fallbackMimeType;
-      const blob = new Blob(callRecorderChunksRef.current, { type: mimeType });
-      const callId = finalCallId ?? meta.callId;
-      const durationSec = calculateCallDurationSeconds(meta.startedAt);
-
-      callRecorderRef.current = null;
-      callRecorderChunksRef.current = [];
-      callRecorderMetaRef.current = null;
-
-      const audioCtx = callRecorderAudioCtxRef.current;
-      callRecorderAudioCtxRef.current = null;
-      if (audioCtx) {
-        try {
-          await audioCtx.close();
-        } catch {
-          // ignore close errors
-        }
-      }
-
-      if (!callId || blob.size === 0 || isUploadingRecordingRef.current) {
-        return;
-      }
-
-      isUploadingRecordingRef.current = true;
-      try {
-        const fileExt = mimeType.toLowerCase().includes('mp4') ? 'mp4' : 'webm';
-        const file = new File([blob], `call-${callId}-${Date.now()}.${fileExt}`, {
-          type: mimeType,
-        });
-        await chatService.uploadCallRecording(callId, file, durationSec, meta.mediaType);
-      } catch (error) {
-        console.error('[MessengerPage] Failed to upload call recording:', error);
-      } finally {
-        isUploadingRecordingRef.current = false;
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const canRecord =
-      (voiceCall.status === 'connecting' || voiceCall.status === 'in_call') &&
-      Boolean(voiceCall.activeCallId) &&
-      Boolean(voiceCall.localStream);
-
-    if (!canRecord) {
-      if (callRecorderRef.current) {
-        void stopAndUploadCallRecording(voiceCall.activeCallId);
-      }
-      return;
-    }
-
-    if (callRecorderRef.current) {
-      return;
-    }
-
-    const callId = voiceCall.activeCallId;
-    const localStream = voiceCall.localStream;
-    const remoteStream = voiceCall.remoteStream;
-    if (!callId || !localStream) {
-      return;
-    }
-
-    const audioCtx = new AudioContext();
-    const destination = audioCtx.createMediaStreamDestination();
-    const localSource = audioCtx.createMediaStreamSource(localStream);
-    localSource.connect(destination);
-    if (remoteStream) {
-      const remoteSource = audioCtx.createMediaStreamSource(remoteStream);
-      remoteSource.connect(destination);
-    }
-
-    const recordingStream = new MediaStream();
-    destination.stream.getAudioTracks().forEach((track) => {
-      recordingStream.addTrack(track);
-    });
-
-    const isVideoCallRecording = voiceCall.callMediaType === 'video';
-    if (isVideoCallRecording) {
-      const remoteVideoTrack = remoteStream?.getVideoTracks().find((track) => track.readyState === 'live');
-      const localVideoTrack = localStream.getVideoTracks().find((track) => track.readyState === 'live');
-      if (remoteVideoTrack || localVideoTrack) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1280;
-        canvas.height = 720;
-        const ctx = canvas.getContext('2d');
-
-        if (ctx) {
-          const localVideo = document.createElement('video');
-          localVideo.playsInline = true;
-          localVideo.muted = true;
-          localVideo.autoplay = true;
-          if (localStream) {
-            localVideo.srcObject = localStream;
-            void localVideo.play().catch(() => {});
-          }
-
-          const remoteVideo = document.createElement('video');
-          remoteVideo.playsInline = true;
-          remoteVideo.muted = true;
-          remoteVideo.autoplay = true;
-          if (remoteStream) {
-            remoteVideo.srcObject = remoteStream;
-            void remoteVideo.play().catch(() => {});
-          }
-
-          callRecorderVideoElementsRef.current = { local: localVideo, remote: remoteVideo };
-          callRecorderCanvasRef.current = canvas;
-
-          const drawFrame = () => {
-            const w = canvas.width;
-            const h = canvas.height;
-
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, w, h);
-
-            const hasRemoteFrame =
-              Boolean(remoteVideoTrack) && remoteVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
-            const hasLocalFrame =
-              Boolean(localVideoTrack) && localVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA;
-
-            if (hasRemoteFrame) {
-              ctx.drawImage(remoteVideo, 0, 0, w, h);
-            } else if (hasLocalFrame) {
-              ctx.drawImage(localVideo, 0, 0, w, h);
-            }
-
-            if (hasLocalFrame && hasRemoteFrame) {
-              const pipW = Math.floor(w * 0.26);
-              const pipH = Math.floor(h * 0.26);
-              const pipX = w - pipW - 24;
-              const pipY = h - pipH - 24;
-
-              ctx.fillStyle = 'rgba(0,0,0,0.35)';
-              ctx.fillRect(pipX - 4, pipY - 4, pipW + 8, pipH + 8);
-              ctx.drawImage(localVideo, pipX, pipY, pipW, pipH);
-            }
-
-            callRecorderAnimationFrameRef.current = window.requestAnimationFrame(drawFrame);
-          };
-
-          drawFrame();
-
-          const canvasStream = canvas.captureStream(30);
-          callRecorderCanvasStreamRef.current = canvasStream;
-          const composedVideoTrack = canvasStream.getVideoTracks()[0];
-          if (composedVideoTrack) {
-            recordingStream.addTrack(composedVideoTrack);
-          }
-        } else {
-          const fallbackTrack = remoteVideoTrack ?? localVideoTrack;
-          if (fallbackTrack) {
-            recordingStream.addTrack(fallbackTrack);
-          }
-        }
-      }
-    }
-
-    const hasVideoTrack = recordingStream.getVideoTracks().length > 0;
-    const preferredMimeTypes = hasVideoTrack
-      ? ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']
-      : ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
-    const supportedMimeType = preferredMimeTypes.find((mime) => MediaRecorder.isTypeSupported(mime));
-    const recorder = supportedMimeType
-      ? new MediaRecorder(recordingStream, { mimeType: supportedMimeType })
-      : new MediaRecorder(recordingStream);
-
-    callRecorderAudioCtxRef.current = audioCtx;
-    callRecorderChunksRef.current = [];
-    callRecorderMetaRef.current = { callId, startedAt: Date.now(), mediaType: hasVideoTrack ? 'video' : 'audio' };
-    recorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        callRecorderChunksRef.current.push(event.data);
-      }
-    };
-    recorder.start(1000);
-    callRecorderRef.current = recorder;
-
-    return () => {
-      if (callRecorderRef.current === recorder) {
-        void stopAndUploadCallRecording(callId);
-      }
-    };
-  }, [
-    stopAndUploadCallRecording,
-    voiceCall.activeCallId,
-    voiceCall.callMediaType,
-    voiceCall.localStream,
-    voiceCall.remoteStream,
-    voiceCall.status,
-  ]);
-
 
   const handleConversationClick = useCallback(
     (conversation: Conversation) => {
@@ -2888,9 +2800,9 @@ export default function MessengerPage() {
             `https://ui-avatars.com/api/?background=2563eb&color=ffffff&bold=true&name=${encodeURIComponent('Group')}`,
           isOnline: false,
         },
-        lastMessage: 'Nhóm chat mới được tạo',
-        timestamp: 'Vừa xong',
-        lastActivityAt: Date.now(),
+        lastMessage: 'Chưa có tin nhắn',
+        timestamp: formatRelativeConversationTime(created.createdAt) || 'Vừa xong',
+        lastActivityAt: parseBackendDate(created.createdAt)?.getTime() ?? Date.now(),
         isUnread: false,
         isGroup: true,
       };
@@ -3218,6 +3130,91 @@ export default function MessengerPage() {
     }
   }, [activeChatUserId, applyGroupConversationResponse, groupMemberApprovalById, isActiveGroupCreator]);
 
+  const removeGroupConversation = useCallback(
+    (chatUserId: string) => {
+      setServerGroupConversations((prev) => prev.filter((item) => item.user.id !== chatUserId));
+      setGroupMembersById((prev) => {
+        const next = { ...prev };
+        delete next[chatUserId];
+        return next;
+      });
+      setGroupCreatorById((prev) => {
+        const next = { ...prev };
+        delete next[chatUserId];
+        return next;
+      });
+      setGroupMemberApprovalById((prev) => {
+        const next = { ...prev };
+        delete next[chatUserId];
+        return next;
+      });
+      if (activeChatUserId === chatUserId) {
+        setSearchParams({});
+      }
+    },
+    [activeChatUserId, setSearchParams],
+  );
+
+  const executeLeaveGroup = useCallback(
+    async (newAdminUserId?: string) => {
+      if (!activeChatUserId?.startsWith('group:')) return;
+      const conversationId = activeChatUserId.replace('group:', '');
+      setIsLeavingGroup(true);
+      try {
+        await chatService.leaveGroupConversation(
+          conversationId,
+          newAdminUserId ? { newAdminUserId } : undefined,
+        );
+        removeGroupConversation(activeChatUserId);
+        setLeaveGroupModalMode(null);
+        toast.success('Đã rời nhóm.');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Không thể rời nhóm.');
+      } finally {
+        setIsLeavingGroup(false);
+      }
+    },
+    [activeChatUserId, removeGroupConversation],
+  );
+
+  const handleLeaveGroupClick = useCallback(() => {
+    if (!activeChatUserId?.startsWith('group:')) return;
+    if (isActiveGroupCreator) {
+      const approvedMembers = (groupMembersById[activeChatUserId] ?? []).filter(
+        (member) => member.memberStatus !== 'PENDING' && member.id !== currentUser?.id,
+      );
+      if (approvedMembers.length === 0) {
+        toast.error('Không còn thành viên khác để chuyển quyền quản trị.');
+        return;
+      }
+      setLeaveGroupNewAdminId(approvedMembers[0]?.id ?? '');
+      setLeaveGroupModalMode('transfer');
+      return;
+    }
+    setLeaveGroupModalMode('confirm');
+  }, [activeChatUserId, currentUser?.id, groupMembersById, isActiveGroupCreator]);
+
+  const handleDissolveGroupClick = useCallback(() => {
+    if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
+    setIsDissolveGroupModalOpen(true);
+  }, [activeChatUserId, isActiveGroupCreator]);
+
+  const executeDissolveGroup = useCallback(async () => {
+    if (!activeChatUserId?.startsWith('group:')) return;
+    const conversationId = activeChatUserId.replace('group:', '');
+    setIsDissolvingGroup(true);
+    try {
+      await chatService.dissolveGroupConversation(conversationId);
+      removeGroupConversation(activeChatUserId);
+      setIsDissolveGroupModalOpen(false);
+      toast.success('Đã giải tán nhóm chat.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể giải tán nhóm.');
+    } finally {
+      setIsDissolvingGroup(false);
+    }
+  }, [activeChatUserId, removeGroupConversation]);
+
   const handleApproveGroupMember = useCallback(async (memberUserId: string) => {
     if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
     const conversationId = activeChatUserId.replace('group:', '');
@@ -3436,6 +3433,7 @@ export default function MessengerPage() {
                 themeColor={activeChatThemeColor}
                 jumpToMessageRequest={jumpToMessageRequest}
                 rateLimitUntil={rateLimitUntil}
+                onGroupJoinLinkClick={handleGroupJoinLinkClick}
               />
             </div>
           ) : activeChatUserId && loadingConversations ? (
@@ -3477,6 +3475,9 @@ export default function MessengerPage() {
               onMemberApprovalChange={handleToggleMemberApproval}
               onApproveMember={handleApproveGroupMember}
               onRejectMember={handleRejectGroupMember}
+              onLeaveGroup={handleLeaveGroupClick}
+              onDissolveGroup={handleDissolveGroupClick}
+              isGroupCreator={isActiveGroupCreator}
             />
           )}
         </div>
@@ -4007,6 +4008,126 @@ export default function MessengerPage() {
                 Chuyển tiếp
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {groupJoinModalToken && (
+        <GroupJoinLinkModal
+          token={groupJoinModalToken}
+          onClose={() => setGroupJoinModalToken(null)}
+          onJoined={(conversationId) => void handleGroupJoinedFromLink(conversationId)}
+          onOpenGroup={handleOpenGroupFromJoinLink}
+        />
+      )}
+
+      {isDissolveGroupModalOpen && activeChatUserId?.startsWith('group:') && (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Giải tán nhóm</h3>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                Toàn bộ thành viên sẽ bị xóa khỏi nhóm và lịch sử chat nhóm sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setIsDissolveGroupModalOpen(false)}
+                disabled={isDissolvingGroup}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-muted dark:text-gray-300"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isDissolvingGroup}
+                onClick={() => void executeDissolveGroup()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+              >
+                {isDissolvingGroup ? 'Đang giải tán...' : 'Giải tán nhóm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {leaveGroupModalMode && activeChatUserId?.startsWith('group:') && (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+            {leaveGroupModalMode === 'confirm' ? (
+              <>
+                <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Rời nhóm</h3>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    Bạn có chắc muốn rời nhóm này? Bạn sẽ không nhận tin nhắn mới từ nhóm cho đến khi được mời lại.
+                  </p>
+                </div>
+                <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setLeaveGroupModalMode(null)}
+                    disabled={isLeavingGroup}
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-muted dark:text-gray-300"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLeavingGroup}
+                    onClick={() => void executeLeaveGroup()}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+                  >
+                    {isLeavingGroup ? 'Đang rời...' : 'Rời nhóm'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Chuyển quyền quản trị</h3>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                    Bạn cần chọn một thành viên làm quản trị viên mới trước khi rời nhóm.
+                  </p>
+                </div>
+                <div className="px-5 py-4">
+                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Quản trị viên mới
+                  </label>
+                  <select
+                    value={leaveGroupNewAdminId}
+                    onChange={(event) => setLeaveGroupNewAdminId(event.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  >
+                    {(groupMembersById[activeChatUserId] ?? [])
+                      .filter((member) => member.memberStatus !== 'PENDING' && member.id !== currentUser?.id)
+                      .map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setLeaveGroupModalMode(null)}
+                    disabled={isLeavingGroup}
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-muted dark:text-gray-300"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!leaveGroupNewAdminId || isLeavingGroup}
+                    onClick={() => void executeLeaveGroup(leaveGroupNewAdminId)}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+                  >
+                    {isLeavingGroup ? 'Đang rời...' : 'Rời nhóm'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

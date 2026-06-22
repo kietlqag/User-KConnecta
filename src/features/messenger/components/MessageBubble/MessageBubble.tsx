@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download, Newspaper } from 'lucide-react';
 import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
+import { isGroupJoinLinkMessage, parseGroupJoinTokenFromUrl } from '../../utils/groupJoinLink';
+import { MessageTextContent } from '../MessageTextContent/MessageTextContent';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -25,6 +27,7 @@ interface MessageBubbleProps {
   showDeliveryStatus?: boolean;
   deliveryStatusLabel?: string;
   onCallAgain?: (mediaType?: 'audio' | 'video') => void;
+  onGroupJoinLinkClick?: (token: string) => void;
   isHighlighted?: boolean;
   themeColor?: string | null;
   groupWithPrevious?: boolean;
@@ -76,6 +79,7 @@ export const MessageBubble = ({
   showDeliveryStatus = false,
   deliveryStatusLabel = 'Đã gửi',
   onCallAgain,
+  onGroupJoinLinkClick,
   isHighlighted = false,
   themeColor,
   groupWithPrevious = false,
@@ -238,6 +242,10 @@ export const MessageBubble = ({
   const imageUrls = message.imageUrls?.length ? message.imageUrls : message.imageUrl ? [message.imageUrl] : [];
   const activeLightboxImage = lightboxIndex === null ? null : imageUrls[lightboxIndex];
   const ownBubbleStyle = message.isOwn && themeColor ? { backgroundColor: themeColor } : undefined;
+  const groupJoinToken =
+    !message.deleted && onGroupJoinLinkClick && isGroupJoinLinkMessage(message.text)
+      ? parseGroupJoinTokenFromUrl(message.text.trim())
+      : null;
 
   let storyCtx: StoryReplyContext | null = message.storyReplyAuthorId
     ? {
@@ -327,7 +335,6 @@ export const MessageBubble = ({
             {isVideoCall ? 'Gọi video lại' : 'Gọi lại'}
           </button>
         </div>
-        {message.isOwn && avatar}
       </div>
     );
   }
@@ -608,10 +615,29 @@ export const MessageBubble = ({
                   <Download className={`h-4 w-4 ${message.isOwn ? 'text-white/85' : 'text-blue-600'}`} />
                 </button>
               </button>
+              ) : groupJoinToken ? (
+              <button
+                type="button"
+                onClick={() => onGroupJoinLinkClick?.(groupJoinToken)}
+                className={`w-[min(280px,72vw)] max-w-full rounded-2xl border px-4 py-3 text-left transition-colors cursor-pointer ${
+                  message.isOwn
+                    ? 'border-white/20 bg-white/10 hover:bg-white/15'
+                    : 'border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800'
+                }`}
+              >
+                <p className={`text-sm font-semibold ${message.isOwn ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
+                  Liên kết tham gia nhóm chat
+                </p>
+                <p className={`mt-1 text-xs ${message.isOwn ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'}`}>
+                  Nhấn để xem thông tin nhóm và tham gia
+                </p>
+              </button>
               ) : (
-              <p className={`max-w-full whitespace-pre-wrap break-all [overflow-wrap:anywhere] text-sm leading-relaxed ${message.deleted ? 'italic opacity-80' : ''}`}>
-                {message.deleted ? 'Tin nhắn đã được gỡ' : message.text}
-              </p>
+              <MessageTextContent
+                text={message.deleted ? 'Tin nhắn đã được gỡ' : message.text}
+                isOwn={message.isOwn}
+                onGroupJoinLinkClick={onGroupJoinLinkClick}
+              />
               )}
             </div>
           )}

@@ -31,6 +31,12 @@ export interface Message {
     | 'clear_nickname'
     | 'add_members'
     | 'add_members_pending'
+    | 'approve_member'
+    | 'reject_member'
+    | 'leave_group'
+    | 'transfer_admin'
+    | 'join_via_link'
+    | 'join_via_link_pending'
     | 'pin_message'
     | 'unpin_message';
   systemActionActorName?: string;

@@ -17,6 +17,7 @@ import { chatService } from '@/services/chatService';
 import { CallMinimizedBar, CallOverlayModal } from '@/features/messenger/components';
 import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
 import { useVoiceCall } from '@/features/messenger/hooks/useVoiceCall';
+import { useCallSounds } from '@/features/messenger/hooks/useCallSounds';
 import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '@/features/messenger/utils/callDuration';
 import type {
   IncomingCallError,
@@ -369,6 +370,11 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const isCallOngoing =
     effectiveCallStatus === 'calling' || effectiveCallStatus === 'connecting' || effectiveCallStatus === 'in_call';
   const isCallConnected = effectiveCallStatus === 'in_call';
+
+  useCallSounds({
+    incomingRinging: voiceCall.isRinging,
+    outgoingWaiting: effectiveCallStatus === 'calling' && voiceCall.activeCallDirection === 'outgoing',
+  });
 
   useEffect(() => {
     const peerIds = [
