@@ -4,7 +4,6 @@ import { GroupsLeftSidebar } from '../GroupsLeftSidebar';
 import { GroupsRightSidebar } from '../GroupsRightSidebar';
 import type { Group } from '../../types/groups.types';
 
-const LEFT_SIDEBAR_WIDTH = 'w-[300px]';
 const RIGHT_SIDEBAR_WIDTH = 'w-[320px]';
 
 interface GroupsHubLayoutProps {
@@ -26,23 +25,21 @@ export function GroupsHubLayout({
     <div className="min-h-screen bg-gray-100 dark:bg-background">
       <Header />
 
-      <div className="mx-auto max-w-[1920px] overflow-x-auto">
-        <div className="flex min-w-[940px] pt-14">
-          <div className={`sticky top-14 z-10 h-[calc(100vh-56px)] ${LEFT_SIDEBAR_WIDTH} shrink-0`}>
-            <GroupsLeftSidebar
-              joinedGroups={joinedGroups}
-              managedGroups={managedGroups}
-              activeSectionId={activeSectionId}
-              initialSearchQuery={initialSearchQuery}
-              showGroupLists={false}
-            />
-          </div>
+      <div className="mx-auto max-w-[1920px]">
+        <div className="flex min-w-[940px] items-start pt-14">
+          <GroupsLeftSidebar
+            joinedGroups={joinedGroups}
+            managedGroups={managedGroups}
+            activeSectionId={activeSectionId}
+            initialSearchQuery={initialSearchQuery}
+            showGroupLists={false}
+          />
 
           <main className="min-w-0 flex-1">
             <div className="mx-auto w-full max-w-[680px] p-4">{children}</div>
           </main>
 
-          <div className={`sticky top-14 z-10 h-[calc(100vh-56px)] ${RIGHT_SIDEBAR_WIDTH} shrink-0`}>
+          <div className={`sticky top-14 z-10 h-[calc(100vh-56px)] shrink-0 self-start ${RIGHT_SIDEBAR_WIDTH}`}>
             <GroupsRightSidebar joinedGroups={joinedGroups} managedGroups={managedGroups} />
           </div>
         </div>

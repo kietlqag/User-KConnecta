@@ -20,7 +20,7 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
     { label: 'Giới thiệu', path: `/profile/${resolvedProfileKey}/about` },
     { label: 'Bạn bè', path: `/profile/${resolvedProfileKey}/friends` },
     { label: 'Ảnh', path: `/profile/${resolvedProfileKey}/photos` },
-    { label: 'Reels', path: `/profile/${resolvedProfileKey}/reels` },
+    { label: 'Watch', path: `/profile/${resolvedProfileKey}/reels` },
     { label: 'Thích', path: `/profile/${resolvedProfileKey}/likes` },
     ...(isOwnProfile ? [{ label: 'Bài đã lên lịch', path: `/profile/${resolvedProfileKey}/scheduled` }] : []),
   ];

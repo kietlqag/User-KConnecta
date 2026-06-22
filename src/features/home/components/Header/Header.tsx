@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Home, Users, Shapes, Video, Store, Grid3x3, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
+import { Search, Home, Users, Shapes, Clapperboard, Store, Grid3x3, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
 import { MenuPanel } from '../../../menu/components';
@@ -94,7 +94,7 @@ export function Header() {
   const navItems = [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
     { icon: <Users className="w-6 h-6" />, href: '/friends', label: 'Bạn bè' },
-    { icon: <Video className="w-6 h-6" />, href: '/watch', label: 'Watch' },
+    { icon: <Clapperboard className="w-6 h-6" />, href: '/watch', label: 'Watch' },
     { icon: <Shapes className="w-6 h-6" />, href: '/groups', label: 'Groups' },
     { icon: <Radio className="w-6 h-6" />, href: '/live', label: LIVE_NAV_LABEL },
   ];

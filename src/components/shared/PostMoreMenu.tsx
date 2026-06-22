@@ -12,6 +12,7 @@ import {
   Check,
   AlertTriangle,
   Pencil,
+  Pin,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -62,6 +63,11 @@ interface PostMoreMenuProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onPrivacyChange?: (privacy: Privacy) => void;
+  /** Group context: admin can pin/unpin this post to the group's featured area. */
+  canPin?: boolean;
+  isPinned?: boolean;
+  onPin?: () => void;
+  onUnpin?: () => void;
   className?: string;
 }
 
@@ -75,6 +81,10 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   onEdit,
   onDelete,
   onPrivacyChange,
+  canPin = false,
+  isPinned = false,
+  onPin,
+  onUnpin,
   className,
 }) => {
   const [updating, setUpdating] = useState(false);
@@ -151,6 +161,25 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 p-2">
+        {canPin && (
+          <>
+            <DropdownMenuItem
+              className="flex items-start gap-3 p-3 cursor-pointer"
+              onClick={isPinned ? onUnpin : onPin}
+            >
+              <div className="mt-1">
+                <Pin className={`w-6 h-6 ${isPinned ? 'text-blue-600 fill-blue-600' : 'text-gray-900 dark:text-gray-100'}`} />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-semibold text-[15px]">{isPinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'}</span>
+                <span className="text-[13px] text-gray-500 dark:text-gray-400">
+                  {isPinned ? 'Gỡ khỏi khu bài viết nổi bật của nhóm.' : 'Đưa lên khu bài viết nổi bật của nhóm.'}
+                </span>
+              </div>
+            </DropdownMenuItem>
+            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+          </>
+        )}
         {!isOwner && (
           <>
             <DropdownMenuItem

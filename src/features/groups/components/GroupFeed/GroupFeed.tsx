@@ -13,6 +13,10 @@ interface GroupFeedProps {
   composerOpen?: boolean;
   onComposerOpenChange?: (open: boolean) => void;
   onPostsLoaded?: (count: number) => void;
+  isAdmin?: boolean;
+  pinnedPostIds?: Set<string>;
+  onPin?: (postId: string) => void;
+  onUnpin?: (postId: string) => void;
 }
 
 export function GroupFeed({
@@ -21,6 +25,10 @@ export function GroupFeed({
   composerOpen,
   onComposerOpenChange,
   onPostsLoaded,
+  isAdmin = false,
+  pinnedPostIds,
+  onPin,
+  onUnpin,
 }: GroupFeedProps) {
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,7 +123,16 @@ export function GroupFeed({
           Chưa có bài viết nào trong nhóm.
         </div>
       )}
-      {!isLoading && !error && posts.map(post => <Post key={post.id} {...post} />)}
+      {!isLoading && !error && posts.map(post => (
+        <Post
+          key={post.id}
+          {...post}
+          canPin={isAdmin}
+          isPinned={pinnedPostIds?.has(post.id) ?? false}
+          onPin={onPin}
+          onUnpin={onUnpin}
+        />
+      ))}
 
       <ProfileCreatePostModal
         isOpen={isModalOpen}

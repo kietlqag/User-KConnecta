@@ -99,6 +99,11 @@ export interface PostProps {
   privacy?: Privacy;
   onDelete?: (postId: string) => void;
   onReactionChange?: (postId: string, reactionType: ReactionType | null) => void;
+  // Group context: admin can pin/unpin this post to the group's featured area.
+  canPin?: boolean;
+  isPinned?: boolean;
+  onPin?: (postId: string) => void;
+  onUnpin?: (postId: string) => void;
 }
 
 export function Post({
@@ -121,6 +126,10 @@ export function Post({
   privacy: initialPrivacy = 'PUBLIC',
   onDelete,
   onReactionChange,
+  canPin = false,
+  isPinned = false,
+  onPin,
+  onUnpin,
   sharedPost = false,
   originalPost,
 }: PostProps) {
@@ -503,6 +512,10 @@ export function Post({
               onEdit={isOwner && !hasLivePreview ? () => setEditModalOpen(true) : undefined}
               onDelete={() => setDeleteDialogOpen(true)}
               onPrivacyChange={setCurrentPrivacy}
+              canPin={canPin}
+              isPinned={isPinned}
+              onPin={onPin ? () => onPin(id) : undefined}
+              onUnpin={onUnpin ? () => onUnpin(id) : undefined}
             />
           </div>
 

@@ -11,6 +11,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { FRIENDSHIP_CHANGED_EVENT } from '@/services/friendService';
+import { GROUP_MEMBERSHIP_CHANGED_EVENT } from '@/services/groupService';
 import { toast } from 'sonner';
 import { chatService } from '@/services/chatService';
 import { CallMinimizedBar, CallOverlayModal } from '@/features/messenger/components';
@@ -118,6 +119,9 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     notificationEventListenersRef.current.forEach((listener) => listener(event));
     if (event.notificationType === 'FRIEND_REQUEST' || event.notificationType === 'FRIEND_ACCEPTED' || event.notificationType === 'FRIEND_REMOVED') {
       window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
+    }
+    if (event.notificationType === 'GROUP_ACTIVITY' || event.notificationType === 'GROUP_JOIN_REQUEST' || event.notificationType === 'GROUP_INVITE') {
+      window.dispatchEvent(new Event(GROUP_MEMBERSHIP_CHANGED_EVENT));
     }
     // Trigger notification list refresh immediately (panel if open + badge count)
     window.dispatchEvent(new Event('notification:refresh'));

@@ -23,6 +23,7 @@ export function mapApiGroup(g: GroupApiResponse): Group {
     description: g.description ?? null,
     members: g.memberCount,
     privacy: g.privacy === 'PUBLIC' ? 'public' : 'private',
+    memberApprovalRequired: g.memberApprovalRequired,
     lastActivity: formatLastActivity(g.updatedAt),
     role: g.status === 'PENDING' ? 'PENDING' : g.role,
   };
@@ -139,6 +140,30 @@ export function useLeaveGroup() {
       groupService.leaveGroup(groupId, currentUser!.id),
     onSuccess: (_, groupId) => {
       queryClient.invalidateQueries({ queryKey: ['groups', 'joined'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
+    },
+  });
+}
+
+export function useDisbandGroup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (groupId: string) => groupService.disbandGroup(groupId),
+    onSuccess: (_, groupId) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', 'joined'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'managed'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'discover'] });
+      queryClient.removeQueries({ queryKey: ['groups', 'detail', groupId] });
+    },
+  });
+}
+
+export function useUpdateMemberApproval() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, memberApprovalRequired }: { groupId: string; memberApprovalRequired: boolean }) =>
+      groupService.updateMemberApproval(groupId, memberApprovalRequired),
+    onSuccess: (_, { groupId }) => {
       queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
     },
   });

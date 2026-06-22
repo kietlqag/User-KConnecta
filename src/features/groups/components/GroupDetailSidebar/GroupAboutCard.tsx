@@ -8,7 +8,9 @@ interface GroupAboutCardProps {
 }
 
 export function GroupAboutCard({ group, isAdmin, onEditDescription }: GroupAboutCardProps) {
-  const hasDescription = !!group.description?.trim();
+  const description = group.description?.trim() ?? '';
+  const hasDescription =
+    description.length > 0 && description.toLowerCase() !== group.name.trim().toLowerCase();
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-4">
@@ -26,7 +28,7 @@ export function GroupAboutCard({ group, isAdmin, onEditDescription }: GroupAbout
       </div>
 
       {hasDescription ? (
-        <p className="text-[15px] text-gray-700 dark:text-gray-300 leading-snug whitespace-pre-wrap mb-4">{group.description}</p>
+        <p className="text-[15px] text-gray-700 dark:text-gray-300 leading-snug whitespace-pre-wrap mb-4">{description}</p>
       ) : isAdmin ? (
         <button
           type="button"

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGroupJoinRequests, useApproveJoinRequest, useRejectJoinRequest } from '../../hooks/useGroups';
 import { UserCheck, X, Check, Loader2 } from 'lucide-react';
+import { UserAvatar } from '@/components/shared';
 import { toast } from 'sonner';
 
 interface GroupRequestsTabProps {
@@ -86,24 +87,17 @@ export function GroupRequestsTab({ groupId, onApproveSuccess }: GroupRequestsTab
 
       <div className="divide-y divide-gray-100">
         {requests.map((req) => {
-          const initials = req.fullName
-            ? req.fullName.trim().split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-            : '?';
-
           return (
             <div key={req.id} className="p-4 sm:p-5 flex items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
               <div className="flex items-center gap-3 min-w-0">
-                {req.avatarUrl ? (
-                  <img
-                    src={req.avatarUrl}
-                    alt={req.fullName}
-                    className="w-12 h-12 rounded-full object-cover border border-gray-100 dark:border-gray-800 shrink-0"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                    {initials}
-                  </div>
-                )}
+                <UserAvatar
+                  name={req.fullName}
+                  avatarUrl={req.avatarUrl}
+                  userId={req.userId}
+                  rounded="full"
+                  className="w-12 h-12 border border-gray-100 dark:border-gray-800 shrink-0"
+                  initialsClassName="text-sm font-semibold"
+                />
                 <div className="min-w-0">
                   <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-[15px] truncate hover:underline cursor-pointer">
                     {req.fullName}

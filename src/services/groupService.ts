@@ -1,11 +1,16 @@
 import { api } from './api';
 
+// Dispatched on the window when a realtime group-membership notification arrives
+// (join request, approval/rejection, invite) so open group views can refetch without a reload.
+export const GROUP_MEMBERSHIP_CHANGED_EVENT = 'group-membership-changed';
+
 export interface GroupApiResponse {
   id: string;
   name: string;
   description: string | null;
   coverPhotoUrl: string | null;
   privacy: 'PUBLIC' | 'PRIVATE';
+  memberApprovalRequired: boolean;
   memberCount: number;
   role: 'ADMIN' | 'MEMBER' | null;
   status: 'PENDING' | 'APPROVED' | null;
@@ -18,6 +23,7 @@ export interface GroupMemberApiResponse {
   fullName: string;
   avatarUrl: string | null;
   role: 'ADMIN' | 'MEMBER';
+  joinedAt: string;
 }
 
 export const groupService = {
@@ -64,11 +70,17 @@ export const groupService = {
   updateDescription: (groupId: string, requesterId: string, description: string) =>
     api.put<GroupApiResponse>(`/groups/${groupId}/description`, { requesterId, description }),
 
+  updateMemberApproval: (groupId: string, memberApprovalRequired: boolean) =>
+    api.put<GroupApiResponse>(`/groups/${groupId}/member-approval`, { memberApprovalRequired }),
+
   removeMember: (groupId: string, userId: string, requesterId: string) =>
     api.delete<void>(`/groups/${groupId}/members/${userId}?requesterId=${requesterId}`),
 
   leaveGroup: (groupId: string, userId: string) =>
     api.delete<void>(`/groups/${groupId}/leave?userId=${userId}`),
+
+  disbandGroup: (groupId: string) =>
+    api.delete<void>(`/groups/${groupId}`),
 
   getJoinRequests: (groupId: string) =>
     api.get<GroupMemberApiResponse[]>(`/groups/${groupId}/requests`),

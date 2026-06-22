@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Home, Shapes, FileText, Loader2 } from 'lucide-react';
 import type { FeedPost, PostSourceTab } from '@/utils/postUtils';
 import { groupPostsBySource } from '@/utils/postUtils';
@@ -59,6 +59,22 @@ function PostSkeleton() {
 
 export function ProfilePosts({ posts, loading = false, hasMore = false, loadingMore = false, onLoadMore }: ProfilePostsProps) {
   const [activeTab, setActiveTab] = useState<PostSourceTab>('feed');
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasMoreRef = useRef(hasMore);
+  const loadingMoreRef = useRef(loadingMore);
+  const onLoadMoreRef = useRef(onLoadMore);
+
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  useEffect(() => {
+    loadingMoreRef.current = loadingMore;
+  }, [loadingMore]);
+
+  useEffect(() => {
+    onLoadMoreRef.current = onLoadMore;
+  }, [onLoadMore]);
 
   const postsByTab = useMemo(() => groupPostsBySource(posts), [posts]);
 
@@ -71,6 +87,28 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
     const nextTab = TAB_CONFIG.find(({ key }) => postsByTab[key].length > 0)?.key;
     if (nextTab) setActiveTab(nextTab);
   }, [loading, posts.length, postsByTab, activeTab]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || loading || !hasMore) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          entry.isIntersecting &&
+          hasMoreRef.current &&
+          !loadingMoreRef.current &&
+          onLoadMoreRef.current
+        ) {
+          onLoadMoreRef.current();
+        }
+      },
+      { rootMargin: '0px 0px 400px 0px' },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loading, hasMore, posts.length, activeTab, filteredPosts.length]);
 
   if (loading) {
     return (
@@ -141,21 +179,20 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
           {filteredPosts.map((post) => (
             <Post key={post.id} {...post} />
           ))}
-          {hasMore && (
-            <button
-              onClick={onLoadMore}
-              disabled={loadingMore}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60"
-            >
-              {loadingMore ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Đang tải...
-                </>
-              ) : (
-                'Xem thêm bài viết'
-              )}
-            </button>
+
+          {hasMore && <div ref={sentinelRef} className="h-1" aria-hidden />}
+
+          {loadingMore && (
+            <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500 dark:text-gray-400">
+              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              Đang tải thêm...
+            </div>
+          )}
+
+          {!hasMore && !loadingMore && (
+            <div className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+              Bạn đã xem hết tất cả bài viết.
+            </div>
           )}
         </div>
       )}

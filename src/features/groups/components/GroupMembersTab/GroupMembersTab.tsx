@@ -1,33 +1,24 @@
-import { Search, Shield, MoreHorizontal, UserMinus } from 'lucide-react';
+import { Search, Shield, MoreHorizontal, UserMinus, Sparkles } from 'lucide-react';
+import { UserAvatar } from '@/components/shared';
 import type { GroupMember } from '../../types/groups.types';
 
-interface UserAvatarProps {
-  avatarUrl?: string | null;
-  name?: string | null;
-  className?: string;
+const NEW_MEMBER_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isNewMember(joinedAt: string): boolean {
+  const ts = new Date(joinedAt).getTime();
+  if (Number.isNaN(ts)) return false;
+  return Date.now() - ts < NEW_MEMBER_WINDOW_MS;
 }
 
-function UserAvatar({ avatarUrl, name, className = '' }: UserAvatarProps) {
-  const initials = name
-    ? name.trim().split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-    : '?';
-
-  if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name ?? 'Avatar'}
-        className={`rounded-full object-cover ${className}`}
-        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-      />
-    );
-  }
-
-  return (
-    <div className={`rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm shrink-0 ${className}`}>
-      {initials}
-    </div>
-  );
+function formatJoinedAt(joinedAt: string): string {
+  const date = new Date(joinedAt);
+  if (Number.isNaN(date.getTime())) return '';
+  const days = Math.floor((Date.now() - date.getTime()) / (24 * 60 * 60 * 1000));
+  if (days < 0) return 'Tham gia hôm nay';
+  if (days === 0) return 'Tham gia hôm nay';
+  if (days === 1) return 'Tham gia hôm qua';
+  if (days < 30) return `Tham gia ${days} ngày trước`;
+  return `Tham gia ${date.toLocaleDateString('vi-VN')}`;
 }
 
 interface GroupMembersTabProps {
@@ -89,12 +80,13 @@ export function GroupMembersTab({
             {adminMembers.map(member => (
               <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => onMemberClick(member.userId)}>
-                  <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} className="w-12 h-12" />
+                  <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} userId={member.userId} rounded="full" className="w-12 h-12 shrink-0" initialsClassName="text-sm font-semibold" />
                   <div>
                     <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] group-hover:underline">{member.fullName}</div>
                     <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
                       <Shield className="w-3 h-3" /> Quản trị viên
                     </div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatJoinedAt(member.joinedAt)}</div>
                   </div>
                 </div>
                 <button type="button" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
@@ -119,10 +111,17 @@ export function GroupMembersTab({
             {regularMembers.map(member => (
               <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => onMemberClick(member.userId)}>
-                  <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} className="w-12 h-12" />
+                  <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} userId={member.userId} rounded="full" className="w-12 h-12 shrink-0" initialsClassName="text-sm font-semibold" />
                   <div>
-                    <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] group-hover:underline">{member.fullName}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Thành viên</div>
+                    <div className="flex items-center gap-2">
+                      <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] group-hover:underline">{member.fullName}</div>
+                      {isNewMember(member.joinedAt) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-semibold whitespace-nowrap">
+                          <Sparkles className="w-3 h-3" /> Thành viên mới
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Thành viên · {formatJoinedAt(member.joinedAt)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

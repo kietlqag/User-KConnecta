@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '../../home/components/Header';
 import {
   GroupsLeftSidebar,
-  GroupsRightSidebar,
   GroupFeed,
   InviteFriendsModal,
   GroupDetailSidebar,
@@ -16,12 +15,14 @@ import {
   GroupMediaTab,
 } from '../components';
 import { GroupRequestsTab } from '../components/GroupRequestsTab/GroupRequestsTab';
+import { GroupFeaturedPosts } from '../components/GroupFeaturedPosts/GroupFeaturedPosts';
+import { useGroupPinnedPosts, usePinPost, useUnpinPost } from '../hooks/useGroupPins';
 import {
   DEFAULT_GROUP_TAB,
   isGroupDetailTabId,
   type GroupDetailTabId,
 } from '../constants/groupDetailTabs';
-import { Edit3, MoreHorizontal, Lock, Users, Image as ImageIcon, AlertTriangle, Loader2, X } from 'lucide-react';
+import { Edit3, MoreHorizontal, Lock, Users, Image as ImageIcon, AlertTriangle, Loader2, X, Settings } from 'lucide-react';
 import { useGroupSetupProgress, type SetupStepId } from '../hooks/useGroupSetupProgress';
 import {
   dismissSetup,
@@ -31,41 +32,12 @@ import {
   isInviteSent,
   markInviteSent,
 } from '../utils/groupSetupStorage';
-import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember, useLeaveGroup, useGroupJoinRequests } from '../hooks/useGroups';
-import { groupService } from '@/services/groupService';
+import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember, useLeaveGroup, useGroupJoinRequests, useUpdateMemberApproval, useDisbandGroup } from '../hooks/useGroups';
+import { useGroupSocket } from '../hooks/useGroupSocket';
+import { groupService, GROUP_MEMBERSHIP_CHANGED_EVENT } from '@/services/groupService';
 import { authService } from '@/services/authService';
+import { UserAvatar } from '@/components/shared';
 import { toast } from 'sonner';
-
-const UserAvatar = ({
-  avatarUrl,
-  name,
-  className = '',
-}: {
-  avatarUrl?: string | null;
-  name?: string | null;
-  className?: string;
-}) => {
-  const initials = name
-    ? name.trim().split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
-    : '?';
-
-  if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name ?? 'Avatar'}
-        className={`rounded-full object-cover ${className}`}
-        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-      />
-    );
-  }
-
-  return (
-    <div className={`rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm shrink-0 ${className}`}>
-      {initials}
-    </div>
-  );
-};
 
 export const GroupDetailPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
@@ -109,6 +81,10 @@ export const GroupDetailPage = () => {
   const removeMemberMutation = useRemoveMember();
   const leaveGroupMutation = useLeaveGroup();
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showDisbandConfirm, setShowDisbandConfirm] = useState(false);
+  const updateMemberApprovalMutation = useUpdateMemberApproval();
+  const disbandGroupMutation = useDisbandGroup();
   const [setupDismissed, setSetupDismissed] = useState(() => (groupId ? isSetupDismissed(groupId) : false));
   const [postCount, setPostCount] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -117,6 +93,24 @@ export const GroupDetailPage = () => {
   const isAdmin = group?.role === 'ADMIN';
   const { data: joinRequests = [] } = useGroupJoinRequests(isAdmin ? groupId : undefined);
   const pendingCount = joinRequests.length;
+
+  // Pinned (featured) posts
+  const { data: pinnedPosts = [] } = useGroupPinnedPosts(groupId);
+  const pinnedPostIds = useMemo(() => new Set(pinnedPosts.map(p => p.post.id)), [pinnedPosts]);
+  const pinPostMutation = usePinPost(groupId);
+  const unpinPostMutation = useUnpinPost(groupId);
+  const handlePinPost = useCallback((postId: string) => {
+    pinPostMutation.mutate({ postId }, {
+      onSuccess: () => toast.success('Đã ghim bài viết lên khu nổi bật'),
+      onError: (err: any) => toast.error(err?.response?.data?.message || 'Không thể ghim bài viết'),
+    });
+  }, [pinPostMutation]);
+  const handleUnpinPost = useCallback((postId: string) => {
+    unpinPostMutation.mutate(postId, {
+      onSuccess: () => toast.success('Đã bỏ ghim bài viết'),
+      onError: (err: any) => toast.error(err?.response?.data?.message || 'Không thể bỏ ghim'),
+    });
+  }, [unpinPostMutation]);
 
   const setupProgress = useGroupSetupProgress({
     memberCount: members.length,
@@ -132,6 +126,28 @@ export const GroupDetailPage = () => {
     if (!groupId) return;
     setSetupDismissed(isSetupDismissed(groupId));
   }, [groupId]);
+
+  // Realtime: when a group membership notification arrives (e.g. an admin approves a join
+  // request), refetch group data so the view updates without a manual reload.
+  useEffect(() => {
+    const handleMembershipChange = () => {
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+    };
+    window.addEventListener(GROUP_MEMBERSHIP_CHANGED_EVENT, handleMembershipChange);
+    return () => window.removeEventListener(GROUP_MEMBERSHIP_CHANGED_EVENT, handleMembershipChange);
+  }, [queryClient]);
+
+  // Realtime: when a member leaves or is removed, the group broadcasts on its topic
+  // so member avatars and the count update live for everyone viewing the group.
+  useGroupSocket(
+    groupId,
+    currentUser?.token,
+    useCallback(() => {
+      queryClient.invalidateQueries({ queryKey: ['groups', 'members', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'pinned', groupId] });
+    }, [queryClient, groupId]),
+  );
 
   useEffect(() => {
     if (!groupId || !setupProgress.isComplete || !isAdmin) return;
@@ -239,20 +255,19 @@ export const GroupDetailPage = () => {
     <div className="min-h-screen bg-gray-100 dark:bg-background flex flex-col">
       <Header />
       
-      <div className="flex h-full min-w-[940px] flex-1 overflow-x-auto pt-14">
-        <div className="sticky top-14 z-10 h-[calc(100vh-56px)] w-[300px] shrink-0">
-          <GroupsLeftSidebar
-            joinedGroups={joinedGroups}
-            managedGroups={managedGroups}
-            showGroupLists={false}
-          />
-        </div>
+      <div className="flex min-w-0 flex-1 items-start pt-14">
+        <GroupsLeftSidebar
+          joinedGroups={joinedGroups}
+          managedGroups={managedGroups}
+          activeSectionId={null}
+          showGroupLists={false}
+        />
 
-        <main className="min-w-0 flex-1 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-800 px-0 lg:px-8 xl:px-16 shadow-sm dark:shadow-none border-b border-gray-200 dark:border-gray-700">
-            <div className="max-w-[1050px] mx-auto">
+        <main className="min-w-0 flex-1">
+          <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-none border-b border-gray-200 dark:border-gray-700">
+            <div className="max-w-[940px] mx-auto px-4 sm:px-6">
               {/* Banner */}
-              <div className="relative w-full h-[250px] md:h-[350px] lg:h-[400px] mt-0 rounded-b-lg overflow-hidden bg-[#fdf0e6]">
+              <div className="relative w-full h-[200px] sm:h-[280px] md:h-[350px] rounded-b-xl overflow-hidden bg-[#fdf0e6]">
                 {previewUrl || group?.icon ? (
                   <img
                     src={previewUrl ?? group!.icon}
@@ -355,8 +370,8 @@ export const GroupDetailPage = () => {
               )}
 
               {/* Group Header Info */}
-              <div className="px-4 pt-6 pb-2">
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{group?.name}</h1>
+              <div className="pt-4 pb-2 sm:pt-6">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{group?.name}</h1>
                 <div className="flex items-center text-[15px] text-gray-500 dark:text-gray-400 gap-1.5 font-medium mb-4">
                   {group?.privacy === 'private' ? <Lock className="w-4 h-4" /> : <Users className="w-4 h-4" />}
                   <span>Nhóm {group?.privacy === 'private' ? 'Riêng tư' : 'Công khai'}</span>
@@ -374,7 +389,10 @@ export const GroupDetailPage = () => {
                           key={member.id}
                           avatarUrl={member.avatarUrl}
                           name={member.fullName}
-                          className="w-10 h-10 border-2 border-white inline-block ring-2 ring-white"
+                          userId={member.userId}
+                          rounded="full"
+                          className="w-10 h-10 border-2 border-white ring-2 ring-white"
+                          initialsClassName="text-sm font-semibold"
                         />
                       ))}
                       {members.length > 8 && (
@@ -391,8 +409,12 @@ export const GroupDetailPage = () => {
                       <button
                         onClick={() => {
                           joinGroupMutation.mutate(groupId!, {
-                            onSuccess: () => {
-                              toast.success('Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ quản trị viên phê duyệt!');
+                            onSuccess: (result) => {
+                              toast.success(
+                                result?.status === 'APPROVED'
+                                  ? 'Bạn đã tham gia nhóm thành công!'
+                                  : 'Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ quản trị viên phê duyệt!'
+                              );
                               queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
                             },
                             onError: (err: any) => {
@@ -423,10 +445,12 @@ export const GroupDetailPage = () => {
                           <span className="text-xl leading-none -mt-0.5">+</span> Mời
                         </button>
                         <button
-                          onClick={() => setShowLeaveConfirm(true)}
+                          onClick={() => setShowSettings(true)}
                           className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
+                          title="Cài đặt nhóm"
                         >
-                          Rời nhóm
+                          <Settings className="w-5 h-5" />
+                          Cài đặt
                         </button>
                       </>
                     )}
@@ -449,128 +473,121 @@ export const GroupDetailPage = () => {
           </div>
           
           {/* Main Layout Area */}
-          <div className="max-w-[1050px] mx-auto px-4 py-4 lg:py-6 flex flex-col md:flex-row gap-6">
-             {/* Sidebar — first on mobile for admins */}
-             {group && activeTab === 'discussion' && (
-               <div className="order-1 md:order-2">
-                 <GroupDetailSidebar
-                   group={group}
-                   members={members}
-                   isAdmin={isAdmin}
-                   setupProgress={setupProgress}
-                   showSetupChecklist={showSetupChecklist}
-                   onDismissSetup={handleDismissSetup}
-                   onStepAction={handleSetupStep}
-                   onInvite={() => setIsInviteModalOpen(true)}
-                   onCreatePost={() => {
-                     scrollToComposer();
-                     setComposerOpen(true);
-                   }}
-                   onCover={() => fileInputRef.current?.click()}
-                   onEditDescription={() => setDescriptionModalOpen(true)}
-                   onViewMembers={() => setActiveTab('members')}
-                 />
-               </div>
-             )}
+          <div className="max-w-[940px] mx-auto px-4 sm:px-6 py-4 lg:py-6">
+            {group && (
+              <div
+                className={
+                  activeTab === 'discussion' || activeTab === 'events' || activeTab === 'documents'
+                    ? 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 lg:gap-6 items-start'
+                    : undefined
+                }
+              >
+                <div
+                  className="min-w-0 order-2 lg:order-1"
+                  role="tabpanel"
+                  id={`group-tabpanel-${activeTab}`}
+                  aria-labelledby={`group-tab-${activeTab}`}
+                >
+                  {isAdmin && showSetupChecklist && activeTab === 'discussion' && (
+                    <GroupActivationMobileBar
+                      progress={setupProgress}
+                      onContinue={() => setupProgress.nextStep && handleSetupStep(setupProgress.nextStep.id)}
+                    />
+                  )}
+                  {activeTab === 'members' && (
+                    <GroupMembersTab
+                      members={members}
+                      adminMembers={adminMembers}
+                      regularMembers={regularMembers}
+                      memberSearch={memberSearch}
+                      onMemberSearchChange={setMemberSearch}
+                      isAdmin={isAdmin}
+                      onInvite={() => setIsInviteModalOpen(true)}
+                      onMemberClick={userId => navigate(`/profile/${userId}`)}
+                      onRemoveMember={isAdmin ? m => setRemovingMember(m) : undefined}
+                    />
+                  )}
 
-             {/* Main column */}
-             <div
-               className="flex-1 min-w-0 order-2 md:order-1"
-               role="tabpanel"
-               id={`group-tabpanel-${activeTab}`}
-               aria-labelledby={`group-tab-${activeTab}`}
-             >
-               {isAdmin && showSetupChecklist && activeTab === 'discussion' && (
-                 <GroupActivationMobileBar
-                   progress={setupProgress}
-                   onContinue={() => setupProgress.nextStep && handleSetupStep(setupProgress.nextStep.id)}
-                 />
-               )}
-               {activeTab === 'members' && (
-                 <GroupMembersTab
-                   members={members}
-                   adminMembers={adminMembers}
-                   regularMembers={regularMembers}
-                   memberSearch={memberSearch}
-                   onMemberSearchChange={setMemberSearch}
-                   isAdmin={isAdmin}
-                   onInvite={() => setIsInviteModalOpen(true)}
-                   onMemberClick={userId => navigate(`/profile/${userId}`)}
-                   onRemoveMember={isAdmin ? m => setRemovingMember(m) : undefined}
-                 />
-               )}
+                  {activeTab === 'requests' && groupId && isAdmin && (
+                    <GroupRequestsTab
+                      groupId={groupId}
+                      onApproveSuccess={() => queryClient.invalidateQueries({ queryKey: ['groups', 'members', groupId] })}
+                    />
+                  )}
 
-               {activeTab === 'requests' && groupId && isAdmin && (
-                 <GroupRequestsTab
-                   groupId={groupId}
-                   onApproveSuccess={() => queryClient.invalidateQueries({ queryKey: ['groups', 'members', groupId] })}
-                 />
-               )}
+                  {activeTab === 'discussion' && groupId && (
+                    isPrivateLocked ? privateLockScreen : (
+                      <>
+                        <GroupFeaturedPosts groupId={groupId} isAdmin={isAdmin} />
+                        <GroupFeed
+                          groupId={groupId}
+                          isApprovedMember={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
+                          composerOpen={composerOpen}
+                          onComposerOpenChange={setComposerOpen}
+                          onPostsLoaded={setPostCount}
+                          isAdmin={isAdmin}
+                          pinnedPostIds={pinnedPostIds}
+                          onPin={handlePinPost}
+                          onUnpin={handleUnpinPost}
+                        />
+                      </>
+                    )
+                  )}
 
-               {activeTab === 'discussion' && groupId && (
-                 isPrivateLocked ? privateLockScreen : (
-                   <GroupFeed
-                     groupId={groupId}
-                     isApprovedMember={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
-                     composerOpen={composerOpen}
-                     onComposerOpenChange={setComposerOpen}
-                     onPostsLoaded={setPostCount}
-                   />
-                 )
-               )}
+                  {activeTab === 'media' && groupId && (
+                    isPrivateLocked ? privateLockScreen : <GroupMediaTab groupId={groupId} />
+                  )}
 
-               {activeTab === 'media' && groupId && (
-                 isPrivateLocked ? privateLockScreen : <GroupMediaTab groupId={groupId} />
-               )}
+                  {(activeTab === 'events' || activeTab === 'documents') && (
+                    <GroupPlaceholderTab
+                      tabId={activeTab}
+                      isAdmin={isAdmin}
+                      isApprovedMember={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
+                      onCreateEvent={() => toast.info('Tạo sự kiện — đang phát triển')}
+                      onPostWithMedia={() => {
+                        setActiveTab('discussion');
+                        setTimeout(() => {
+                          scrollToComposer();
+                          setComposerOpen(true);
+                        }, 0);
+                      }}
+                    />
+                  )}
+                </div>
 
-               {(activeTab === 'events' || activeTab === 'documents') && (
-                 <GroupPlaceholderTab
-                   tabId={activeTab}
-                   isAdmin={isAdmin}
-                   isApprovedMember={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
-                   onCreateEvent={() => toast.info('Tạo sự kiện — đang phát triển')}
-                   onPostWithMedia={() => {
-                     setActiveTab('discussion');
-                     setTimeout(() => {
-                       scrollToComposer();
-                       setComposerOpen(true);
-                     }, 0);
-                   }}
-                 />
-               )}
-             </div>
-
-             {/* Sidebar on other tabs — about + members only */}
-             {group && activeTab !== 'discussion' && (
-               <div className="order-1 md:order-2 w-full md:w-[360px] shrink-0">
-                 <GroupDetailSidebar
-                   group={group}
-                   members={members}
-                   isAdmin={isAdmin}
-                   setupProgress={setupProgress}
-                   showSetupChecklist={false}
-                   onDismissSetup={handleDismissSetup}
-                   onStepAction={handleSetupStep}
-                   onInvite={() => setIsInviteModalOpen(true)}
-                   onCreatePost={() => {
-                     setActiveTab('discussion');
-                     setTimeout(() => {
-                       scrollToComposer();
-                       setComposerOpen(true);
-                     }, 0);
-                   }}
-                   onCover={() => fileInputRef.current?.click()}
-                   onEditDescription={() => setDescriptionModalOpen(true)}
-                   onViewMembers={() => setActiveTab('members')}
-                 />
-               </div>
-             )}
+                {(activeTab === 'discussion' || activeTab === 'events' || activeTab === 'documents') && (
+                <aside className="order-1 lg:order-2 lg:sticky lg:top-14 lg:max-h-[calc(100vh-56px)] lg:overflow-y-auto lg:pb-4 sidebar-scrollbar">
+                  <GroupDetailSidebar
+                    group={group}
+                    members={members}
+                    isAdmin={isAdmin}
+                    setupProgress={setupProgress}
+                    showSetupChecklist={activeTab === 'discussion' && showSetupChecklist}
+                    onDismissSetup={handleDismissSetup}
+                    onStepAction={handleSetupStep}
+                    onInvite={() => setIsInviteModalOpen(true)}
+                    onCreatePost={() => {
+                      if (activeTab !== 'discussion') {
+                        setActiveTab('discussion');
+                        setTimeout(() => {
+                          scrollToComposer();
+                          setComposerOpen(true);
+                        }, 0);
+                      } else {
+                        scrollToComposer();
+                        setComposerOpen(true);
+                      }
+                    }}
+                    onCover={() => fileInputRef.current?.click()}
+                    onEditDescription={() => setDescriptionModalOpen(true)}
+                    onViewMembers={() => setActiveTab('members')}
+                  />
+                </aside>
+                )}
+              </div>
+            )}
           </div>
         </main>
-
-        <div className="sticky top-14 z-10 h-[calc(100vh-56px)] w-[320px] shrink-0">
-          <GroupsRightSidebar joinedGroups={joinedGroups} managedGroups={managedGroups} />
-        </div>
       </div>
 
       {groupId && group && (
@@ -595,6 +612,97 @@ export const GroupDetailPage = () => {
             }
           }}
         />
+      )}
+
+      {/* Group Settings Modal */}
+      {showSettings && group && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Cài đặt nhóm
+              </h3>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-5">
+              {isAdmin && (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">Duyệt thành viên</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Khi bật, yêu cầu tham gia cần quản trị viên phê duyệt. Khi tắt, thành viên mới được tham gia ngay.
+                    </p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={group.memberApprovalRequired}
+                    disabled={updateMemberApprovalMutation.isPending}
+                    onClick={() =>
+                      updateMemberApprovalMutation.mutate(
+                        { groupId: groupId!, memberApprovalRequired: !group.memberApprovalRequired },
+                        {
+                          onSuccess: () =>
+                            toast.success(
+                              group.memberApprovalRequired
+                                ? 'Đã tắt duyệt thành viên. Thành viên mới sẽ được tham gia ngay.'
+                                : 'Đã bật duyệt thành viên. Yêu cầu tham gia cần được phê duyệt.'
+                            ),
+                          onError: (err: any) =>
+                            toast.error(err?.response?.data?.message || err?.message || 'Không thể cập nhật cài đặt.'),
+                        }
+                      )
+                    }
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
+                      group.memberApprovalRequired ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                        group.memberApprovalRequired ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
+
+              <div className={isAdmin ? 'pt-5 border-t border-gray-200 dark:border-gray-700' : ''}>
+                {isAdmin ? (
+                  <>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">Giải tán nhóm</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3">
+                      Xóa nhóm vĩnh viễn và gỡ tất cả thành viên. Hành động này không thể hoàn tác.
+                    </p>
+                    <button
+                      onClick={() => { setShowSettings(false); setShowDisbandConfirm(true); }}
+                      className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors"
+                    >
+                      Giải tán nhóm
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">Rời nhóm</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3">
+                      Bạn sẽ không còn là thành viên của nhóm này.
+                    </p>
+                    <button
+                      onClick={() => { setShowSettings(false); setShowLeaveConfirm(true); }}
+                      className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 text-sm font-semibold transition-colors"
+                    >
+                      Rời nhóm
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Leave Group Confirmation Modal */}
@@ -636,6 +744,51 @@ export const GroupDetailPage = () => {
               >
                 {leaveGroupMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 {leaveGroupMutation.isPending ? 'Đang xử lý...' : 'Rời nhóm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disband Group Confirmation Modal */}
+      {showDisbandConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Giải tán nhóm</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Bạn có chắc chắn muốn giải tán nhóm <strong className="text-gray-900 dark:text-gray-100">{group?.name}</strong> không? Toàn bộ thành viên sẽ bị gỡ và nội dung nhóm sẽ bị xóa vĩnh viễn.
+              </p>
+            </div>
+            <div className="flex gap-2 px-6 pb-6">
+              <button
+                onClick={() => setShowDisbandConfirm(false)}
+                disabled={disbandGroupMutation.isPending}
+                className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={() => {
+                  disbandGroupMutation.mutate(groupId!, {
+                    onSuccess: () => {
+                      toast.success('Đã giải tán nhóm');
+                      navigate('/groups');
+                    },
+                    onError: (err: any) => {
+                      toast.error(err?.response?.data?.message || err?.message || 'Không thể giải tán nhóm');
+                      setShowDisbandConfirm(false);
+                    },
+                  });
+                }}
+                disabled={disbandGroupMutation.isPending}
+                className="flex-1 py-2.5 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors cursor-pointer flex items-center justify-center gap-2"
+              >
+                {disbandGroupMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                {disbandGroupMutation.isPending ? 'Đang xử lý...' : 'Giải tán nhóm'}
               </button>
             </div>
           </div>

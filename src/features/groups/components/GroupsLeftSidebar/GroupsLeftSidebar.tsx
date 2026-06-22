@@ -19,7 +19,8 @@ const sidebarSections: GroupsSidebarSection[] = [
 interface GroupsLeftSidebarProps {
   joinedGroups: Group[];
   managedGroups?: Group[];
-  activeSectionId?: string;
+  /** Omit or pass `null` to highlight no nav item (e.g. group detail page). */
+  activeSectionId?: string | null;
   initialSearchQuery?: string;
   showGroupLists?: boolean;
 }
@@ -75,7 +76,7 @@ export const GroupsLeftSidebar = ({
   };
 
   return (
-    <div className="sidebar-scrollbar sticky top-14 min-h-[calc(100vh-56px)] w-full overflow-y-auto border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div className="sidebar-scrollbar sticky top-14 z-10 hidden h-[calc(100vh-56px)] w-[300px] shrink-0 self-start overflow-y-auto border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 md:block">
       <div className="p-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Nhóm</h1>
 
@@ -131,7 +132,7 @@ export const GroupsLeftSidebar = ({
 
         <div className="space-y-1 mb-4">
           {sidebarSections.map(section => {
-            const isActive = activeSectionId === section.id;
+            const isActive = activeSectionId != null && activeSectionId === section.id;
             return (
               <button
                 key={section.id}

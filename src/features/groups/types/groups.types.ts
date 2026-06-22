@@ -5,6 +5,7 @@ export interface Group {
   description: string | null;
   members: number;
   privacy: 'public' | 'private';
+  memberApprovalRequired: boolean;
   lastActivity?: string;
   role?: 'ADMIN' | 'MEMBER' | 'PENDING' | null;
 }
@@ -15,6 +16,7 @@ export interface GroupMember {
   fullName: string;
   avatarUrl: string | null;
   role: 'ADMIN' | 'MEMBER';
+  joinedAt: string;
 }
 
 export interface GroupsSidebarSection {

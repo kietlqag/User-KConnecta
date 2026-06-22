@@ -1,3 +1,4 @@
+import { UserAvatar } from '@/components/shared';
 import type { GroupMember } from '../../types/groups.types';
 
 interface GroupMembersPreviewProps {
@@ -6,28 +7,15 @@ interface GroupMembersPreviewProps {
 }
 
 function MemberAvatar({ member }: { member: GroupMember }) {
-  const initials = member.fullName
-    .trim()
-    .split(' ')
-    .map(w => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-
-  if (member.avatarUrl) {
-    return (
-      <img
-        src={member.avatarUrl}
-        alt={member.fullName}
-        className="w-9 h-9 rounded-full object-cover border-2 border-white ring-1 ring-gray-200 dark:ring-gray-700"
-      />
-    );
-  }
-
   return (
-    <div className="w-9 h-9 rounded-full bg-blue-500 border-2 border-white ring-1 ring-gray-200 dark:ring-gray-700 flex items-center justify-center text-white text-xs font-semibold">
-      {initials}
-    </div>
+    <UserAvatar
+      name={member.fullName}
+      avatarUrl={member.avatarUrl}
+      userId={member.userId}
+      rounded="full"
+      className="w-9 h-9 border-2 border-white ring-1 ring-gray-200 dark:ring-gray-700"
+      initialsClassName="text-xs font-semibold"
+    />
   );
 }
 

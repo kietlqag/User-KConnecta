@@ -66,7 +66,7 @@ export function ProfileReelsPage() {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <Clapperboard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Reels</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Watch</h2>
           </div>
         </div>
 
