@@ -45,10 +45,7 @@ import {
   mapContentToConversationPreview,
 } from '../utils/conversationPreview';
 import { toast } from 'sonner';
-import { usePublicPolicies } from '@/hooks/usePublicPolicies';
-import { validateChatAgainstPolicy } from '@/utils/policyValidation';
 import { getAppOrigin } from '@/utils/apiBaseUrl';
-import { Switch } from '@/components/ui/switch';
 
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
 const REPLY_PREFIX = '__REPLY__:';
@@ -57,6 +54,7 @@ const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const POST_SHARE_PREFIX = '__POST_SHARE__:';
+const GROUP_SHARE_PREFIX = '__GROUP_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 const MEMBERSHIP_CHAT_ACTIONS = new Set([
   'join_via_link_pending',
@@ -307,6 +305,21 @@ function mapBackendContentToMessageFields(
         return { text: 'Đã chia sẻ một bài viết' };
       }
     }
+    if (content?.startsWith(GROUP_SHARE_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(GROUP_SHARE_PREFIX.length));
+        return {
+          text: 'Đã chia sẻ một nhóm',
+          sharedGroupId: typeof payload?.id === 'string' ? payload.id : undefined,
+          sharedGroupName: typeof payload?.name === 'string' ? payload.name : undefined,
+          sharedGroupCover: typeof payload?.cover === 'string' ? payload.cover : undefined,
+          sharedGroupPrivacy: payload?.privacy === 'PRIVATE' ? 'PRIVATE' : 'PUBLIC',
+          sharedGroupMemberCount: typeof payload?.memberCount === 'number' ? payload.memberCount : undefined,
+        };
+      } catch {
+        return { text: 'Đã chia sẻ một nhóm' };
+      }
+    }
     return { text: content };
   }
 
@@ -529,11 +542,6 @@ function ChatInfoPanel({
   onLoadMoreHistory,
   hasMoreHistory = false,
   isLoadingMoreHistory = false,
-  memberApprovalRequired = false,
-  canManageMemberApproval = false,
-  onMemberApprovalChange,
-  onApproveMember,
-  onRejectMember,
   onRequestRemoveMember,
   onLeaveGroup,
   onDissolveGroup,
@@ -555,11 +563,6 @@ function ChatInfoPanel({
   onLoadMoreHistory?: () => Promise<void> | void;
   hasMoreHistory?: boolean;
   isLoadingMoreHistory?: boolean;
-  memberApprovalRequired?: boolean;
-  canManageMemberApproval?: boolean;
-  onMemberApprovalChange?: (enabled: boolean) => void;
-  onApproveMember?: (memberId: string) => void;
-  onRejectMember?: (memberId: string) => void;
   onRequestRemoveMember?: (memberId: string, memberName: string) => void;
   onLeaveGroup?: () => void;
   onDissolveGroup?: () => void;
@@ -571,7 +574,6 @@ function ChatInfoPanel({
   const [groupSectionsOpen, setGroupSectionsOpen] = useState({
     info: false,
     customize: false,
-    options: false,
     joinLink: false,
     members: false,
   });
@@ -628,7 +630,6 @@ function ChatInfoPanel({
     setGroupSectionsOpen({
       info: false,
       customize: false,
-      options: false,
       joinLink: false,
       members: false,
     });
@@ -1224,7 +1225,6 @@ function ChatInfoPanel({
       setGroupSectionsOpen((prev) => ({ ...prev, [section]: !prev[section] }));
     };
     const sortedMembers = [...groupMembers]
-      .filter((member) => member.memberStatus !== 'PENDING')
       .sort((a, b) => {
       if (a.id === groupCreatorId) return -1;
       if (b.id === groupCreatorId) return 1;
@@ -1232,10 +1232,7 @@ function ChatInfoPanel({
       if (b.id === currentUserId) return 1;
       return a.name.localeCompare(b.name, 'vi');
     });
-    const pendingMembers = [...groupMembers]
-      .filter((member) => member.memberStatus === 'PENDING')
-      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-    const approvedMemberCount = groupMembers.filter((member) => member.memberStatus !== 'PENDING').length;
+    const approvedMemberCount = groupMembers.length;
 
     const renderGroupSectionHeader = (
       section: keyof typeof groupSectionsOpen,
@@ -1265,9 +1262,6 @@ function ChatInfoPanel({
           <h3 className="mt-3 truncate text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">{user.name}</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             {approvedMemberCount} thành viên
-            {canManageMemberApproval && pendingMembers.length > 0
-              ? ` · ${pendingMembers.length} chờ duyệt`
-              : ''}
           </p>
         </div>
 
@@ -1327,29 +1321,6 @@ function ChatInfoPanel({
             </div>
           )}
 
-          {canManageMemberApproval && (
-            <>
-              {renderGroupSectionHeader('options', 'Tùy chọn nhóm')}
-              {groupSectionsOpen.options && (
-                <div className="space-y-2 px-3 pb-3 text-sm text-gray-600 dark:text-gray-400">
-                  <div className="flex items-center justify-between gap-3 rounded-lg py-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Phê duyệt thành viên</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Thành viên tham gia qua liên kết hoặc được mời cần được bạn duyệt. Người do quản trị viên thêm sẽ vào nhóm ngay.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={memberApprovalRequired}
-                      onCheckedChange={(checked) => onMemberApprovalChange?.(checked)}
-                      aria-label="Phê duyệt thành viên"
-                    />
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-
           {renderGroupSectionHeader('joinLink', 'Liên kết tham gia')}
           {groupSectionsOpen.joinLink && (
             <div className="space-y-3 px-3 pb-3 text-sm">
@@ -1378,11 +1349,6 @@ function ChatInfoPanel({
                       <Copy className="h-4 w-4" />
                     </button>
                   </div>
-                  {memberApprovalRequired && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Người tham gia qua liên kết này cần được quản trị viên phê duyệt trước khi vào nhóm.
-                    </p>
-                  )}
                 </>
               ) : (
                 <p className="text-gray-500 dark:text-gray-400">Không thể tải liên kết tham gia.</p>
@@ -1393,45 +1359,6 @@ function ChatInfoPanel({
           {renderGroupSectionHeader('members', 'Thành viên trong đoạn chat')}
           {groupSectionsOpen.members && (
             <div className="space-y-3 px-3 pb-3 pt-1">
-              {canManageMemberApproval && pendingMembers.length > 0 && (
-                <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3">
-                  <p className="text-sm font-semibold text-amber-900">
-                    Chờ phê duyệt ({pendingMembers.length})
-                  </p>
-                  {pendingMembers.map((member) => (
-                    <div key={member.id} className="flex items-center gap-3">
-                      <img
-                        src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`}
-                        alt={member.name}
-                        className="h-10 w-10 rounded-full object-cover"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-semibold text-gray-900 dark:text-gray-100">{member.name}</p>
-                        <p className="truncate text-sm text-amber-700">Đang chờ phê duyệt</p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => onApproveMember?.(member.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-white hover:bg-green-700 cursor-pointer"
-                          title="Duyệt"
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onRejectMember?.(member.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 ring-1 ring-gray-200 dark:ring-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                          title="Từ chối"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               {sortedMembers.map((member) => {
                 const isCreator = member.id === groupCreatorId;
                 const isCurrentUser = member.id === currentUserId;
@@ -1812,7 +1739,6 @@ function EmptyInfoTab({ icon, text }: { icon: ReactNode; text: string }) {
 }
 
 export default function MessengerPage() {
-  const { data: publicPolicy } = usePublicPolicies();
   const currentUser = authService.getCurrentUser();
 
   const {
@@ -1857,7 +1783,6 @@ export default function MessengerPage() {
   const [serverGroupConversations, setServerGroupConversations] = useState<Conversation[]>([]);
   const [groupMembersById, setGroupMembersById] = useState<Record<string, ChatUser[]>>({});
   const [groupCreatorById, setGroupCreatorById] = useState<Record<string, string>>({});
-  const [groupMemberApprovalById, setGroupMemberApprovalById] = useState<Record<string, boolean>>({});
   const [leaveGroupModalMode, setLeaveGroupModalMode] = useState<'confirm' | 'transfer' | null>(null);
   const [isDissolveGroupModalOpen, setIsDissolveGroupModalOpen] = useState(false);
   const [isDissolvingGroup, setIsDissolvingGroup] = useState(false);
@@ -2090,12 +2015,10 @@ export default function MessengerPage() {
 
       const membersMap: Record<string, ChatUser[]> = {};
       const creatorsMap: Record<string, string> = {};
-      const approvalMap: Record<string, boolean> = {};
       groups.forEach((group) => {
         const chatUserId = `group:${group.id}`;
         membersMap[chatUserId] = mapGroupMembersToChatUsers(group.members);
         creatorsMap[chatUserId] = group.createdBy;
-        approvalMap[chatUserId] = Boolean(group.memberApprovalRequired);
       });
 
       setServerGroupConversations(mapped);
@@ -2123,7 +2046,6 @@ export default function MessengerPage() {
       });
       setGroupMembersById((prev) => ({ ...prev, ...membersMap }));
       setGroupCreatorById((prev) => ({ ...prev, ...creatorsMap }));
-      setGroupMemberApprovalById((prev) => ({ ...prev, ...approvalMap }));
     } catch {
       // keep current state on failure
     }
@@ -2187,7 +2109,6 @@ export default function MessengerPage() {
       [chatUserId]: mapGroupMembersToChatUsers(group.members),
     }));
     setGroupCreatorById((prev) => ({ ...prev, [chatUserId]: group.createdBy }));
-    setGroupMemberApprovalById((prev) => ({ ...prev, [chatUserId]: Boolean(group.memberApprovalRequired) }));
   }, [overrides]);
 
   const refreshGroupMembers = useCallback(async (conversationId: string) => {
@@ -2710,24 +2631,6 @@ export default function MessengerPage() {
     (content: string) => {
       if (!activeChatUserId) return;
 
-      const isStructuredPayload =
-        content.startsWith(VOICE_MESSAGE_PREFIX) ||
-        content.startsWith(IMAGE_MESSAGE_PREFIX) ||
-        content.startsWith(FILE_MESSAGE_PREFIX) ||
-        content.startsWith(VIDEO_SHARE_PREFIX) ||
-        content.startsWith(POST_SHARE_PREFIX) ||
-        content.startsWith(CHAT_ACTION_PREFIX) ||
-        content.startsWith(STORY_REPLY_PREFIX) ||
-        content.startsWith(REPLY_PREFIX);
-
-      if (!isStructuredPayload) {
-        const policyError = validateChatAgainstPolicy(content, publicPolicy);
-        if (policyError) {
-          toast.error(policyError);
-          return;
-        }
-      }
-
       if (activeChatUserId.startsWith('group:')) {
         const conversationId = activeChatUserId.replace('group:', '');
         void chatService
@@ -2742,7 +2645,7 @@ export default function MessengerPage() {
       }
       sendMessage(activeChatUserId, content);
     },
-    [activeChatUserId, handleIncomingMessage, publicPolicy, sendMessage],
+    [activeChatUserId, handleIncomingMessage, sendMessage],
   );
 
   const buildForwardContent = useCallback((message: Message) => {
@@ -3204,21 +3107,6 @@ export default function MessengerPage() {
     }
   }, [activeChatUserId, applyGroupConversationResponse]);
 
-  const handleToggleMemberApproval = useCallback(async (enabled: boolean) => {
-    if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
-    const conversationId = activeChatUserId.replace('group:', '');
-    const previousValue = groupMemberApprovalById[activeChatUserId] ?? false;
-    setGroupMemberApprovalById((prev) => ({ ...prev, [activeChatUserId]: enabled }));
-    try {
-      const updated = await chatService.updateGroupConversation(conversationId, { memberApprovalRequired: enabled });
-      applyGroupConversationResponse(updated);
-      toast.success(enabled ? 'Đã bật phê duyệt thành viên.' : 'Đã tắt phê duyệt thành viên.');
-    } catch {
-      setGroupMemberApprovalById((prev) => ({ ...prev, [activeChatUserId]: previousValue }));
-      toast.error('Không thể cập nhật cài đặt phê duyệt.');
-    }
-  }, [activeChatUserId, applyGroupConversationResponse, groupMemberApprovalById, isActiveGroupCreator]);
-
   const removeGroupConversation = useCallback(
     (chatUserId: string) => {
       setServerGroupConversations((prev) => prev.filter((item) => item.user.id !== chatUserId));
@@ -3228,11 +3116,6 @@ export default function MessengerPage() {
         return next;
       });
       setGroupCreatorById((prev) => {
-        const next = { ...prev };
-        delete next[chatUserId];
-        return next;
-      });
-      setGroupMemberApprovalById((prev) => {
         const next = { ...prev };
         delete next[chatUserId];
         return next;
@@ -3306,30 +3189,6 @@ export default function MessengerPage() {
       setIsDissolvingGroup(false);
     }
   }, [activeChatUserId, removeGroupConversation]);
-
-  const handleApproveGroupMember = useCallback(async (memberUserId: string) => {
-    if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
-    const conversationId = activeChatUserId.replace('group:', '');
-    try {
-      const updated = await chatService.approveGroupMember(conversationId, memberUserId);
-      applyGroupConversationResponse(updated);
-      toast.success('Đã phê duyệt thành viên.');
-    } catch {
-      toast.error('Không thể phê duyệt thành viên.');
-    }
-  }, [activeChatUserId, applyGroupConversationResponse, isActiveGroupCreator]);
-
-  const handleRejectGroupMember = useCallback(async (memberUserId: string) => {
-    if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
-    const conversationId = activeChatUserId.replace('group:', '');
-    try {
-      const updated = await chatService.rejectGroupMember(conversationId, memberUserId);
-      applyGroupConversationResponse(updated);
-      toast.success('Đã từ chối thành viên.');
-    } catch {
-      toast.error('Không thể từ chối thành viên.');
-    }
-  }, [activeChatUserId, applyGroupConversationResponse, isActiveGroupCreator]);
 
   const handleRequestRemoveGroupMember = useCallback((memberUserId: string, memberName: string) => {
     if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
@@ -3583,11 +3442,6 @@ export default function MessengerPage() {
               onLoadMoreHistory={handleLoadOlderMessages}
               hasMoreHistory={hasOlderMessages}
               isLoadingMoreHistory={loadingOlderMessages}
-              memberApprovalRequired={activeChatUserId ? Boolean(groupMemberApprovalById[activeChatUserId]) : false}
-              canManageMemberApproval={isActiveGroupCreator}
-              onMemberApprovalChange={handleToggleMemberApproval}
-              onApproveMember={handleApproveGroupMember}
-              onRejectMember={handleRejectGroupMember}
               onRequestRemoveMember={handleRequestRemoveGroupMember}
               onLeaveGroup={handleLeaveGroupClick}
               onDissolveGroup={handleDissolveGroupClick}

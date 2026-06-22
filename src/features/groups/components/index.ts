@@ -8,6 +8,7 @@ export { InviteFriendsModal } from './InviteFriendsModal/InviteFriendsModal';
 export { GroupPostCard } from './GroupPostCard/GroupPostCard';
 export { GroupDetailSidebar, GroupActivationMobileBar } from './GroupDetailSidebar';
 export { EditGroupDescriptionModal } from './EditGroupDescriptionModal/EditGroupDescriptionModal';
+export { EditGroupNameModal } from './EditGroupNameModal/EditGroupNameModal';
 export { GroupTabBar } from './GroupTabBar/GroupTabBar';
 export { GroupMembersTab } from './GroupMembersTab/GroupMembersTab';
 export { GroupPlaceholderTab } from './GroupPlaceholderTabs/GroupPlaceholderTabs';

@@ -54,6 +54,11 @@ export interface Message {
   sharedPostContent?: string;
   sharedPostImage?: string;
   sharedPostAuthorName?: string;
+  sharedGroupId?: string;
+  sharedGroupName?: string;
+  sharedGroupCover?: string;
+  sharedGroupPrivacy?: 'PUBLIC' | 'PRIVATE';
+  sharedGroupMemberCount?: number;
   storyReplyAuthorId?: string;
   storyReplyAuthorName?: string;
   storyReplyAuthorAvatarUrl?: string;

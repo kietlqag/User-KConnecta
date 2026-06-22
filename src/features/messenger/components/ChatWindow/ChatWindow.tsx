@@ -7,12 +7,10 @@ import { PendingAttachments } from './components/PendingAttachments';
 import { Composer } from './components/Composer';
 import { CameraModal } from './components/CameraModal';
 import { PinnedMessagesModal, type PinnedChatMessage } from './components/PinnedMessagesModal';
-import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { useChatScroll } from './hooks/useChatScroll';
 import { useVoiceRecorder } from './hooks/useVoiceRecorder';
 import { useAttachments } from './hooks/useAttachments';
 import { useCameraCapture } from './hooks/useCameraCapture';
-import { useSpamCounter } from './hooks/useSpamCounter';
 
 const REPLY_PREFIX = '__REPLY__:';
 
@@ -113,26 +111,6 @@ export const ChatWindow = ({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [showPinnedModal, setShowPinnedModal] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const { data: publicPolicy } = usePublicPolicies();
-  const spamMaxConsecutive = publicPolicy?.chatPolicy?.messagesPerMinute ?? 10;
-  const spamCounterEnabled = publicPolicy?.chatPolicy?.antiSpamEnabled ?? true;
-  const { recordSend: recordSpamSend, isAtLimitFor: isDuplicateAtLimit } = useSpamCounter(
-    user.id,
-    messages,
-    spamMaxConsecutive,
-    spamCounterEnabled,
-  );
-
-  const isDuplicateBlocked =
-    spamCounterEnabled && Boolean(inputText.trim()) && isDuplicateAtLimit(inputText);
-
-  const trackAndSendMessage = useCallback(
-    (content: string) => {
-      recordSpamSend(content);
-      onSendMessage(content);
-    },
-    [onSendMessage, recordSpamSend]
-  );
 
   useEffect(() => {
     if (!rateLimitUntil) {
@@ -167,7 +145,7 @@ export const ChatWindow = ({
     startVoiceRecording,
     stopAndSendVoiceRecording,
     cancelVoiceRecording,
-  } = useVoiceRecorder(connected, trackAndSendMessage, setReportNotice);
+  } = useVoiceRecorder(connected, onSendMessage, setReportNotice);
 
   const {
     pendingImages,
@@ -183,7 +161,7 @@ export const ChatWindow = ({
     removePendingFile,
     sendPendingImages,
     sendPendingFiles,
-  } = useAttachments(connected, trackAndSendMessage, setReportNotice);
+  } = useAttachments(connected, onSendMessage, setReportNotice);
 
   const {
     showCamera,
@@ -201,10 +179,6 @@ export const ChatWindow = ({
   const handleSend = () => {
     const text = inputText.trim();
     if ((!text && pendingImages.length === 0 && pendingFiles.length === 0) || !connected || cooldownSeconds > 0 || isRecordingVoice || isSendingVoice || isSendingImage || isSendingFile) {
-      return;
-    }
-
-    if (text && isDuplicateAtLimit(text)) {
       return;
     }
 
@@ -229,7 +203,6 @@ export const ChatWindow = ({
           replyPreview: replyToMessage.text.slice(0, 120),
         })}`
       : text;
-    recordSpamSend(text);
     onSendMessage(payload);
     setInputText('');
     setReplyToMessage(null);
@@ -372,7 +345,6 @@ export const ChatWindow = ({
             onSend={handleSend}
             connected={connected}
             cooldownSeconds={cooldownSeconds}
-            isDuplicateBlocked={isDuplicateBlocked}
             isRecordingVoice={isRecordingVoice}
             isSendingVoice={isSendingVoice}
             isSendingImage={isSendingImage}

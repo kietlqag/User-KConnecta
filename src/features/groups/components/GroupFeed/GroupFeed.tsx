@@ -34,11 +34,18 @@ export function GroupFeed({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [internalModalOpen, setInternalModalOpen] = useState(false);
+  const [openWithPoll, setOpenWithPoll] = useState(false);
   const isControlled = composerOpen !== undefined;
   const isModalOpen = isControlled ? composerOpen : internalModalOpen;
   const setModalOpen = (open: boolean) => {
+    if (!open) setOpenWithPoll(false);
     if (isControlled) onComposerOpenChange?.(open);
     else setInternalModalOpen(open);
+  };
+
+  const openComposer = (withPoll = false) => {
+    setOpenWithPoll(withPoll);
+    setModalOpen(true);
   };
 
   const currentUser = authService.getCurrentUser();
@@ -76,7 +83,7 @@ export function GroupFeed({
         <div className="flex gap-2 items-center mb-3">
           <CurrentUserAvatar />
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={() => openComposer(false)}
             className="flex-1 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer rounded-full py-2.5 px-4 text-gray-500 dark:text-gray-400 text-[15px] text-left"
           >
             Bạn đang nghĩ gì?
@@ -84,21 +91,21 @@ export function GroupFeed({
         </div>
         <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex flex-wrap">
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={() => openComposer(false)}
             className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-gray-600 dark:text-gray-400 font-semibold text-[15px]"
           >
             <Image className="w-6 h-6 text-green-500" />
             Ảnh/video
           </button>
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={() => openComposer(false)}
             className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-gray-600 dark:text-gray-400 font-semibold text-[15px]"
           >
             <Smile className="w-6 h-6 text-yellow-500" />
             Cảm xúc
           </button>
           <button
-            onClick={() => setModalOpen(true)}
+            onClick={() => openComposer(true)}
             className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-gray-600 dark:text-gray-400 font-semibold text-[15px]"
           >
             <Briefcase className="w-6 h-6 text-orange-500" />
@@ -139,6 +146,7 @@ export function GroupFeed({
         onClose={() => setModalOpen(false)}
         username={currentUser?.fullName || 'Người dùng'}
         groupId={groupId}
+        initialShowPoll={openWithPoll}
         onPostCreated={() => void fetchPosts()}
       />
     </div>

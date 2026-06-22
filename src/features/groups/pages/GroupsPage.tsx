@@ -1,45 +1,51 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Post } from '../../../components/shared';
 import { GroupsHubLayout } from '../components';
 import { useJoinedGroups, useManagedGroups } from '../hooks/useGroups';
-import { postService } from '@/services/postService';
+import { useGroupFeed } from '../hooks/useGroupFeed';
 import { authService } from '@/services/authService';
-import { mapApiPost, type FeedPost } from '@/utils/postUtils';
+import { mapApiPost } from '@/utils/postUtils';
 
 export const GroupsPage = () => {
   const { data: joinedGroups = [] } = useJoinedGroups();
   const { data: managedGroups = [] } = useManagedGroups();
 
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const currentUser = authService.getCurrentUser();
+  const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error } = useGroupFeed(
+    currentUser?.id
+  );
 
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasNextPageRef = useRef(false);
+  const isFetchingNextPageRef = useRef(false);
+  const fetchNextPageRef = useRef<() => void>(() => {});
+
+  // Keep refs in sync every render so the observer callback always reads fresh values
+  hasNextPageRef.current = hasNextPage ?? false;
+  isFetchingNextPageRef.current = isFetchingNextPage;
+  fetchNextPageRef.current = fetchNextPage;
+
+  const posts = useMemo(
+    () => data?.pages.flatMap((page) => page.content.map(mapApiPost)) ?? [],
+    [data]
+  );
+
+  // Re-attach observer when feed grows so we fetch the next page if sentinel is already visible
   useEffect(() => {
-    let isMounted = true;
+    const sentinel = sentinelRef.current;
+    if (!sentinel || isLoading || !hasNextPage) return;
 
-    const fetchGroupFeed = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const currentUser = authService.getCurrentUser();
-        const response = await postService.getGroupFeedPosts(currentUser?.id);
-
-        if (!isMounted) return;
-        setPosts(response.map(mapApiPost));
-      } catch (err) {
-        if (!isMounted) return;
-        setError(err instanceof Error ? err.message : 'Không thể tải bảng tin nhóm');
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    void fetchGroupFeed();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasNextPageRef.current && !isFetchingNextPageRef.current) {
+          void fetchNextPageRef.current();
+        }
+      },
+      { rootMargin: '0px 0px 400px 0px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [isLoading, hasNextPage, posts.length]);
 
   return (
     <GroupsHubLayout
@@ -56,7 +62,7 @@ export const GroupsPage = () => {
 
         {!isLoading && error && (
           <div className="rounded-lg bg-white p-6 text-center text-sm text-red-500 shadow dark:bg-gray-800">
-            {error}
+            {error instanceof Error ? error.message : 'Không thể tải bảng tin nhóm'}
           </div>
         )}
 
@@ -77,11 +83,19 @@ export const GroupsPage = () => {
         ))}
       </div>
 
-      {!isLoading && !error && posts.length > 0 && (
-        <div className="py-8 text-center">
-          <button type="button" className="font-medium text-blue-600 hover:text-blue-700">
-            Xem thêm bài viết
-          </button>
+      {/* Sentinel: IntersectionObserver watches this to trigger fetchNextPage */}
+      <div ref={sentinelRef} />
+
+      {isFetchingNextPage && (
+        <div className="p-4 text-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Đang tải thêm...</span>
+        </div>
+      )}
+
+      {!isLoading && !error && !hasNextPage && posts.length > 0 && (
+        <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+          Bạn đã xem hết tất cả bài viết.
         </div>
       )}
     </GroupsHubLayout>

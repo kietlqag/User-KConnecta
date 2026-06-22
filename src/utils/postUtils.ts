@@ -1,4 +1,4 @@
-import type { PostReactionCountResponse, PostResponse } from '@/services/postService';
+import type { PostReactionCountResponse, PostResponse, PostPollResponse } from '@/services/postService';
 
 export interface FeedPost {
   id: string;
@@ -21,9 +21,18 @@ export interface FeedPost {
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
   isLivePost?: boolean;
   privacy: PostResponse['privacy'];
+  poll?: PostPollResponse | null;
   // Share-wrapper fields
   sharedPost?: boolean;
   originalPost?: FeedPost;
+  // Embedded group card (present when this post shares a group to the feed)
+  sharedGroup?: {
+    id: string;
+    name: string;
+    coverPhotoUrl?: string;
+    privacy: 'PUBLIC' | 'PRIVATE';
+    memberCount: number;
+  };
 }
 
 export type PostSourceTab = 'feed' | 'group';
@@ -110,7 +119,17 @@ export function mapApiPost(item: PostResponse): FeedPost {
     })),
     isLivePost,
     privacy: item.privacy ?? 'PUBLIC',
+    poll: item.poll ?? undefined,
     sharedPost: item.sharedPost ?? false,
     originalPost: item.originalPost ? mapApiPost(item.originalPost) : undefined,
+    sharedGroup: item.sharedGroup
+      ? {
+          id: item.sharedGroup.id,
+          name: item.sharedGroup.name,
+          coverPhotoUrl: item.sharedGroup.coverPhotoUrl || undefined,
+          privacy: item.sharedGroup.privacy,
+          memberCount: item.sharedGroup.memberCount,
+        }
+      : undefined,
   };
 }

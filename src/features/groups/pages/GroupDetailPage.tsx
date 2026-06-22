@@ -9,6 +9,7 @@ import {
   GroupDetailSidebar,
   GroupActivationMobileBar,
   EditGroupDescriptionModal,
+  EditGroupNameModal,
   GroupTabBar,
   GroupMembersTab,
   GroupPlaceholderTab,
@@ -37,6 +38,7 @@ import { useGroupSocket } from '../hooks/useGroupSocket';
 import { groupService, GROUP_MEMBERSHIP_CHANGED_EVENT } from '@/services/groupService';
 import { authService } from '@/services/authService';
 import { UserAvatar } from '@/components/shared';
+import { GroupShareModal } from '@/components/posts/GroupShareModal';
 import { toast } from 'sonner';
 
 export const GroupDetailPage = () => {
@@ -75,6 +77,7 @@ export const GroupDetailPage = () => {
 
   const [coverError, setCoverError] = useState<string | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [memberSearch, setMemberSearch] = useState('');
   const [removingMember, setRemovingMember] = useState<{ userId: string; fullName: string } | null>(null);
   const navigate = useNavigate();
@@ -89,6 +92,7 @@ export const GroupDetailPage = () => {
   const [postCount, setPostCount] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
   const [descriptionModalOpen, setDescriptionModalOpen] = useState(false);
+  const [nameModalOpen, setNameModalOpen] = useState(false);
   const [inviteSent, setInviteSent] = useState(() => (groupId ? isInviteSent(groupId) : false));
   const isAdmin = group?.role === 'ADMIN';
   const { data: joinRequests = [] } = useGroupJoinRequests(isAdmin ? groupId : undefined);
@@ -371,7 +375,19 @@ export const GroupDetailPage = () => {
 
               {/* Group Header Info */}
               <div className="pt-4 pb-2 sm:pt-6">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">{group?.name}</h1>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{group?.name}</h1>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setNameModalOpen(true)}
+                      className="rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+                      title="Đổi tên nhóm"
+                    >
+                      <Edit3 className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
                 <div className="flex items-center text-[15px] text-gray-500 dark:text-gray-400 gap-1.5 font-medium mb-4">
                   {group?.privacy === 'private' ? <Lock className="w-4 h-4" /> : <Users className="w-4 h-4" />}
                   <span>Nhóm {group?.privacy === 'private' ? 'Riêng tư' : 'Công khai'}</span>
@@ -454,7 +470,10 @@ export const GroupDetailPage = () => {
                         </button>
                       </>
                     )}
-                    <button className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors">
+                    <button
+                      onClick={() => setIsShareModalOpen(true)}
+                      className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors"
+                    >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>
                       Chia sẻ
                     </button>
@@ -599,6 +618,15 @@ export const GroupDetailPage = () => {
         />
       )}
 
+      {groupId && group && (
+        <EditGroupNameModal
+          groupId={groupId}
+          isOpen={nameModalOpen}
+          initialName={group.name}
+          onClose={() => setNameModalOpen(false)}
+        />
+      )}
+
       {groupId && (
         <InviteFriendsModal 
           groupId={groupId}
@@ -611,6 +639,18 @@ export const GroupDetailPage = () => {
               setInviteSent(true);
             }
           }}
+        />
+      )}
+
+      {groupId && group && (
+        <GroupShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          groupId={groupId}
+          groupName={group.name}
+          groupCoverUrl={group.icon}
+          groupPrivacy={group.privacy === 'private' ? 'PRIVATE' : 'PUBLIC'}
+          groupMemberCount={group.members ?? members.length}
         />
       )}
 
@@ -632,7 +672,23 @@ export const GroupDetailPage = () => {
             </div>
             <div className="p-6 space-y-5">
               {isAdmin && (
-                <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">Tên nhóm</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3">
+                    Hiện tại: <span className="font-medium text-gray-800 dark:text-gray-200">{group.name}</span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setShowSettings(false); setNameModalOpen(true); }}
+                    className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 text-sm font-semibold transition-colors"
+                  >
+                    Đổi tên nhóm
+                  </button>
+                </div>
+              )}
+
+              {isAdmin && (
+                <div className="flex items-start justify-between gap-4 pt-5 border-t border-gray-200 dark:border-gray-700">
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 dark:text-gray-100">Duyệt thành viên</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

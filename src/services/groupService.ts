@@ -70,6 +70,9 @@ export const groupService = {
   updateDescription: (groupId: string, requesterId: string, description: string) =>
     api.put<GroupApiResponse>(`/groups/${groupId}/description`, { requesterId, description }),
 
+  updateName: (groupId: string, requesterId: string, name: string) =>
+    api.put<GroupApiResponse>(`/groups/${groupId}/name`, { requesterId, name }),
+
   updateMemberApproval: (groupId: string, memberApprovalRequired: boolean) =>
     api.put<GroupApiResponse>(`/groups/${groupId}/member-approval`, { memberApprovalRequired }),
 

@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { createPortal } from 'react-dom';
-import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download, Newspaper } from 'lucide-react';
+import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download, Newspaper, Users, Lock, Globe } from 'lucide-react';
 import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
 import { isGroupJoinLinkMessage, parseGroupJoinTokenFromUrl } from '../../utils/groupJoinLink';
@@ -465,6 +465,47 @@ export const MessageBubble = ({
                 <p className="mt-0.5 text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100 line-clamp-2">
                   {message.sharedPostContent?.trim() || 'Xem bài viết trên KConnecta'}
                 </p>
+              </div>
+            </button>
+          ) : message.sharedGroupId && !message.deleted ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/groups/${message.sharedGroupId}`)}
+              className="flex w-[min(300px,72vw)] max-w-full flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700/90 bg-white dark:bg-gray-800 text-left shadow-[0_1px_2px_rgba(0,0,0,0.08)] transition hover:shadow-md group/group-share"
+              title="Xem nhóm"
+            >
+              <div className="relative aspect-[1.91/1] w-full overflow-hidden bg-gray-100 dark:bg-background">
+                {message.sharedGroupCover ? (
+                  <img
+                    src={message.sharedGroupCover}
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover/group-share:scale-[1.03]"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-100 via-indigo-100 to-blue-200">
+                    <Users className="h-10 w-10 text-blue-500/70" strokeWidth={1.5} />
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2.5">
+                <p className="truncate text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100">
+                  {message.sharedGroupName?.trim() || 'Nhóm trên KConnecta'}
+                </p>
+                <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  {message.sharedGroupPrivacy === 'PRIVATE' ? (
+                    <Lock className="h-3.5 w-3.5" aria-hidden />
+                  ) : (
+                    <Globe className="h-3.5 w-3.5" aria-hidden />
+                  )}
+                  <span>{message.sharedGroupPrivacy === 'PRIVATE' ? 'Nhóm Riêng tư' : 'Nhóm Công khai'}</span>
+                  {typeof message.sharedGroupMemberCount === 'number' && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <span>{message.sharedGroupMemberCount.toLocaleString('vi-VN')} thành viên</span>
+                    </>
+                  )}
+                </div>
               </div>
             </button>
           ) : imageUrls.length > 0 && !message.deleted ? (

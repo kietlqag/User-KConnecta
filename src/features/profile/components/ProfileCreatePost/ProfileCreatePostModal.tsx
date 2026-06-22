@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Lock,
   Shield,
+  BarChart3,
 } from 'lucide-react';
 import { useGroupById } from '@/features/groups/hooks/useGroups';
 import { getGroupPrivacyShortLabel } from './postPublishContext';
@@ -37,6 +38,7 @@ import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidation';
 
 import { toApiScheduledAt, debugScheduleLog } from './postScheduleUtils';
+import { GroupPollComposer } from '@/features/groups/components/GroupPollComposer/GroupPollComposer';
 
 interface ProfileCreatePostModalProps {
   isOpen: boolean;
@@ -45,6 +47,7 @@ interface ProfileCreatePostModalProps {
   onPostCreated?: () => void;
   groupId?: string;
   initialShowImagePicker?: boolean;
+  initialShowPoll?: boolean;
 }
 
 export function ProfileCreatePostModal({
@@ -54,6 +57,7 @@ export function ProfileCreatePostModal({
   onPostCreated,
   groupId,
   initialShowImagePicker = false,
+  initialShowPoll = false,
 }: ProfileCreatePostModalProps) {
   const [postContent, setPostContent] = useState('');
   const [privacy, setPrivacy] = useState('public');
@@ -90,6 +94,9 @@ export function ProfileCreatePostModal({
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [emojiPickerPos, setEmojiPickerPos] = useState({ top: 0, right: 0 });
+  const [showPoll, setShowPoll] = useState(initialShowPoll);
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollAllowAddOptions, setPollAllowAddOptions] = useState(true);
 
   const { data: targetGroup } = useGroupById(groupId);
   const postContext = groupId ? 'GROUP' : 'PROFILE';
@@ -99,6 +106,13 @@ export function ProfileCreatePostModal({
   useEffect(() => {
     setShowImagePicker(initialShowImagePicker);
   }, [initialShowImagePicker]);
+
+  useEffect(() => {
+    setShowPoll(initialShowPoll);
+    if (initialShowPoll) {
+      setPollOptions(['', '']);
+    }
+  }, [initialShowPoll]);
 
   useEffect(() => {
     if (isOpen) {
@@ -224,6 +238,8 @@ export function ProfileCreatePostModal({
 
     setSelectedImages([]);
     setShowImagePicker(false);
+    setShowPoll(false);
+    setPollOptions(['', '']);
     onClose();
   };
 
@@ -254,7 +270,19 @@ export function ProfileCreatePostModal({
       : 'Đăng ngay';
 
   const handlePost = async () => {
-    if (!postContent.trim() && selectedImages.length === 0) return;
+    const trimmedPollOptions = pollOptions.map((item) => item.trim()).filter(Boolean);
+    if (showPoll) {
+      if (!postContent.trim()) {
+        toast.error('Bạn không thể tạo cuộc thăm dò ý kiến không chứa văn bản trong bài viết.');
+        return;
+      }
+      if (trimmedPollOptions.length < 2) {
+        toast.error('Cuộc thăm dò ý kiến cần ít nhất 2 lựa chọn');
+        return;
+      }
+    }
+
+    if (!postContent.trim() && selectedImages.length === 0 && !showPoll) return;
 
     if (scheduleMode === 'scheduled') {
       if (!scheduledAtLocal.trim()) {
@@ -334,6 +362,12 @@ export function ProfileCreatePostModal({
         ...(!isGroupPost && allowedUserIds.length > 0 && { allowedUserIds }),
         status: isScheduled ? 'SCHEDULED' : 'PUBLISHED',
         ...(isScheduled && scheduledAtApi ? { scheduledAt: scheduledAtApi } : {}),
+        ...(showPoll && isGroupPost && {
+          poll: {
+            options: trimmedPollOptions,
+            allowAddOptions: pollAllowAddOptions,
+          },
+        }),
       });
 
       toast.success(isScheduled ? 'Đã lên lịch đăng bài' : 'Đăng bài thành công');
@@ -352,6 +386,9 @@ export function ProfileCreatePostModal({
       setAllowedUserIds([]);
       setSelectedGroupId(null);
       setSelectedGroupName(null);
+      setShowPoll(false);
+      setPollOptions(['', '']);
+      setPollAllowAddOptions(true);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể đăng bài');
     } finally {
@@ -483,7 +520,7 @@ export function ProfileCreatePostModal({
               ref={textareaRef}
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
-              placeholder="Bạn đang nghĩ gì?"
+              placeholder={isGroupPost ? 'Bạn viết gì đi...' : 'Bạn đang nghĩ gì?'}
               className="min-h-[120px] w-full resize-none border-none bg-transparent text-2xl text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
               autoFocus
             />
@@ -508,6 +545,19 @@ export function ProfileCreatePostModal({
                 </div>
               ) : null;
             })()}
+
+            {showPoll && isGroupPost && (
+              <GroupPollComposer
+                options={pollOptions}
+                onOptionsChange={setPollOptions}
+                onRemove={() => {
+                  setShowPoll(false);
+                  setPollOptions(['', '']);
+                }}
+                allowAddOptions={pollAllowAddOptions}
+                onAllowAddOptionsChange={setPollAllowAddOptions}
+              />
+            )}
 
             {showImagePicker && (
               <div className="relative mb-4 rounded-lg bg-gray-50 border border-gray-200 p-2 group dark:bg-gray-700 dark:border-gray-600">
@@ -659,6 +709,15 @@ export function ProfileCreatePostModal({
                   <button className="rounded-full p-2 transition-colors hover:bg-muted">
                     <Users className="h-6 w-6 text-emerald-500" />
                   </button>
+                  {isGroupPost && !showPoll && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPoll(true)}
+                      className="rounded-full p-2 transition-colors hover:bg-muted"
+                    >
+                      <BarChart3 className="h-6 w-6 text-orange-500" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -667,7 +726,10 @@ export function ProfileCreatePostModal({
 
           <div className="shrink-0 border-t border-gray-200 bg-white px-4 pb-4 pt-3 dark:border-gray-700 dark:bg-gray-800">
             {(() => {
-              const hasContent = postContent.trim() || selectedImages.length > 0;
+              const trimmedPollOptions = pollOptions.map((item) => item.trim()).filter(Boolean);
+              const pollNeedsText = showPoll && !postContent.trim();
+              const pollNeedsOptions = showPoll && trimmedPollOptions.length < 2;
+              const hasContent = postContent.trim() || selectedImages.length > 0 || (showPoll && trimmedPollOptions.length >= 2);
               const isUploading = selectedImages.some(img => img.uploading);
               const hasVideo = selectedImages.some(img => img.type === 'video');
               const hasImage = selectedImages.some(img => img.type === 'image');
@@ -676,25 +738,39 @@ export function ProfileCreatePostModal({
                 : hasVideo
                   ? 'Đang đăng hình ảnh/video...'
                   : 'Đang tải ảnh lên...';
-              const disabled = !hasContent || isUploading || !!checkKeywords(postContent, publicPolicy);
+              const disabled = !hasContent || isUploading || isPosting || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions;
+              const useDirectPost = isGroupPost;
+
               return (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={disabled}
-                  className={`w-full rounded-lg py-2.5 font-semibold transition-colors ${
-                    !disabled
-                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                      : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                  }`}
-                >
-                  {isUploading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {uploadingLabel}
-                    </span>
-                  ) : 'Tiếp'}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={useDirectPost ? () => void handlePost() : handleNext}
+                    disabled={disabled}
+                    className={`w-full rounded-lg py-2.5 font-semibold transition-colors ${
+                      !disabled
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
+                    }`}
+                  >
+                    {isPosting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang đăng...
+                      </span>
+                    ) : isUploading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {uploadingLabel}
+                      </span>
+                    ) : useDirectPost ? 'Đăng' : 'Tiếp'}
+                  </button>
+                  {pollNeedsText && (
+                    <p className="mt-2 text-center text-xs text-red-500">
+                      Bạn không thể tạo cuộc thăm dò ý kiến không chứa văn bản trong bài viết.
+                    </p>
+                  )}
+                </>
               );
             })()}
             <div className="mt-2 text-center">

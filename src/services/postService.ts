@@ -12,6 +12,8 @@ export interface CreatePostMediaRequest {
 export interface CreatePostPayload {
   authorId: string;
   groupId?: string;
+  // Set when sharing a group to the feed — the group being shared.
+  sharedGroupId?: string;
   content: string;
   imageUrl?: string;
   media?: CreatePostMediaRequest[];
@@ -23,6 +25,38 @@ export interface CreatePostPayload {
   locationText?: string | null;
   taggedUserIds?: string[];
   promoted?: boolean;
+  poll?: CreatePostPollPayload;
+}
+
+export interface CreatePostPollPayload {
+  options: string[];
+  allowMultiple?: boolean;
+  allowAddOptions?: boolean;
+}
+
+export interface PostPollOptionResponse {
+  id: string;
+  text: string;
+  sortOrder: number;
+  voteCount: number;
+  percentage: number;
+}
+
+export interface PostPollResponse {
+  id: string;
+  allowMultiple: boolean;
+  allowAddOptions: boolean;
+  options: PostPollOptionResponse[];
+  myVotedOptionIds: string[];
+  totalVotes: number;
+}
+
+export interface VotePostPollPayload {
+  optionId: string;
+}
+
+export interface AddPostPollOptionPayload {
+  text: string;
 }
 
 export interface UpdatePostPayload {
@@ -132,6 +166,17 @@ export interface PostResponse {
   sharedPost?: boolean;
   // The embedded original post (only present when sharedPost is true)
   originalPost?: PostResponse;
+  // Embedded group summary (only present when this post shares a group to the feed)
+  sharedGroup?: SharedGroupResponse | null;
+  poll?: PostPollResponse | null;
+}
+
+export interface SharedGroupResponse {
+  id: string;
+  name: string;
+  coverPhotoUrl?: string | null;
+  privacy: 'PUBLIC' | 'PRIVATE';
+  memberCount: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -248,10 +293,14 @@ export const postService = {
     if (currentUserId) params.append('currentUserId', currentUserId);
     return api.get<PostResponse[]>(`/posts?${params.toString()}`);
   },
-  getGroupFeedPosts: (currentUserId?: string) => {
+  getGroupFeedPosts: (currentUserId?: string, page = 0, size = 10) => {
     const params = new URLSearchParams({ isGroupFeed: 'true' });
     if (currentUserId) params.append('currentUserId', currentUserId);
-    return api.get<PostResponse[]>(`/posts?${params.toString()}`);
+    params.append('page', page.toString());
+    params.append('size', size.toString());
+    return api
+      .get<SpringPaginatedRaw<PostResponse>>(`/posts?${params.toString()}`)
+      .then(normalizePaginatedResponse);
   },
   createPost: (data: CreatePostPayload) => {
     if (import.meta.env.DEV) {
@@ -341,4 +390,10 @@ export const postService = {
     }),
   getMyReports: () =>
     api.get<PostReportResponse[]>('/posts/reports/my'),
+  votePoll: (postId: string, payload: VotePostPollPayload) =>
+    api.put<PostPollResponse>(`/posts/${encodeURIComponent(postId)}/poll/vote`, payload),
+  addPollOption: (postId: string, payload: AddPostPollOptionPayload) =>
+    api.post<PostPollResponse>(`/posts/${encodeURIComponent(postId)}/poll/options`, payload),
+  deletePollOption: (postId: string, optionId: string) =>
+    api.delete<PostPollResponse>(`/posts/${encodeURIComponent(postId)}/poll/options/${encodeURIComponent(optionId)}`),
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Shield, FileText, MessageSquare, Lock,
+  Shield, FileText, Lock,
   AlertTriangle, AlertOctagon, Ban, Info,
   ChevronDown, ChevronUp, XCircle,
 } from 'lucide-react';
@@ -344,49 +344,6 @@ export default function CommunityPoliciesPage() {
                   <div key={label} className="flex justify-between items-start rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 px-3 py-2.5 gap-2">
                     <span className="text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{label}</span>
                     <span className="text-sm font-medium text-gray-800 dark:text-gray-200 text-right">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* Chat */}
-            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-              <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                <MessageSquare className="w-5 h-5 text-blue-600" />
-                Quy định nhắn tin
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                Hệ thống tự động bảo vệ bạn khỏi spam và nội dung nguy hiểm trong tin nhắn.
-              </p>
-              <div className="space-y-2">
-                {[
-                  {
-                    label: 'Giới hạn tốc độ gửi',
-                    note: `Tối đa ${policy.chatPolicy.messagesPerMinute} tin giống nhau liên tiếp — vượt quá cần đổi nội dung`,
-                    enabled: policy.chatPolicy.antiSpamEnabled,
-                  },
-                  {
-                    label: 'Chặn đường link độc hại',
-                    note: 'Link lừa đảo, phát tán virus sẽ bị chặn tự động',
-                    enabled: policy.chatPolicy.blockMaliciousLinks,
-                  },
-                  {
-                    label: 'Quét nội dung bằng AI',
-                    note: 'AI phát hiện và báo cáo nội dung vi phạm trong tin nhắn',
-                    enabled: policy.chatPolicy.aiScanEnabled,
-                  },
-                ].map(({ label, note, enabled }) => (
-                  <div
-                    key={label}
-                    className={`rounded-lg border px-3 py-2.5 ${enabled ? 'bg-green-50 border-green-100' : 'bg-gray-50 dark:bg-gray-900 border-gray-100 dark:border-gray-800'}`}
-                  >
-                    <div className="flex justify-between items-center gap-2">
-                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{label}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${enabled ? 'bg-green-100 text-green-700' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                        {enabled ? 'Đang bật' : 'Đang tắt'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{note}</p>
                   </div>
                 ))}
               </div>

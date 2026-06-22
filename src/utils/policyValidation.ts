@@ -1,7 +1,5 @@
 import type { PublicPolicyResponse } from '@/types/policy';
 
-const URL_PATTERN = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
-
 export type PostPolicyAction = 'create' | 'edit';
 
 function normalizeCategory(category: string): string {
@@ -52,30 +50,6 @@ export function validatePostAgainstPolicy(
   return validateTextKeywords(text, policy, action);
 }
 
-export function validateChatAgainstPolicy(
-  content: string,
-  policy: PublicPolicyResponse | undefined
-): string | null {
-  if (!policy) return null;
-  const text = content ?? '';
-
-  const keywordError = validateTextKeywords(text, policy);
-  if (keywordError) return keywordError;
-
-  if (policy.chatPolicy.blockMaliciousLinks) {
-    const blocked = getBlockedDomains(policy);
-    const matches = text.matchAll(URL_PATTERN);
-    for (const m of matches) {
-      const url = (m[0] ?? '').toLowerCase();
-      if (blocked.some((b) => url.includes(b))) {
-        return 'Link không được phép trên nền tảng';
-      }
-    }
-  }
-
-  return null;
-}
-
 export function checkKeywords(
   text: string,
   policy: PublicPolicyResponse | undefined,
@@ -107,13 +81,4 @@ function validateTextKeywords(
     }
   }
   return null;
-}
-
-function getBlockedDomains(policy: PublicPolicyResponse): string[] {
-  const keywords = policy.fullConfig?.keywords;
-  if (!Array.isArray(keywords)) return [];
-  return (keywords as { value?: string; category?: string }[])
-    .filter((k) => k.category === 'blocked_domain')
-    .map((k) => (k.value ?? '').toLowerCase())
-    .filter(Boolean);
 }

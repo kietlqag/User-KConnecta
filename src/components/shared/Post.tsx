@@ -38,6 +38,8 @@ import {
 } from '../reactions';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 import { PostMoreMenu, type Privacy } from './PostMoreMenu';
+import { PostPollCard } from '../posts/PostPollCard';
+import type { PostPollResponse } from '@/services/postService';
 import { PostMediaGallery, type PostGalleryItem } from './PostMediaGallery';
 import {
   AlertDialog,
@@ -92,6 +94,14 @@ export interface PostProps {
   // Share-wrapper fields
   sharedPost?: boolean;
   originalPost?: PostProps;
+  // Embedded group card (present when this post shares a group to the feed)
+  sharedGroup?: {
+    id: string;
+    name: string;
+    coverPhotoUrl?: string;
+    privacy: 'PUBLIC' | 'PRIVATE';
+    memberCount: number;
+  };
   group?: Group;
   commentsData?: Comment[];
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
@@ -104,6 +114,7 @@ export interface PostProps {
   isPinned?: boolean;
   onPin?: (postId: string) => void;
   onUnpin?: (postId: string) => void;
+  poll?: PostPollResponse | null;
 }
 
 export function Post({
@@ -132,6 +143,8 @@ export function Post({
   onUnpin,
   sharedPost = false,
   originalPost,
+  sharedGroup,
+  poll,
 }: PostProps) {
   // For share wrappers, save/share actions target the original post; interactions use the wrapper id.
   const originalPostId = sharedPost && originalPost ? originalPost.id : id;
@@ -523,6 +536,14 @@ export function Post({
             <p className="text-gray-900 dark:text-gray-100 mb-3 whitespace-pre-wrap">{displayContent}</p>
           ) : null}
 
+          {poll && !sharedPost && (
+            <PostPollCard
+              postId={id}
+              poll={poll}
+              canManageOptions={isOwner || canPin}
+            />
+          )}
+
           {/* Embedded original post card for share wrappers */}
           {sharedPost && originalPost && (() => {
             const origMediaUrl = originalPost.media?.url || originalPost.image;
@@ -592,6 +613,48 @@ export function Post({
               </div>
             );
           })()}
+
+          {/* Embedded group card for "share group to feed" posts */}
+          {sharedGroup && (
+            <div
+              className="mt-1 mb-2 rounded-xl border border-border bg-muted overflow-hidden cursor-pointer hover:bg-muted/80 transition-colors"
+              onClick={() => navigate(`/groups/${sharedGroup.id}`)}
+            >
+              {sharedGroup.coverPhotoUrl ? (
+                <img
+                  src={sharedGroup.coverPhotoUrl}
+                  alt={sharedGroup.name}
+                  className="w-full max-h-56 object-cover"
+                />
+              ) : (
+                <div className="flex h-32 w-full items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-gray-700 dark:to-gray-800">
+                  <Users className="h-10 w-10 text-blue-500/70" aria-hidden />
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-3 p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-gray-900 dark:text-white">{sharedGroup.name}</p>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    {sharedGroup.privacy === 'PUBLIC' ? (
+                      <Globe className="h-3.5 w-3.5" aria-hidden />
+                    ) : (
+                      <Lock className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    <span>{sharedGroup.privacy === 'PUBLIC' ? 'Nhóm Công khai' : 'Nhóm Riêng tư'}</span>
+                    <span aria-hidden>·</span>
+                    <span>{sharedGroup.memberCount.toLocaleString('vi-VN')} thành viên</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/groups/${sharedGroup.id}`); }}
+                  className="shrink-0 rounded-lg bg-gray-200 px-4 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                >
+                  Xem nhóm
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {hasLivePreview && !sharedPost && !isModalOpen ? (
