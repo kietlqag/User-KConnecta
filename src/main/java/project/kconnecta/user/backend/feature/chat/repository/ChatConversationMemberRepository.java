@@ -56,4 +56,13 @@ public interface ChatConversationMemberRepository extends JpaRepository<ChatConv
             ORDER BY c.createdAt DESC
             """)
     List<ChatConversationMember> findApprovedByUserIdWithConversation(@Param("userId") UUID userId);
+
+    @Query("""
+            SELECT COUNT(cm.id)
+            FROM ChatConversationMember cm
+            WHERE cm.conversation.id = :conversationId
+              AND cm.user.id <> :excludeUserId
+              AND cm.memberStatus = project.kconnecta.user.backend.feature.chat.entity.enums.ChatMemberStatus.APPROVED
+            """)
+    long countApprovedMembersExcluding(@Param("conversationId") UUID conversationId, @Param("excludeUserId") UUID excludeUserId);
 }

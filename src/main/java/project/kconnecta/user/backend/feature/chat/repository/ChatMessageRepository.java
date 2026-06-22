@@ -198,6 +198,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
                    m.created_at AS lastMessageCreatedAt
             FROM chat_messages m
             WHERE m.conversation_id IN (:conversationIds)
+              AND m.content NOT LIKE '__CHAT_ACTION__:%'
             ORDER BY m.conversation_id, m.created_at DESC
             """, nativeQuery = true)
     List<GroupSummaryRow> findLatestGroupSummaries(

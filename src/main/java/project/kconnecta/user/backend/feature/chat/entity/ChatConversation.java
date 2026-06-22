@@ -32,6 +32,9 @@ public class ChatConversation {
     @Column(name = "member_approval_required", nullable = false)
     private boolean memberApprovalRequired;
 
+    @Column(name = "join_link_token", length = 64, unique = true)
+    private String joinLinkToken;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

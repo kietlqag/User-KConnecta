@@ -15,6 +15,7 @@ import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequ
 import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.LeaveGroupConversationRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupCallSessionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
@@ -30,6 +31,9 @@ import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinR
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationSummaryResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationMemberResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupJoinLinkPreviewResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupJoinLinkResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.JoinGroupViaLinkResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSessionResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.MessageStatusResponse;
@@ -65,6 +69,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -529,6 +534,7 @@ public class ChatServiceImpl implements ChatService {
                 .name(name)
                 .avatarUrl(avatarUrl == null || avatarUrl.isBlank() ? null : avatarUrl)
                 .createdBy(creator)
+                .joinLinkToken(generateJoinLinkToken())
                 .createdAt(LocalDateTime.now())
                 .build();
         conversation = chatConversationRepository.save(conversation);
@@ -796,6 +802,206 @@ public class ChatServiceImpl implements ChatService {
                 null
         ));
         return toGroupConversationResponse(conversation, chatConversationMemberRepository.findMembersByConversationId(conversationId));
+    }
+
+    @Override
+    @Transactional
+    public GroupConversationResponse leaveGroupConversation(
+            String currentUsername,
+            UUID conversationId,
+            LeaveGroupConversationRequest request
+    ) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (conversationId == null) {
+            throw new RuntimeException("Conversation ID is required");
+        }
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        ChatConversationMember membership = chatConversationMemberRepository
+                .findByConversationIdAndUserId(conversationId, actor.getId())
+                .orElseThrow(() -> new RuntimeException("You are not a member of this conversation"));
+        if (membership.getMemberStatus() != ChatMemberStatus.APPROVED) {
+            throw new RuntimeException("Only approved members can leave the group");
+        }
+
+        boolean isCreator = conversation.getCreatedBy().getId().equals(actor.getId());
+        if (isCreator) {
+            UUID newAdminUserId = request == null ? null : request.getNewAdminUserId();
+            if (newAdminUserId == null) {
+                throw new BadRequestException("Group admin must assign a new admin before leaving");
+            }
+            if (newAdminUserId.equals(actor.getId())) {
+                throw new BadRequestException("New admin must be another member");
+            }
+            if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, newAdminUserId)) {
+                throw new BadRequestException("Selected member is not in this group");
+            }
+            User newAdmin = userRepository.findById(newAdminUserId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            conversation.setCreatedBy(newAdmin);
+            chatConversationRepository.save(conversation);
+            sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                    "transfer_admin",
+                    actor,
+                    newAdmin,
+                    null
+            ));
+        }
+
+        chatConversationMemberRepository.delete(membership);
+        sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                "leave_group",
+                actor,
+                null,
+                null
+        ));
+        return toGroupConversationResponse(
+                conversation,
+                chatConversationMemberRepository.findMembersByConversationId(conversationId)
+        );
+    }
+
+    @Override
+    @Transactional
+    public void dissolveGroupConversation(String currentUsername, UUID conversationId) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (conversationId == null) {
+            throw new BadRequestException("Conversation ID is required");
+        }
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+        if (!conversation.getCreatedBy().getId().equals(actor.getId())) {
+            throw new ForbiddenException("Only group admin can dissolve this group");
+        }
+        if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, actor.getId())) {
+            throw new ForbiddenException("Forbidden");
+        }
+        chatConversationRepository.delete(conversation);
+    }
+
+    @Override
+    @Transactional
+    public GroupJoinLinkResponse getGroupJoinLink(String currentUsername, UUID conversationId) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (conversationId == null) {
+            throw new RuntimeException("Conversation ID is required");
+        }
+        if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, actor.getId())) {
+            throw new RuntimeException("You are not a member of this conversation");
+        }
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        ensureJoinLinkToken(conversation);
+        return GroupJoinLinkResponse.builder()
+                .conversationId(conversation.getId())
+                .token(conversation.getJoinLinkToken())
+                .memberApprovalRequired(conversation.isMemberApprovalRequired())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GroupJoinLinkPreviewResponse previewGroupJoinLink(String currentUsername, String token) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String normalizedToken = token == null ? "" : token.trim();
+        if (normalizedToken.isBlank()) {
+            throw new BadRequestException("Join link token is required");
+        }
+        ChatConversation conversation = chatConversationRepository.findByJoinLinkToken(normalizedToken)
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid join link"));
+
+        String membershipStatus = "NONE";
+        Optional<ChatConversationMember> existing = chatConversationMemberRepository
+                .findByConversationIdAndUserId(conversation.getId(), actor.getId());
+        if (existing.isPresent()) {
+            ChatMemberStatus status = existing.get().getMemberStatus();
+            if (status == ChatMemberStatus.PENDING) {
+                membershipStatus = "PENDING";
+            } else if (status == ChatMemberStatus.APPROVED) {
+                membershipStatus = "MEMBER";
+            }
+        }
+
+        long memberCount = chatConversationMemberRepository.findMembersByConversationId(conversation.getId())
+                .stream()
+                .filter(member -> member.getMemberStatus() == null || member.getMemberStatus() == ChatMemberStatus.APPROVED)
+                .count();
+
+        return GroupJoinLinkPreviewResponse.builder()
+                .conversationId(conversation.getId())
+                .conversationName(conversation.getName())
+                .avatarUrl(conversation.getAvatarUrl())
+                .memberCount(Math.toIntExact(memberCount))
+                .memberApprovalRequired(conversation.isMemberApprovalRequired())
+                .membershipStatus(membershipStatus)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public JoinGroupViaLinkResponse joinGroupViaLink(String currentUsername, String token) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String normalizedToken = token == null ? "" : token.trim();
+        if (normalizedToken.isBlank()) {
+            throw new BadRequestException("Join link token is required");
+        }
+        ChatConversation conversation = chatConversationRepository.findByJoinLinkToken(normalizedToken)
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid join link"));
+
+        Optional<ChatConversationMember> existing = chatConversationMemberRepository
+                .findByConversationIdAndUserId(conversation.getId(), actor.getId());
+        if (existing.isPresent()) {
+            ChatMemberStatus status = existing.get().getMemberStatus();
+            if (status == ChatMemberStatus.PENDING) {
+                return JoinGroupViaLinkResponse.builder()
+                        .status("ALREADY_PENDING")
+                        .conversationId(conversation.getId())
+                        .conversationName(conversation.getName())
+                        .message("Yêu cầu tham gia của bạn đang chờ quản trị viên duyệt.")
+                        .build();
+            }
+            return JoinGroupViaLinkResponse.builder()
+                    .status("ALREADY_MEMBER")
+                    .conversationId(conversation.getId())
+                    .conversationName(conversation.getName())
+                    .message("Bạn đã là thành viên của nhóm này.")
+                    .build();
+        }
+
+        boolean requiresApproval = conversation.isMemberApprovalRequired();
+        ChatConversationMember member = ChatConversationMember.builder()
+                .conversation(conversation)
+                .user(actor)
+                .joinedAt(LocalDateTime.now())
+                .memberStatus(requiresApproval ? ChatMemberStatus.PENDING : ChatMemberStatus.APPROVED)
+                .build();
+        chatConversationMemberRepository.save(member);
+        sendGroupSystemMessage(actor.getId(), conversation.getId(), buildChatActionContent(
+                requiresApproval ? "join_via_link_pending" : "join_via_link",
+                actor,
+                null,
+                null
+        ));
+
+        if (requiresApproval) {
+            return JoinGroupViaLinkResponse.builder()
+                    .status("PENDING")
+                    .conversationId(conversation.getId())
+                    .conversationName(conversation.getName())
+                    .message("Yêu cầu tham gia đã được gửi. Vui lòng chờ quản trị viên duyệt.")
+                    .build();
+        }
+        return JoinGroupViaLinkResponse.builder()
+                .status("JOINED")
+                .conversationId(conversation.getId())
+                .conversationName(conversation.getName())
+                .message("Bạn đã tham gia nhóm chat.")
+                .build();
     }
 
     @Override
@@ -1283,6 +1489,17 @@ public class ChatServiceImpl implements ChatService {
             return user.getFullName();
         }
         return user.getUsername();
+    }
+
+    private String generateJoinLinkToken() {
+        return UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private void ensureJoinLinkToken(ChatConversation conversation) {
+        if (conversation.getJoinLinkToken() == null || conversation.getJoinLinkToken().isBlank()) {
+            conversation.setJoinLinkToken(generateJoinLinkToken());
+            chatConversationRepository.save(conversation);
+        }
     }
 
     private String buildChatActionContent(String type, User actor, User target, String value) {

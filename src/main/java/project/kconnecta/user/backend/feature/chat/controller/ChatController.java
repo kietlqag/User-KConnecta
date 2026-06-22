@@ -14,11 +14,14 @@ import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequ
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupConversationRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.UpdateGroupMemberNicknameRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.LeaveGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupJoinLinkPreviewResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupJoinLinkResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.JoinGroupViaLinkResponse;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupCallSessionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PinnedMessageRequest;
-import project.kconnecta.user.backend.feature.chat.dto.response.CallRecordingResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatFileUploadResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatImageUploadResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
@@ -31,7 +34,6 @@ import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSession
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.VoiceMessageUploadResponse;
-import project.kconnecta.user.backend.feature.chat.service.CallRecordingService;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 
 import java.io.IOException;
@@ -59,7 +61,6 @@ public class ChatController {
     );
 
     private final ChatService chatService;
-    private final CallRecordingService callRecordingService;
     private final CloudinaryService cloudinaryService;
 
     @GetMapping("/history")
@@ -213,6 +214,63 @@ public class ChatController {
         return ResponseEntity.ok(chatService.rejectGroupMember(principal.getName(), conversationId, memberUserId));
     }
 
+    @PostMapping("/conversations/{conversationId}/leave")
+    public ResponseEntity<GroupConversationResponse> leaveGroupConversation(
+            @PathVariable UUID conversationId,
+            @RequestBody(required = false) LeaveGroupConversationRequest request,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.leaveGroupConversation(principal.getName(), conversationId, request));
+    }
+
+    @DeleteMapping("/conversations/{conversationId}")
+    public ResponseEntity<Void> dissolveGroupConversation(
+            @PathVariable UUID conversationId,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        chatService.dissolveGroupConversation(principal.getName(), conversationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/conversations/{conversationId}/join-link")
+    public ResponseEntity<GroupJoinLinkResponse> getGroupJoinLink(
+            @PathVariable UUID conversationId,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getGroupJoinLink(principal.getName(), conversationId));
+    }
+
+    @GetMapping("/join/{token}/preview")
+    public ResponseEntity<GroupJoinLinkPreviewResponse> previewGroupJoinLink(
+            @PathVariable String token,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.previewGroupJoinLink(principal.getName(), token));
+    }
+
+    @PostMapping("/join/{token}")
+    public ResponseEntity<JoinGroupViaLinkResponse> joinGroupViaLink(
+            @PathVariable String token,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.joinGroupViaLink(principal.getName(), token));
+    }
+
     @PostMapping("/conversations/{conversationId}/calls")
     public ResponseEntity<GroupCallSessionResponse> createGroupCallSession(
             @PathVariable UUID conversationId,
@@ -286,20 +344,6 @@ public class ChatController {
         GroupMessageRequest normalized = request == null ? new GroupMessageRequest() : request;
         normalized.setConversationId(conversationId);
         return ResponseEntity.ok(chatService.sendGroupMessage(principal.getName(), normalized));
-    }
-
-    @PostMapping(value = "/calls/{callId}/recordings", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CallRecordingResponse> uploadCallRecording(
-            @PathVariable UUID callId,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "durationSec", required = false) Integer durationSec,
-            @RequestParam(value = "mediaType", required = false) String mediaType,
-            Principal principal
-    ) {
-        if (principal == null) {
-            return ResponseEntity.status(401).build();
-        }
-        return ResponseEntity.ok(callRecordingService.saveRecording(callId, principal.getName(), file, durationSec, mediaType));
     }
 
     @PostMapping(value = "/messages/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

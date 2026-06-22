@@ -56,7 +56,6 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
         LiveSession session = findSession(sessionId);
         liveAccessService.requireHost(session, hostUserId);
         LiveSessionToolState state = findOrNew(session);
-        boolean wasEnabled = state.isPollEnabled();
         String oldQuestion = state.getPollQuestion();
         String oldOptions = state.getPollOptions();
         List<String> options = sanitizeOptions(request.getOptions());
@@ -64,15 +63,15 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
         if (request.isEnabled() && (question == null || options.size() < 2)) {
             throw new ValidationException("Poll requires a question and at least 2 options");
         }
-        state.setPollEnabled(request.isEnabled());
-        state.setPollQuestion(question);
-        state.setPollOptions(String.join("\n", options));
-        boolean configChanged = wasEnabled != request.isEnabled()
-                || !Objects.equals(oldQuestion, question)
-                || !Objects.equals(oldOptions, state.getPollOptions());
-        if (!request.isEnabled() || configChanged) {
+        String newOptionsStored = String.join("\n", options);
+        boolean pollContentChanged = !Objects.equals(oldQuestion, question)
+                || !Objects.equals(oldOptions, newOptionsStored);
+        if (pollContentChanged) {
             liveSessionPollVoteRepository.deleteAllBySessionId(session.getId());
         }
+        state.setPollEnabled(request.isEnabled());
+        state.setPollQuestion(question);
+        state.setPollOptions(newOptionsStored);
         LiveSessionToolStateResponse response = toResponse(liveSessionToolStateRepository.save(state), hostUserId);
         realtimePublisher.publishToolsUpdated(response);
         return response;
@@ -200,7 +199,7 @@ public class LiveSessionToolServiceImpl implements LiveSessionToolService {
         List<String> options = parseOptions(state.getPollOptions());
         List<Long> counts = new ArrayList<>();
         Integer myPollOptionIndex = null;
-        if (state.isPollEnabled() && !options.isEmpty()) {
+        if (state.getPollQuestion() != null && !options.isEmpty()) {
             UUID sessionId = state.getSession().getId();
             for (int index = 0; index < options.size(); index++) {
                 counts.add(liveSessionPollVoteRepository.countBySessionIdAndOptionIndex(sessionId, index));

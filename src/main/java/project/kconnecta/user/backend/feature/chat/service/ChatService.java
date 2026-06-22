@@ -5,6 +5,7 @@ import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRe
 import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.ConversationPinRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
+import project.kconnecta.user.backend.feature.chat.dto.request.LeaveGroupConversationRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupCallSessionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
@@ -16,6 +17,9 @@ import project.kconnecta.user.backend.feature.chat.dto.response.ChatAssetPageRes
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.CallSessionSnapshotResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupJoinLinkPreviewResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.GroupJoinLinkResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.JoinGroupViaLinkResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSessionResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
@@ -47,6 +51,11 @@ public interface ChatService {
     GroupConversationResponse addGroupMembers(String currentUsername, UUID conversationId, AddGroupMembersRequest request);
     GroupConversationResponse approveGroupMember(String currentUsername, UUID conversationId, UUID targetUserId);
     GroupConversationResponse rejectGroupMember(String currentUsername, UUID conversationId, UUID targetUserId);
+    GroupConversationResponse leaveGroupConversation(String currentUsername, UUID conversationId, LeaveGroupConversationRequest request);
+    void dissolveGroupConversation(String currentUsername, UUID conversationId);
+    GroupJoinLinkResponse getGroupJoinLink(String currentUsername, UUID conversationId);
+    GroupJoinLinkPreviewResponse previewGroupJoinLink(String currentUsername, String token);
+    JoinGroupViaLinkResponse joinGroupViaLink(String currentUsername, String token);
     GroupCallSessionResponse createGroupCallSession(String currentUsername, UUID conversationId, CreateGroupCallSessionRequest request);
     GroupCallSessionResponse getGroupCallSessionSnapshot(String currentUsername, UUID callId);
     ConversationPinResponse setConversationPinned(String currentUsername, ConversationPinRequest request);

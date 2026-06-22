@@ -15,5 +15,7 @@ public interface ChatConversationRepository extends JpaRepository<ChatConversati
             WHERE c.id = :conversationId
             """)
     Optional<ChatConversation> findByIdPlain(@Param("conversationId") UUID conversationId);
+
+    Optional<ChatConversation> findByJoinLinkToken(String joinLinkToken);
 }
 

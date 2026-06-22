@@ -113,22 +113,6 @@ public class CloudinaryService {
         }
     }
 
-    public String uploadCallRecording(MultipartFile file, String callId) {
-        try {
-            Map<?, ?> result = cloudinary.uploader().upload(
-                    file.getBytes(),
-                    ObjectUtils.asMap(
-                            "folder", "kconnecta/call-recordings",
-                            "resource_type", "video",
-                            "public_id", "call-" + callId + "-" + System.currentTimeMillis()
-                    )
-            );
-            return result.get("secure_url").toString();
-        } catch (IOException e) {
-            throw new RuntimeException("Upload call recording failed", e);
-        }
-    }
-
     public String uploadLiveRecording(MultipartFile file, String sessionId) {
         try {
             Map<?, ?> result = cloudinary.uploader().upload(
