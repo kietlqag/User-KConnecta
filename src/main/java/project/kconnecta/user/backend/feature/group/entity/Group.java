@@ -36,6 +36,9 @@ public class Group {
     @Column(nullable = false, length = 10)
     private GroupPrivacy privacy;
 
+    @Column(name = "member_approval_required", nullable = false)
+    private boolean memberApprovalRequired;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

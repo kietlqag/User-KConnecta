@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.group.dto.request.CreateGroupRequest;
 import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupDescriptionRequest;
+import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupMemberApprovalRequest;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupMemberResponse;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
@@ -81,6 +82,16 @@ public class GroupController {
         );
     }
 
+    @PutMapping("/{id}/member-approval")
+    public ResponseEntity<GroupResponse> updateMemberApproval(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateGroupMemberApprovalRequest request) {
+        return ResponseEntity.ok(
+                groupService.updateMemberApproval(id, principal.getUserId(), request.getMemberApprovalRequired())
+        );
+    }
+
     @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<GroupResponse> getGroupById(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -133,6 +144,14 @@ public class GroupController {
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID id) {
         groupService.leaveGroup(id, principal.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
+    public ResponseEntity<Void> disbandGroup(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id) {
+        groupService.disbandGroup(id, principal.getUserId());
         return ResponseEntity.noContent().build();
     }
 

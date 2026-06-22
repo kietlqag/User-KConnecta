@@ -19,6 +19,7 @@ import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
 import project.kconnecta.user.backend.feature.notification.service.NotificationService;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
+import project.kconnecta.user.backend.feature.post.repository.PostRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -35,6 +36,8 @@ public class GroupServiceImpl implements GroupService {
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
     private final NotificationService notificationService;
+    private final PostRepository postRepository;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional(readOnly = true)
@@ -77,6 +80,7 @@ public class GroupServiceImpl implements GroupService {
                         .fullName(gm.getUser().getFullName())
                         .avatarUrl(gm.getUser().getAvatarUrl())
                         .role(gm.getRole())
+                        .joinedAt(gm.getJoinedAt())
                         .build())
                 .toList();
     }
@@ -101,31 +105,37 @@ public class GroupServiceImpl implements GroupService {
             throw new ValidationException("Bạn đã tham gia hoặc đã gửi yêu cầu tham gia nhóm này rồi.");
         }
 
+        GroupMemberStatus joinStatus = group.isMemberApprovalRequired()
+                ? GroupMemberStatus.PENDING
+                : GroupMemberStatus.APPROVED;
+
         GroupMember member = GroupMember.builder()
                 .group(group)
                 .user(user)
                 .role(GroupMemberRole.MEMBER)
-                .status(GroupMemberStatus.PENDING)
+                .status(joinStatus)
                 .build();
 
         groupMemberRepository.save(member);
 
-        // Notify admins
-        List<GroupMember> admins = groupMemberRepository.findAllByGroupId(groupId).stream()
-                .filter(gm -> gm.getRole() == GroupMemberRole.ADMIN)
-                .toList();
+        // Only notify admins to review when approval is required.
+        if (joinStatus == GroupMemberStatus.PENDING) {
+            List<GroupMember> admins = groupMemberRepository.findAllByGroupId(groupId).stream()
+                    .filter(gm -> gm.getRole() == GroupMemberRole.ADMIN)
+                    .toList();
 
-        for (GroupMember admin : admins) {
-            notificationService.createNotification(
-                    admin.getUser().getId(),
-                    userId,
-                    NotificationType.GROUP_JOIN_REQUEST,
-                    user.getFullName() + " đã yêu cầu tham gia nhóm " + group.getName() + ".",
-                    groupId
-            );
+            for (GroupMember admin : admins) {
+                notificationService.createNotification(
+                        admin.getUser().getId(),
+                        userId,
+                        NotificationType.GROUP_JOIN_REQUEST,
+                        user.getFullName() + " đã yêu cầu tham gia nhóm " + group.getName() + ".",
+                        groupId
+                );
+            }
         }
 
-        return toResponse(group, GroupMemberRole.MEMBER, GroupMemberStatus.PENDING);
+        return toResponse(group, GroupMemberRole.MEMBER, joinStatus);
     }
 
     @Override
@@ -195,6 +205,7 @@ public class GroupServiceImpl implements GroupService {
                 .description(request.getDescription())
                 .coverPhotoUrl(request.getCoverPhotoUrl())
                 .privacy(request.getPrivacy())
+                .memberApprovalRequired(true)
                 .createdBy(creator)
                 .build();
 
@@ -243,6 +254,22 @@ public class GroupServiceImpl implements GroupService {
 
         String trimmed = description == null ? null : description.trim();
         group.setDescription(trimmed == null || trimmed.isEmpty() ? null : trimmed);
+        Group saved = groupRepository.save(group);
+        return toResponse(saved, GroupMemberRole.ADMIN, GroupMemberStatus.APPROVED);
+    }
+
+    @Override
+    public GroupResponse updateMemberApproval(UUID groupId, UUID requesterId, boolean memberApprovalRequired) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        GroupMember requester = groupMemberRepository.findByGroupIdAndUserId(groupId, requesterId)
+                .orElseThrow(() -> new ValidationException("Requester is not a member of this group"));
+        if (requester.getRole() != GroupMemberRole.ADMIN) {
+            throw new ValidationException("Only admins can update group settings");
+        }
+
+        group.setMemberApprovalRequired(memberApprovalRequired);
         Group saved = groupRepository.save(group);
         return toResponse(saved, GroupMemberRole.ADMIN, GroupMemberStatus.APPROVED);
     }
@@ -300,6 +327,7 @@ public class GroupServiceImpl implements GroupService {
         }
 
         groupMemberRepository.delete(target);
+        broadcastMembershipChanged(groupId);
     }
 
     @Override
@@ -319,6 +347,37 @@ public class GroupServiceImpl implements GroupService {
         }
 
         groupMemberRepository.delete(member);
+        broadcastMembershipChanged(groupId);
+    }
+
+    // Notify everyone viewing the group that its membership changed so their UI
+    // (member avatars + count) refreshes in realtime without a manual reload.
+    private void broadcastMembershipChanged(UUID groupId) {
+        messagingTemplate.convertAndSend(
+                "/topic/group/" + groupId,
+                java.util.Map.of("event", "MEMBERSHIP_CHANGED", "groupId", groupId.toString())
+        );
+    }
+
+    @Override
+    @Transactional
+    public void disbandGroup(UUID groupId, UUID requesterId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        GroupMember requester = groupMemberRepository.findByGroupIdAndUserId(groupId, requesterId)
+                .orElseThrow(() -> new ValidationException("Requester is not a member of this group"));
+        if (requester.getRole() != GroupMemberRole.ADMIN) {
+            throw new ValidationException("Only admins can disband the group");
+        }
+
+        // Delete all group posts first — posts.group_id is a non-cascading FK that would
+        // otherwise block the group deletion. DB-level ON DELETE CASCADE handles post children.
+        postRepository.deleteAllByGroupId(groupId);
+
+        // Remove every member, then the group itself (kicks all members on disband).
+        groupMemberRepository.deleteAll(groupMemberRepository.findAllByGroupId(groupId));
+        groupRepository.delete(group);
     }
 
     private GroupResponse toResponse(Group group, GroupMemberRole role, GroupMemberStatus status) {
@@ -329,6 +388,7 @@ public class GroupServiceImpl implements GroupService {
                 .description(group.getDescription())
                 .coverPhotoUrl(group.getCoverPhotoUrl())
                 .privacy(group.getPrivacy())
+                .memberApprovalRequired(group.isMemberApprovalRequired())
                 .memberCount(memberCount)
                 .role(role)
                 .status(status)
@@ -352,6 +412,7 @@ public class GroupServiceImpl implements GroupService {
                         .fullName(gm.getUser().getFullName())
                         .avatarUrl(gm.getUser().getAvatarUrl())
                         .role(gm.getRole())
+                        .joinedAt(gm.getJoinedAt())
                         .build())
                 .toList();
     }

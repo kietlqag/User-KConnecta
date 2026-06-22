@@ -6,6 +6,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import project.kconnecta.user.backend.feature.group.entity.Group;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.post.entity.Post;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
@@ -247,7 +248,10 @@ public class RedisSearchIndexer {
 
     public void indexPost(Post post) {
         try {
-            if (post.getStatus() != PostStatus.PUBLISHED || post.getPrivacy() != PostPrivacy.PUBLIC) {
+            // Posts inside a private group must never be searchable by non-members.
+            boolean inPrivateGroup = post.getGroup() != null
+                    && post.getGroup().getPrivacy() == GroupPrivacy.PRIVATE;
+            if (post.getStatus() != PostStatus.PUBLISHED || post.getPrivacy() != PostPrivacy.PUBLIC || inPrivateGroup) {
                 deletePost(post.getId());
                 return;
             }

@@ -41,11 +41,14 @@ public interface PostShareRepository extends JpaRepository<PostShare, UUID> {
         @org.springframework.data.repository.query.Param("userId") UUID userId
     );
 
-    // Recent shares from a set of users — used to inject friend shares into the newsfeed
+    // Recent shares from a set of users — used to inject friend shares into the newsfeed.
+    // Exclude shares of posts inside a private group so private-group content never
+    // surfaces on the home feed (it stays inside the group).
     @org.springframework.data.jpa.repository.Query(
         "SELECT ps FROM PostShare ps " +
-        "JOIN FETCH ps.post p JOIN FETCH p.author LEFT JOIN FETCH p.group JOIN FETCH ps.user " +
+        "JOIN FETCH ps.post p JOIN FETCH p.author LEFT JOIN FETCH p.group g JOIN FETCH ps.user " +
         "WHERE ps.user.id IN :userIds AND ps.createdAt >= :since " +
+        "AND (g IS NULL OR g.privacy = project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy.PUBLIC) " +
         "ORDER BY ps.createdAt DESC"
     )
     java.util.List<PostShare> findRecentSharesByUserIds(

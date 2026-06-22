@@ -17,6 +17,7 @@ public class GroupResponse {
     private String description;
     private String coverPhotoUrl;
     private GroupPrivacy privacy;
+    private boolean memberApprovalRequired;
     private int memberCount;
     private GroupMemberRole role;
     private GroupMemberStatus status;

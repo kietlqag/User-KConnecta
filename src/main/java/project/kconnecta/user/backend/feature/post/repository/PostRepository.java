@@ -66,11 +66,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "  GROUP BY p2.author_id" +
         ") ui ON ui.author_id = p.author_id " +
         "WHERE p.status = 'PUBLISHED' " +
-        "  AND (p.group_id IS NULL " +
-        "   OR g.privacy = 'PUBLIC' " +
-        "   OR p.privacy = 'PUBLIC' " +
-        "   OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
-        "   OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC') " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
         "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
@@ -134,7 +130,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "SELECT count(*) FROM posts p " +
         "LEFT JOIN user_groups g ON p.group_id = g.id " +
         "WHERE p.status = 'PUBLISHED' " +
-        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR p.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC') " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
         "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
@@ -167,11 +163,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "      OR p.image_url ~* '\\.(mp4|mov|webm|m4v|ogg)(\\?.*)?$'" +
         "    ))" +
         "  ) " +
-        "  AND (p.group_id IS NULL " +
-        "   OR g.privacy = 'PUBLIC' " +
-        "   OR p.privacy = 'PUBLIC' " +
-        "   OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
-        "   OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC') " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
         "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
@@ -215,7 +207,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "      OR p.image_url ~* '\\.(mp4|mov|webm|m4v|ogg)(\\?.*)?$'" +
         "    ))" +
         "  ) " +
-        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR p.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = :currentUserId))) " +
+        "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC') " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
         "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
@@ -307,6 +299,10 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     )
     List<Post> findByGroupId(@org.springframework.data.repository.query.Param("groupId") UUID groupId);
 
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM Post p WHERE p.group.id = :groupId")
+    void deleteAllByGroupId(@org.springframework.data.repository.query.Param("groupId") UUID groupId);
+
     @org.springframework.data.jpa.repository.Query(
         "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group g " +
         "WHERE p.status = 'PUBLISHED' " +
@@ -328,7 +324,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "  LEFT JOIN user_groups g ON p.group_id = g.id " +
         "  WHERE p.id = CAST(:postId AS uuid) " +
         "    AND p.status = 'PUBLISHED' " +
-        "    AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR p.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = CAST(:currentUserId AS uuid)))) " +
+        "    AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = CAST(:currentUserId AS uuid)))) " +
         "    AND (" +
         "      p.privacy = 'PUBLIC' " +
         "      OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +

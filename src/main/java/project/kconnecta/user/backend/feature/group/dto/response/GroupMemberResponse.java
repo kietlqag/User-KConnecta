@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -14,4 +15,5 @@ public class GroupMemberResponse {
     private String fullName;
     private String avatarUrl;
     private GroupMemberRole role;
+    private LocalDateTime joinedAt;
 }

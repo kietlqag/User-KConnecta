@@ -21,7 +21,7 @@ public class NotificationSchemaFix implements ApplicationRunner {
     private static final String ALL_TYPES =
             "'LIKE','COMMENT','SHARE'," +
             "'FRIEND_REQUEST','FRIEND_ACCEPTED','FRIEND_REMOVED'," +
-            "'GROUP_ACTIVITY','GROUP_INVITE','GROUP_JOIN_REQUEST'," +
+            "'GROUP_ACTIVITY','GROUP_INVITE','GROUP_JOIN_REQUEST','GROUP_POST_PINNED'," +
             "'MENTION','BIRTHDAY','EVENT','MEMORY','SYSTEM'";
 
     @Override
