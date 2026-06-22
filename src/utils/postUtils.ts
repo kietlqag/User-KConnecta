@@ -33,6 +33,13 @@ export interface FeedPost {
     privacy: 'PUBLIC' | 'PRIVATE';
     memberCount: number;
   };
+  sharedAlbum?: {
+    id: string;
+    title: string;
+    coverUrl?: string;
+    mediaCount: number;
+    ownerName: string;
+  };
 }
 
 export type PostSourceTab = 'feed' | 'group';
@@ -129,6 +136,15 @@ export function mapApiPost(item: PostResponse): FeedPost {
           coverPhotoUrl: item.sharedGroup.coverPhotoUrl || undefined,
           privacy: item.sharedGroup.privacy,
           memberCount: item.sharedGroup.memberCount,
+        }
+      : undefined,
+    sharedAlbum: item.sharedAlbum
+      ? {
+          id: item.sharedAlbum.id,
+          title: item.sharedAlbum.title,
+          coverUrl: item.sharedAlbum.coverUrl || undefined,
+          mediaCount: item.sharedAlbum.mediaCount,
+          ownerName: item.sharedAlbum.ownerName,
         }
       : undefined,
   };

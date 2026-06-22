@@ -6,6 +6,7 @@ import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
 import { isGroupJoinLinkMessage, parseGroupJoinTokenFromUrl } from '../../utils/groupJoinLink';
 import { MessageTextContent } from '../MessageTextContent/MessageTextContent';
+import { VoiceWaveform } from '../VoiceWaveform/VoiceWaveform';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -95,6 +96,7 @@ export const MessageBubble = ({
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [isVoicePlaying, setIsVoicePlaying] = useState(false);
   const [voiceProgress, setVoiceProgress] = useState(0);
+  const [voiceCurrentSec, setVoiceCurrentSec] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const reactionRef = useRef<HTMLDivElement>(null);
@@ -508,6 +510,16 @@ export const MessageBubble = ({
                 </div>
               </div>
             </button>
+          ) : message.videoUrl && !message.deleted ? (
+            <div className={`flex max-w-full flex-col sm:max-w-[386px] ${message.isOwn ? 'items-end' : 'items-start'}`}>
+              <video
+                src={message.videoUrl}
+                controls
+                playsInline
+                preload="metadata"
+                className="max-h-[320px] w-[min(300px,72vw)] max-w-full rounded-2xl bg-black object-contain"
+              />
+            </div>
           ) : imageUrls.length > 0 && !message.deleted ? (
             <div className={`flex max-w-full flex-col gap-1.5 sm:max-w-[386px] ${message.isOwn ? 'items-end' : 'items-start'}`}>
               <div className={`flex flex-wrap gap-1.5 ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
@@ -543,31 +555,46 @@ export const MessageBubble = ({
             >
               {message.voiceAudioUrl && !message.deleted ? (
               <div
-                className="flex min-w-0 w-[min(240px,68vw)] max-w-full items-center gap-2 sm:min-w-[176px]"
+                className="flex min-w-0 w-[min(260px,72vw)] max-w-full items-center gap-2.5 py-0.5 sm:min-w-[200px]"
                 style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
               >
                 <button
                   type="button"
-                  onClick={toggleVoicePlayback} className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ${
-                    message.isOwn ? 'bg-white dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/30' : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  onClick={toggleVoicePlayback}
+                  className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm transition-transform hover:scale-105 ${
+                    isVoicePlaying
+                      ? message.isOwn
+                        ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-blue-600'
+                        : 'ring-2 ring-blue-500/35 ring-offset-2 ring-offset-gray-200 dark:ring-offset-gray-700'
+                      : ''
                   }`}
                   title={isVoicePlaying ? 'Tạm dừng' : 'Phát tin nhắn thoại'}
                 >
                   {isVoicePlaying ? (
-                    <Pause className={`h-4 w-4 ${message.isOwn ? 'text-white' : 'text-blue-600'}`} />
+                    <Pause className="h-4 w-4 fill-current text-blue-600" />
                   ) : (
-                    <Play className={`h-4 w-4 ${message.isOwn ? 'text-white' : 'text-blue-600'}`} />
+                    <Play className="h-4 w-4 fill-current text-blue-600" />
                   )}
                 </button>
-                <div className={`h-1.5 flex-1 overflow-hidden rounded-full ${message.isOwn ? 'bg-white dark:bg-gray-800/25' : 'bg-gray-300'}`}>
-                  <div
-                    className={`h-full rounded-full ${message.isOwn ? 'bg-white dark:bg-gray-800' : 'bg-blue-600'}`}
-                    style={{ width: `${voiceProgress}%` }}
-                  />
-                </div>
-                <span className={`w-10 shrink-0 text-right text-xs tabular-nums ${message.isOwn ? 'text-white/90' : 'text-gray-600 dark:text-gray-400'}`}>
-                  {formatDuration(message.voiceDurationSec ?? 0)}
+
+                <VoiceWaveform
+                  seed={message.id}
+                  progress={voiceProgress}
+                  isActive={isVoicePlaying}
+                  variant={message.isOwn ? 'own' : 'other'}
+                  className="min-w-0"
+                />
+
+                <span
+                  className={`w-11 shrink-0 text-right text-[11px] font-semibold tabular-nums ${
+                    message.isOwn ? 'text-white/95' : 'text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  {isVoicePlaying
+                    ? formatDuration(voiceCurrentSec)
+                    : formatDuration(message.voiceDurationSec ?? 0)}
                 </span>
+
                 <audio
                   ref={audioRef}
                   src={message.voiceAudioUrl}
@@ -575,11 +602,13 @@ export const MessageBubble = ({
                   onTimeUpdate={(event) => {
                     const audio = event.currentTarget;
                     const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : 0;
+                    setVoiceCurrentSec(Math.floor(audio.currentTime));
                     setVoiceProgress(duration ? Math.min(100, (audio.currentTime / duration) * 100) : 0);
                   }}
                   onEnded={() => {
                     setIsVoicePlaying(false);
                     setVoiceProgress(0);
+                    setVoiceCurrentSec(0);
                   }}
                   onPause={() => setIsVoicePlaying(false)}
                   className="hidden"

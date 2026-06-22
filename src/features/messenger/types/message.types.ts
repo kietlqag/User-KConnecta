@@ -7,6 +7,9 @@ export interface Message {
   voiceAudioUrl?: string;
   voiceDurationSec?: number;
   voiceMimeType?: string;
+  videoUrl?: string;
+  videoDurationSec?: number;
+  videoMimeType?: string;
   fileUrl?: string;
   fileName?: string;
   fileMimeType?: string;

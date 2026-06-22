@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { chatService } from '@/services/chatService';
 
 const MAX_VOICE_RECORDING_SEC = 60;
 const VOICE_MESSAGE_PREFIX = '__VOICE__:';
+const VOICE_LEVEL_BAR_COUNT = 28;
+const IDLE_VOICE_LEVELS = Array.from({ length: VOICE_LEVEL_BAR_COUNT }, () => 0.15);
 
 function getSupportedAudioMimeType() {
   if (typeof MediaRecorder === 'undefined') return undefined;
@@ -20,18 +22,66 @@ export function useVoiceRecorder(connected: boolean, onSendMessage: (content: st
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [isSendingVoice, setIsSendingVoice] = useState(false);
   const [voiceRecordingSec, setVoiceRecordingSec] = useState(0);
+  const [voiceLevels, setVoiceLevels] = useState<number[]>(IDLE_VOICE_LEVELS);
 
   const voiceRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceStreamRef = useRef<MediaStream | null>(null);
   const voiceChunksRef = useRef<Blob[]>([]);
   const voiceStartedAtRef = useRef(0);
   const voiceTimerRef = useRef<number | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const levelFrameRef = useRef<number | null>(null);
 
-  const resetVoiceRecording = () => {
+  const stopLevelMeter = useCallback(() => {
+    if (levelFrameRef.current !== null) {
+      cancelAnimationFrame(levelFrameRef.current);
+      levelFrameRef.current = null;
+    }
+    analyserRef.current = null;
+    void audioContextRef.current?.close().catch(() => undefined);
+    audioContextRef.current = null;
+    setVoiceLevels(IDLE_VOICE_LEVELS);
+  }, []);
+
+  const startLevelMeter = useCallback((stream: MediaStream) => {
+    stopLevelMeter();
+    try {
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 128;
+      analyser.smoothingTimeConstant = 0.72;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+
+      const buffer = new Uint8Array(analyser.frequencyBinCount);
+      const tick = () => {
+        if (!analyserRef.current) return;
+        analyserRef.current.getByteFrequencyData(buffer);
+        const nextLevels = Array.from({ length: VOICE_LEVEL_BAR_COUNT }, (_, index) => {
+          const sampleIndex = Math.min(
+            buffer.length - 1,
+            Math.floor(((index + 1) / VOICE_LEVEL_BAR_COUNT) * buffer.length),
+          );
+          return Math.max(0.12, buffer[sampleIndex] / 255);
+        });
+        setVoiceLevels(nextLevels);
+        levelFrameRef.current = requestAnimationFrame(tick);
+      };
+      levelFrameRef.current = requestAnimationFrame(tick);
+    } catch {
+      setVoiceLevels(IDLE_VOICE_LEVELS);
+    }
+  }, [stopLevelMeter]);
+
+  const resetVoiceRecording = useCallback(() => {
     if (voiceTimerRef.current) {
       window.clearInterval(voiceTimerRef.current);
       voiceTimerRef.current = null;
     }
+    stopLevelMeter();
     voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
     voiceStreamRef.current = null;
     voiceRecorderRef.current = null;
@@ -39,7 +89,7 @@ export function useVoiceRecorder(connected: boolean, onSendMessage: (content: st
     voiceStartedAtRef.current = 0;
     setVoiceRecordingSec(0);
     setIsRecordingVoice(false);
-  };
+  }, [stopLevelMeter]);
 
   const startVoiceRecording = async () => {
     if (!connected || isRecordingVoice || isSendingVoice) return;
@@ -57,6 +107,7 @@ export function useVoiceRecorder(connected: boolean, onSendMessage: (content: st
       voiceStartedAtRef.current = Date.now();
       voiceStreamRef.current = stream;
       voiceRecorderRef.current = recorder;
+      startLevelMeter(stream);
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -72,7 +123,9 @@ export function useVoiceRecorder(connected: boolean, onSendMessage: (content: st
           window.clearInterval(voiceTimerRef.current);
           voiceTimerRef.current = null;
         }
+        stopLevelMeter();
         voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
+        voiceStreamRef.current = null;
         setIsRecordingVoice(false);
         setIsSendingVoice(true);
         try {
@@ -138,14 +191,16 @@ export function useVoiceRecorder(connected: boolean, onSendMessage: (content: st
   useEffect(() => {
     return () => {
       if (voiceTimerRef.current) window.clearInterval(voiceTimerRef.current);
-      voiceStreamRef.current?.getTracks().forEach(track => track.stop());
+      stopLevelMeter();
+      voiceStreamRef.current?.getTracks().forEach((track) => track.stop());
     };
-  }, []);
+  }, [stopLevelMeter]);
 
   return {
     isRecordingVoice,
     isSendingVoice,
     voiceRecordingSec,
+    voiceLevels,
     startVoiceRecording,
     stopAndSendVoiceRecording,
     cancelVoiceRecording,

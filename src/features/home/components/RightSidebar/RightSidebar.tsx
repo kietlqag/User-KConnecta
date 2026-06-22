@@ -5,6 +5,7 @@ import { ImageWithFallback } from '../../../../components/figma/ImageWithFallbac
 import { friendService } from '@/services/friendService';
 import { authService } from '@/services/authService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
+import { AlbumSidebarCard } from '@/features/albums/components/AlbumSidebarCard/AlbumSidebarCard';
 
 function normalizeSearchText(value: string) {
   return value
@@ -61,8 +62,9 @@ export function RightSidebar() {
   const birthdays: any[] = [];
 
   return (
-    <aside className="hidden lg:block w-[280px] xl:w-[360px] h-[calc(100vh-56px)] sticky top-14 overflow-y-auto pb-4 sidebar-scrollbar">
-      <div className="px-4 py-4 space-y-4">
+    <aside className="hidden lg:flex lg:flex-col w-[280px] xl:w-[360px] h-[calc(100vh-56px)] sticky top-14 overflow-hidden">
+      {/* Cố định: sinh nhật + kỷ niệm ảnh */}
+      <div className="shrink-0 px-4 pt-4 pb-2 space-y-4">
         {birthdays.length > 0 && (
           <>
             <div>
@@ -86,7 +88,12 @@ export function RightSidebar() {
           </>
         )}
 
-        <div>
+        <AlbumSidebarCard />
+      </div>
+
+      {/* Chỉ scroll danh sách người liên hệ */}
+      <div className="flex-1 min-h-0 flex flex-col px-4 pb-4">
+        <div className="shrink-0 pt-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-gray-600 dark:text-gray-400 font-semibold">Người liên hệ</h3>
             <div className="flex items-center gap-2">
@@ -129,38 +136,38 @@ export function RightSidebar() {
               )}
             </div>
           )}
+        </div>
 
-          <div className="space-y-1">
-            {loading && contacts.length === 0 ? (
-              <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</div>
-            ) : filteredContacts.length > 0 ? (
-              filteredContacts.map((contact) => (
-                <div
-                  key={contact.id}
-                  onClick={() => navigate(`/messages?with=${contact.id}`)}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors cursor-pointer group"
-                >
-                  <div className="relative">
-                    <ImageWithFallback
-                      src={contact.avatar}
-                      alt={contact.name}
-                      className="w-9 h-9 rounded-full object-cover"
-                    />
-                    {presence[contact.id] && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full" />
-                    )}
-                  </div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:underline">
-                    {contact.name}
-                  </span>
+        <div className="flex-1 min-h-0 overflow-y-auto sidebar-scrollbar space-y-1 pr-0.5">
+          {loading && contacts.length === 0 ? (
+            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</div>
+          ) : filteredContacts.length > 0 ? (
+            filteredContacts.map((contact) => (
+              <div
+                key={contact.id}
+                onClick={() => navigate(`/messages?with=${contact.id}`)}
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors cursor-pointer group"
+              >
+                <div className="relative">
+                  <ImageWithFallback
+                    src={contact.avatar}
+                    alt={contact.name}
+                    className="w-9 h-9 rounded-full object-cover"
+                  />
+                  {presence[contact.id] && (
+                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full" />
+                  )}
                 </div>
-              ))
-            ) : query.trim() ? (
-              <div className="p-2 text-sm text-gray-500 dark:text-gray-400">Không tìm thấy người liên hệ</div>
-            ) : (
-              <div className="p-2 text-sm text-gray-500 dark:text-gray-400">Không có người liên hệ</div>
-            )}
-          </div>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:underline">
+                  {contact.name}
+                </span>
+              </div>
+            ))
+          ) : query.trim() ? (
+            <div className="p-2 text-sm text-gray-500 dark:text-gray-400">Không tìm thấy người liên hệ</div>
+          ) : (
+            <div className="p-2 text-sm text-gray-500 dark:text-gray-400">Không có người liên hệ</div>
+          )}
         </div>
       </div>
     </aside>

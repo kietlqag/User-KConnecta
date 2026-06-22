@@ -369,6 +369,11 @@ html:has(.welcome-page) body {
   100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
+@keyframes voice-bar-pulse {
+  0%, 100% { transform: scaleY(0.55); opacity: 0.65; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
 @layer utilities {
   .animate-logo-intro {
     animation: logoIntro 1500ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -385,6 +390,11 @@ html:has(.welcome-page) body {
   .animate-welcome-pulse-glow {
     animation: welcome-pulse-glow 7s ease-in-out infinite;
   }
+
+  .animate-voice-bar {
+    animation: voice-bar-pulse 0.85s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -392,6 +402,7 @@ html:has(.welcome-page) body {
   .animate-welcome-float,
   .animate-welcome-float-delayed,
   .animate-welcome-pulse-glow { animation: none; }
+  .animate-voice-bar { animation: none; transform: none; opacity: 1; }
   @keyframes reaction-entrance { 0%, 100% { opacity: 1; transform: none; } }
   @keyframes reaction-pop      { 0%, 100% { transform: scale(1); } }
   @keyframes like-thump        { 0%, 100% { transform: scale(1); } }

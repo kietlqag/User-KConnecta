@@ -3,6 +3,7 @@ import { extractGroupJoinTokenFromText } from './groupJoinLink';
 const CALL_LOG_PREFIX = '__CALL_LOG__:';
 const REPLY_PREFIX = '__REPLY__:';
 const VOICE_MESSAGE_PREFIX = '__VOICE__:';
+const VIDEO_MESSAGE_PREFIX = '__VIDEO_MSG__:';
 const IMAGE_MESSAGE_PREFIX = '__IMAGE__:';
 const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
@@ -36,6 +37,10 @@ export function mapContentToConversationPreview(content?: string | null): string
 
   if (raw.startsWith(VOICE_MESSAGE_PREFIX)) {
     return 'Tin nhắn thoại';
+  }
+
+  if (raw.startsWith(VIDEO_MESSAGE_PREFIX)) {
+    return 'Video';
   }
 
   if (raw.startsWith(IMAGE_MESSAGE_PREFIX)) {

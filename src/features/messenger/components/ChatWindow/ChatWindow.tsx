@@ -142,6 +142,7 @@ export const ChatWindow = ({
     isRecordingVoice,
     isSendingVoice,
     voiceRecordingSec,
+    voiceLevels,
     startVoiceRecording,
     stopAndSendVoiceRecording,
     cancelVoiceRecording,
@@ -165,20 +166,28 @@ export const ChatWindow = ({
 
   const {
     showCamera,
+    cameraMode,
     isOpeningCamera,
+    isCameraReady,
+    isRecordingVideo,
+    isSendingVideo,
+    videoRecordingLabel,
     cameraVideoRef,
     openCamera,
     closeCamera,
+    switchCameraMode,
     captureCameraPhoto,
-  } = useCameraCapture(connected, setReportNotice, (file) => {
-    // Manually add to pending images
+    startVideoRecording,
+    stopVideoRecording,
+    onCameraReady,
+  } = useCameraCapture(connected, onSendMessage, setReportNotice, (file) => {
     const event = { target: { files: [file], value: '' } } as any;
     handleImageSelect(event);
   });
 
   const handleSend = () => {
     const text = inputText.trim();
-    if ((!text && pendingImages.length === 0 && pendingFiles.length === 0) || !connected || cooldownSeconds > 0 || isRecordingVoice || isSendingVoice || isSendingImage || isSendingFile) {
+    if ((!text && pendingImages.length === 0 && pendingFiles.length === 0) || !connected || cooldownSeconds > 0 || isRecordingVoice || isSendingVoice || isSendingImage || isSendingFile || isRecordingVideo || isSendingVideo) {
       return;
     }
 
@@ -362,6 +371,7 @@ export const ChatWindow = ({
             replyToMessage={replyToMessage}
             onCancelReply={() => setReplyToMessage(null)}
             voiceRecordingSec={voiceRecordingSec}
+            voiceLevels={voiceLevels}
             formatVoiceDuration={formatVoiceDuration}
             imageInputRef={imageInputRef}
             fileInputRef={fileInputRef}
@@ -384,9 +394,19 @@ export const ChatWindow = ({
 
       <CameraModal 
         show={showCamera}
+        mode={cameraMode}
         videoRef={cameraVideoRef}
+        isCameraReady={isCameraReady}
+        isOpeningCamera={isOpeningCamera}
+        isRecording={isRecordingVideo}
+        isSending={isSendingVideo}
+        recordingLabel={videoRecordingLabel}
         onClose={closeCamera}
+        onModeChange={switchCameraMode}
         onCapture={captureCameraPhoto}
+        onStartRecording={startVideoRecording}
+        onStopRecording={stopVideoRecording}
+        onCameraReady={onCameraReady}
       />
 
       {reportNotice && (

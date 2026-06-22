@@ -8,6 +8,13 @@ export interface VoiceMessageUploadResponse {
   durationSec?: number;
 }
 
+export interface VideoMessageUploadResponse {
+  videoUrl: string;
+  mimeType?: string;
+  fileSizeBytes: number;
+  durationSec?: number;
+}
+
 export interface ChatImageUploadResponse {
   imageUrl: string;
   mimeType?: string;
@@ -219,6 +226,15 @@ export const chatService = {
       formData.append('durationSec', String(Math.max(0, Math.floor(durationSec))));
     }
     return api.postMultipart<VoiceMessageUploadResponse>('/chat/messages/voice', formData);
+  },
+
+  uploadChatVideo: (file: File, durationSec?: number) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (typeof durationSec === 'number' && Number.isFinite(durationSec)) {
+      formData.append('durationSec', String(Math.max(0, Math.floor(durationSec))));
+    }
+    return api.postMultipart<VideoMessageUploadResponse>('/chat/messages/videos', formData);
   },
 
   uploadChatImage: (file: File) => {

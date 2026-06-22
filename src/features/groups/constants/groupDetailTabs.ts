@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { MessageSquare, Users, Calendar, Images, FileText, UserCheck } from 'lucide-react';
+import { MessageSquare, Users, Calendar, Images, FileText, UserCheck, Album } from 'lucide-react';
 
 export const GROUP_DETAIL_TABS = [
   {
@@ -35,7 +35,14 @@ export const GROUP_DETAIL_TABS = [
     label: 'Ảnh & Video',
     shortLabel: 'Ảnh/Video',
     icon: Images,
-    ready: false,
+    ready: true,
+  },
+  {
+    id: 'albums',
+    label: 'Album',
+    shortLabel: 'Album',
+    icon: Album,
+    ready: true,
   },
   {
     id: 'documents',

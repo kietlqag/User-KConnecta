@@ -168,7 +168,16 @@ export interface PostResponse {
   originalPost?: PostResponse;
   // Embedded group summary (only present when this post shares a group to the feed)
   sharedGroup?: SharedGroupResponse | null;
+  sharedAlbum?: SharedAlbumResponse | null;
   poll?: PostPollResponse | null;
+}
+
+export interface SharedAlbumResponse {
+  id: string;
+  title: string;
+  coverUrl?: string | null;
+  mediaCount: number;
+  ownerName: string;
 }
 
 export interface SharedGroupResponse {

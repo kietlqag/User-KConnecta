@@ -1,8 +1,9 @@
 ﻿import React, { useEffect, useRef, useState } from 'react';
-import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, Pause, X } from 'lucide-react';
+import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, X } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { Message } from '../../../types/message.types';
+import { VoiceWaveform } from '../../VoiceWaveform/VoiceWaveform';
 
 interface ComposerProps {
   inputText: string;
@@ -26,6 +27,7 @@ interface ComposerProps {
   replyToMessage: Message | null;
   onCancelReply: () => void;
   voiceRecordingSec: number;
+  voiceLevels?: number[];
   formatVoiceDuration: (sec: number) => string;
   imageInputRef: React.RefObject<HTMLInputElement | null>;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -58,6 +60,7 @@ export const Composer: React.FC<ComposerProps> = ({
   replyToMessage,
   onCancelReply,
   voiceRecordingSec,
+  voiceLevels,
   formatVoiceDuration,
   imageInputRef,
   fileInputRef,
@@ -148,42 +151,43 @@ export const Composer: React.FC<ComposerProps> = ({
 
       <div className="flex items-end gap-2">
         {isRecordingVoice || isSendingVoice ? (
-          <div className="flex-1 flex items-center gap-2">
+          <div className="flex flex-1 items-center gap-2">
             <button
               type="button"
               onClick={onCancelVoice}
               disabled={isSendingVoice}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-full disabled:opacity-50 cursor-pointer"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50 cursor-pointer dark:hover:bg-red-950/40"
               title="Hủy ghi âm"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="h-5 w-5" />
             </button>
-            <div className="flex-1 h-10 flex items-center gap-2 rounded-full bg-blue-600 px-3 text-white">
-              <button
-                type="button"
-                onClick={onStopAndSendVoice}
-                disabled={isSendingVoice}
-                className="w-7 h-7 flex items-center justify-center rounded-full bg-white dark:bg-gray-800 text-blue-600 cursor-pointer"
-              >
-                <Pause className="w-4 h-4 fill-current" />
-              </button>
-              <div className="flex-1 flex items-center gap-[3px] overflow-hidden">
-                {Array.from({ length: 30 }).map((_, i) => (
-                  <span key={i} className="h-1 w-1 rounded-full bg-white dark:bg-gray-800/90" />
-                ))}
-              </div>
-              <span className="text-[11px] font-medium tabular-nums">
-                {isSendingVoice ? '...' : formatVoiceDuration(voiceRecordingSec)}
+
+            <div className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-3 shadow-[0_8px_24px_rgba(37,99,235,0.28)]">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-70" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+              </span>
+
+              <VoiceWaveform
+                heights={voiceLevels}
+                isActive={isRecordingVoice && !isSendingVoice}
+                variant="recording"
+                className="min-w-0"
+              />
+
+              <span className="shrink-0 text-xs font-semibold tabular-nums text-white">
+                {isSendingVoice ? 'Đang gửi...' : formatVoiceDuration(voiceRecordingSec)}
               </span>
             </div>
+
             <button
               type="button"
               onClick={onStopAndSendVoice}
               disabled={isSendingVoice}
-              className="p-2 text-blue-600 hover:bg-blue-50 rounded-full disabled:opacity-50 cursor-pointer"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-md transition-transform hover:scale-105 hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
               title="Gửi ghi âm"
             >
-              <Send className="w-6 h-6 fill-current" />
+              <Send className="h-5 w-5 fill-current" />
             </button>
           </div>
         ) : (

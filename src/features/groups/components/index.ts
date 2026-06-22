@@ -13,6 +13,7 @@ export { GroupTabBar } from './GroupTabBar/GroupTabBar';
 export { GroupMembersTab } from './GroupMembersTab/GroupMembersTab';
 export { GroupPlaceholderTab } from './GroupPlaceholderTabs/GroupPlaceholderTabs';
 export { GroupMediaTab } from './GroupMediaTab/GroupMediaTab';
+export { GroupAlbumsTab } from './GroupAlbumsTab/GroupAlbumsTab';
 export { GroupTabEmptyState } from './GroupTabEmptyState/GroupTabEmptyState';
 export { GroupSearchDropdown } from './GroupSearchDropdown/GroupSearchDropdown';
 export { GroupRequestsTab } from './GroupRequestsTab/GroupRequestsTab';

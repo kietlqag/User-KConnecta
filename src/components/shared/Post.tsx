@@ -7,6 +7,7 @@ import {
   Globe,
   Users,
   Lock,
+  Images,
   X,
   ChevronLeft,
   ChevronRight,
@@ -102,6 +103,13 @@ export interface PostProps {
     privacy: 'PUBLIC' | 'PRIVATE';
     memberCount: number;
   };
+  sharedAlbum?: {
+    id: string;
+    title: string;
+    coverUrl?: string;
+    mediaCount: number;
+    ownerName: string;
+  };
   group?: Group;
   commentsData?: Comment[];
   mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
@@ -144,6 +152,7 @@ export function Post({
   sharedPost = false,
   originalPost,
   sharedGroup,
+  sharedAlbum,
   poll,
 }: PostProps) {
   // For share wrappers, save/share actions target the original post; interactions use the wrapper id.
@@ -651,6 +660,36 @@ export function Post({
                   className="shrink-0 rounded-lg bg-gray-200 px-4 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
                 >
                   Xem nhóm
+                </button>
+              </div>
+            </div>
+          )}
+
+          {sharedAlbum && (
+            <div
+              className="mt-1 mb-2 rounded-xl border border-border bg-muted overflow-hidden cursor-pointer hover:bg-muted/80 transition-colors"
+              onClick={() => navigate(`/albums/${sharedAlbum.id}`)}
+            >
+              {sharedAlbum.coverUrl ? (
+                <img src={sharedAlbum.coverUrl} alt={sharedAlbum.title} className="w-full max-h-56 object-cover" />
+              ) : (
+                <div className="flex h-32 w-full items-center justify-center bg-gradient-to-br from-violet-100 to-pink-100 dark:from-gray-700 dark:to-gray-800">
+                  <Images className="h-10 w-10 text-violet-500/70" aria-hidden />
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-3 p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-semibold text-gray-900 dark:text-white">{sharedAlbum.title}</p>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {sharedAlbum.mediaCount} ảnh/video · {sharedAlbum.ownerName}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/albums/${sharedAlbum.id}`); }}
+                  className="shrink-0 rounded-lg bg-gray-200 px-4 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                >
+                  Xem album
                 </button>
               </div>
             </div>

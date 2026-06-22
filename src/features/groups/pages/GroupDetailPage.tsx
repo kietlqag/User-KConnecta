@@ -14,6 +14,7 @@ import {
   GroupMembersTab,
   GroupPlaceholderTab,
   GroupMediaTab,
+  GroupAlbumsTab,
 } from '../components';
 import { GroupRequestsTab } from '../components/GroupRequestsTab/GroupRequestsTab';
 import { GroupFeaturedPosts } from '../components/GroupFeaturedPosts/GroupFeaturedPosts';
@@ -555,6 +556,15 @@ export const GroupDetailPage = () => {
 
                   {activeTab === 'media' && groupId && (
                     isPrivateLocked ? privateLockScreen : <GroupMediaTab groupId={groupId} />
+                  )}
+
+                  {activeTab === 'albums' && groupId && (
+                    isPrivateLocked ? privateLockScreen : (
+                      <GroupAlbumsTab
+                        groupId={groupId}
+                        canCreate={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
+                      />
+                    )
                   )}
 
                   {(activeTab === 'events' || activeTab === 'documents') && (

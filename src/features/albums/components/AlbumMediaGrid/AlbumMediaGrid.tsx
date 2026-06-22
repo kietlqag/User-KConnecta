@@ -1,0 +1,112 @@
+import { useCallback, useEffect, useState } from 'react';
+import { GripVertical, Play, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
+import type { AlbumMedia } from '@/services/albumService';
+import { useReorderAlbumMedia } from '../../hooks/useAlbums';
+
+interface AlbumMediaGridProps {
+  albumId: string;
+  media: AlbumMedia[];
+  canEdit: boolean;
+  onOpenLightbox: (index: number) => void;
+  onDeleteMedia: (mediaId: string) => void;
+}
+
+export function AlbumMediaGrid({
+  albumId,
+  media,
+  canEdit,
+  onOpenLightbox,
+  onDeleteMedia,
+}: AlbumMediaGridProps) {
+  const reorder = useReorderAlbumMedia(albumId);
+  const [items, setItems] = useState(media);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    setItems(media);
+  }, [media]);
+
+  const persistOrder = useCallback(
+    async (ordered: AlbumMedia[]) => {
+      try {
+        await reorder.mutateAsync(ordered.map((m) => m.id));
+      } catch {
+        toast.error('Không thể sắp xếp ảnh');
+        setItems(media);
+      }
+    },
+    [media, reorder],
+  );
+
+  const handleDrop = (targetIndex: number) => {
+    if (dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null);
+      return;
+    }
+    const next = [...items];
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    setItems(next);
+    setDragIndex(null);
+    void persistOrder(next);
+  };
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+      {items.map((item, index) => (
+        <div
+          key={item.id}
+          draggable={canEdit}
+          onDragStart={() => setDragIndex(index)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => handleDrop(index)}
+          onDragEnd={() => setDragIndex(null)}
+          className={`relative group aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 ${
+            dragIndex === index ? 'ring-2 ring-blue-500 opacity-70' : ''
+          } ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        >
+          <button type="button" onClick={() => onOpenLightbox(index)} className="w-full h-full">
+            {item.mediaType === 'VIDEO' ? (
+              <div className="relative w-full h-full">
+                <ImageWithFallback
+                  src={item.thumbnailUrl ?? item.url}
+                  alt={item.caption ?? 'Video'}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <Play className="w-10 h-10 text-white fill-white" />
+                </div>
+              </div>
+            ) : (
+              <ImageWithFallback
+                src={item.url}
+                alt={item.caption ?? 'Ảnh'}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              />
+            )}
+          </button>
+          {canEdit && (
+            <>
+              <div className="absolute top-2 left-2 p-1 rounded bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <GripVertical className="w-4 h-4" />
+              </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteMedia(item.id);
+                }}
+                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                aria-label="Xóa"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}

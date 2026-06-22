@@ -33,6 +33,7 @@ import LiveViewerPage from '../features/live/pages/LiveViewerPage';
 import SearchResultsPage from '../features/search/pages/SearchResultsPage';
 import MessengerPage from '../features/messenger/pages/MessengerPage';
 import { SavedPage } from '../features/saved/pages/SavedPage';
+import { AlbumListPage, AlbumDetailPage } from '../features/albums/pages';
 import SettingsPage from '../features/settings/pages/SettingsPage';
 import MyReportsPage from '../features/reports/pages/MyReportsPage';
 import CommunityPoliciesPage from '../features/policies/pages/CommunityPoliciesPage';
@@ -146,6 +147,14 @@ export const router = createBrowserRouter([
           {
             path: '/saved',
             Component: SavedPage,
+          },
+          {
+            path: '/albums',
+            Component: AlbumListPage,
+          },
+          {
+            path: '/albums/:albumId',
+            Component: AlbumDetailPage,
           },
           {
             path: '/settings',
