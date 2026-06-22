@@ -37,7 +37,7 @@ axiosInstance.interceptors.response.use(
       const url = error.config?.url ?? '';
       const isAuthEndpoint = url.startsWith('/auth/');
 
-      if ((status === 401 || status === 403) && !isAuthEndpoint) {
+      if (status === 401 && !isAuthEndpoint) {
         const data = error.response?.data;
         const locked =
           typeof data === 'object' && data !== null &&

@@ -13,6 +13,7 @@ import type { Conversation } from '../types/messenger.types';
 interface UseFriendConversationsResult {
   conversations: Conversation[];
   loading: boolean;
+  isRefreshing: boolean;
   error: string | null;
   reload: () => void;
 }
@@ -62,11 +63,13 @@ function formatTimestamp(iso?: string | null) {
 export function useFriendConversations(options: UseFriendConversationsOptions = {}): UseFriendConversationsResult {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const includeGroups = Boolean(options.includeGroups);
   const loadInFlightRef = useRef<Promise<void> | null>(null);
   const reloadTimerRef = useRef<number | null>(null);
+  const hasLoadedOnceRef = useRef(false);
 
   useEffect(() => {
     const syncAuth = () => setCurrentUser(authService.getCurrentUser());
@@ -74,15 +77,20 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
     return () => window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
   }, []);
 
-  const load = useCallback(() => {
+  const load = useCallback((options?: { background?: boolean }) => {
     if (!currentUser?.id) {
       setLoading(false);
       return;
     }
     if (loadInFlightRef.current) return;
 
-    setLoading(true);
-    setError(null);
+    const background = options?.background ?? hasLoadedOnceRef.current;
+    if (background) {
+      setIsRefreshing(true);
+    } else {
+      setLoading(true);
+      setError(null);
+    }
 
     loadInFlightRef.current = Promise.all([
       friendService.getFriends(currentUser.id),
@@ -187,7 +195,9 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
       })
       .finally(() => {
         loadInFlightRef.current = null;
+        hasLoadedOnceRef.current = true;
         setLoading(false);
+        setIsRefreshing(false);
       });
   }, [currentUser?.id, includeGroups]);
 
@@ -209,36 +219,44 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
       if (reloadTimerRef.current !== null) return;
       reloadTimerRef.current = window.setTimeout(() => {
         reloadTimerRef.current = null;
-        load();
+        load({ background: true });
       }, 800);
     };
 
     const unsubMsg = subscribeMessages((msg) => {
-      const preview = buildConversationPreviewFromContent(msg.content, msg.senderId, currentUser.id);
-      if (preview) {
-        const chatUserId = msg.conversationId ? `group:${msg.conversationId}` : (msg.senderId === currentUser.id ? msg.receiverId : msg.senderId);
-        if (chatUserId) {
-          setConversations((prev) => {
-            const index = prev.findIndex((item) => item.user.id === chatUserId);
-            if (index === -1) {
-              scheduleReload();
-              return prev;
-            }
-            const next = [...prev];
-            next[index] = {
-              ...next[index],
-              lastMessage: preview,
-              timestamp: 'Vừa xong',
-              lastActivityAt: Date.now(),
-              isUnread: msg.senderId !== currentUser.id,
-              unreadCount: msg.senderId !== currentUser.id ? Math.max(1, next[index].unreadCount ?? 0) : next[index].unreadCount,
-            };
-            return next.sort((first, second) => (second.lastActivityAt ?? 0) - (first.lastActivityAt ?? 0));
-          });
-          return;
-        }
+      if (msg.conversationId && !includeGroups) {
+        return;
       }
-      scheduleReload();
+
+      const preview = buildConversationPreviewFromContent(msg.content, msg.senderId, currentUser.id);
+      const chatUserId = msg.conversationId
+        ? `group:${msg.conversationId}`
+        : (msg.senderId === currentUser.id ? msg.receiverId : msg.senderId);
+
+      if (!chatUserId || !preview) {
+        return;
+      }
+
+      setConversations((prev) => {
+        const index = prev.findIndex((item) => item.user.id === chatUserId);
+        if (index === -1) {
+          scheduleReload();
+          return prev;
+        }
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          lastMessage: preview,
+          timestamp: 'Vừa xong',
+          lastActivityAt: Date.now(),
+          isUnread: msg.senderId !== currentUser.id,
+          unreadCount:
+            msg.senderId !== currentUser.id
+              ? Math.max(1, next[index].unreadCount ?? 0)
+              : next[index].unreadCount,
+        };
+        return next.sort((first, second) => (second.lastActivityAt ?? 0) - (first.lastActivityAt ?? 0));
+      });
     });
 
     return () => {
@@ -248,9 +266,9 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
       }
       unsubMsg();
     };
-  }, [currentUser?.id, subscribeMessages, load]);
+  }, [currentUser?.id, includeGroups, subscribeMessages, load]);
 
-  return { conversations, loading, error, reload: load };
+  return { conversations, loading, isRefreshing, error, reload: () => load({ background: true }) };
 }
 
 

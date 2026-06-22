@@ -130,6 +130,8 @@ export const MessageList = forwardRef(({
         return `${actor} đã phê duyệt ${target} tham gia nhóm.`;
       case 'reject_member':
         return `${actor} đã từ chối ${target} tham gia nhóm.`;
+      case 'remove_member':
+        return `${actor} đã xóa ${target} khỏi nhóm.`;
       case 'leave_group':
         return `${actor} đã rời khỏi nhóm.`;
       case 'transfer_admin':

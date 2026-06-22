@@ -33,6 +33,7 @@ export interface Message {
     | 'add_members_pending'
     | 'approve_member'
     | 'reject_member'
+    | 'remove_member'
     | 'leave_group'
     | 'transfer_admin'
     | 'join_via_link'

@@ -14,7 +14,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
-  const { conversations, loading, error, reload } = useFriendConversations({ includeGroups: true });
+  const { conversations, loading, isRefreshing, error, reload } = useFriendConversations({ includeGroups: true });
 
   const filters: { key: MessengerFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
@@ -45,11 +45,11 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
             <div className="flex items-center gap-2">
               <button
                 onClick={reload}
-                disabled={loading}
+                disabled={isRefreshing}
                 className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
                 title="Tải lại"
               >
-                <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
               <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors cursor-pointer">
                 <MoreHorizontal className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -94,7 +94,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
-          {loading ? (
+          {loading && conversations.length === 0 ? (
             <div className="text-center py-8 text-gray-400 text-sm">Đang tải...</div>
           ) : error ? (
             <div className="text-center py-8 text-sm">

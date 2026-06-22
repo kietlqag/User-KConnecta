@@ -58,6 +58,17 @@ const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const POST_SHARE_PREFIX = '__POST_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
+const MEMBERSHIP_CHAT_ACTIONS = new Set([
+  'join_via_link_pending',
+  'join_via_link',
+  'add_members_pending',
+  'add_members',
+  'approve_member',
+  'reject_member',
+  'remove_member',
+  'leave_group',
+  'transfer_admin',
+]);
 const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
 const HISTORY_PAGE_SIZE = 15;
 const GROUP_AVATAR_CROP_SIZE = 180;
@@ -523,6 +534,7 @@ function ChatInfoPanel({
   onMemberApprovalChange,
   onApproveMember,
   onRejectMember,
+  onRequestRemoveMember,
   onLeaveGroup,
   onDissolveGroup,
   isGroupCreator = false,
@@ -548,6 +560,7 @@ function ChatInfoPanel({
   onMemberApprovalChange?: (enabled: boolean) => void;
   onApproveMember?: (memberId: string) => void;
   onRejectMember?: (memberId: string) => void;
+  onRequestRemoveMember?: (memberId: string, memberName: string) => void;
   onLeaveGroup?: () => void;
   onDissolveGroup?: () => void;
   isGroupCreator?: boolean;
@@ -573,6 +586,8 @@ function ChatInfoPanel({
   const [mediaLightboxIndex, setMediaLightboxIndex] = useState<number | null>(null);
   const [mediaActionMenuId, setMediaActionMenuId] = useState<string | null>(null);
   const [mediaActionMenuPosition, setMediaActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const [memberActionMenuId, setMemberActionMenuId] = useState<string | null>(null);
+  const [memberActionMenuPosition, setMemberActionMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [assetItemsByTab, setAssetItemsByTab] = useState<Record<InfoPanelTab, Array<{ id: string; url: string; type?: string; label?: string; meta?: string; createdAt?: string | null }>>>({
     media: [],
     files: [],
@@ -725,6 +740,19 @@ function ChatInfoPanel({
       setMediaActionMenuPosition(null);
     }
   }, [mediaActionMenuId]);
+
+  useEffect(() => {
+    if (!memberActionMenuId) return;
+    const close = () => setMemberActionMenuId(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [memberActionMenuId]);
+
+  useEffect(() => {
+    if (!memberActionMenuId) {
+      setMemberActionMenuPosition(null);
+    }
+  }, [memberActionMenuId]);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -924,6 +952,8 @@ function ChatInfoPanel({
         setAssetItemsByTab((prev) => ({ ...prev, [tab]: beforeCreatedAt ? [...prev[tab], ...mapped] : mapped }));
         setAssetCursorByTab((prev) => ({ ...prev, [tab]: response.nextBeforeCreatedAt || null }));
         setAssetHasMoreByTab((prev) => ({ ...prev, [tab]: Boolean(response.hasMore) }));
+      } catch {
+        // Ignore — e.g. user left the group while assets were loading.
       } finally {
         setAssetLoadingByTab((prev) => ({ ...prev, [tab]: false }));
       }
@@ -1406,9 +1436,10 @@ function ChatInfoPanel({
                 const isCreator = member.id === groupCreatorId;
                 const isCurrentUser = member.id === currentUserId;
                 const subtitle = isCreator ? 'Quản trị viên' : isCurrentUser ? 'Bạn' : 'Do bạn thêm';
+                const canShowMemberMenu = isGroupCreator && !isCreator;
 
                 return (
-                  <div key={member.id} className="flex items-center gap-3">
+                  <div key={member.id} className="relative flex items-center gap-3">
                     <img
                       src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`}
                       alt={member.name}
@@ -1418,13 +1449,48 @@ function ChatInfoPanel({
                       <p className="truncate text-[15px] font-semibold text-gray-900 dark:text-gray-100">{member.name}</p>
                       <p className="truncate text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
                     </div>
-                    <button
-                      type="button"
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-900 dark:text-gray-100 hover:bg-muted cursor-pointer"
-                      title="Tùy chọn thành viên"
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
+                    {canShowMemberMenu && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                            const menuWidth = 256;
+                            const viewportPadding = 8;
+                            const left = Math.min(
+                              Math.max(viewportPadding, rect.right - menuWidth),
+                              window.innerWidth - menuWidth - viewportPadding,
+                            );
+                            const top = Math.min(rect.bottom + 6, window.innerHeight - 120);
+                            setMemberActionMenuPosition({ top, left });
+                            setMemberActionMenuId((prev) => (prev === member.id ? null : member.id));
+                          }}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-900 dark:text-gray-100 hover:bg-muted cursor-pointer"
+                          title="Tùy chọn thành viên"
+                        >
+                          <MoreHorizontal className="h-5 w-5" />
+                        </button>
+                        {memberActionMenuId === member.id && memberActionMenuPosition && (
+                          <div
+                            className="fixed z-[350] w-64 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-2xl"
+                            style={{ top: memberActionMenuPosition.top, left: memberActionMenuPosition.left }}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onRequestRemoveMember?.(member.id, member.name);
+                                setMemberActionMenuId(null);
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-[15px] text-red-600 hover:bg-muted dark:text-red-400"
+                            >
+                              Xóa thành viên ra khỏi nhóm
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 );
               })}
@@ -1752,6 +1818,7 @@ export default function MessengerPage() {
   const {
     conversations: baseConversations,
     loading: loadingConversations,
+    isRefreshing: isRefreshingConversations,
     error: friendsError,
     reload: loadFriends,
   } = useFriendConversations();
@@ -1797,6 +1864,8 @@ export default function MessengerPage() {
   const [groupJoinModalToken, setGroupJoinModalToken] = useState<string | null>(null);
   const [leaveGroupNewAdminId, setLeaveGroupNewAdminId] = useState('');
   const [isLeavingGroup, setIsLeavingGroup] = useState(false);
+  const [removeMemberTarget, setRemoveMemberTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isRemovingGroupMember, setIsRemovingGroupMember] = useState(false);
   const joinTokenHandledRef = useRef<string | null>(null);
   const historyByUserRef = useRef<Record<string, HistoryState>>({});
   const messagesByUserRef = useRef<Record<string, Message[]>>({});
@@ -2121,6 +2190,17 @@ export default function MessengerPage() {
     setGroupMemberApprovalById((prev) => ({ ...prev, [chatUserId]: Boolean(group.memberApprovalRequired) }));
   }, [overrides]);
 
+  const refreshGroupMembers = useCallback(async (conversationId: string) => {
+    try {
+      const groups = await chatService.getMyGroupConversations();
+      const group = groups.find((item) => item.id === conversationId);
+      if (!group) return;
+      applyGroupConversationResponse(group);
+    } catch {
+      // keep current member list on failure
+    }
+  }, [applyGroupConversationResponse]);
+
   const loadInitialHistory = useCallback(
     async (peerUserId: string) => {
       if (!currentUser?.id) return;
@@ -2354,6 +2434,15 @@ export default function MessengerPage() {
         });
       }
 
+      if (
+        msg.conversationId &&
+        newMsg.systemType === 'chat_action' &&
+        newMsg.systemActionType &&
+        MEMBERSHIP_CHAT_ACTIONS.has(newMsg.systemActionType)
+      ) {
+        void refreshGroupMembers(msg.conversationId);
+      }
+
       if (msg.senderId !== myId && !msg.conversationId) {
         sendMessageDelivered(msg.id);
         if (activeChatUserId === otherUserId) {
@@ -2361,7 +2450,7 @@ export default function MessengerPage() {
         }
       }
     },
-    [activeChatUserId, currentUser?.id, sendConversationSeen, sendMessageDelivered],
+    [activeChatUserId, currentUser?.id, refreshGroupMembers, sendConversationSeen, sendMessageDelivered],
   );
 
   useEffect(() => {
@@ -3159,22 +3248,25 @@ export default function MessengerPage() {
     async (newAdminUserId?: string) => {
       if (!activeChatUserId?.startsWith('group:')) return;
       const conversationId = activeChatUserId.replace('group:', '');
+      const chatUserId = activeChatUserId;
       setIsLeavingGroup(true);
+      setSearchParams({});
       try {
         await chatService.leaveGroupConversation(
           conversationId,
           newAdminUserId ? { newAdminUserId } : undefined,
         );
-        removeGroupConversation(activeChatUserId);
+        removeGroupConversation(chatUserId);
         setLeaveGroupModalMode(null);
         toast.success('Đã rời nhóm.');
       } catch (error) {
+        setSearchParams({ with: chatUserId });
         toast.error(error instanceof Error ? error.message : 'Không thể rời nhóm.');
       } finally {
         setIsLeavingGroup(false);
       }
     },
-    [activeChatUserId, removeGroupConversation],
+    [activeChatUserId, removeGroupConversation, setSearchParams],
   );
 
   const handleLeaveGroupClick = useCallback(() => {
@@ -3238,6 +3330,27 @@ export default function MessengerPage() {
       toast.error('Không thể từ chối thành viên.');
     }
   }, [activeChatUserId, applyGroupConversationResponse, isActiveGroupCreator]);
+
+  const handleRequestRemoveGroupMember = useCallback((memberUserId: string, memberName: string) => {
+    if (!activeChatUserId?.startsWith('group:') || !isActiveGroupCreator) return;
+    setRemoveMemberTarget({ id: memberUserId, name: memberName });
+  }, [activeChatUserId, isActiveGroupCreator]);
+
+  const executeRemoveGroupMember = useCallback(async () => {
+    if (!activeChatUserId?.startsWith('group:') || !removeMemberTarget) return;
+    const conversationId = activeChatUserId.replace('group:', '');
+    setIsRemovingGroupMember(true);
+    try {
+      const updated = await chatService.removeGroupMember(conversationId, removeMemberTarget.id);
+      applyGroupConversationResponse(updated);
+      setRemoveMemberTarget(null);
+      toast.success('Đã xóa thành viên khỏi nhóm.');
+    } catch {
+      toast.error('Không thể xóa thành viên khỏi nhóm.');
+    } finally {
+      setIsRemovingGroupMember(false);
+    }
+  }, [activeChatUserId, applyGroupConversationResponse, removeMemberTarget]);
 
   const handleSaveNickname = useCallback(async (memberUserId: string, nickname: string) => {
     if (!activeChatUserId?.startsWith('group:')) return;
@@ -3306,11 +3419,11 @@ export default function MessengerPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={loadFriends}
-                    disabled={loadingConversations}
+                    disabled={isRefreshingConversations}
                     className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors disabled:opacity-50 cursor-pointer"
                     title="Tải lại danh sách"
                   >
-                    <RefreshCw className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${loadingConversations ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${isRefreshingConversations ? 'animate-spin' : ''}`} />
                   </button>
                   <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors cursor-pointer">
                     <MoreHorizontal className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -3352,7 +3465,7 @@ export default function MessengerPage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-2">
-              {loadingConversations ? (
+              {loadingConversations && conversations.length === 0 ? (
                 <div className="text-center py-8 text-gray-400 text-sm">Đang tải...</div>
               ) : friendsError ? (
                 <div className="text-center py-8 text-sm">
@@ -3475,6 +3588,7 @@ export default function MessengerPage() {
               onMemberApprovalChange={handleToggleMemberApproval}
               onApproveMember={handleApproveGroupMember}
               onRejectMember={handleRejectGroupMember}
+              onRequestRemoveMember={handleRequestRemoveGroupMember}
               onLeaveGroup={handleLeaveGroupClick}
               onDissolveGroup={handleDissolveGroupClick}
               isGroupCreator={isActiveGroupCreator}
@@ -4046,6 +4160,37 @@ export default function MessengerPage() {
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
               >
                 {isDissolvingGroup ? 'Đang giải tán...' : 'Giải tán nhóm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {removeMemberTarget && activeChatUserId?.startsWith('group:') && (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+            <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Xóa thành viên</h3>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                Bạn có chắc muốn xóa <span className="font-semibold text-gray-900 dark:text-gray-100">{removeMemberTarget.name}</span> khỏi nhóm? Người này sẽ không nhận tin nhắn mới từ nhóm cho đến khi được mời lại.
+              </p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={() => setRemoveMemberTarget(null)}
+                disabled={isRemovingGroupMember}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-muted dark:text-gray-300"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={isRemovingGroupMember}
+                onClick={() => void executeRemoveGroupMember()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+              >
+                {isRemovingGroupMember ? 'Đang xóa...' : 'Xóa thành viên'}
               </button>
             </div>
           </div>

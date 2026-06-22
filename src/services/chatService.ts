@@ -257,6 +257,9 @@ export const chatService = {
   rejectGroupMember: (conversationId: string, memberUserId: string) =>
     api.delete<GroupConversationResponse>(`/chat/conversations/${conversationId}/members/${memberUserId}/pending`),
 
+  removeGroupMember: (conversationId: string, memberUserId: string) =>
+    api.delete<GroupConversationResponse>(`/chat/conversations/${conversationId}/members/${memberUserId}`),
+
   leaveGroupConversation: (conversationId: string, payload?: { newAdminUserId?: string }) =>
     api.post<GroupConversationResponse>(`/chat/conversations/${conversationId}/leave`, payload ?? {}),
 
