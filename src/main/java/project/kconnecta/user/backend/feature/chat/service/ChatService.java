@@ -51,6 +51,7 @@ public interface ChatService {
     GroupConversationResponse addGroupMembers(String currentUsername, UUID conversationId, AddGroupMembersRequest request);
     GroupConversationResponse approveGroupMember(String currentUsername, UUID conversationId, UUID targetUserId);
     GroupConversationResponse rejectGroupMember(String currentUsername, UUID conversationId, UUID targetUserId);
+    GroupConversationResponse removeGroupMember(String currentUsername, UUID conversationId, UUID targetUserId);
     GroupConversationResponse leaveGroupConversation(String currentUsername, UUID conversationId, LeaveGroupConversationRequest request);
     void dissolveGroupConversation(String currentUsername, UUID conversationId);
     GroupJoinLinkResponse getGroupJoinLink(String currentUsername, UUID conversationId);

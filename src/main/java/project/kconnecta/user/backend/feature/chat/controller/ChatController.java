@@ -214,6 +214,18 @@ public class ChatController {
         return ResponseEntity.ok(chatService.rejectGroupMember(principal.getName(), conversationId, memberUserId));
     }
 
+    @DeleteMapping("/conversations/{conversationId}/members/{memberUserId}")
+    public ResponseEntity<GroupConversationResponse> removeGroupMember(
+            @PathVariable UUID conversationId,
+            @PathVariable UUID memberUserId,
+            Principal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.removeGroupMember(principal.getName(), conversationId, memberUserId));
+    }
+
     @PostMapping("/conversations/{conversationId}/leave")
     public ResponseEntity<GroupConversationResponse> leaveGroupConversation(
             @PathVariable UUID conversationId,

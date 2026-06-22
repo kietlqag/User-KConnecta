@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.feature.policy.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import project.kconnecta.user.backend.exception.ChatValidationException;
@@ -22,6 +23,17 @@ import java.util.regex.Pattern;
 @Component
 @RequiredArgsConstructor
 public class PolicyContentValidator {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final String VOICE_MESSAGE_PREFIX = "__VOICE__:";
+    private static final String IMAGE_MESSAGE_PREFIX = "__IMAGE__:";
+    private static final String FILE_MESSAGE_PREFIX = "__FILE__:";
+    private static final String REPLY_PREFIX = "__REPLY__:";
+    private static final String CHAT_ACTION_PREFIX = "__CHAT_ACTION__:";
+    private static final String CALL_LOG_PREFIX = "__CALL_LOG__:";
+    private static final String VIDEO_SHARE_PREFIX = "__VIDEO_SHARE__:";
+    private static final String POST_SHARE_PREFIX = "__POST_SHARE__:";
+    private static final String STORY_REPLY_PREFIX = "__STORY_REPLY__:";
 
     private static final Pattern URL_PATTERN = Pattern.compile(
             "(https?://[^\\s]+|www\\.[^\\s]+)",
@@ -164,6 +176,7 @@ public class PolicyContentValidator {
         JsonNode config = policyService.getConfigJson();
         JsonNode chatPolicy = config.path("chatPolicy");
         String text = content == null ? "" : content;
+        String policyText = extractPolicyCheckableText(text);
         String convId = conversationId != null ? conversationId.toString() : null;
 
         if (chatPolicy.path("antiSpamEnabled").asBoolean(true)) {
@@ -172,7 +185,7 @@ public class PolicyContentValidator {
         }
 
         try {
-            checkKeywords(text, config, true, "gửi tin nhắn");
+            checkKeywords(policyText, config, true, "gửi tin nhắn");
         } catch (ValidationException e) {
             throw new ChatValidationException("CHAT_BLOCKED_KEYWORD",
                     "Tin nhắn chứa nội dung không phù hợp nên không thể gửi.", null, convId, messageClientId);
@@ -180,11 +193,50 @@ public class PolicyContentValidator {
 
         if (chatPolicy.path("blockMaliciousLinks").asBoolean(true)) {
             try {
-                checkBlockedLinks(text, config);
+                checkBlockedLinks(policyText, config);
             } catch (ValidationException e) {
                 throw new ChatValidationException("CHAT_MALICIOUS_LINK",
                         "Tin nhắn chứa liên kết không an toàn nên đã bị chặn.", null, convId, messageClientId);
             }
+        }
+    }
+
+    /**
+     * Structured chat payloads (image/voice/file metadata) must not be keyword-scanned as plain text —
+     * URLs and JSON keys often false-match community rules. Only user-authored fields are checked.
+     */
+    private String extractPolicyCheckableText(String content) {
+        if (content == null || content.isBlank()) {
+            return "";
+        }
+        if (content.startsWith(REPLY_PREFIX)) {
+            return readJsonStringField(content.substring(REPLY_PREFIX.length()), "text");
+        }
+        if (content.startsWith(IMAGE_MESSAGE_PREFIX)) {
+            return readJsonStringField(content.substring(IMAGE_MESSAGE_PREFIX.length()), "caption");
+        }
+        if (content.startsWith(VOICE_MESSAGE_PREFIX)
+                || content.startsWith(FILE_MESSAGE_PREFIX)
+                || content.startsWith(CHAT_ACTION_PREFIX)
+                || content.startsWith(CALL_LOG_PREFIX)
+                || content.startsWith(VIDEO_SHARE_PREFIX)
+                || content.startsWith(POST_SHARE_PREFIX)
+                || content.startsWith(STORY_REPLY_PREFIX)) {
+            return "";
+        }
+        return content;
+    }
+
+    private String readJsonStringField(String json, String fieldName) {
+        try {
+            JsonNode payload = OBJECT_MAPPER.readTree(json);
+            JsonNode node = payload.get(fieldName);
+            if (node == null || node.isNull()) {
+                return "";
+            }
+            return node.asText("").trim();
+        } catch (Exception ignored) {
+            return "";
         }
     }
 

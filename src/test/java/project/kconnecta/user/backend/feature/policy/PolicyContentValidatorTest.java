@@ -219,6 +219,39 @@ class PolicyContentValidatorTest {
         );
     }
 
+    @Test
+    void structuredImageMessage_skipsMetadataKeywordScan() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithKeyword("res"));
+
+        String imagePayload = "__IMAGE__:{\"imageUrl\":\"https://res.cloudinary.com/demo/image/upload/cat.jpg\",\"mimeType\":\"image/jpeg\",\"caption\":\"\"}";
+
+        assertThatNoException().isThrownBy(
+            () -> validator.validateChatMessage(userId, imagePayload, null, null)
+        );
+    }
+
+    @Test
+    void structuredImageMessage_blocksBadCaption() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithKeyword("badword"));
+
+        String imagePayload = "__IMAGE__:{\"imageUrl\":\"https://cdn.example.com/a.jpg\",\"caption\":\"badword here\"}";
+
+        assertThatThrownBy(() -> validator.validateChatMessage(userId, imagePayload, null, null))
+            .isInstanceOf(ChatValidationException.class)
+            .extracting("code").isEqualTo("CHAT_BLOCKED_KEYWORD");
+    }
+
+    @Test
+    void structuredVoiceAndFileMessages_passWithoutKeywordScan() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithKeyword("audio"));
+
+        String voicePayload = "__VOICE__:{\"audioUrl\":\"https://cdn.example.com/audio.webm\",\"durationSec\":3,\"mimeType\":\"audio/webm\"}";
+        String filePayload = "__FILE__:{\"fileUrl\":\"https://cdn.example.com/doc.pdf\",\"fileName\":\"report.pdf\",\"mimeType\":\"application/pdf\"}";
+
+        assertThatNoException().isThrownBy(() -> validator.validateChatMessage(userId, voicePayload, null, null));
+        assertThatNoException().isThrownBy(() -> validator.validateChatMessage(userId, filePayload, null, null));
+    }
+
     // ── suspect pre-filter (comment moderation) ─────────────────────────────
 
     private JsonNode configWithWatchlist(String keyword) throws Exception {

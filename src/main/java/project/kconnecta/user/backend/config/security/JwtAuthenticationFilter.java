@@ -46,8 +46,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (header != null && header.startsWith("Bearer ")) {
             String token = header.substring(7);
 
-            if (jwtUtil.isTokenValid(token) && !tokenBlacklistService.isBlacklisted(token)) {
-                Claims claims = jwtUtil.extractClaims(token);
+            if (!jwtUtil.isTokenValid(token) || tokenBlacklistService.isBlacklisted(token)) {
+                sendUnauthorizedResponse(response, "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");
+                return;
+            }
+
+            Claims claims = jwtUtil.extractClaims(token);
                 // JWT subject is the user id (see JwtUtil.generateToken), not the account id.
                 UUID userId = UUID.fromString(claims.getSubject());
 
@@ -67,10 +71,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         Collections.emptyList());
 
                 SecurityContextHolder.getContext().setAuthentication(auth);
-            }
         }
 
         chain.doFilter(request, response);
+    }
+
+    private void sendUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding("UTF-8");
+        response.getWriter().write(objectMapper.writeValueAsString(Map.of("message", message)));
     }
 
     /**

@@ -806,6 +806,39 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
+    public GroupConversationResponse removeGroupMember(String currentUsername, UUID conversationId, UUID targetUserId) {
+        User actor = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        ChatConversation conversation = chatConversationRepository.findByIdPlain(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        if (!conversation.getCreatedBy().getId().equals(actor.getId())) {
+            throw new RuntimeException("Only the group creator can remove members");
+        }
+        if (targetUserId.equals(actor.getId())) {
+            throw new BadRequestException("Use leave group to remove yourself");
+        }
+        if (targetUserId.equals(conversation.getCreatedBy().getId())) {
+            throw new BadRequestException("Cannot remove the group creator");
+        }
+
+        ChatConversationMember member = chatConversationMemberRepository.findByConversationIdAndUserId(conversationId, targetUserId)
+                .orElseThrow(() -> new RuntimeException("Member not found"));
+        if (member.getMemberStatus() != ChatMemberStatus.APPROVED) {
+            throw new RuntimeException("Only approved members can be removed");
+        }
+        User target = member.getUser();
+        chatConversationMemberRepository.delete(member);
+        sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
+                "remove_member",
+                actor,
+                target,
+                null
+        ));
+        return toGroupConversationResponse(conversation, chatConversationMemberRepository.findMembersByConversationId(conversationId));
+    }
+
+    @Override
+    @Transactional
     public GroupConversationResponse leaveGroupConversation(
             String currentUsername,
             UUID conversationId,
