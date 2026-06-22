@@ -259,6 +259,30 @@ public class GroupServiceImpl implements GroupService {
     }
 
     @Override
+    public GroupResponse updateName(UUID groupId, UUID requesterId, String name) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        GroupMember requester = groupMemberRepository.findByGroupIdAndUserId(groupId, requesterId)
+                .orElseThrow(() -> new ValidationException("Requester is not a member of this group"));
+        if (requester.getRole() != GroupMemberRole.ADMIN) {
+            throw new ValidationException("Only admins can update group name");
+        }
+
+        String trimmed = name == null ? null : name.trim();
+        if (trimmed == null || trimmed.isEmpty()) {
+            throw new ValidationException("Group name cannot be empty");
+        }
+        if (trimmed.length() > 150) {
+            throw new ValidationException("Group name must be at most 150 characters");
+        }
+
+        group.setName(trimmed);
+        Group saved = groupRepository.save(group);
+        return toResponse(saved, GroupMemberRole.ADMIN, GroupMemberStatus.APPROVED);
+    }
+
+    @Override
     public GroupResponse updateMemberApproval(UUID groupId, UUID requesterId, boolean memberApprovalRequired) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));

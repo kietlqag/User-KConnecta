@@ -17,6 +17,9 @@ import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostRequest
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.AddPostPollOptionRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.CreatePostPollRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.VotePostPollRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PendingCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
@@ -25,8 +28,10 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostReactionCoun
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionUserResponse;
-import project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostPollOptionResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostPollResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.SharedGroupResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.entity.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
@@ -45,6 +50,8 @@ import project.kconnecta.user.backend.feature.search.redis.RedisSearchIndexer;
 import project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus;
 import project.kconnecta.user.backend.feature.friend.repository.FriendshipRepository;
 import project.kconnecta.user.backend.feature.group.entity.Group;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.page.repository.PageRepository;
@@ -105,14 +112,31 @@ public class PostServiceImpl implements PostService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final project.kconnecta.user.backend.feature.ai.GeminiModerationService geminiModerationService;
     private final FriendshipRepository friendshipRepository;
+    private final PostPollRepository postPollRepository;
+    private final PostPollOptionRepository postPollOptionRepository;
+    private final PostPollVoteRepository postPollVoteRepository;
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
         User author = getUser(request.getAuthorId(), "Author not found");
         List<CreatePostMediaRequest> mediaRequests = request.getMedia() == null ? Collections.emptyList() : request.getMedia();
 
-        if ((request.getContent() == null || request.getContent().isBlank()) && mediaRequests.isEmpty()) {
+        if ((request.getContent() == null || request.getContent().isBlank())
+                && mediaRequests.isEmpty()
+                && request.getPoll() == null) {
             throw new ValidationException("Post must have content or media");
+        }
+
+        if (request.getPoll() != null) {
+            if (request.getGroupId() == null) {
+                throw new ValidationException("Polls are only supported in group posts");
+            }
+            if (request.getContent() == null || request.getContent().isBlank()) {
+                throw new ValidationException("Bạn không thể tạo cuộc thăm dò ý kiến không chứa văn bản trong bài viết.");
+            }
+            if (normalizePollOptions(request.getPoll().getOptions()).size() < 2) {
+                throw new ValidationException("Cuộc thăm dò ý kiến cần ít nhất 2 lựa chọn");
+            }
         }
 
         policyContentValidator.validatePost(
@@ -207,10 +231,17 @@ public class PostServiceImpl implements PostService {
             }
         }
 
+        Group sharedGroup = null;
+        if (request.getSharedGroupId() != null) {
+            sharedGroup = groupRepository.findById(request.getSharedGroupId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Shared group not found: " + request.getSharedGroupId()));
+        }
+
         Post post = Post.builder()
                 .author(author)
                 .group(group)
                 .page(userPage)
+                .sharedGroup(sharedGroup)
                 .content(trimToNull(request.getContent()))
                 .privacy(privacy)
                 .status(status)
@@ -229,6 +260,10 @@ public class PostServiceImpl implements PostService {
         attachTaggedUsers(post, request.getTaggedUserIds());
 
         Post saved = postRepository.save(post);
+        if (request.getPoll() != null) {
+            attachPoll(saved, author, request.getPoll());
+            saved = postRepository.save(saved);
+        }
         log.info("create post saved: postId={}, status={}, publishedAt={}",
                 saved.getId(), saved.getStatus(), saved.getPublishedAt());
 
@@ -713,10 +748,11 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PostResponse> getGroupFeedPosts(UUID currentUserId) {
-        if (currentUserId == null) return Collections.emptyList();
-        List<Post> posts = postRepository.findGroupFeedPostsByUserId(currentUserId);
-        return processPostsBulk(posts, currentUserId);
+    public Page<PostResponse> getGroupFeedPosts(UUID currentUserId, Pageable pageable) {
+        if (currentUserId == null) return Page.empty(pageable);
+        Page<Post> postPage = postRepository.findGroupFeedPostsByUserId(currentUserId, pageable);
+        List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
+        return new PageImpl<>(responses, pageable, postPage.getTotalElements());
     }
 
     private List<PostResponse> processPostsBulk(List<Post> posts, UUID currentUserId) {
@@ -752,6 +788,7 @@ public class PostServiceImpl implements PostService {
         final Map<UUID, Long> finalShareCounts = shareCountsMap;
         final Map<UUID, ReactionType> finalUserReactions = userReactionsMap;
         final Set<UUID> finalSavedPostIds = savedPostIds;
+        final Map<UUID, PostPollResponse> pollResponses = buildPollResponseMap(postIds, currentUserId);
 
         return posts.stream()
                 .map(post -> mapToResponseOptimized(post, currentUserId,
@@ -759,7 +796,8 @@ public class PostServiceImpl implements PostService {
                         finalCommentCounts.getOrDefault(post.getId(), 0L),
                         finalShareCounts.getOrDefault(post.getId(), 0L),
                         finalUserReactions.get(post.getId()),
-                        finalSavedPostIds.contains(post.getId())))
+                        finalSavedPostIds.contains(post.getId()),
+                        pollResponses.get(post.getId())))
                 .toList();
     }
 
@@ -1458,7 +1496,9 @@ public class PostServiceImpl implements PostService {
         boolean savedByCurrentUser = currentUserId != null &&
                 postSavedRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
 
-        return mapToResponseOptimized(post, currentUserId, reactionCounts, commentCount, shareCount, currentUserReaction, savedByCurrentUser);
+        Map<UUID, PostPollResponse> pollMap = buildPollResponseMap(List.of(post.getId()), currentUserId);
+
+        return mapToResponseOptimized(post, currentUserId, reactionCounts, commentCount, shareCount, currentUserReaction, savedByCurrentUser, pollMap.get(post.getId()));
     }
 
     private PostResponse mapToResponseOptimized(Post post, UUID currentUserId,
@@ -1466,7 +1506,8 @@ public class PostServiceImpl implements PostService {
                                                long commentCount,
                                                long shareCount,
                                                ReactionType currentUserReactionType,
-                                               boolean savedByCurrentUser) {
+                                               boolean savedByCurrentUser,
+                                               PostPollResponse poll) {
         List<PostMediaResponse> media = post.getMedia()
                 .stream()
                 .map(item -> PostMediaResponse.builder()
@@ -1531,6 +1572,19 @@ public class PostServiceImpl implements PostService {
                 .taggedUserIds(taggedUserIds)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
+                .poll(poll)
+                .sharedGroup(buildSharedGroupSummary(post.getSharedGroup()))
+                .build();
+    }
+
+    private SharedGroupResponse buildSharedGroupSummary(Group group) {
+        if (group == null) return null;
+        return SharedGroupResponse.builder()
+                .id(group.getId())
+                .name(group.getName())
+                .coverPhotoUrl(group.getCoverPhotoUrl())
+                .privacy(group.getPrivacy())
+                .memberCount(groupMemberRepository.countByGroupId(group.getId()))
                 .build();
     }
 
@@ -1623,6 +1677,203 @@ public class PostServiceImpl implements PostService {
                 })
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    @Override
+    public PostPollResponse votePoll(UUID postId, UUID userId, VotePostPollRequest request) {
+        if (request == null || request.getOptionId() == null) {
+            throw new ValidationException("optionId is required");
+        }
+        Post post = getPost(postId);
+        PostPoll poll = postPollRepository.findByPostId(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll not found for this post"));
+        requireApprovedGroupMember(post, userId);
+
+        PostPollOption option = postPollOptionRepository.findById(request.getOptionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Poll option not found"));
+        if (!option.getPoll().getId().equals(poll.getId())) {
+            throw new ValidationException("Invalid poll option");
+        }
+
+        User user = getUser(userId, "User not found");
+        if (!poll.isAllowMultiple()) {
+            postPollVoteRepository.deleteAllByPollIdAndUserId(poll.getId(), userId);
+            postPollVoteRepository.save(PostPollVote.builder()
+                    .poll(poll)
+                    .option(option)
+                    .user(user)
+                    .build());
+        } else {
+            postPollVoteRepository.findByPollIdAndUserIdAndOptionId(poll.getId(), userId, option.getId())
+                    .ifPresentOrElse(
+                            postPollVoteRepository::delete,
+                            () -> postPollVoteRepository.save(PostPollVote.builder()
+                                    .poll(poll)
+                                    .option(option)
+                                    .user(user)
+                                    .build())
+                    );
+        }
+
+        return buildPollResponse(poll, userId);
+    }
+
+    @Override
+    public PostPollResponse addPollOption(UUID postId, UUID userId, AddPostPollOptionRequest request) {
+        if (request == null || trimToNull(request.getText()) == null) {
+            throw new ValidationException("Option text is required");
+        }
+        Post post = getPost(postId);
+        PostPoll poll = postPollRepository.findByPostId(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll not found for this post"));
+        if (!poll.isAllowAddOptions()) {
+            throw new ValidationException("Adding options is not allowed for this poll");
+        }
+        requireApprovedGroupMember(post, userId);
+
+        List<PostPollOption> existing = postPollOptionRepository.findAllByPollIdOrderBySortOrderAsc(poll.getId());
+        if (existing.size() >= 10) {
+            throw new ValidationException("Poll cannot have more than 10 options");
+        }
+
+        User user = getUser(userId, "User not found");
+        int nextOrder = existing.isEmpty() ? 0 : existing.get(existing.size() - 1).getSortOrder() + 1;
+        postPollOptionRepository.save(PostPollOption.builder()
+                .poll(poll)
+                .text(request.getText().trim())
+                .sortOrder(nextOrder)
+                .addedBy(user)
+                .build());
+
+        return buildPollResponse(poll, userId);
+    }
+
+    @Override
+    public PostPollResponse deletePollOption(UUID postId, UUID optionId, UUID userId) {
+        Post post = getPost(postId);
+        PostPoll poll = postPollRepository.findByPostId(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll not found for this post"));
+        requireApprovedGroupMember(post, userId);
+
+        boolean isAuthor = post.getAuthor().getId().equals(userId);
+        boolean isAdmin = post.getGroup() != null && groupMemberRepository.findByGroupIdAndUserId(post.getGroup().getId(), userId)
+                .map(member -> member.getRole() == GroupMemberRole.ADMIN
+                        && member.getStatus() == GroupMemberStatus.APPROVED)
+                .orElse(false);
+        if (!isAuthor && !isAdmin) {
+            throw new ValidationException("Bạn không có quyền xóa lựa chọn này");
+        }
+
+        PostPollOption option = postPollOptionRepository.findById(optionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Poll option not found"));
+        if (!option.getPoll().getId().equals(poll.getId())) {
+            throw new ValidationException("Invalid poll option");
+        }
+
+        long optionCount = postPollOptionRepository.findAllByPollIdOrderBySortOrderAsc(poll.getId()).size();
+        if (optionCount <= 2) {
+            throw new ValidationException("Cuộc thăm dò ý kiến cần ít nhất 2 lựa chọn");
+        }
+
+        postPollOptionRepository.delete(option);
+        return buildPollResponse(poll, userId);
+    }
+
+    private void attachPoll(Post post, User author, CreatePostPollRequest pollRequest) {
+        List<String> options = normalizePollOptions(pollRequest.getOptions());
+        PostPoll poll = PostPoll.builder()
+                .post(post)
+                .allowMultiple(Boolean.TRUE.equals(pollRequest.getAllowMultiple()))
+                .allowAddOptions(pollRequest.getAllowAddOptions() == null || pollRequest.getAllowAddOptions())
+                .build();
+
+        for (int i = 0; i < options.size(); i++) {
+            poll.getOptions().add(PostPollOption.builder()
+                    .poll(poll)
+                    .text(options.get(i))
+                    .sortOrder(i)
+                    .addedBy(author)
+                    .build());
+        }
+        postPollRepository.save(poll);
+    }
+
+    private List<String> normalizePollOptions(List<String> rawOptions) {
+        if (rawOptions == null) {
+            return Collections.emptyList();
+        }
+        return rawOptions.stream()
+                .map(this::trimToNull)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private Map<UUID, PostPollResponse> buildPollResponseMap(List<UUID> postIds, UUID currentUserId) {
+        if (postIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<PostPoll> polls = postPollRepository.findAllByPostIdIn(postIds);
+        if (polls.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<UUID, PostPollResponse> result = new HashMap<>();
+        for (PostPoll poll : polls) {
+            UUID postId = poll.getPost().getId();
+            result.put(postId, buildPollResponse(poll, currentUserId));
+        }
+        return result;
+    }
+
+    private PostPollResponse buildPollResponse(PostPoll poll, UUID currentUserId) {
+        List<PostPollOption> options = postPollOptionRepository.findAllByPollIdOrderBySortOrderAsc(poll.getId());
+        Map<UUID, Long> voteCounts = postPollVoteRepository.countVotesByPollId(poll.getId()).stream()
+                .collect(Collectors.toMap(
+                        PostPollVoteRepository.OptionVoteCountProjection::getOptionId,
+                        PostPollVoteRepository.OptionVoteCountProjection::getCount
+                ));
+
+        long totalVotes = voteCounts.values().stream().mapToLong(Long::longValue).sum();
+        List<UUID> myVotedOptionIds = currentUserId == null
+                ? Collections.emptyList()
+                : postPollVoteRepository.findAllByPollIdAndUserId(poll.getId(), currentUserId).stream()
+                        .map(vote -> vote.getOption().getId())
+                        .toList();
+
+        List<PostPollOptionResponse> optionResponses = options.stream()
+                .map(option -> {
+                    long count = voteCounts.getOrDefault(option.getId(), 0L);
+                    int percentage = totalVotes == 0 ? 0 : (int) Math.round((count * 100.0) / totalVotes);
+                    return PostPollOptionResponse.builder()
+                            .id(option.getId())
+                            .text(option.getText())
+                            .sortOrder(option.getSortOrder())
+                            .voteCount(count)
+                            .percentage(percentage)
+                            .build();
+                })
+                .toList();
+
+        return PostPollResponse.builder()
+                .id(poll.getId())
+                .allowMultiple(poll.isAllowMultiple())
+                .allowAddOptions(poll.isAllowAddOptions())
+                .options(optionResponses)
+                .myVotedOptionIds(myVotedOptionIds)
+                .totalVotes(totalVotes)
+                .build();
+    }
+
+    private void requireApprovedGroupMember(Post post, UUID userId) {
+        if (post.getGroup() == null) {
+            throw new ValidationException("Poll is only available on group posts");
+        }
+        boolean isMember = groupMemberRepository.findByGroupIdAndUserId(post.getGroup().getId(), userId)
+                .map(member -> member.getStatus() == GroupMemberStatus.APPROVED)
+                .orElse(false);
+        if (!isMember) {
+            throw new ValidationException("Only approved group members can interact with polls");
+        }
     }
 
     private String trimToNull(String value) {

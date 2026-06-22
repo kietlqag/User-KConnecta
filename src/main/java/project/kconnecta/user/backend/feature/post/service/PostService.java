@@ -9,6 +9,8 @@ import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.AddPostPollOptionRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.VotePostPollRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PendingCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
@@ -17,6 +19,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResp
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostPollResponse;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
@@ -34,7 +37,7 @@ public interface PostService {
     Page<PostResponse> getWatchPosts(UUID currentUserId, Pageable pageable);
     Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable);
     List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId);
-    List<PostResponse> getGroupFeedPosts(UUID currentUserId);
+    Page<PostResponse> getGroupFeedPosts(UUID currentUserId, Pageable pageable);
     PostResponse getPostById(UUID id, UUID currentUserId);
     PostReactionResponse addReaction(UUID postId, AddReactionRequest request);
     void removeReaction(UUID postId, UUID userId);
@@ -73,4 +76,10 @@ public interface PostService {
 
     /** Manually reject a comment (admin) with a reason. */
     void rejectComment(UUID commentId, String reason);
+
+    PostPollResponse votePoll(UUID postId, UUID userId, VotePostPollRequest request);
+
+    PostPollResponse addPollOption(UUID postId, UUID userId, AddPostPollOptionRequest request);
+
+    PostPollResponse deletePollOption(UUID postId, UUID optionId, UUID userId);
 }

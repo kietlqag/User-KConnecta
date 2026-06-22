@@ -41,6 +41,11 @@ public class Post {
     @JoinColumn(name = "page_id")
     private Page page;
 
+    // Set when this post is a "share group to feed" wrapper — the group being shared.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shared_group_id")
+    private Group sharedGroup;
+
     @Column(columnDefinition = "TEXT")
     private String content;
 

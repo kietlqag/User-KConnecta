@@ -173,32 +173,7 @@ public class PolicyContentValidator {
     }
 
     public void validateChatMessage(UUID senderId, String content, UUID conversationId, String messageClientId) {
-        JsonNode config = policyService.getConfigJson();
-        JsonNode chatPolicy = config.path("chatPolicy");
-        String text = content == null ? "" : content;
-        String policyText = extractPolicyCheckableText(text);
-        String convId = conversationId != null ? conversationId.toString() : null;
-
-        if (chatPolicy.path("antiSpamEnabled").asBoolean(true)) {
-            int maxConsecutive = chatPolicy.path("messagesPerMinute").asInt(10);
-            checkDuplicateMessageSpam(senderId, text, maxConsecutive, convId, messageClientId);
-        }
-
-        try {
-            checkKeywords(policyText, config, true, "gửi tin nhắn");
-        } catch (ValidationException e) {
-            throw new ChatValidationException("CHAT_BLOCKED_KEYWORD",
-                    "Tin nhắn chứa nội dung không phù hợp nên không thể gửi.", null, convId, messageClientId);
-        }
-
-        if (chatPolicy.path("blockMaliciousLinks").asBoolean(true)) {
-            try {
-                checkBlockedLinks(policyText, config);
-            } catch (ValidationException e) {
-                throw new ChatValidationException("CHAT_MALICIOUS_LINK",
-                        "Tin nhắn chứa liên kết không an toàn nên đã bị chặn.", null, convId, messageClientId);
-            }
-        }
+        // Chat moderation disabled — post/comment moderation remains active.
     }
 
     /**

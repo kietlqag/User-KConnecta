@@ -49,4 +49,9 @@ public class PostResponse {
     private boolean sharedPost;
     // Embedded original post (non-null only when sharedPost == true)
     private PostResponse originalPost;
+
+    // Embedded group summary (non-null only when this post shares a group to the feed)
+    private SharedGroupResponse sharedGroup;
+
+    private PostPollResponse poll;
 }

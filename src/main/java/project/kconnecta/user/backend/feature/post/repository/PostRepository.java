@@ -304,12 +304,20 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     void deleteAllByGroupId(@org.springframework.data.repository.query.Param("groupId") UUID groupId);
 
     @org.springframework.data.jpa.repository.Query(
+        value =
         "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group g " +
         "WHERE p.status = 'PUBLISHED' " +
         "AND g.id IN (SELECT gm.group.id FROM GroupMember gm WHERE gm.user.id = :userId AND gm.status = project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus.APPROVED) " +
-        "ORDER BY p.publishedAt DESC, p.createdAt DESC"
+        "ORDER BY p.publishedAt DESC, p.createdAt DESC",
+        countQuery =
+        "SELECT COUNT(p) FROM Post p " +
+        "WHERE p.status = 'PUBLISHED' " +
+        "AND p.group.id IN (SELECT gm.group.id FROM GroupMember gm WHERE gm.user.id = :userId AND gm.status = project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus.APPROVED)"
     )
-    List<Post> findGroupFeedPostsByUserId(@org.springframework.data.repository.query.Param("userId") UUID userId);
+    org.springframework.data.domain.Page<Post> findGroupFeedPostsByUserId(
+        @org.springframework.data.repository.query.Param("userId") UUID userId,
+        org.springframework.data.domain.Pageable pageable
+    );
 
     @org.springframework.data.jpa.repository.Query(
         "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group " +

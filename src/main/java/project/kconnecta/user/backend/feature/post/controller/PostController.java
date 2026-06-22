@@ -19,6 +19,9 @@ import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportCommentRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.AddPostPollOptionRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.VotePostPollRequest;
+import project.kconnecta.user.backend.feature.post.dto.response.PostPollResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
@@ -96,7 +99,7 @@ public class PostController {
             return ResponseEntity.ok(postService.getPostsByUserId(authorId, currentUserId, pageable));
         }
         if (isGroupFeed) {
-            return ResponseEntity.ok(postService.getGroupFeedPosts(currentUserId));
+            return ResponseEntity.ok(postService.getGroupFeedPosts(currentUserId, pageable));
         }
         return ResponseEntity.ok(postService.getAllPosts(currentUserId, pageable));
     }
@@ -271,5 +274,29 @@ public class PostController {
             @RequestParam UUID postId) {
         postService.unsavePost(principal.getUserId(), postId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{id}/poll/vote")
+    public ResponseEntity<PostPollResponse> votePoll(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody VotePostPollRequest request) {
+        return ResponseEntity.ok(postService.votePoll(id, principal.getUserId(), request));
+    }
+
+    @PostMapping("/{id}/poll/options")
+    public ResponseEntity<PostPollResponse> addPollOption(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody AddPostPollOptionRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(postService.addPollOption(id, principal.getUserId(), request));
+    }
+
+    @DeleteMapping("/{id}/poll/options/{optionId}")
+    public ResponseEntity<PostPollResponse> deletePollOption(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @PathVariable UUID optionId) {
+        return ResponseEntity.ok(postService.deletePollOption(id, optionId, principal.getUserId()));
     }
 }

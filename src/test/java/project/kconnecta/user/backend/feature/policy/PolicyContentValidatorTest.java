@@ -78,178 +78,21 @@ class PolicyContentValidatorTest {
         // default config used by most tests — overridden per-test via when()
     }
 
-    // ── duplicate message limit ─────────────────────────────────────────────
+    // ── chat moderation disabled ────────────────────────────────────────────
 
     @Test
-    void duplicateLimit_underLimit_passes() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWith(5, true, false));
-
-        for (int i = 0; i < 5; i++) {
-            assertThatNoException().isThrownBy(
-                () -> validator.validateChatMessage(userId, "hi", null, null)
-            );
-        }
-    }
-
-    @Test
-    void duplicateLimit_exceedsLimit_throwsChatRateLimited() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWith(3, true, false));
-
-        for (int i = 0; i < 3; i++) {
-            validator.validateChatMessage(userId, "hi", null, null);
-        }
-
-        assertThatThrownBy(() -> validator.validateChatMessage(userId, "hi", null, null))
-            .isInstanceOf(ChatValidationException.class)
-            .satisfies(ex -> {
-                ChatValidationException e = (ChatValidationException) ex;
-                assertThat(e.getCode()).isEqualTo("CHAT_RATE_LIMITED");
-                assertThat(e.getRetryAfterSeconds()).isNull();
-            });
-    }
-
-    @Test
-    void duplicateLimit_differentMessages_doNotShareLimit() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWith(2, true, false));
-
-        validator.validateChatMessage(userId, "hello", null, null);
-        validator.validateChatMessage(userId, "hello", null, null);
-
-        assertThatThrownBy(() -> validator.validateChatMessage(userId, "hello", null, null))
-            .isInstanceOf(ChatValidationException.class);
-
-        assertThatNoException().isThrownBy(
-            () -> validator.validateChatMessage(userId, "world", null, null)
-        );
-    }
-
-    @Test
-    void duplicateLimit_carriesConversationIdAndMessageClientId() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWith(1, true, false));
-        UUID convId = UUID.randomUUID();
-        String clientId = "client-abc";
-
-        validator.validateChatMessage(userId, "hi", convId, clientId);
-
-        assertThatThrownBy(() -> validator.validateChatMessage(userId, "hi", convId, clientId))
-            .isInstanceOf(ChatValidationException.class)
-            .satisfies(ex -> {
-                ChatValidationException e = (ChatValidationException) ex;
-                assertThat(e.getConversationId()).isEqualTo(convId.toString());
-                assertThat(e.getMessageClientId()).isEqualTo(clientId);
-            });
-    }
-
-    @Test
-    void duplicateLimit_differentUsers_trackedSeparately() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWith(1, true, false));
-        UUID user2 = UUID.randomUUID();
-
-        validator.validateChatMessage(userId, "hi", null, null);
-        assertThatNoException().isThrownBy(
-            () -> validator.validateChatMessage(user2, "hi", null, null)
-        );
-    }
-
-    @Test
-    void duplicateLimit_disabled_neverBlocks() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWith(1, false, false));
-
-        for (int i = 0; i < 20; i++) {
-            assertThatNoException().isThrownBy(
-                () -> validator.validateChatMessage(userId, "hi", null, null)
-            );
-        }
-    }
-
-    // ── keyword blocking ────────────────────────────────────────────────────
-
-    @Test
-    void keyword_blocked_throwsChatBlockedKeyword() throws Exception {
+    void validateChatMessage_isNoOp() throws Exception {
         when(policyService.getConfigJson()).thenReturn(configWithKeyword("badword"));
 
-        assertThatThrownBy(() -> validator.validateChatMessage(userId, "this has badword in it", null, null))
-            .isInstanceOf(ChatValidationException.class)
-            .satisfies(ex -> {
-                ChatValidationException e = (ChatValidationException) ex;
-                assertThat(e.getCode()).isEqualTo("CHAT_BLOCKED_KEYWORD");
-                assertThat(e.getRetryAfterSeconds()).isNull();
-            });
-    }
-
-    @Test
-    void keyword_caseInsensitive_blocked() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithKeyword("badword"));
-
-        assertThatThrownBy(() -> validator.validateChatMessage(userId, "BADWORD here", null, null))
-            .isInstanceOf(ChatValidationException.class)
-            .extracting("code").isEqualTo("CHAT_BLOCKED_KEYWORD");
-    }
-
-    @Test
-    void keyword_clean_passes() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithKeyword("badword"));
-
-        assertThatNoException().isThrownBy(
-            () -> validator.validateChatMessage(userId, "hello world", null, null)
-        );
-    }
-
-    // ── malicious link blocking ─────────────────────────────────────────────
-
-    @Test
-    void blockedDomain_inMessage_throwsChatMaliciousLink() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithBlockedDomain("evil.com"));
-
-        assertThatThrownBy(() -> validator.validateChatMessage(userId, "check https://evil.com/phish", null, null))
-            .isInstanceOf(ChatValidationException.class)
-            .satisfies(ex -> {
-                ChatValidationException e = (ChatValidationException) ex;
-                assertThat(e.getCode()).isEqualTo("CHAT_MALICIOUS_LINK");
-                assertThat(e.getRetryAfterSeconds()).isNull();
-            });
-    }
-
-    @Test
-    void blockedDomain_notPresent_passes() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithBlockedDomain("evil.com"));
-
-        assertThatNoException().isThrownBy(
-            () -> validator.validateChatMessage(userId, "check https://safe.com/page", null, null)
-        );
-    }
-
-    @Test
-    void structuredImageMessage_skipsMetadataKeywordScan() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithKeyword("res"));
-
-        String imagePayload = "__IMAGE__:{\"imageUrl\":\"https://res.cloudinary.com/demo/image/upload/cat.jpg\",\"mimeType\":\"image/jpeg\",\"caption\":\"\"}";
-
-        assertThatNoException().isThrownBy(
-            () -> validator.validateChatMessage(userId, imagePayload, null, null)
-        );
-    }
-
-    @Test
-    void structuredImageMessage_blocksBadCaption() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithKeyword("badword"));
-
-        String imagePayload = "__IMAGE__:{\"imageUrl\":\"https://cdn.example.com/a.jpg\",\"caption\":\"badword here\"}";
-
-        assertThatThrownBy(() -> validator.validateChatMessage(userId, imagePayload, null, null))
-            .isInstanceOf(ChatValidationException.class)
-            .extracting("code").isEqualTo("CHAT_BLOCKED_KEYWORD");
-    }
-
-    @Test
-    void structuredVoiceAndFileMessages_passWithoutKeywordScan() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithKeyword("audio"));
-
-        String voicePayload = "__VOICE__:{\"audioUrl\":\"https://cdn.example.com/audio.webm\",\"durationSec\":3,\"mimeType\":\"audio/webm\"}";
-        String filePayload = "__FILE__:{\"fileUrl\":\"https://cdn.example.com/doc.pdf\",\"fileName\":\"report.pdf\",\"mimeType\":\"application/pdf\"}";
-
-        assertThatNoException().isThrownBy(() -> validator.validateChatMessage(userId, voicePayload, null, null));
-        assertThatNoException().isThrownBy(() -> validator.validateChatMessage(userId, filePayload, null, null));
+        assertThatNoException().isThrownBy(() -> {
+            for (int i = 0; i < 20; i++) {
+                validator.validateChatMessage(userId, "hi", null, null);
+            }
+            validator.validateChatMessage(userId, "this has badword in it", null, null);
+            validator.validateChatMessage(userId, "check https://evil.com/phish", null, null);
+            String imagePayload = "__IMAGE__:{\"imageUrl\":\"https://cdn.example.com/a.jpg\",\"caption\":\"badword here\"}";
+            validator.validateChatMessage(userId, imagePayload, null, null);
+        });
     }
 
     // ── suspect pre-filter (comment moderation) ─────────────────────────────

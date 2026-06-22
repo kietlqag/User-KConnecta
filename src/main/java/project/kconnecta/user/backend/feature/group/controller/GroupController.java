@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.group.dto.request.CreateGroupRequest;
 import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupDescriptionRequest;
+import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupNameRequest;
 import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupMemberApprovalRequest;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupMemberResponse;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
@@ -79,6 +80,17 @@ public class GroupController {
         request.setRequesterId(principal.getUserId());
         return ResponseEntity.ok(
                 groupService.updateDescription(id, request.getRequesterId(), request.getDescription())
+        );
+    }
+
+    @PutMapping("/{id}/name")
+    public ResponseEntity<GroupResponse> updateName(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateGroupNameRequest request) {
+        request.setRequesterId(principal.getUserId());
+        return ResponseEntity.ok(
+                groupService.updateName(id, request.getRequesterId(), request.getName())
         );
     }
 

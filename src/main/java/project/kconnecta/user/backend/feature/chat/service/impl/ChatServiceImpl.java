@@ -588,12 +588,6 @@ public class ChatServiceImpl implements ChatService {
                 String themeColor = request.getThemeColor().trim();
                 conversation.setThemeColor(themeColor.isBlank() ? null : themeColor.substring(0, Math.min(themeColor.length(), 32)));
             }
-            if (request.getMemberApprovalRequired() != null) {
-                if (!conversation.getCreatedBy().getId().equals(actor.getId())) {
-                    throw new RuntimeException("Only the group creator can change member approval settings");
-                }
-                conversation.setMemberApprovalRequired(request.getMemberApprovalRequired());
-            }
         }
 
         ChatConversation saved = chatConversationRepository.save(conversation);
@@ -718,15 +712,13 @@ public class ChatServiceImpl implements ChatService {
         }
 
         LocalDateTime joinedAt = LocalDateTime.now();
-        boolean isGroupAdmin = conversation.getCreatedBy().getId().equals(actor.getId());
-        boolean requiresApproval = conversation.isMemberApprovalRequired() && !isGroupAdmin;
         List<ChatConversationMember> newMembers = users.stream()
                 .filter(user -> !chatConversationMemberRepository.existsByConversationIdAndUserId(conversationId, user.getId()))
                 .map(user -> ChatConversationMember.builder()
                         .conversation(conversation)
                         .user(user)
                         .joinedAt(joinedAt)
-                        .memberStatus(requiresApproval ? ChatMemberStatus.PENDING : ChatMemberStatus.APPROVED)
+                        .memberStatus(ChatMemberStatus.APPROVED)
                         .build())
                 .toList();
 
@@ -737,7 +729,7 @@ public class ChatServiceImpl implements ChatService {
                     .map(this::displayName)
                     .collect(Collectors.joining(", "));
             sendGroupSystemMessage(actor.getId(), conversationId, buildChatActionContent(
-                    requiresApproval ? "add_members_pending" : "add_members",
+                    "add_members",
                     actor,
                     null,
                     addedNames

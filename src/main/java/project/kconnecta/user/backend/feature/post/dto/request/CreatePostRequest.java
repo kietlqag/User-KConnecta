@@ -22,6 +22,9 @@ public class CreatePostRequest {
 
     private UUID pageId;
 
+    // Set when sharing a group to the feed — the group being shared.
+    private UUID sharedGroupId;
+
     private String content;
     private String imageUrl;
 
@@ -47,4 +50,7 @@ public class CreatePostRequest {
     private List<UUID> allowedUserIds;
 
     private List<UUID> taggedUserIds;
+
+    @Valid
+    private CreatePostPollRequest poll;
 }

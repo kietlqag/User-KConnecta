@@ -21,6 +21,7 @@ public interface GroupService {
     GroupResponse updateCoverPhoto(UUID groupId, org.springframework.web.multipart.MultipartFile file);
     void removeCoverPhoto(UUID groupId);
     GroupResponse updateDescription(UUID groupId, UUID requesterId, String description);
+    GroupResponse updateName(UUID groupId, UUID requesterId, String name);
     GroupResponse updateMemberApproval(UUID groupId, UUID requesterId, boolean memberApprovalRequired);
     void removeMember(UUID groupId, UUID userId, UUID requesterId);
     void leaveGroup(UUID groupId, UUID userId);
