@@ -9,6 +9,7 @@ const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const POST_SHARE_PREFIX = '__POST_SHARE__:';
 const GROUP_SHARE_PREFIX = '__GROUP_SHARE__:';
+const ALBUM_SHARE_PREFIX = '__ALBUM_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 const STORY_REPLY_PREFIX = '__STORY_REPLY__:';
 
@@ -57,6 +58,10 @@ export function mapContentToConversationPreview(content?: string | null): string
 
   if (raw.startsWith(GROUP_SHARE_PREFIX)) {
     return 'Đã chia sẻ một nhóm';
+  }
+
+  if (raw.startsWith(ALBUM_SHARE_PREFIX)) {
+    return 'Đã chia sẻ một album';
   }
 
   if (raw.startsWith(FILE_MESSAGE_PREFIX)) {

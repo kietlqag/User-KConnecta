@@ -62,6 +62,11 @@ export interface Message {
   sharedGroupCover?: string;
   sharedGroupPrivacy?: 'PUBLIC' | 'PRIVATE';
   sharedGroupMemberCount?: number;
+  sharedAlbumId?: string;
+  sharedAlbumTitle?: string;
+  sharedAlbumCover?: string;
+  sharedAlbumMediaCount?: number;
+  sharedAlbumOwnerName?: string;
   storyReplyAuthorId?: string;
   storyReplyAuthorName?: string;
   storyReplyAuthorAvatarUrl?: string;

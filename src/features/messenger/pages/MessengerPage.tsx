@@ -57,6 +57,7 @@ const FILE_MESSAGE_PREFIX = '__FILE__:';
 const VIDEO_SHARE_PREFIX = '__VIDEO_SHARE__:';
 const POST_SHARE_PREFIX = '__POST_SHARE__:';
 const GROUP_SHARE_PREFIX = '__GROUP_SHARE__:';
+const ALBUM_SHARE_PREFIX = '__ALBUM_SHARE__:';
 const CHAT_ACTION_PREFIX = '__CHAT_ACTION__:';
 const MEMBERSHIP_CHAT_ACTIONS = new Set([
   'join_via_link_pending',
@@ -156,7 +157,7 @@ function dataUrlToFile(dataUrl: string, fileName: string): File {
 
 function mapBackendContentToMessageFields(
   content: string,
-): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'videoUrl' | 'videoDurationSec' | 'videoMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'systemActionType' | 'systemActionActorName' | 'systemActionTargetName' | 'systemActionValue' | 'callLogKind' | 'callDurationSec' | 'callMediaType' | 'storyReplyAuthorId' | 'storyReplyAuthorName' | 'storyReplyAuthorAvatarUrl' | 'storyReplySlideImageUrl' | 'storyReplySlideBackgroundColor' | 'sharedPostId' | 'sharedPostContent' | 'sharedPostImage' | 'sharedPostAuthorName'> {
+): Pick<Message, 'text' | 'replyPreview' | 'replyToMessageId' | 'voiceAudioUrl' | 'voiceDurationSec' | 'voiceMimeType' | 'videoUrl' | 'videoDurationSec' | 'videoMimeType' | 'fileUrl' | 'fileName' | 'fileMimeType' | 'fileSizeBytes' | 'imageUrl' | 'imageUrls' | 'imageMimeType' | 'imageCaption' | 'systemType' | 'systemActionType' | 'systemActionActorName' | 'systemActionTargetName' | 'systemActionValue' | 'callLogKind' | 'callDurationSec' | 'callMediaType' | 'storyReplyAuthorId' | 'storyReplyAuthorName' | 'storyReplyAuthorAvatarUrl' | 'storyReplySlideImageUrl' | 'storyReplySlideBackgroundColor' | 'sharedPostId' | 'sharedPostContent' | 'sharedPostImage' | 'sharedPostAuthorName' | 'sharedGroupId' | 'sharedGroupName' | 'sharedGroupCover' | 'sharedGroupPrivacy' | 'sharedGroupMemberCount' | 'sharedAlbumId' | 'sharedAlbumTitle' | 'sharedAlbumCover' | 'sharedAlbumMediaCount' | 'sharedAlbumOwnerName'> {
   if (!content?.startsWith(CALL_LOG_PREFIX)) {
     if (content?.startsWith(CHAT_ACTION_PREFIX)) {
       try {
@@ -339,6 +340,21 @@ function mapBackendContentToMessageFields(
         };
       } catch {
         return { text: 'Đã chia sẻ một nhóm' };
+      }
+    }
+    if (content?.startsWith(ALBUM_SHARE_PREFIX)) {
+      try {
+        const payload = JSON.parse(content.slice(ALBUM_SHARE_PREFIX.length));
+        return {
+          text: 'Đã chia sẻ một album',
+          sharedAlbumId: typeof payload?.id === 'string' ? payload.id : undefined,
+          sharedAlbumTitle: typeof payload?.title === 'string' ? payload.title : undefined,
+          sharedAlbumCover: typeof payload?.cover === 'string' ? payload.cover : undefined,
+          sharedAlbumMediaCount: typeof payload?.mediaCount === 'number' ? payload.mediaCount : undefined,
+          sharedAlbumOwnerName: typeof payload?.ownerName === 'string' ? payload.ownerName : undefined,
+        };
+      } catch {
+        return { text: 'Đã chia sẻ một album' };
       }
     }
     return { text: content };

@@ -17,6 +17,7 @@ interface StoryGroup {
 function buildGroups(stories: OptimisticStory[], currentUserId?: string): StoryGroup[] {
   const map = new Map<string, StoryGroup>();
   for (const s of stories) {
+    if (s.privacy === 'ONLY_ME' && s.userId !== currentUserId) continue;
     if (!map.has(s.userId)) {
       map.set(s.userId, {
         userId: s.userId,

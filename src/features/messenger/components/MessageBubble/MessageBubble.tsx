@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { createPortal } from 'react-dom';
-import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download, Newspaper, Users, Lock, Globe } from 'lucide-react';
+import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download, Newspaper, Users, Lock, Globe, Images } from 'lucide-react';
 import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
 import { isGroupJoinLinkMessage, parseGroupJoinTokenFromUrl } from '../../utils/groupJoinLink';
@@ -508,6 +508,39 @@ export const MessageBubble = ({
                     </>
                   )}
                 </div>
+              </div>
+            </button>
+          ) : message.sharedAlbumId && !message.deleted ? (
+            <button
+              type="button"
+              onClick={() => navigate(`/albums/${message.sharedAlbumId}`)}
+              className="flex w-[min(300px,72vw)] max-w-full flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700/90 bg-white dark:bg-gray-800 text-left shadow-[0_1px_2px_rgba(0,0,0,0.08)] transition hover:shadow-md group/album-share"
+              title="Xem album"
+            >
+              <div className="relative aspect-[1.91/1] w-full overflow-hidden bg-gray-100 dark:bg-background">
+                {message.sharedAlbumCover ? (
+                  <img
+                    src={message.sharedAlbumCover}
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover/album-share:scale-[1.03]"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-100 via-blue-100 to-violet-200">
+                    <Images className="h-10 w-10 text-violet-500/70" strokeWidth={1.5} />
+                  </div>
+                )}
+              </div>
+              <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2.5">
+                <p className="truncate text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100">
+                  {message.sharedAlbumTitle?.trim() || 'Album trên KConnecta'}
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {typeof message.sharedAlbumMediaCount === 'number'
+                    ? `${message.sharedAlbumMediaCount} ảnh/video`
+                    : 'Album'}
+                  {message.sharedAlbumOwnerName ? ` · ${message.sharedAlbumOwnerName}` : ''}
+                </p>
               </div>
             </button>
           ) : message.videoUrl && !message.deleted ? (

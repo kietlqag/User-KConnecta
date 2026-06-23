@@ -1,9 +1,13 @@
 import React, { useEffect, useRef, useState, type ChangeEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { Camera, Check, ChevronRight, Crop, Globe, Lock, Music, Search, Sparkles, Type, UserPlus, Users, X } from 'lucide-react';
+import { Camera, Check, ChevronRight, Clock, Crop, Globe, Lock, Music, Search, Sparkles, Type, UserPlus, Users, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
 import { authService, AuthUser } from '@/services/authService';
 import { useCreateStoryMutation } from '@/features/stories/hooks/useStories';
+import type { StoryDurationHours, StoryPrivacy } from '@/services/storyService';
+import { StoryFriendPickerModal } from '@/features/stories/components/StoryFriendPickerModal';
 import { estimateStoryTextSize } from '@/lib/storyShareText';
 import bgImg1 from './backgroundImage/000ecac94d4fa09a8369747056ce72f0.jpg';
 import bgImg2 from './backgroundImage/2886e1de8d8637a139478d903feb0643.jpg';
@@ -29,7 +33,6 @@ type FilterId = typeof COLOR_FILTERS[number]['id'];
 
 interface StickerItem { id: string; emoji: string; x: number; y: number; size: number; }
 
-const EMOJI_LIST = ['😊','😂','🥰','😎','🔥','❤️','✨','🎉','👍','😍','🤩','😜','🥳','💯','🌈','🎶','💪','👀','🙌','💀','🫶','😭','🤣','😱','🌸','⭐','🍀','🦋'];
 
 
 interface MusicTrack {
@@ -48,6 +51,65 @@ const musicTracks: MusicTrack[] = [
 ];
 
 const textColorPalette = ['#FFFFFF', '#000000', '#F43F5E', '#F59E0B', '#22C55E', '#3B82F6', '#8B5CF6', '#F97316'];
+
+const STORY_DURATION_OPTIONS: Array<{ value: StoryDurationHours; label: string; sub: string }> = [
+  { value: 3, label: '3 giờ', sub: 'Tin biến mất sau 3 giờ' },
+  { value: 6, label: '6 giờ', sub: 'Tin biến mất sau 6 giờ' },
+  { value: 12, label: '12 giờ', sub: 'Tin biến mất sau 12 giờ' },
+  { value: 24, label: '1 ngày', sub: 'Tin biến mất sau 24 giờ' },
+];
+
+function formatStoryDurationLabel(hours: StoryDurationHours): string {
+  return STORY_DURATION_OPTIONS.find((option) => option.value === hours)?.label ?? '1 ngày';
+}
+
+type StoryPrivacySetting = 'public' | 'friends' | 'specific-friends' | 'only_me';
+
+function mapStoryPrivacyToApi(
+  privacy: StoryPrivacySetting,
+  allowedFriendIds: string[],
+): { privacy: StoryPrivacy; allowedUserIds?: string[] } {
+  switch (privacy) {
+    case 'friends':
+      return { privacy: 'FRIENDS' };
+    case 'specific-friends':
+      return { privacy: 'SPECIFIC_FRIENDS', allowedUserIds: allowedFriendIds };
+    case 'only_me':
+      return { privacy: 'ONLY_ME' };
+    default:
+      return { privacy: 'PUBLIC' };
+  }
+}
+
+function getStoryPrivacyLabel(privacy: StoryPrivacySetting, allowedFriendIds: string[]): string {
+  switch (privacy) {
+    case 'public':
+      return 'Công khai';
+    case 'only_me':
+      return 'Chỉ mình tôi';
+    case 'specific-friends':
+      return allowedFriendIds.length === 1
+        ? '1 bạn bè'
+        : `${allowedFriendIds.length} bạn bè`;
+    case 'friends':
+    default:
+      return 'Bạn bè';
+  }
+}
+
+function getStoryPrivacySubtext(privacy: StoryPrivacySetting, allowedFriendIds: string[]): string {
+  switch (privacy) {
+    case 'public':
+      return 'Tất cả mọi người';
+    case 'only_me':
+      return 'Chỉ bạn mới thấy trên tin của mình';
+    case 'specific-friends':
+      return 'Chỉ những bạn bè được chọn';
+    case 'friends':
+    default:
+      return 'Tất cả bạn bè của bạn';
+  }
+}
 
 const bgImagePresets = [bgImg1, bgImg2, bgImg3, bgImg4, bgImg5, bgImg6, bgImg7];
 
@@ -135,8 +197,12 @@ export function CreateStoryPage() {
   const [draggingStickerId, setDraggingStickerId] = useState<string | null>(null);
   const stickerDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
-  const [privacySetting, setPrivacySetting] = useState<'public' | 'friends' | 'only_me'>('public');
+  const [privacySetting, setPrivacySetting] = useState<StoryPrivacySetting>('public');
+  const [allowedFriendIds, setAllowedFriendIds] = useState<string[]>([]);
   const [isPrivacyDropdownOpen, setIsPrivacyDropdownOpen] = useState(false);
+  const [isFriendPickerOpen, setIsFriendPickerOpen] = useState(false);
+  const [storyDurationHours, setStoryDurationHours] = useState<StoryDurationHours>(24);
+  const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
   const [selectedBg, setSelectedBg] = useState<BgState>(DEFAULT_BG);
 
@@ -219,6 +285,8 @@ export function CreateStoryPage() {
       ? selectedImageUrl
       : undefined;
 
+    const privacyPayload = mapStoryPrivacyToApi(privacySetting, allowedFriendIds);
+
     createStory.mutate({
       userId: currentUser.id,
       image: selectedImageFile ?? undefined,
@@ -232,6 +300,9 @@ export function CreateStoryPage() {
       altText: altText.trim() || undefined,
       backgroundColor: isTextStoryMode ? selectedBg.value : undefined,
       linkedPostId: linkedPostId ?? undefined,
+      durationHours: storyDurationHours,
+      privacy: privacyPayload.privacy,
+      allowedUserIds: privacyPayload.allowedUserIds,
     });
 
     navigate('/home');
@@ -250,6 +321,26 @@ export function CreateStoryPage() {
       el.innerText = storyText;
     }
   }, [storyText]);
+
+  const handlePrivacyButtonClick = () => {
+    setIsDurationDropdownOpen(false);
+    if (privacySetting === 'friends' || privacySetting === 'specific-friends') {
+      setIsFriendPickerOpen(true);
+      return;
+    }
+    setIsPrivacyDropdownOpen((open) => !open);
+  };
+
+  const handleFriendPickerDone = (selectedIds: string[]) => {
+    if (selectedIds.length === 0) {
+      setPrivacySetting('friends');
+      setAllowedFriendIds([]);
+    } else {
+      setPrivacySetting('specific-friends');
+      setAllowedFriendIds(selectedIds);
+    }
+    setIsFriendPickerOpen(false);
+  };
 
   const hasSelectedImage = Boolean(selectedImageUrl);
   const isActive = hasSelectedImage || isTextStoryMode;
@@ -463,14 +554,14 @@ export function CreateStoryPage() {
   };
 
   const handleStickerPointerMove = (e: React.PointerEvent, id: string) => {
-    if (draggingStickerId !== id || !stickerDragRef.current || !previewFrameRef.current) return;
+    const drag = stickerDragRef.current;
+    if (draggingStickerId !== id || !drag || !previewFrameRef.current) return;
     const frame = previewFrameRef.current.getBoundingClientRect();
-    const dx = ((e.clientX - stickerDragRef.current.startX) / frame.width) * 100;
-    const dy = ((e.clientY - stickerDragRef.current.startY) / frame.height) * 100;
-    setStickers(prev => prev.map(s => s.id === id
-      ? { ...s, x: Math.max(5, Math.min(95, stickerDragRef.current!.origX + dx)), y: Math.max(5, Math.min(95, stickerDragRef.current!.origY + dy)) }
-      : s
-    ));
+    const dx = ((e.clientX - drag.startX) / frame.width) * 100;
+    const dy = ((e.clientY - drag.startY) / frame.height) * 100;
+    const nextX = Math.max(5, Math.min(95, drag.origX + dx));
+    const nextY = Math.max(5, Math.min(95, drag.origY + dy));
+    setStickers(prev => prev.map(s => s.id === id ? { ...s, x: nextX, y: nextY } : s));
   };
 
   const handleStickerPointerUp = (e: React.PointerEvent) => {
@@ -528,7 +619,7 @@ export function CreateStoryPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tin của bạn</h1>
           </div>
 
-          <div className="px-5 py-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
             <div className="mb-4 flex items-center gap-3 rounded-lg px-2 py-2">
               <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-300 dark:bg-gray-600">
                 <img
@@ -544,37 +635,54 @@ export function CreateStoryPage() {
             <div className="relative mb-3">
               <button
                 type="button"
-                onClick={() => setIsPrivacyDropdownOpen(p => !p)}
+                onClick={handlePrivacyButtonClick}
                 className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 transition hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-colors ${
                   privacySetting === 'public' ? 'bg-blue-500' :
-                  privacySetting === 'friends' ? 'bg-green-500' : 'bg-gray-400'
+                  privacySetting === 'only_me' ? 'bg-gray-400' : 'bg-green-500'
                 }`}>
                   {privacySetting === 'public' && <Globe className="h-4 w-4" />}
-                  {privacySetting === 'friends' && <Users className="h-4 w-4" />}
+                  {(privacySetting === 'friends' || privacySetting === 'specific-friends') && <Users className="h-4 w-4" />}
                   {privacySetting === 'only_me' && <Lock className="h-4 w-4" />}
                 </div>
-                <span className="flex-1 text-left text-sm font-medium text-gray-800 dark:text-gray-200">
-                  {privacySetting === 'public' && 'Công khai'}
-                  {privacySetting === 'friends' && 'Bạn bè'}
-                  {privacySetting === 'only_me' && 'Chỉ mình tôi'}
-                </span>
-                <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isPrivacyDropdownOpen ? 'rotate-90' : ''}`} />
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {getStoryPrivacyLabel(privacySetting, allowedFriendIds)}
+                  </p>
+                  <p className="truncate text-xs text-gray-400">
+                    {getStoryPrivacySubtext(privacySetting, allowedFriendIds)}
+                  </p>
+                </div>
+                <ChevronRight className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${isPrivacyDropdownOpen ? 'rotate-90' : ''}`} />
               </button>
 
               {isPrivacyDropdownOpen && (
                 <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
                   {([
-                    { value: 'public', label: 'Công khai', sub: 'Tất cả mọi người', icon: <Globe className="h-4 w-4" />, color: 'bg-blue-500' },
-                    { value: 'friends', label: 'Bạn bè', sub: 'Chỉ bạn bè của bạn', icon: <Users className="h-4 w-4" />, color: 'bg-green-500' },
-                    { value: 'only_me', label: 'Chỉ mình tôi', sub: 'Không ai khác nhìn thấy', icon: <Lock className="h-4 w-4" />, color: 'bg-gray-400' },
-                  ] as const).map((opt) => (
+                    { value: 'public' as const, label: 'Công khai', sub: 'Tất cả mọi người', icon: <Globe className="h-4 w-4" />, color: 'bg-blue-500' },
+                    { value: 'friends' as const, label: 'Bạn bè', sub: 'Chọn bạn bè cụ thể', icon: <Users className="h-4 w-4" />, color: 'bg-green-500' },
+                    { value: 'only_me' as const, label: 'Chỉ mình tôi', sub: 'Không hiển thị trên bảng tin', icon: <Lock className="h-4 w-4" />, color: 'bg-gray-400' },
+                  ]).map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => { setPrivacySetting(opt.value); setIsPrivacyDropdownOpen(false); }}
-                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800 ${privacySetting === opt.value ? 'bg-gray-50 dark:bg-gray-900' : ''}`}
+                      onClick={() => {
+                        setIsPrivacyDropdownOpen(false);
+                        if (opt.value === 'friends') {
+                          setIsFriendPickerOpen(true);
+                          return;
+                        }
+                        setPrivacySetting(opt.value);
+                        setAllowedFriendIds([]);
+                      }}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                        (opt.value === 'friends'
+                          ? privacySetting === 'friends' || privacySetting === 'specific-friends'
+                          : privacySetting === opt.value)
+                          ? 'bg-gray-50 dark:bg-gray-900'
+                          : ''
+                      }`}
                     >
                       <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white ${opt.color}`}>
                         {opt.icon}
@@ -583,7 +691,59 @@ export function CreateStoryPage() {
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{opt.label}</p>
                         <p className="text-xs text-gray-400">{opt.sub}</p>
                       </div>
-                      {privacySetting === opt.value && <Check className="h-4 w-4 text-blue-500" />}
+                      {(opt.value === 'friends'
+                        ? privacySetting === 'friends' || privacySetting === 'specific-friends'
+                        : privacySetting === opt.value) && <Check className="h-4 w-4 text-blue-500" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Story duration selector */}
+            <div className="relative mb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDurationDropdownOpen((open) => !open);
+                  setIsPrivacyDropdownOpen(false);
+                }}
+                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 transition hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500 text-white">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    Thời gian tồn tại: {formatStoryDurationLabel(storyDurationHours)}
+                  </p>
+                  <p className="truncate text-xs text-gray-400">
+                    {STORY_DURATION_OPTIONS.find((option) => option.value === storyDurationHours)?.sub}
+                  </p>
+                </div>
+                <ChevronRight className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${isDurationDropdownOpen ? 'rotate-90' : ''}`} />
+              </button>
+
+              {isDurationDropdownOpen && (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+                  {STORY_DURATION_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        setStoryDurationHours(option.value);
+                        setIsDurationDropdownOpen(false);
+                      }}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800 ${storyDurationHours === option.value ? 'bg-gray-50 dark:bg-gray-900' : ''}`}
+                    >
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500 text-white">
+                        <Clock className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{option.label}</p>
+                        <p className="text-xs text-gray-400">{option.sub}</p>
+                      </div>
+                      {storyDurationHours === option.value && <Check className="h-4 w-4 text-blue-500" />}
                     </button>
                   ))}
                 </div>
@@ -673,18 +833,17 @@ export function CreateStoryPage() {
             {activeTool === 'sticker' && (
               <div className="mt-4">
                 <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Nhấn để thêm vào tin</p>
-                <div className="grid grid-cols-7 gap-1">
-                  {EMOJI_LIST.map(emoji => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => handleAddSticker(emoji)}
-                      className="flex items-center justify-center rounded-lg p-1.5 text-2xl transition hover:bg-muted hover:scale-125"
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
+                <Picker
+                  data={data}
+                  onEmojiSelect={(emoji: { native?: string }) => {
+                    if (emoji.native) handleAddSticker(emoji.native);
+                  }}
+                  theme="light"
+                  locale="vi"
+                  previewPosition="none"
+                  perLine={7}
+                  emojiButtonSize={36}
+                />
                 {stickers.length > 0 && (
                   <button
                     type="button"
@@ -973,7 +1132,7 @@ export function CreateStoryPage() {
                   {(storyText.length > 0 || isEditingText) && (
                     <div
                       role="presentation"
-                      className={`absolute -translate-x-1/2 -translate-y-1/2 ${isDraggingText ? 'cursor-grabbing' : 'cursor-move'}`}
+                      className={`absolute max-w-[88%] -translate-x-1/2 -translate-y-1/2 ${isDraggingText ? 'cursor-grabbing' : 'cursor-move'}`}
                       onPointerDown={handleTextPointerDown}
                       onPointerMove={handleTextPointerMove}
                       onPointerUp={handleTextPointerUp}
@@ -989,7 +1148,7 @@ export function CreateStoryPage() {
                         onFocus={() => setIsEditingText(true)}
                         onBlur={() => setIsEditingText(false)}
                         onInput={handleStoryTextInput}
-                        className="relative px-2 text-center font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] outline-none max-w-[88%] mx-auto whitespace-pre-wrap break-words"
+                        className="relative w-full px-2 text-center font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] outline-none whitespace-pre-wrap break-words"
                         style={{
                           fontSize: `${textSize}px`,
                           color: textColor,
@@ -1162,7 +1321,9 @@ export function CreateStoryPage() {
             <div className="px-4 py-4">
               <div className="mb-4">
                 <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Ai có thể xem tin của bạn?</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Tin của bạn sẽ hiển thị trên KConnecta trong 24 giờ.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Tin của bạn sẽ hiển thị trên KConnecta trong {formatStoryDurationLabel(storyDurationHours).toLowerCase()}.
+                </p>
               </div>
 
               <div className="space-y-1">
@@ -1255,6 +1416,13 @@ export function CreateStoryPage() {
           </div>
         </div>
       )}
+
+      <StoryFriendPickerModal
+        isOpen={isFriendPickerOpen}
+        selectedFriendIds={allowedFriendIds}
+        onClose={() => setIsFriendPickerOpen(false)}
+        onDone={handleFriendPickerDone}
+      />
 
       {/* 🔥 DISCARD CONFIRMATION MODAL */}
       {isDiscardModalOpen && (

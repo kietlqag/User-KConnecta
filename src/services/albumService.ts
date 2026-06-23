@@ -1,4 +1,5 @@
 import { api } from './api';
+import type { ReactionType, PostReactionDetailsResponse } from './postService';
 
 export type AlbumType = 'PERSONAL' | 'FAMILY' | 'EVENT' | 'TRAVEL' | 'OTHER';
 export type AlbumPrivacy = 'PUBLIC' | 'FRIENDS' | 'ONLY_ME';
@@ -127,13 +128,19 @@ export const albumService = {
   addComment: (albumId: string, content: string, parentId?: string) =>
     api.post<AlbumComment>(`/albums/${albumId}/comments`, { content, parentId }),
 
-  addReaction: (albumId: string, reactionType = 'LIKE') =>
+  addReaction: (albumId: string, reactionType: ReactionType = 'LIKE') =>
     api.post<void>(`/albums/${albumId}/reactions`, { reactionType }),
 
   removeReaction: (albumId: string) => api.delete<void>(`/albums/${albumId}/reactions`),
 
+  getReactionDetails: (albumId: string) =>
+    api.get<PostReactionDetailsResponse>(`/albums/${albumId}/reactions/details`),
+
   share: (albumId: string, message?: string, shareToFeed = true) =>
     api.post<{ id: string; postId: string | null }>(`/albums/${albumId}/share`, { message, shareToFeed }),
+
+  sendToUser: (albumId: string, recipientId: string) =>
+    api.post<void>(`/albums/${albumId}/send/${recipientId}`, {}),
 
   getGroupAlbums: (groupId: string, page = 0, size = 12) =>
     api.get<SpringPage<Album>>(`/groups/${groupId}/albums?page=${page}&size=${size}`),

@@ -22,8 +22,10 @@ import {
   Flag,
   Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { storyService, type StoryResponse } from '@/services/storyService';
+import { useDeleteStoryMutation } from '@/features/stories/hooks/useStories';
 import { resolveStoryTextSize } from '@/lib/storyShareText';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
@@ -138,17 +140,37 @@ export function StoryViewerPage() {
   const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const { sendMessage } = useRealtimeCall();
+  const deleteStoryMutation = useDeleteStoryMutation();
   const emojiIdRef = useRef(0);
   const progressIntervalRef = useRef<number | null>(null);
   const progressRef = useRef(0);
 
   useEffect(() => {
-    storyService.getAllActiveStories().then((stories) => {
-      const grouped = groupStoriesByUser(stories);
-      setAuthors(grouped);
-      const idx = grouped.findIndex((a) => a.userId === authorId);
-      setCurrentAuthorIndex(idx >= 0 ? idx : 0);
-    }).catch(() => {}).finally(() => setLoading(false));
+    const loadStories = async () => {
+      try {
+        const allStories = await storyService.getAllActiveStories();
+        let merged = allStories;
+
+        if (authorId) {
+          const authorStories = await storyService.getActiveStoriesByUser(authorId);
+          const byId = new Map<string, StoryResponse>();
+          for (const story of allStories) byId.set(story.id, story);
+          for (const story of authorStories) byId.set(story.id, story);
+          merged = Array.from(byId.values());
+        }
+
+        const grouped = groupStoriesByUser(merged);
+        setAuthors(grouped);
+        const idx = grouped.findIndex((a) => a.userId === authorId);
+        setCurrentAuthorIndex(idx >= 0 ? idx : 0);
+      } catch {
+        setAuthors([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadStories();
   }, [authorId]);
 
   const author = authors[currentAuthorIndex];
@@ -277,6 +299,23 @@ export function StoryViewerPage() {
     if (!slide?.linkedPostId) return;
     navigate(`/home?post=${encodeURIComponent(slide.linkedPostId)}`);
   }, [navigate, slide?.linkedPostId]);
+
+  const handleDeleteStory = useCallback(async () => {
+    if (!slide || !author || deleteStoryMutation.isPending) return;
+
+    const deletedStoryId = slide.id;
+
+    setIsMenuOpen(false);
+    setIsPaused(true);
+
+    try {
+      await deleteStoryMutation.mutateAsync(deletedStoryId);
+      toast.success('Đã xóa tin thành công');
+      navigate('/home');
+    } catch {
+      setIsPaused(false);
+    }
+  }, [slide, author, deleteStoryMutation, navigate]);
 
   if (loading) {
     return (
@@ -450,9 +489,9 @@ export function StoryViewerPage() {
           {/* Progress Bars */}
           <div className="absolute top-3 left-3 right-3 z-30 flex gap-1">
             {author.slides.map((s, i) => (
-              <div key={s.id} className="flex-1 h-[3px] rounded-full bg-white dark:bg-gray-800/40 overflow-hidden">
+              <div key={s.id} className="flex-1 h-[3px] rounded-full bg-white/30 overflow-hidden">
                 <div
-                  className="h-full bg-white dark:bg-gray-800 rounded-full transition-none"
+                  className="h-full bg-white rounded-full transition-none"
                   style={{
                     width:
                       i < currentSlideIndex
@@ -534,8 +573,9 @@ export function StoryViewerPage() {
                     {isOwnStory && (
                       <button
                         type="button"
-                        onClick={() => { setIsMenuOpen(false); navigate('/home'); }}
-                        className="group flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                        disabled={deleteStoryMutation.isPending}
+                        onClick={() => { void handleDeleteStory(); }}
+                        className="group flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-60"
                       >
                         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 text-red-500 transition-all duration-150 group-hover:bg-red-100 group-hover:scale-105">
                           <Trash2 className="h-4 w-4" />

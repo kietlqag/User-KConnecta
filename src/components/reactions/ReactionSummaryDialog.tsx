@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, UserPlus } from 'lucide-react';
-import { postService, type PostReactionUserResponse } from '@/services/postService';
+import {
+  postService,
+  type PostReactionDetailsResponse,
+  type PostReactionUserResponse,
+} from '@/services/postService';
 import {
   Dialog,
   DialogContent,
@@ -20,8 +24,11 @@ import {
 interface ReactionSummaryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Used as the default fetch source and as a stable key. Pass the post or album id. */
   postId: string;
   reactionCounts: ReactionCountMap;
+  /** Optional custom fetcher (e.g. for albums). Defaults to post reaction details. */
+  fetchDetails?: () => Promise<PostReactionDetailsResponse>;
 }
 
 type FilterType = 'ALL' | (typeof reactions)[number]['type'];
@@ -31,7 +38,10 @@ export function ReactionSummaryDialog({
   onOpenChange,
   postId,
   reactionCounts,
+  fetchDetails,
 }: ReactionSummaryDialogProps) {
+  const fetchDetailsRef = useRef(fetchDetails);
+  fetchDetailsRef.current = fetchDetails;
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
   const [resolvedCounts, setResolvedCounts] = useState<ReactionCountMap>(reactionCounts);
   const [reactionUsers, setReactionUsers] = useState<PostReactionUserResponse[]>([]);
@@ -54,7 +64,9 @@ export function ReactionSummaryDialog({
       try {
         setIsLoading(true);
         setError(null);
-        const response = await postService.getReactionDetails(postId);
+        const response = await (fetchDetailsRef.current
+          ? fetchDetailsRef.current()
+          : postService.getReactionDetails(postId));
 
         if (!isMounted) {
           return;

@@ -86,13 +86,15 @@ export function useCreateStoryMutation() {
         textPosY: variables.textPosY ?? null,
         musicTrackId: variables.musicTrackId ?? null,
         altText: variables.altText ?? null,
+        privacy: variables.privacy,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        expiresAt: new Date(
+          Date.now() + (variables.durationHours ?? 24) * 60 * 60 * 1000,
+        ).toISOString(),
         active: true,
         isPending: true,
       };
 
-      // 4. Inject the temp story at the front of the cache.
       queryClient.setQueryData<OptimisticStory[]>(STORIES_QUERY_KEY, (old = []) => [
         tempStory,
         ...old,
@@ -105,14 +107,21 @@ export function useCreateStoryMutation() {
     onSuccess: (serverStory, _variables, context) => {
       if (!context) return;
 
-      // Replace temp entry with the confirmed server story.
-      queryClient.setQueryData<OptimisticStory[]>(STORIES_QUERY_KEY, (old = []) =>
-        old.map((s) =>
-          s.id === context.tempId ? { ...serverStory, isPending: false } : s
-        )
-      );
+      queryClient.setQueryData<OptimisticStory[]>(STORIES_QUERY_KEY, (old = []) => {
+        const hasTemp = old.some((s) => s.id === context.tempId);
+        if (hasTemp) {
+          return old.map((s) =>
+            s.id === context.tempId ? { ...serverStory, isPending: false } : s,
+          );
+        }
+        if (old.some((s) => s.id === serverStory.id)) {
+          return old.map((s) =>
+            s.id === serverStory.id ? { ...serverStory, isPending: false } : s,
+          );
+        }
+        return [{ ...serverStory, isPending: false }, ...old];
+      });
 
-      // Release the object URL now that we have the real server URL.
       if (context.previewObjectUrl) {
         URL.revokeObjectURL(context.previewObjectUrl);
       }
@@ -135,6 +144,42 @@ export function useCreateStoryMutation() {
     // ── onSettled ───────────────────────────────────────────────────────────
     onSettled: () => {
       // Always resync with the server after the mutation completes (or fails).
+      queryClient.invalidateQueries({ queryKey: STORIES_QUERY_KEY });
+    },
+  });
+}
+
+interface DeleteStoryContext {
+  previousStories: OptimisticStory[] | undefined;
+}
+
+// ─── useDeleteStoryMutation ──────────────────────────────────────────────────
+
+export function useDeleteStoryMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string, DeleteStoryContext>({
+    mutationFn: storyService.deleteStory,
+
+    onMutate: async (storyId) => {
+      await queryClient.cancelQueries({ queryKey: STORIES_QUERY_KEY });
+      const previousStories = queryClient.getQueryData<OptimisticStory[]>(STORIES_QUERY_KEY);
+
+      queryClient.setQueryData<OptimisticStory[]>(STORIES_QUERY_KEY, (old = []) =>
+        old.filter((story) => story.id !== storyId),
+      );
+
+      return { previousStories };
+    },
+
+    onError: (_error, _storyId, context) => {
+      if (context?.previousStories !== undefined) {
+        queryClient.setQueryData<OptimisticStory[]>(STORIES_QUERY_KEY, context.previousStories);
+      }
+      toast.error('Không thể xóa tin. Vui lòng thử lại.');
+    },
+
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: STORIES_QUERY_KEY });
     },
   });

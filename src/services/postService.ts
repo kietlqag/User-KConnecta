@@ -14,6 +14,8 @@ export interface CreatePostPayload {
   groupId?: string;
   // Set when sharing a group to the feed — the group being shared.
   sharedGroupId?: string;
+  // Set when sharing an album to the feed — the album being shared.
+  sharedAlbumId?: string;
   content: string;
   imageUrl?: string;
   media?: CreatePostMediaRequest[];

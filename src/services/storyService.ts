@@ -1,5 +1,8 @@
 import { api } from './api';
 
+export type StoryDurationHours = 3 | 6 | 12 | 24;
+export type StoryPrivacy = 'PUBLIC' | 'FRIENDS' | 'SPECIFIC_FRIENDS' | 'ONLY_ME';
+
 export interface StoryResponse {
   id: string;
   userId: string;
@@ -18,6 +21,7 @@ export interface StoryResponse {
   linkedPostId: string | null;
   createdAt: string;
   expiresAt: string;
+  privacy?: StoryPrivacy;
   active: boolean;
 }
 
@@ -39,6 +43,9 @@ export const storyService = {
     backgroundColor?: string;
     sharedImageUrl?: string;
     linkedPostId?: string;
+    durationHours?: StoryDurationHours;
+    privacy?: StoryPrivacy;
+    allowedUserIds?: string[];
   }) => {
     const formData = new FormData();
     formData.append('userId', params.userId);
@@ -53,6 +60,9 @@ export const storyService = {
     if (params.backgroundColor) formData.append('backgroundColor', params.backgroundColor);
     if (params.sharedImageUrl) formData.append('sharedImageUrl', params.sharedImageUrl);
     if (params.linkedPostId) formData.append('linkedPostId', params.linkedPostId);
+    if (params.durationHours != null) formData.append('durationHours', String(params.durationHours));
+    if (params.privacy) formData.append('privacy', params.privacy);
+    params.allowedUserIds?.forEach((userId) => formData.append('allowedUserIds', userId));
     return api.postMultipart<StoryResponse>('/stories', formData);
   },
 
@@ -61,6 +71,6 @@ export const storyService = {
   getActiveStoriesByUser: (userId: string) =>
     api.get<StoryResponse[]>(`/stories/users/${userId}`),
 
-  deleteStory: (storyId: string, userId: string) =>
-    api.delete<void>(`/stories/${storyId}?userId=${userId}`),
+  deleteStory: (storyId: string) =>
+    api.delete<void>(`/stories/${storyId}`),
 };

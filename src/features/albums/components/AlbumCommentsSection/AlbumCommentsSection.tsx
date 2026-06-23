@@ -39,6 +39,8 @@ export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
           name={currentUser?.fullName ?? 'Bạn'}
           userId={currentUser?.id}
           className="w-9 h-9 shrink-0"
+          rounded="full"
+          initialsClassName="text-sm font-bold"
         />
         <div className="flex-1 flex gap-2">
           <input
@@ -74,6 +76,8 @@ export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
                 name={comment.userName}
                 userId={comment.userId}
                 className="w-9 h-9 shrink-0"
+                rounded="full"
+                initialsClassName="text-sm font-bold"
               />
               <div className="flex-1 min-w-0">
                 <div className="inline-block max-w-full rounded-2xl bg-muted px-3 py-2">

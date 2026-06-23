@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 
 interface ReelPlayerProps {
   reel: Reel;
+  isActive?: boolean;
   onPrevious: () => void;
   onNext: () => void;
   hasPrevious: boolean;
@@ -20,6 +21,7 @@ interface ReelPlayerProps {
 
 export const ReelPlayer = ({
   reel,
+  isActive = true,
   onPrevious,
   onNext,
   hasPrevious,

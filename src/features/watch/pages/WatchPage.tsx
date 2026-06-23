@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Star } from 'lucide-react';
 import { Header } from '../../home/components/Header';
-import { ReelPlayer } from '../components';
+import { ReelSlideViewport, type ReelSlideViewportHandle } from '../components';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { WATCH_FEED_KEY, useWatchFeed } from '../hooks/useWatchFeed';
 
@@ -20,6 +20,7 @@ const WatchSidebar = () => (
 
 export const WatchPage = () => {
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
+  const viewportRef = useRef<ReelSlideViewportHandle>(null);
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
@@ -63,15 +64,11 @@ export const WatchPage = () => {
   const currentReel = reels[currentReelIndex];
 
   const handlePrevious = () => {
-    if (currentReelIndex > 0) {
-      setCurrentReelIndex(currentReelIndex - 1);
-    }
+    viewportRef.current?.goPrevious();
   };
 
   const handleNext = () => {
-    if (currentReelIndex < reels.length - 1) {
-      setCurrentReelIndex(currentReelIndex + 1);
-    }
+    viewportRef.current?.goNext();
   };
 
   useEffect(() => {
@@ -139,12 +136,12 @@ export const WatchPage = () => {
         ) : reels.length === 0 ? (
           <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">Chưa có video nào.</div>
         ) : currentReel ? (
-          <ReelPlayer
-            reel={currentReel}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            hasPrevious={currentReelIndex > 0}
-            hasNext={currentReelIndex < reels.length - 1 || !!hasNextPage}
+          <ReelSlideViewport
+            ref={viewportRef}
+            reels={reels}
+            currentIndex={currentReelIndex}
+            onIndexChange={setCurrentReelIndex}
+            hasNextPage={!!hasNextPage}
           />
         ) : null}
       </div>

@@ -1,4 +1,6 @@
 export { WatchHeader } from './WatchHeader';
+export { ReelSlideViewport } from './ReelSlideViewport';
+export type { ReelSlideViewportHandle } from './ReelSlideViewport';
 export { ReelPlayer } from './ReelPlayer';
 export { ReelOverlay } from './ReelOverlay';
 export { ReelInteractionPanel } from './ReelInteractionPanel';

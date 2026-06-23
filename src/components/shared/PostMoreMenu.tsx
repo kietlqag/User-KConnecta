@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
   MoreHorizontal,
   Bookmark,
-  Plus,
-  Minus,
   Trash2,
   Shield,
   Globe,
@@ -94,19 +92,6 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   const [reportReason, setReportReason] = useState('');
   const queryClient = useQueryClient();
 
-  const handleAction = (action: string) => {
-    switch (action) {
-      case 'interested':
-        toast.success('Đã cập nhật: Bạn sẽ thấy nhiều bài viết tương tự hơn.');
-        break;
-      case 'not_interested':
-        toast.success('Đã cập nhật: Bạn sẽ thấy ít bài viết tương tự hơn.');
-        break;
-      default:
-        break;
-    }
-  };
-
   const handlePrivacySelect = async (newPrivacy: Privacy) => {
     if (newPrivacy === privacy || updating || !currentUserId) return;
     setUpdating(true);
@@ -182,34 +167,6 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         )}
         {!isOwner && (
           <>
-            <DropdownMenuItem
-              className="flex items-start gap-3 p-3 cursor-pointer"
-              onClick={() => handleAction('interested')}
-            >
-              <div className="mt-1">
-                <Plus className="w-6 h-6 text-gray-900 dark:text-gray-100 border-2 border-gray-900 rounded-full p-0.5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-semibold text-[15px]">Quan tâm</span>
-                <span className="text-[13px] text-gray-500 dark:text-gray-400">Bạn sẽ nhìn thấy nhiều bài viết tương tự hơn.</span>
-              </div>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem
-              className="flex items-start gap-3 p-3 cursor-pointer"
-              onClick={() => handleAction('not_interested')}
-            >
-              <div className="mt-1">
-                <Minus className="w-6 h-6 text-gray-900 dark:text-gray-100 border-2 border-gray-900 rounded-full p-0.5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-semibold text-[15px]">Không quan tâm</span>
-                <span className="text-[13px] text-gray-500 dark:text-gray-400">Bạn sẽ thấy ít bài viết tương tự hơn.</span>
-              </div>
-            </DropdownMenuItem>
-
-            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
-
             <DropdownMenuItem
               className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
               disabled={reporting}

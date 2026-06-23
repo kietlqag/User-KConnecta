@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import type { AlbumMedia } from '@/services/albumService';
 import { useReorderAlbumMedia } from '../../hooks/useAlbums';
+import { formatAlbumDateTime } from '../../utils/formatAlbumDateTime';
 
 interface AlbumMediaGridProps {
   albumId: string;
@@ -87,6 +88,13 @@ export function AlbumMediaGrid({
               />
             )}
           </button>
+          {item.createdAt && (
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent px-2.5 pt-6 pb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <p className="text-[11px] leading-tight text-white font-medium">
+                Thêm ngày {formatAlbumDateTime(item.createdAt)}
+              </p>
+            </div>
+          )}
           {canEdit && (
             <>
               <div className="absolute top-2 left-2 p-1 rounded bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
