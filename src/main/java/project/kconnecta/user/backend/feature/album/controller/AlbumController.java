@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.album.dto.request.*;
 import project.kconnecta.user.backend.feature.album.dto.response.AlbumCommentResponse;
+import project.kconnecta.user.backend.feature.album.dto.response.AlbumReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.album.dto.response.AlbumMediaResponse;
 import project.kconnecta.user.backend.feature.album.dto.response.AlbumResponse;
 import project.kconnecta.user.backend.feature.album.dto.response.AlbumSidebarItemResponse;
@@ -160,6 +161,13 @@ public class AlbumController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/api/albums/{id}/reactions/details")
+    public ResponseEntity<AlbumReactionDetailsResponse> getReactionDetails(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id) {
+        return ResponseEntity.ok(albumService.getAlbumReactionDetails(principal.getUserId(), id));
+    }
+
     @PostMapping("/api/albums/{albumId}/media/{mediaId}/comments")
     public ResponseEntity<AlbumCommentResponse> addMediaComment(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -203,6 +211,15 @@ public class AlbumController {
             @PathVariable UUID id,
             @Valid @RequestBody ShareAlbumRequest request) {
         return ResponseEntity.ok(albumService.shareAlbum(principal.getUserId(), id, request));
+    }
+
+    @PostMapping("/api/albums/{id}/send/{recipientId}")
+    public ResponseEntity<Void> sendAlbumToUser(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @PathVariable UUID recipientId) {
+        albumService.sendAlbumToUser(principal.getUserId(), id, recipientId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/api/albums/{id}/report")

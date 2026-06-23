@@ -8,8 +8,12 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.exception.BadRequestException;
+import project.kconnecta.user.backend.exception.ChatValidationException;
 import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
+import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
+import project.kconnecta.user.backend.feature.activity.service.ActivityLogService;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRequest;
@@ -106,6 +110,7 @@ public class ChatServiceImpl implements ChatService {
     private final CallSessionRepository callSessionRepository;
     private final GroupCallSessionRepository groupCallSessionRepository;
     private final PolicyContentValidator policyContentValidator;
+    private final ActivityLogService activityLogService;
 
     @Override
     public void sendPrivateMessage(String currentUsername, PrivateMessageRequest request) {
@@ -113,7 +118,7 @@ public class ChatServiceImpl implements ChatService {
         User sender = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
 
-        policyContentValidator.validateChatMessage(sender.getId(), request.getContent(), null, request.getMessageClientId());
+        validateChatForSend(sender, request.getContent(), null, request.getMessageClientId());
 
         User receiver = userRepository.findById(request.getReceiverId())
                 .orElseThrow(() -> new RuntimeException("Receiver not found"));
@@ -133,6 +138,9 @@ public class ChatServiceImpl implements ChatService {
                 .seenAt(null)
                 .build();
         message = chatMessageRepository.save(message);
+
+        activityLogService.log(sender.getId(), sender.getUsername(), ActivityLogType.MESSAGE_SENT,
+                "{\"messageId\":\"" + message.getId() + "\",\"type\":\"private\"}");
 
         ChatMessageResponse response = toMessageResponse(message);
 
@@ -290,7 +298,7 @@ public class ChatServiceImpl implements ChatService {
             throw new RuntimeException("Forbidden");
         }
 
-        policyContentValidator.validateChatMessage(sender.getId(), request.getContent(), conversation.getId(), request.getMessageClientId());
+        validateChatForSend(sender, request.getContent(), conversation.getId(), request.getMessageClientId());
 
         LocalDateTime now = LocalDateTime.now();
         ChatMessage message = ChatMessage.builder()
@@ -308,6 +316,9 @@ public class ChatServiceImpl implements ChatService {
                 .seenAt(null)
                 .build();
         message = chatMessageRepository.save(message);
+
+        activityLogService.log(sender.getId(), sender.getUsername(), ActivityLogType.MESSAGE_SENT,
+                "{\"messageId\":\"" + message.getId() + "\",\"conversationId\":\"" + conversation.getId() + "\",\"type\":\"group\"}");
 
         ChatMessageResponse response = toMessageResponse(message);
         List<ChatConversationMember> members = chatConversationMemberRepository.findMembersByConversationId(conversation.getId());
@@ -407,6 +418,9 @@ public class ChatServiceImpl implements ChatService {
                 .createdAt(LocalDateTime.now())
                 .build();
         chatMessageReportRepository.save(report);
+
+        activityLogService.log(reporter.getId(), reporter.getUsername(), ActivityLogType.REPORT_CREATED,
+                "{\"targetType\":\"chat_message\",\"targetId\":\"" + messageId + "\"}");
     }
 
     @Override
@@ -1870,5 +1884,19 @@ public class ChatServiceImpl implements ChatService {
                 session.getEndedAt(),
                 durationSec
         );
+    }
+
+    private void validateChatForSend(User sender, String content, UUID conversationId, String messageClientId) {
+        try {
+            policyContentValidator.validateChatMessage(sender.getId(), content, conversationId, messageClientId);
+        } catch (ChatValidationException e) {
+            activityLogService.log(sender.getId(), sender.getUsername(), ActivityLogType.MESSAGE_BLOCKED_SPAM,
+                    "{\"reason\":\"" + escapeJson(e.getMessage()) + "\"}");
+            throw e;
+        } catch (ValidationException e) {
+            activityLogService.log(sender.getId(), sender.getUsername(), ActivityLogType.MESSAGE_BLOCKED_KEYWORD,
+                    "{\"reason\":\"" + escapeJson(e.getMessage()) + "\"}");
+            throw e;
+        }
     }
 }

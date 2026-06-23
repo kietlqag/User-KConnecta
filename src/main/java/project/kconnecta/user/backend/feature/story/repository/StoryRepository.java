@@ -12,9 +12,9 @@ import java.util.UUID;
 @Repository
 public interface StoryRepository extends JpaRepository<Story, UUID> {
     
-    @EntityGraph(attributePaths = {"user"})
+    @EntityGraph(attributePaths = {"user", "audienceAllowances", "audienceAllowances.allowedUser"})
     List<Story> findByUserIdAndExpiresAtAfterAndActiveTrueOrderByCreatedAtAsc(UUID userId, LocalDateTime now);
     
-    @EntityGraph(attributePaths = {"user"})
+    @EntityGraph(attributePaths = {"user", "audienceAllowances", "audienceAllowances.allowedUser"})
     List<Story> findByExpiresAtAfterAndActiveTrueOrderByCreatedAtDesc(LocalDateTime now);
 }

@@ -28,6 +28,8 @@ import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
 import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReactionCountResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostReactionUserResponse;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import project.kconnecta.user.backend.feature.post.service.PostService;
@@ -325,9 +327,23 @@ public class AlbumServiceImpl implements AlbumService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         AlbumReaction reaction = albumReactionRepository.findByAlbumIdAndUserId(albumId, userId)
-                .orElse(AlbumReaction.builder().album(album).user(user).build());
+                .orElse(null);
+        boolean isNewReaction = reaction == null;
+        if (isNewReaction) {
+            reaction = AlbumReaction.builder().album(album).user(user).build();
+        }
         reaction.setReactionType(reactionType);
         albumReactionRepository.save(reaction);
+
+        if (isNewReaction && !album.getOwner().getId().equals(userId)) {
+            notificationEventPublisher.publish(
+                    userId,
+                    album.getOwner().getId(),
+                    NotificationType.LIKE,
+                    user.getFullName() + " đã bày tỏ cảm xúc về album \"" + album.getTitle() + "\"",
+                    album.getId()
+            );
+        }
     }
 
     @Override
@@ -336,6 +352,43 @@ public class AlbumServiceImpl implements AlbumService {
         albumPermissionService.requireView(userId, album);
         albumReactionRepository.findByAlbumIdAndUserId(albumId, userId)
                 .ifPresent(albumReactionRepository::delete);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AlbumReactionDetailsResponse getAlbumReactionDetails(UUID viewerId, UUID albumId) {
+        Album album = loadAlbum(albumId);
+        albumPermissionService.requireView(viewerId, album);
+
+        List<AlbumReaction> reactions = albumReactionRepository.findAllByAlbumIdOrderByCreatedAtDesc(albumId);
+
+        Map<ReactionType, Long> countByType = reactions.stream()
+                .collect(Collectors.groupingBy(AlbumReaction::getReactionType, Collectors.counting()));
+
+        List<PostReactionCountResponse> counts = Arrays.stream(ReactionType.values())
+                .map(reactionType -> PostReactionCountResponse.builder()
+                        .reactionType(reactionType)
+                        .count(countByType.getOrDefault(reactionType, 0L))
+                        .build())
+                .toList();
+
+        List<PostReactionUserResponse> users = reactions.stream()
+                .map(reaction -> PostReactionUserResponse.builder()
+                        .userId(reaction.getUser().getId())
+                        .username(reaction.getUser().getUsername())
+                        .fullName(reaction.getUser().getFullName())
+                        .avatarUrl(reaction.getUser().getAvatarUrl())
+                        .reactionType(reaction.getReactionType())
+                        .reactedAt(reaction.getCreatedAt())
+                        .build())
+                .toList();
+
+        return AlbumReactionDetailsResponse.builder()
+                .albumId(albumId)
+                .totalCount(reactions.size())
+                .counts(counts)
+                .reactions(users)
+                .build();
     }
 
     @Override
@@ -464,6 +517,29 @@ public class AlbumServiceImpl implements AlbumService {
                 .id(share.getId())
                 .postId(postId)
                 .build();
+    }
+
+    @Override
+    public void sendAlbumToUser(UUID senderId, UUID albumId, UUID recipientId) {
+        Album album = loadAlbum(albumId);
+        albumPermissionService.requireView(senderId, album);
+
+        if (recipientId.equals(senderId)) {
+            return;
+        }
+
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        userRepository.findById(recipientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Recipient not found"));
+
+        notificationEventPublisher.publish(
+                senderId,
+                recipientId,
+                NotificationType.SHARE,
+                sender.getFullName() + " đã gửi cho bạn album \"" + album.getTitle() + "\"",
+                album.getId()
+        );
     }
 
     @Override

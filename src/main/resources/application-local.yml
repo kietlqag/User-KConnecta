@@ -7,6 +7,10 @@ spring:
     show-sql: false
     hibernate:
       ddl-auto: update  # temporary: adds missing columns (privacy in post_shares); revert to validate after first run
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/story-privacy-schema.sql
 
   datasource:
     hikari:

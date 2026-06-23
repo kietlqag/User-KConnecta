@@ -116,12 +116,14 @@ public class AuthService {
             throw new ValidationException("Tai khoan nay dang nhap qua Google, vui long dung nut Dang nhap bang Google");
         }
 
-        if (!passwordEncoder.matches(request.getPassword(), account.getPasswordHash())) {
-            throw new ValidationException("Mat khau khong dung");
-        }
-
         User user = userRepository.findByAccountId(account.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
+
+        if (!passwordEncoder.matches(request.getPassword(), account.getPasswordHash())) {
+            activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.LOGIN_FAILED,
+                    "{\"reason\":\"Mat khau khong dung\"}");
+            throw new ValidationException("Mat khau khong dung");
+        }
 
         AuthResponse blocked = resolveLockState(account, user,
                 "{\"reason\":\"Tai khoan bi khoa khi dang nhap\"}");
@@ -182,6 +184,7 @@ public class AuthService {
             throw new ValidationException("Tai khoan khong kha dung");
         }
 
+        activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.GOOGLE_LOGIN);
         return toResponse(user);
     }
 

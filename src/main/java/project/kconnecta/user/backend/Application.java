@@ -7,6 +7,8 @@ import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import project.kconnecta.user.backend.config.StoryPrivacySchemaBootstrap;
+
 @EnableCaching
 @EnableScheduling
 @SpringBootApplication
@@ -14,6 +16,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class Application {
 
 	public static void main(String[] args) {
+		StoryPrivacySchemaBootstrap.migrateBeforeStartup();
 		SpringApplication.run(Application.class, args);
 	}
 

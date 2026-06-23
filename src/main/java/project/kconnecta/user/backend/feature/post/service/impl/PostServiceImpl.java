@@ -85,6 +85,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -129,7 +132,8 @@ public class PostServiceImpl implements PostService {
 
         if ((request.getContent() == null || request.getContent().isBlank())
                 && mediaRequests.isEmpty()
-                && request.getPoll() == null) {
+                && request.getPoll() == null
+                && request.getSharedGroupId() == null) {
             throw new ValidationException("Post must have content or media");
         }
 

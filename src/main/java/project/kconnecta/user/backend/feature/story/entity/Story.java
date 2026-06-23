@@ -2,9 +2,12 @@ package project.kconnecta.user.backend.feature.story.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import project.kconnecta.user.backend.feature.story.entity.enums.StoryPrivacy;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -60,6 +63,14 @@ public class Story {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "privacy", length = 255)
+    private StoryPrivacy privacy;
+
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<StoryAudienceAllowance> audienceAllowances = new ArrayList<>();
+
     @Column(name = "is_active", nullable = false)
     private boolean active;
 
@@ -73,6 +84,9 @@ public class Story {
         }
         if (expiresAt == null) {
             expiresAt = createdAt.plusHours(24);
+        }
+        if (privacy == null) {
+            privacy = StoryPrivacy.PUBLIC;
         }
         active = true;
     }

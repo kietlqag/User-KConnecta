@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.story.dto.response;
 
 import lombok.Builder;
 import lombok.Getter;
+import project.kconnecta.user.backend.feature.story.entity.enums.StoryPrivacy;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -28,5 +29,6 @@ public class StoryResponse {
     
     private LocalDateTime createdAt;
     private LocalDateTime expiresAt;
+    private StoryPrivacy privacy;
     private boolean active;
 }

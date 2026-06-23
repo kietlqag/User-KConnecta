@@ -40,6 +40,8 @@ public interface AlbumService {
 
     void addAlbumReaction(UUID userId, UUID albumId, ReactionType reactionType);
 
+    AlbumReactionDetailsResponse getAlbumReactionDetails(UUID viewerId, UUID albumId);
+
     void removeAlbumReaction(UUID userId, UUID albumId);
 
     AlbumCommentResponse addMediaComment(UUID userId, UUID albumId, UUID mediaId, CreateAlbumCommentRequest request);
@@ -51,6 +53,8 @@ public interface AlbumService {
     void removeMediaReaction(UUID userId, UUID albumId, UUID mediaId);
 
     ShareAlbumResponse shareAlbum(UUID userId, UUID albumId, ShareAlbumRequest request);
+
+    void sendAlbumToUser(UUID senderId, UUID albumId, UUID recipientId);
 
     Page<AlbumResponse> getGroupAlbums(UUID viewerId, UUID groupId, Pageable pageable);
 

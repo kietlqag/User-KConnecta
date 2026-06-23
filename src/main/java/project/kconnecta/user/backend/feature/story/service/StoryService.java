@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface StoryService {
     StoryResponse createStory(CreateStoryRequest request);
-    List<StoryResponse> getActiveStories(UUID userId);
-    List<StoryResponse> getAllActiveStories();
+    List<StoryResponse> getActiveStories(UUID userId, UUID viewerId);
+    List<StoryResponse> getAllActiveStories(UUID viewerId);
     void deleteStory(UUID storyId, UUID userId);
 }
