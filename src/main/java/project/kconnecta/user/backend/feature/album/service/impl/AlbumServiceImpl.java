@@ -146,6 +146,27 @@ public class AlbumServiceImpl implements AlbumService {
     }
 
     @Override
+    public void reorderMyAlbums(UUID userId, ReorderAlbumsRequest request) {
+        List<UUID> albumIds = request.getAlbumIds();
+        if (albumIds == null || albumIds.isEmpty()) {
+            return;
+        }
+
+        for (UUID albumId : albumIds) {
+            Album album = loadAlbum(albumId);
+            albumPermissionService.requireEdit(userId, album);
+        }
+
+        java.time.LocalDateTime base = java.time.LocalDateTime.now();
+        for (int i = 0; i < albumIds.size(); i++) {
+            albumRepository.updateUpdatedAt(
+                    albumIds.get(i),
+                    userId,
+                    base.minusNanos((long) i * 1_000_000L));
+        }
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<AlbumSidebarItemResponse> getSidebarAlbums(UUID userId) {
         return albumRepository.findSidebarByOwnerId(userId, PageRequest.of(0, SIDEBAR_LIMIT))
@@ -157,12 +178,22 @@ public class AlbumServiceImpl implements AlbumService {
     @Override
     @Transactional(readOnly = true)
     public Page<AlbumResponse> getUserAlbums(UUID viewerId, UUID ownerId, Pageable pageable) {
-        Page<Album> page = albumRepository.findPublicByOwnerId(ownerId, pageable);
-        List<AlbumResponse> filtered = page.getContent().stream()
+        List<Album> albums = albumRepository
+                .findPersonalByOwnerId(ownerId, org.springframework.data.domain.Pageable.unpaged())
+                .getContent();
+
+        List<AlbumResponse> viewable = albums.stream()
                 .filter(a -> albumPermissionService.canView(viewerId, a))
                 .map(a -> mapAlbum(a, viewerId, false))
                 .toList();
-        return new org.springframework.data.domain.PageImpl<>(filtered, pageable, page.getTotalElements());
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), viewable.size());
+        List<AlbumResponse> page = start >= viewable.size()
+                ? java.util.Collections.emptyList()
+                : viewable.subList(start, end);
+
+        return new org.springframework.data.domain.PageImpl<>(page, pageable, viewable.size());
     }
 
     @Override

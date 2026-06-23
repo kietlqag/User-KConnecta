@@ -141,6 +141,8 @@ public class UserServiceImpl implements UserService {
         if (request.getSchool()             != null) user.setSchool(request.getSchool());
         if (request.getWorkplace()          != null) user.setWorkplace(request.getWorkplace());
         if (request.getJobTitle()           != null) user.setJobTitle(request.getJobTitle());
+        if (request.getPhoneNumber()        != null) user.setPhoneNumber(request.getPhoneNumber());
+        if (request.getWebsite()            != null) user.setWebsite(request.getWebsite());
         if (request.getDateOfBirth()        != null) user.setDateOfBirth(request.getDateOfBirth());
         if (request.getAvatarUrl()          != null) user.setAvatarUrl(request.getAvatarUrl());
         if (request.getCoverPhotoUrl()      != null) user.setCoverPhotoUrl(request.getCoverPhotoUrl());
@@ -286,6 +288,8 @@ public class UserServiceImpl implements UserService {
                 .school(user.getSchool())
                 .workplace(user.getWorkplace())
                 .jobTitle(user.getJobTitle())
+                .phoneNumber(user.getPhoneNumber())
+                .website(user.getWebsite())
                 .dateOfBirth(user.getDateOfBirth())
                 .avatarUrl(user.getAvatarUrl())
                 .coverPhotoUrl(user.getCoverPhotoUrl())

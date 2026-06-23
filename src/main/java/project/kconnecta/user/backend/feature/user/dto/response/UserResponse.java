@@ -32,6 +32,8 @@ public class UserResponse implements Serializable {
     private String school;
     private String workplace;
     private String jobTitle;
+    private String phoneNumber;
+    private String website;
     private LocalDate dateOfBirth;
     private String avatarUrl;
     private String coverPhotoUrl;

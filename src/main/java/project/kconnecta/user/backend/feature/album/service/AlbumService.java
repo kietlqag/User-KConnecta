@@ -22,6 +22,8 @@ public interface AlbumService {
 
     Page<AlbumResponse> getMyAlbums(UUID userId, Pageable pageable);
 
+    void reorderMyAlbums(UUID userId, ReorderAlbumsRequest request);
+
     List<AlbumSidebarItemResponse> getSidebarAlbums(UUID userId);
 
     Page<AlbumResponse> getUserAlbums(UUID viewerId, UUID ownerId, Pageable pageable);

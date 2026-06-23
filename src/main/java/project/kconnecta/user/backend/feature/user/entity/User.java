@@ -55,6 +55,12 @@ public class User {
     @Column(name = "job_title", length = 120)
     private String jobTitle;
 
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
+    @Column(length = 255)
+    private String website;
+
     @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "account_id", nullable = false, unique = true)
     private Account account;

@@ -69,6 +69,14 @@ public class AlbumController {
         return ResponseEntity.ok(albumService.getMyAlbums(principal.getUserId(), pageable));
     }
 
+    @PutMapping("/api/me/albums/reorder")
+    public ResponseEntity<Void> reorderMyAlbums(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody ReorderAlbumsRequest request) {
+        albumService.reorderMyAlbums(principal.getUserId(), request);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/api/me/albums/sidebar")
     public ResponseEntity<List<AlbumSidebarItemResponse>> getSidebarAlbums(
             @AuthenticationPrincipal UserPrincipal principal) {

@@ -1,15 +1,18 @@
 package project.kconnecta.user.backend.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -96,11 +99,49 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.SERVICE_UNAVAILABLE, "Redis khong kha dung. Vui long thu lai sau.");
     }
 
+    // Client closed the connection before the response finished (tab switch, refresh, cancelled fetch).
+    @ExceptionHandler({
+            ClientAbortException.class,
+            AsyncRequestNotUsableException.class
+    })
+    public void handleClientAbort(Exception ex) {
+        log.debug("Client disconnected before response completed: {}", ex.getMessage());
+    }
+
+    @ExceptionHandler(IOException.class)
+    public void handleIOException(IOException ex) {
+        if (isClientDisconnect(ex)) {
+            log.debug("Client disconnected while writing response: {}", ex.getMessage());
+            return;
+        }
+        log.error("Unhandled IO exception", ex);
+    }
+
     // fallback 500 — never expose internal exception messages to clients
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleException(Exception ex) {
+        if (isClientDisconnect(ex)) {
+            log.debug("Client disconnected: {}", ex.getMessage());
+            return null;
+        }
         log.error("Unhandled exception", ex);
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An internal server error occurred");
+    }
+
+    private static boolean isClientDisconnect(Throwable ex) {
+        Throwable current = ex;
+        while (current != null) {
+            if (current instanceof ClientAbortException
+                    || current instanceof AsyncRequestNotUsableException) {
+                return true;
+            }
+            String message = current.getMessage();
+            if (message != null && message.contains("connection was aborted")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
