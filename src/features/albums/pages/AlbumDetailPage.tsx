@@ -5,7 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ImagePlus,
-  Pencil,
+  Settings,
   Share2,
   X,
 } from 'lucide-react';
@@ -24,9 +24,9 @@ import {
 import { AlbumMediaGrid } from '../components/AlbumMediaGrid/AlbumMediaGrid';
 import { AlbumCommentsSection } from '../components/AlbumCommentsSection/AlbumCommentsSection';
 import { AlbumShareModal } from '../components/AlbumShareModal/AlbumShareModal';
-import { EditAlbumTitleModal } from '../components/EditAlbumTitleModal/EditAlbumTitleModal';
-import { EditAlbumDescriptionModal } from '../components/EditAlbumDescriptionModal/EditAlbumDescriptionModal';
+import { EditAlbumSettingsModal } from '../components/EditAlbumSettingsModal/EditAlbumSettingsModal';
 import { formatAlbumDateTime } from '../utils/formatAlbumDateTime';
+import { getAlbumPrivacyMeta } from '../utils/albumPrivacy';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import {
   AlertDialog,
@@ -49,8 +49,7 @@ export function AlbumDetailPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [editTitleOpen, setEditTitleOpen] = useState(false);
-  const [editDescriptionOpen, setEditDescriptionOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mediaToDelete, setMediaToDelete] = useState<string | null>(null);
   const [selectedReaction, setSelectedReaction] = useState<ReactionOption | null>(null);
@@ -165,6 +164,8 @@ export function AlbumDetailPage() {
   }
 
   const currentMedia: AlbumMedia | undefined = lightboxIndex !== null ? media[lightboxIndex] : undefined;
+  const privacyMeta = getAlbumPrivacyMeta(album.privacy);
+  const PrivacyIcon = privacyMeta.icon;
 
   return (
     <MainLayout>
@@ -186,42 +187,39 @@ export function AlbumDetailPage() {
           )}
           <div className="p-5">
             <div className="flex items-start gap-2">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex-1">{album.title}</h1>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 break-words">{album.title}</h1>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    <PrivacyIcon className="h-3.5 w-3.5" />
+                    {album.groupId ? 'Công khai · Album nhóm' : privacyMeta.label}
+                  </span>
+                  <span>{album.mediaCount} ảnh/video</span>
+                </div>
+              </div>
               {album.canEdit && (
                 <button
                   type="button"
-                  onClick={() => setEditTitleOpen(true)}
-                  className="p-2 rounded-full text-gray-500 hover:bg-muted hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 shrink-0"
-                  aria-label="Đổi tên album"
+                  onClick={() => setSettingsOpen(true)}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-2 text-sm font-medium text-gray-700 hover:bg-muted/80 dark:text-gray-200"
+                  aria-label="Cài đặt album"
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Settings className="h-4 w-4" />
+                  Cài đặt
                 </button>
               )}
             </div>
-            {(album.description || album.canEdit) && (
-              <div className="flex items-start gap-2 mt-2">
-                {album.description ? (
-                  <p className="text-gray-600 dark:text-gray-400 flex-1">{album.description}</p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setEditDescriptionOpen(true)}
-                    className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 italic"
-                  >
-                    Thêm mô tả...
-                  </button>
-                )}
-                {album.canEdit && album.description && (
-                  <button
-                    type="button"
-                    onClick={() => setEditDescriptionOpen(true)}
-                    className="p-1.5 rounded-full text-gray-500 hover:bg-muted hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 shrink-0"
-                    aria-label="Sửa mô tả album"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+            {album.description && (
+              <p className="mt-3 text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">{album.description}</p>
+            )}
+            {!album.description && album.canEdit && (
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+                className="mt-3 text-sm italic text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                Thêm mô tả...
+              </button>
             )}
             {album.groupName && (
               <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">Nhóm: {album.groupName}</p>
@@ -232,7 +230,6 @@ export function AlbumDetailPage() {
               </p>
             )}
             <div className="flex flex-wrap items-center gap-3 mt-4">
-              <span className="text-sm text-gray-500">{album.mediaCount} ảnh/video</span>
               <div className="inline-flex items-center rounded-full bg-muted">
                 <ReactionButton
                   initialReaction={selectedReaction}
@@ -332,18 +329,11 @@ export function AlbumDetailPage() {
         fetchDetails={() => albumService.getReactionDetails(album.id)}
       />
 
-      <EditAlbumTitleModal
-        albumId={album.id}
-        isOpen={editTitleOpen}
-        initialTitle={album.title}
-        onClose={() => setEditTitleOpen(false)}
-      />
-
-      <EditAlbumDescriptionModal
-        albumId={album.id}
-        isOpen={editDescriptionOpen}
-        initialDescription={album.description}
-        onClose={() => setEditDescriptionOpen(false)}
+      <EditAlbumSettingsModal
+        album={album}
+        media={media}
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
 
       <AlertDialog

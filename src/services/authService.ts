@@ -38,6 +38,8 @@ export interface AuthUser {
   school?: string;
   workplace?: string;
   jobTitle?: string;
+  phoneNumber?: string;
+  website?: string;
   dateOfBirth?: string;
   avatarUrl?: string;
   coverPhotoUrl?: string;
@@ -58,6 +60,8 @@ export interface RegisterData {
   school?: string;
   workplace?: string;
   jobTitle?: string;
+  phoneNumber?: string;
+  website?: string;
 }
 
 export interface GoogleCompleteRegisterData {

@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Album as AlbumIcon, ImagePlus } from 'lucide-react';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import { useGroupAlbums } from '@/features/albums/hooks/useAlbums';
-import { CreateAlbumModal } from '@/features/albums/components/CreateAlbumModal/CreateAlbumModal';
 
 interface GroupAlbumsTabProps {
   groupId: string;
@@ -13,7 +11,6 @@ interface GroupAlbumsTabProps {
 export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabProps) {
   const navigate = useNavigate();
   const { data, isLoading } = useGroupAlbums(groupId);
-  const [createOpen, setCreateOpen] = useState(false);
   const albums = data?.content ?? [];
 
   return (
@@ -31,7 +28,7 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
         {canCreate && (
           <button
             type="button"
-            onClick={() => setCreateOpen(true)}
+            onClick={() => navigate(`/albums/create?groupId=${groupId}`)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
           >
             <ImagePlus className="w-4 h-4" />
@@ -49,7 +46,7 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
           {canCreate && (
             <button
               type="button"
-              onClick={() => setCreateOpen(true)}
+              onClick={() => navigate(`/albums/create?groupId=${groupId}`)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
             >
               <ImagePlus className="w-4 h-4" />
@@ -89,12 +86,6 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
           ))}
         </div>
       )}
-
-      <CreateAlbumModal
-        isOpen={createOpen}
-        onClose={() => setCreateOpen(false)}
-        groupId={groupId}
-      />
     </div>
   );
 }

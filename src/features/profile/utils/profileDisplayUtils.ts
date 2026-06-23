@@ -19,6 +19,8 @@ export interface ProfileDisplayData {
   hometown: string;
   relationship: string;
   bio: string;
+  phoneNumber: string;
+  website: string;
   dateOfBirth?: string;
   gender?: string;
 }
@@ -83,6 +85,8 @@ export function buildProfileDisplay(
     hometown: profile?.hometown || '',
     relationship: profile?.relationshipStatus || '',
     bio: profile?.bio || '',
+    phoneNumber: profile?.phoneNumber || '',
+    website: profile?.website || '',
     dateOfBirth: profile?.dateOfBirth,
     gender: profile?.gender,
   };
@@ -114,6 +118,8 @@ export function buildEditProfileInitialData(profile: AuthUser) {
     jobTitle: profile.jobTitle || '',
     relationship: profile.relationshipStatus || '',
     bio: profile.bio || '',
+    phoneNumber: profile.phoneNumber || '',
+    website: profile.website || '',
     dateOfBirth: profile.dateOfBirth,
     avatarUrl: profile.avatarUrl || display.avatar,
     coverPhotoUrl: profile.coverPhotoUrl || display.coverPhoto,

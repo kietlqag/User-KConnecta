@@ -7,15 +7,19 @@ import {
   FriendsPreview,
   PhotosPreview,
   ProfileCreatePost,
-  ProfileIntro,
   ProfilePosts,
 } from '../components';
 import { mapApiPost, type FeedPost } from '@/utils/postUtils';
 import { buildProfileDisplay, getProfileHeaderName } from '../utils/profileDisplayUtils';
+import {
+  extractPhotosFromPosts,
+  fetchAllUserPosts,
+  isAbortError,
+} from '../utils/profilePhotoUtils';
 import { useProfileLayoutContext } from './ProfileLayout';
 
 export function ProfilePage() {
-  const { profile, resolvedId, isOwnProfile, friendsCount, loading: profileLoading, onEditClick } =
+  const { profile, resolvedId, isOwnProfile, friendsCount, loading: profileLoading } =
     useProfileLayoutContext();
   const [searchParams] = useSearchParams();
   const highlightPostId = searchParams.get('post');
@@ -27,8 +31,19 @@ export function ProfilePage() {
   const [hasMorePosts, setHasMorePosts] = React.useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = React.useState(false);
   const [postsPage, setPostsPage] = React.useState(0);
+  const [profilePhotos, setProfilePhotos] = React.useState<{ id: string; url: string }[]>([]);
 
   const PAGE_SIZE = 10;
+
+  const refreshProfilePhotos = React.useCallback(async (authorId: string, signal?: AbortSignal) => {
+    try {
+      const allPosts = await fetchAllUserPosts(authorId, currentUser?.id, signal);
+      setProfilePhotos(extractPhotosFromPosts(allPosts).map(({ id, url }) => ({ id, url })));
+    } catch (error) {
+      if (isAbortError(error)) return;
+      setProfilePhotos([]);
+    }
+  }, [currentUser?.id]);
 
   const fetchPosts = React.useCallback(
     async (authorId: string, page = 0) => {
@@ -58,7 +73,9 @@ export function ProfilePage() {
 
   React.useEffect(() => {
     if (!resolvedId) return;
+    const controller = new AbortController();
     void fetchPosts(resolvedId);
+    void refreshProfilePhotos(resolvedId, controller.signal);
     friendService
       .getFriends(resolvedId)
       .then(res =>
@@ -73,7 +90,8 @@ export function ProfilePage() {
         ),
       )
       .catch(() => setFriends([]));
-  }, [resolvedId, fetchPosts]);
+    return () => controller.abort();
+  }, [resolvedId, fetchPosts, refreshProfilePhotos]);
 
   const handleLoadMorePosts = React.useCallback(async () => {
     if (!resolvedId || loadingMorePosts) return;
@@ -123,34 +141,12 @@ export function ProfilePage() {
 
   const profilePathKey = profile?.username || resolvedId;
 
-  const profilePhotos = React.useMemo(
-    () =>
-      posts.flatMap(post =>
-        (post.mediaList || [])
-          .filter(m => m.type === 'IMAGE')
-          .map((m, i) => ({ id: `${post.id}-${i}`, url: m.url })),
-      ),
-    [posts],
-  );
-
   const loading = profileLoading || postsLoading;
 
   return (
     <div className="max-w-[1320px] mx-auto px-4 py-4 lg:py-6">
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.55fr)] gap-4 lg:gap-6 items-start">
         <div className="space-y-4 lg:sticky lg:top-[136px] lg:max-h-[calc(100vh-136px)] lg:overflow-y-auto lg:pb-4 sidebar-scrollbar">
-          <ProfileIntro
-            bio={userProfile.bio}
-            location={userProfile.location}
-            hometown={userProfile.hometown}
-            relationship={userProfile.relationship}
-            school={userProfile.school}
-            workplace={userProfile.workplace}
-            jobTitle={userProfile.jobTitle}
-            featuredPhotos={profilePhotos.slice(0, 3)}
-            isOwnProfile={isOwnProfile}
-            onEditClick={onEditClick}
-          />
           <FriendsPreview userId={profilePathKey} friendsCount={friendsCount} friends={friends} />
           <PhotosPreview userId={profilePathKey} photos={profilePhotos.slice(0, 9)} />
         </div>
@@ -159,7 +155,10 @@ export function ProfilePage() {
           {isOwnProfile && (
             <ProfileCreatePost
               username={getProfileHeaderName(userProfile)}
-              onPostCreated={() => void fetchPosts(resolvedId)}
+              onPostCreated={() => {
+                void fetchPosts(resolvedId);
+                void refreshProfilePhotos(resolvedId);
+              }}
             />
           )}
           <ProfilePosts

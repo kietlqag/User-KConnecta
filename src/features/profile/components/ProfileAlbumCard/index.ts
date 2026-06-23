@@ -1,0 +1,1 @@
+export { ProfileAlbumCard } from './ProfileAlbumCard';

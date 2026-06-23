@@ -1,90 +1,165 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ImagePlus, Images } from 'lucide-react';
+import { toast } from 'sonner';
 import { MainLayout } from '@/layouts';
-import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
-import { useMyAlbums } from '../hooks/useAlbums';
-import { CreateAlbumModal } from '../components/CreateAlbumModal/CreateAlbumModal';
+import { useDeleteAlbum, useMyAlbums, useReorderMyAlbums } from '../hooks/useAlbums';
+import { AlbumListCard } from '../components/AlbumListCard/AlbumListCard';
+import type { Album } from '@/services/albumService';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export function AlbumListPage() {
   const navigate = useNavigate();
   const { data, isLoading } = useMyAlbums();
-  const [createOpen, setCreateOpen] = useState(false);
+  const deleteAlbum = useDeleteAlbum();
+  const reorderAlbums = useReorderMyAlbums();
+  const [items, setItems] = useState<Album[]>([]);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
+
   const albums = data?.content ?? [];
+
+  useEffect(() => {
+    setItems((prev) => {
+      if (prev.length === 0) return albums;
+      const prevIds = prev.map((album) => album.id).join(',');
+      const nextIds = albums.map((album) => album.id).join(',');
+      if (prevIds !== nextIds) return albums;
+      return prev;
+    });
+  }, [albums]);
+
+  const persistOrder = useCallback(
+    async (ordered: Album[]) => {
+      try {
+        await reorderAlbums.mutateAsync(ordered.map((album) => album.id));
+      } catch {
+        toast.error('Không thể sắp xếp album');
+        setItems(albums);
+      }
+    },
+    [albums, reorderAlbums],
+  );
+
+  const handleDrop = (targetIndex: number) => {
+    if (dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null);
+      return;
+    }
+    const next = [...items];
+    const [moved] = next.splice(dragIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    setItems(next);
+    setDragIndex(null);
+    void persistOrder(next);
+  };
+
+  const confirmDelete = async () => {
+    if (!albumToDelete) return;
+    try {
+      await deleteAlbum.mutateAsync(albumToDelete.id);
+      toast.success('Đã xóa album');
+      setAlbumToDelete(null);
+    } catch {
+      toast.error('Không thể xóa album');
+    }
+  };
 
   return (
     <MainLayout>
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="mx-auto max-w-5xl px-4 py-6">
+        <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Images className="w-7 h-7 text-blue-600" />
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+              <Images className="h-7 w-7 text-blue-600" />
               Album của bạn
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
               Quản lý ảnh và video kỷ niệm của bạn
             </p>
           </div>
           <button
             type="button"
-            onClick={() => setCreateOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+            onClick={() => navigate('/albums/create')}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
-            <ImagePlus className="w-4 h-4" />
+            <ImagePlus className="h-4 w-4" />
             Tạo album
           </button>
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12 text-gray-500">Đang tải album...</div>
-        ) : albums.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center bg-white dark:bg-gray-900">
-            <Images className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400 mb-4">Bạn chưa có album nào</p>
+          <div className="py-12 text-center text-gray-500">Đang tải album...</div>
+        ) : items.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-900">
+            <Images className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+            <p className="mb-4 text-gray-600 dark:text-gray-400">Bạn chưa có album nào</p>
             <button
               type="button"
-              onClick={() => setCreateOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+              onClick={() => navigate('/albums/create')}
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
-              <ImagePlus className="w-4 h-4" />
+              <ImagePlus className="h-4 w-4" />
               Tạo album đầu tiên
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {albums.map((album) => (
-              <button
-                key={album.id}
-                type="button"
-                onClick={() => navigate(`/albums/${album.id}`)}
-                className="group text-left rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:shadow-lg transition-shadow"
-              >
-                <div className="aspect-square bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
-                  {album.coverUrl ? (
-                    <ImageWithFallback
-                      src={album.coverUrl}
-                      alt={album.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <Images className="w-10 h-10 opacity-40" />
-                    </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{album.title}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    {album.mediaCount} ảnh/video
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
+          <>
+            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+              Kéo thả album để sắp xếp thứ tự
+            </p>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {items.map((album, index) => (
+                <AlbumListCard
+                  key={album.id}
+                  album={album}
+                  draggable={album.canEdit}
+                  isDragging={dragIndex === index}
+                  onOpen={() => navigate(`/albums/${album.id}`)}
+                  onDelete={() => setAlbumToDelete(album)}
+                  onDragStart={() => setDragIndex(index)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleDrop(index)}
+                  onDragEnd={() => setDragIndex(null)}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 
-      <CreateAlbumModal isOpen={createOpen} onClose={() => setCreateOpen(false)} />
+      <AlertDialog open={Boolean(albumToDelete)} onOpenChange={(open) => !open && setAlbumToDelete(null)}>
+        <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-gray-900 dark:text-white">Xóa album</AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
+              Xóa album &quot;{albumToDelete?.title}&quot;? Toàn bộ ảnh và video trong album sẽ bị xóa.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer border-gray-300 dark:border-gray-600">Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              className="cursor-pointer bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+              disabled={deleteAlbum.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+            >
+              {deleteAlbum.isPending ? 'Đang xóa...' : 'Xóa'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }

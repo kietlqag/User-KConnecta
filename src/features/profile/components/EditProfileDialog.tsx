@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
-import { User, MapPin, Heart, Loader2, Camera, Briefcase, X } from 'lucide-react';
+import { User, MapPin, Heart, Loader2, Camera, Briefcase, X, Phone, Globe, Mail } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,8 @@ interface EditProfileDialogProps {
     school?: string;
     workplace?: string;
     jobTitle?: string;
+    phoneNumber?: string;
+    website?: string;
     relationship?: string;
     birthday?: string;
     dateOfBirth?: string;
@@ -55,6 +57,8 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
       school: data.school || '',
       workplace: data.workplace || '',
       jobTitle: data.jobTitle || '',
+      phoneNumber: data.phoneNumber || '',
+      website: data.website || '',
       relationship: data.relationship || '',
       day: data.dateOfBirth ? data.dateOfBirth.split('-')[2]?.replace(/^0/, '') : '',
       month: data.dateOfBirth ? data.dateOfBirth.split('-')[1]?.replace(/^0/, '') : '',
@@ -138,6 +142,8 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
         school: formData.school,
         workplace: formData.workplace,
         jobTitle: formData.jobTitle,
+        phoneNumber: formData.phoneNumber,
+        website: formData.website,
         relationshipStatus: formData.relationship,
         dateOfBirth: day && month && year
           ? `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
@@ -376,6 +382,60 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                           placeholder="VD: Lập trình viên"
                         />
                       </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section: Contact */}
+                <section className="space-y-6">
+                  <div className="flex items-center gap-4 pb-2 border-b dark:border-gray-800">
+                    <div className="w-1.5 h-6 bg-violet-500 rounded-full"></div>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Thông tin liên hệ</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-2">
+                      <Label htmlFor="phoneNumber" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Số điện thoại</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Input
+                          id="phoneNumber"
+                          type="tel"
+                          className="pl-11 h-12 dark:bg-gray-800"
+                          {...register('phoneNumber')}
+                          placeholder="VD: 0901234567"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="website" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Website</Label>
+                      <div className="relative">
+                        <Globe className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Input
+                          id="website"
+                          type="url"
+                          className="pl-11 h-12 dark:bg-gray-800"
+                          {...register('website')}
+                          placeholder="VD: https://example.com"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="email" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Input
+                          id="email"
+                          type="email"
+                          className="pl-11 h-12 bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400"
+                          value={currentUser?.email || ''}
+                          readOnly
+                          disabled
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400">Email liên kết với tài khoản, không thể đổi tại đây.</p>
                     </div>
                   </div>
                 </section>

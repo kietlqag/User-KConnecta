@@ -71,8 +71,8 @@ axiosInstance.interceptors.response.use(
 );
 
 export const api = {
-  get: <T>(path: string) =>
-    axiosInstance.get<T>(path).then(r => r.data),
+  get: <T>(path: string, options?: { signal?: AbortSignal }) =>
+    axiosInstance.get<T>(path, options).then(r => r.data),
 
   post: <T>(path: string, body: unknown) =>
     axiosInstance.post<T>(path, body).then(r => r.data),

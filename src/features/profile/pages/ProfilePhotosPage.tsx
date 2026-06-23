@@ -1,89 +1,45 @@
 import * as React from 'react';
-import { X, ChevronLeft, ChevronRight, Images, Loader2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
 import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
 import { authService } from '@/services/authService';
-import { postService } from '@/services/postService';
 import { useProfileLayoutContext } from './ProfileLayout';
-
-interface Photo {
-  id: string;
-  url: string;
-  postId: string;
-  date: string;
-}
-
-const PAGE_SIZE = 20;
+import {
+  extractPhotosFromPosts,
+  fetchAllUserPosts,
+  isAbortError,
+  type ProfilePhoto,
+} from '../utils/profilePhotoUtils';
 
 function PhotoSkeleton() {
   return <div className="aspect-square rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />;
 }
 
-function extractPhotos(posts: any[]): Photo[] {
-  return posts
-    .filter(p => !p.status || p.status === 'PUBLISHED')
-    .flatMap(post =>
-      (post.media ?? [])
-        .filter((m: any) => m.mediaType === 'IMAGE')
-        .map((m: any) => {
-          const url = m.mediaUrl || m.fileUrl;
-          return url
-            ? {
-                id: `${post.id}-${m.id ?? Math.random()}`,
-                url,
-                postId: post.id,
-                date: new Date(post.publishedAt || post.createdAt).toLocaleDateString('vi-VN', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                }),
-              }
-            : null;
-        })
-        .filter(Boolean) as Photo[],
-    );
-}
-
 export function ProfilePhotosPage() {
-  const { resolvedId, isOwnProfile, loading: profileLoading } = useProfileLayoutContext();
+  const { resolvedId, loading: profileLoading } = useProfileLayoutContext();
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
 
-  const [photos, setPhotos] = React.useState<Photo[]>([]);
+  const [photos, setPhotos] = React.useState<ProfilePhoto[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [loadingMore, setLoadingMore] = React.useState(false);
-  const [postsPage, setPostsPage] = React.useState(0);
-  const [hasMore, setHasMore] = React.useState(false);
   const [lbIndex, setLbIndex] = React.useState<number | null>(null);
 
   React.useEffect(() => {
     if (!resolvedId) return;
-    let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
 
-    postService.getAllPosts(currentUser?.id, resolvedId, 0, PAGE_SIZE).then(res => {
-      if (cancelled) return;
-      setPhotos(extractPhotos(res.content));
-      setPostsPage(0);
-      setHasMore(res.number + 1 < res.totalPages);
-    }).catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    fetchAllUserPosts(resolvedId, currentUser?.id, controller.signal)
+      .then((posts) => {
+        setPhotos(extractPhotosFromPosts(posts));
+      })
+      .catch((error) => {
+        if (!isAbortError(error)) setPhotos([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
 
-    return () => { cancelled = true; };
+    return () => controller.abort();
   }, [resolvedId, currentUser?.id]);
-
-  const handleLoadMore = async () => {
-    if (loadingMore || !resolvedId) return;
-    setLoadingMore(true);
-    try {
-      const nextPage = postsPage + 1;
-      const res = await postService.getAllPosts(currentUser?.id, resolvedId, nextPage, PAGE_SIZE);
-      setPhotos(prev => [...prev, ...extractPhotos(res.content)]);
-      setPostsPage(nextPage);
-      setHasMore(res.number + 1 < res.totalPages);
-    } catch {
-      // ignore
-    } finally {
-      setLoadingMore(false);
-    }
-  };
 
   const openLightbox  = (i: number) => setLbIndex(i);
   const closeLightbox = () => setLbIndex(null);
@@ -161,17 +117,6 @@ export function ProfilePhotosPage() {
                   </div>
                 ))}
               </div>
-              {hasMore && (
-                <div className="mt-4 flex justify-center">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 font-semibold text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-60"
-                  >
-                    {loadingMore ? <><Loader2 className="w-4 h-4 animate-spin" />Đang tải...</> : 'Tải thêm ảnh'}
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>

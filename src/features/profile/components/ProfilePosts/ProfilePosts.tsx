@@ -133,7 +133,6 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
 
         <div className="grid grid-cols-2">
           {TAB_CONFIG.map(({ key, label, icon: Icon }) => {
-            const count = postsByTab[key].length;
             const isActive = activeTab === key;
             return (
               <button
@@ -148,15 +147,6 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="truncate">{label}</span>
-                {count > 0 && (
-                  <span
-                    className={`hidden rounded-full px-1.5 py-0.5 text-[11px] font-semibold sm:inline ${
-                      isActive ? 'bg-primary/15 text-primary' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
               </button>
             );
           })}

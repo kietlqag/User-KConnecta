@@ -173,7 +173,7 @@ export function ProfileLayout() {
           onAvatarUpload={isOwnProfile ? handleAvatarUpload : undefined}
           onCoverUpload={isOwnProfile ? handleCoverUpload : undefined}
         />
-        <ProfileTabs profileKey={profilePathKey} isOwnProfile={isOwnProfile} />
+        <ProfileTabs profileKey={profilePathKey} />
         <Outlet context={context} />
       </div>
       {isOwnProfile && profile && (

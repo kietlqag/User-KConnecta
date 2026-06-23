@@ -7,6 +7,16 @@ import { ReelSlideViewport, type ReelSlideViewportHandle } from '../components';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { WATCH_FEED_KEY, useWatchFeed } from '../hooks/useWatchFeed';
 
+function isWatchOverlayTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  return Boolean(
+    el.closest('[data-reel-comments]')
+      || el.closest('[data-share-modal]')
+      || el.closest('[data-slot="dialog-content"]'),
+  );
+}
+
 const WatchSidebar = () => (
   <aside className="hidden lg:flex fixed top-14 left-0 z-40 h-[calc(100vh-56px)] w-[320px] flex-col gap-1 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-4">
     <h1 className="px-3 pb-3 text-2xl font-bold text-gray-900 dark:text-white">Watch</h1>
@@ -80,6 +90,7 @@ export const WatchPage = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isWatchOverlayTarget(e.target)) return;
       if (e.key === 'ArrowUp') {
         handlePrevious();
       } else if (e.key === 'ArrowDown') {
@@ -95,8 +106,7 @@ export const WatchPage = () => {
     let cooldown = false;
 
     const handleWheel = (e: WheelEvent) => {
-      // Bỏ qua khi đang cuộn bên trong bảng bình luận
-      if ((e.target as HTMLElement | null)?.closest('[data-reel-comments]')) return;
+      if (isWatchOverlayTarget(e.target)) return;
       if (cooldown || Math.abs(e.deltaY) < 10) return;
 
       cooldown = true;

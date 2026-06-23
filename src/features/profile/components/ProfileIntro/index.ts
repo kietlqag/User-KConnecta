@@ -1,1 +1,0 @@
-export { ProfileIntro } from './ProfileIntro';

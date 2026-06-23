@@ -123,6 +123,8 @@ export const albumService = {
   reorderMedia: (albumId: string, mediaIds: string[]) =>
     api.put<void>(`/albums/${albumId}/media/reorder`, { mediaIds }),
 
+  reorderMyAlbums: (albumIds: string[]) => api.put<void>('/me/albums/reorder', { albumIds }),
+
   getComments: (albumId: string) => api.get<AlbumComment[]>(`/albums/${albumId}/comments`),
 
   addComment: (albumId: string, content: string, parentId?: string) =>

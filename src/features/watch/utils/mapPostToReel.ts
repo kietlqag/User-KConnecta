@@ -1,15 +1,6 @@
 import type { PostResponse } from '@/services/postService';
 import type { Reel } from '../types/watch.types';
-
-function isVideoUrl(url?: string | null): boolean {
-  if (!url?.trim()) return false;
-  const u = url.trim();
-  return (
-    u.includes('/video/') ||
-    u.includes('resource_type=video') ||
-    /\.(mp4|mov|webm|m4v|ogg)(\?.*)?$/i.test(u)
-  );
-}
+import { isVideoUrl } from '@/utils/mediaUtils';
 
 function resolveVideoUrl(post: PostResponse): string | null {
   const videoMedia = post.media?.find((m) => m.mediaType === 'VIDEO');
@@ -27,6 +18,14 @@ function resolveVideoUrl(post: PostResponse): string | null {
   return null;
 }
 
+function resolveThumbnailUrl(post: PostResponse, videoUrl: string): string {
+  const videoMedia = post.media?.find((m) => m.mediaType === 'VIDEO');
+  if (videoMedia?.thumbnailUrl?.trim()) {
+    return videoMedia.thumbnailUrl.trim();
+  }
+  return videoUrl;
+}
+
 export function mapPostToReel(post: PostResponse): Reel | null {
   const videoUrl = resolveVideoUrl(post);
   if (!videoUrl) return null;
@@ -36,7 +35,7 @@ export function mapPostToReel(post: PostResponse): Reel | null {
   return {
     id: post.id,
     videoUrl,
-    thumbnail: videoUrl,
+    thumbnail: resolveThumbnailUrl(post, videoUrl),
     creator: {
       id: post.authorId,
       name: post.authorFullName,

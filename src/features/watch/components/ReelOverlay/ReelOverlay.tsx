@@ -106,10 +106,6 @@ export const ReelOverlay = ({ creator, caption, postedAt, privacy, group, music 
             <p className="mt-0.5 text-xs text-white/70">{postedAtLabel}</p>
           </div>
         )}
-
-        <button className="ml-2 px-6 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full transition-colors cursor-pointer">
-          Theo dõi
-        </button>
       </div>
 
       {/* Caption */}

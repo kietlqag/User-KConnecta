@@ -1,19 +1,15 @@
 ﻿import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { authService } from '@/services/authService';
 
 interface ProfileTabsProps {
   userId?: string;
   profileKey?: string;
-  isOwnProfile?: boolean;
 }
 
-export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp }: ProfileTabsProps) {
+export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {
   const location = useLocation();
   const currentPath = location.pathname;
-  const currentUser = authService.getCurrentUser();
   const resolvedProfileKey = profileKey || userId || '';
-  const isOwnProfile = isOwnProfileProp ?? currentUser?.id === resolvedProfileKey;
 
   const tabs = [
     { label: 'Tất cả', path: `/profile/${resolvedProfileKey}` },
@@ -21,8 +17,7 @@ export function ProfileTabs({ userId, profileKey, isOwnProfile: isOwnProfileProp
     { label: 'Bạn bè', path: `/profile/${resolvedProfileKey}/friends` },
     { label: 'Ảnh', path: `/profile/${resolvedProfileKey}/photos` },
     { label: 'Watch', path: `/profile/${resolvedProfileKey}/reels` },
-    { label: 'Thích', path: `/profile/${resolvedProfileKey}/likes` },
-    ...(isOwnProfile ? [{ label: 'Bài đã lên lịch', path: `/profile/${resolvedProfileKey}/scheduled` }] : []),
+    { label: 'Album', path: `/profile/${resolvedProfileKey}/albums` },
   ];
 
   const isActive = (path: string) => {

@@ -279,7 +279,14 @@ export interface PostReactionResponse {
 }
 
 export const postService = {
-  getAllPosts: (currentUserId?: string, authorId?: string, page = 0, size = 10, status?: string) => {
+  getAllPosts: (
+    currentUserId?: string,
+    authorId?: string,
+    page = 0,
+    size = 10,
+    status?: string,
+    signal?: AbortSignal,
+  ) => {
     const params = new URLSearchParams();
     if (currentUserId) params.append('currentUserId', currentUserId);
     if (authorId) params.append('authorId', authorId);
@@ -287,7 +294,7 @@ export const postService = {
     params.append('size', size.toString());
     if (status) params.append('status', status);
     return api
-      .get<SpringPaginatedRaw<PostResponse>>(`/posts?${params.toString()}`)
+      .get<SpringPaginatedRaw<PostResponse>>(`/posts?${params.toString()}`, { signal })
       .then(normalizePaginatedResponse);
   },
   getWatchPosts: (currentUserId?: string, page = 0, size = 20) => {

@@ -6,6 +6,7 @@ import {
   type AlbumComment,
   type AlbumSidebarItem,
   type CreateAlbumPayload,
+  type SpringPage,
   type UpdateAlbumPayload,
 } from '@/services/albumService';
 
@@ -23,11 +24,22 @@ export function useAlbumSidebar() {
   });
 }
 
-export function useMyAlbums(page = 0) {
+export const USER_ALBUMS_KEY = ['albums', 'user'] as const;
+
+export function useUserAlbums(userId: string | undefined, page = 0, size = 12) {
+  return useQuery({
+    queryKey: [...USER_ALBUMS_KEY, userId, page, size],
+    queryFn: () => albumService.getUserAlbums(userId!, page, size),
+    enabled: !!userId,
+    staleTime: 30_000,
+  });
+}
+
+export function useMyAlbums(page = 0, size = 12) {
   const currentUser = authService.getCurrentUser();
   return useQuery({
-    queryKey: [...MY_ALBUMS_KEY, currentUser?.id, page],
-    queryFn: () => albumService.getMyAlbums(page),
+    queryKey: [...MY_ALBUMS_KEY, currentUser?.id, page, size],
+    queryFn: () => albumService.getMyAlbums(page, size),
     enabled: !!currentUser?.id,
     staleTime: 30_000,
   });
@@ -49,6 +61,7 @@ export function useCreateAlbum() {
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ALBUM_SIDEBAR_KEY });
       void queryClient.invalidateQueries({ queryKey: MY_ALBUMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_ALBUMS_KEY });
       if (variables.groupId) {
         void queryClient.invalidateQueries({ queryKey: [...GROUP_ALBUMS_KEY, variables.groupId] });
       }
@@ -64,6 +77,43 @@ export function useUpdateAlbum(albumId: string) {
       void queryClient.invalidateQueries({ queryKey: ['albums', 'detail', albumId] });
       void queryClient.invalidateQueries({ queryKey: ALBUM_SIDEBAR_KEY });
       void queryClient.invalidateQueries({ queryKey: MY_ALBUMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_ALBUMS_KEY });
+    },
+  });
+}
+
+export function useDeleteAlbum() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (albumId: string) => albumService.delete(albumId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ALBUM_SIDEBAR_KEY });
+      void queryClient.invalidateQueries({ queryKey: MY_ALBUMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_ALBUMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: GROUP_ALBUMS_KEY });
+    },
+  });
+}
+
+export function useReorderMyAlbums() {
+  const queryClient = useQueryClient();
+  const currentUser = authService.getCurrentUser();
+  return useMutation({
+    mutationFn: (albumIds: string[]) => albumService.reorderMyAlbums(albumIds),
+    onSuccess: (_data, albumIds) => {
+      queryClient.setQueriesData<SpringPage<Album>>(
+        { queryKey: MY_ALBUMS_KEY },
+        (old) => {
+          if (!old?.content) return old;
+          const byId = new Map(old.content.map((album) => [album.id, album]));
+          const reordered = albumIds
+            .map((id) => byId.get(id))
+            .filter((album): album is Album => album != null);
+          const rest = old.content.filter((album) => !albumIds.includes(album.id));
+          return { ...old, content: [...reordered, ...rest] };
+        },
+      );
+      void queryClient.invalidateQueries({ queryKey: [...ALBUM_SIDEBAR_KEY, currentUser?.id] });
     },
   });
 }
@@ -77,6 +127,7 @@ export function useUploadAlbumMedia(albumId: string) {
       void queryClient.invalidateQueries({ queryKey: ['albums', 'detail', albumId] });
       void queryClient.invalidateQueries({ queryKey: ALBUM_SIDEBAR_KEY });
       void queryClient.invalidateQueries({ queryKey: MY_ALBUMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_ALBUMS_KEY });
     },
   });
 }
@@ -89,6 +140,7 @@ export function useDeleteAlbumMedia(albumId: string) {
       void queryClient.invalidateQueries({ queryKey: ['albums', 'detail', albumId] });
       void queryClient.invalidateQueries({ queryKey: ALBUM_SIDEBAR_KEY });
       void queryClient.invalidateQueries({ queryKey: MY_ALBUMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_ALBUMS_KEY });
     },
   });
 }
@@ -128,6 +180,19 @@ export function useReorderAlbumMedia(albumId: string) {
     mutationFn: (mediaIds: string[]) => albumService.reorderMedia(albumId, mediaIds),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['albums', 'detail', albumId] });
+    },
+  });
+}
+
+export function useSetAlbumCover(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mediaId: string) => albumService.setCover(albumId, mediaId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['albums', 'detail', albumId] });
+      void queryClient.invalidateQueries({ queryKey: ALBUM_SIDEBAR_KEY });
+      void queryClient.invalidateQueries({ queryKey: MY_ALBUMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_ALBUMS_KEY });
     },
   });
 }

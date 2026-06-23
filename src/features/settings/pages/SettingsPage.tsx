@@ -1,482 +1,94 @@
-﻿import { useEffect, useState } from 'react';
-import { KeyRound, Loader2, CheckCircle2, Mail, Lock, Eye, EyeOff, ScrollText } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+﻿import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
-import { authService } from '@/services/authService';
-import { OTPInput } from '../../auth/components/OTPInput/OTPInput';
-import { toast } from 'sonner';
+import { SettingsSidebar, SettingsMobileNav, SETTINGS_TAB_LABELS } from '../components/SettingsSidebar';
+import { SecuritySection } from '../components/sections/SecuritySection';
+import { PrivacySection } from '../components/sections/PrivacySection';
+import { NotificationsSection } from '../components/sections/NotificationsSection';
+import { AppearanceSection } from '../components/sections/AppearanceSection';
+import { useUserSettings } from '../hooks/useUserSettings';
+import type { SettingsTab } from '../types/userSettings.types';
 
-type SettingsSection = 'forgot-password' | 'change-password';
-type ForgotStep = 'email' | 'otp' | 'reset' | 'success';
+const VALID_TABS: SettingsTab[] = ['security', 'privacy', 'notifications', 'appearance'];
 
-// -- Sidebar -------------------------------------------------------------------
-
-const navItems: { id: SettingsSection; label: string; icon: React.ReactNode }[] = [
-  { id: 'change-password', label: 'Đổi mật khẩu', icon: <Lock className="w-5 h-5" /> },
-  { id: 'forgot-password', label: 'Quên mật khẩu', icon: <KeyRound className="w-5 h-5" /> },
-];
-
-function SettingsSidebar({
-  active,
-  onSelect,
-}: {
-  active: SettingsSection;
-  onSelect: (s: SettingsSection) => void;
-}) {
-  return (
-    <div className="w-[300px] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 min-h-[calc(100vh-56px)] sticky top-14 overflow-y-auto">
-      <div className="p-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Cài đặt</h1>
-        <div className="space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => onSelect(item.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${
-                active === item.id ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-muted'
-              }`}
-            >
-              <span className={active === item.id ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400 group-hover:text-blue-600 transition-colors'}>
-                {item.icon}
-              </span>
-              <span className={`font-medium ${active === item.id ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'}`}>
-                {item.label}
-              </span>
-            </button>
-          ))}
-          <Link
-            to="/policies"
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-muted text-gray-900 dark:text-gray-100"
-          >
-            <ScrollText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            <span className="font-medium">Chính sách cộng đồng</span>
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+function parseTab(value: string | null): SettingsTab {
+  if (value && VALID_TABS.includes(value as SettingsTab)) {
+    return value as SettingsTab;
+  }
+  return 'security';
 }
-
-// -- Change Password section ---------------------------------------------------
-
-interface ChangePasswordForm {
-  oldPassword: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
-function ChangePasswordSection() {
-  const currentUser = authService.getCurrentUser();
-  const isSettingPassword = !currentUser?.hasPassword;
-
-  const [showOld, setShowOld] = useState(false);
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } =
-    useForm<ChangePasswordForm>({ defaultValues: { oldPassword: '', newPassword: '', confirmPassword: '' } });
-
-  const newPassword = watch('newPassword');
-
-  const onSubmit = async (data: ChangePasswordForm) => {
-    if (!currentUser) { toast.error('Bạn cần đăng nhập'); return; }
-    try {
-      if (isSettingPassword) {
-        await authService.setPassword(currentUser.email, data.newPassword);
-        authService.saveCurrentUser({ ...currentUser, hasPassword: true });
-        toast.success('Đặt mật khẩu thành công');
-      } else {
-        await authService.changePassword(currentUser.email, data.oldPassword, data.newPassword);
-        toast.success('Đổi mật khẩu thành công');
-      }
-      setSuccess(true);
-      reset();
-    } catch (err: any) {
-      toast.error(err.message || 'Có lỗi xảy ra');
-    }
-  };
-
-  const inputClass = 'w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm pr-11 transition-colors';
-  const btnClass = 'w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
-
-  const EyeToggle = ({ show, onToggle }: { show: boolean; onToggle: () => void }) => (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
-    >
-      {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-    </button>
-  );
-
-  return (
-    <div className="max-w-lg">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-          {isSettingPassword ? 'Đặt mật khẩu' : 'Đổi mật khẩu'}
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {isSettingPassword
-            ? 'Tài khoản của bạn chưa có mật khẩu. Đặt mật khẩu để đăng nhập bằng email.'
-            : 'Nhập mật khẩu hiện tại và mật khẩu mới để cập nhật.'}
-        </p>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm dark:shadow-none">
-        {success ? (
-          <div className="flex flex-col items-center text-center py-4 space-y-4">
-            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-8 h-8 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
-                {isSettingPassword ? 'Đặt mật khẩu thành công!' : 'Đổi mật khẩu thành công!'}
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Mật khẩu của bạn đã được cập nhật.</p>
-            </div>
-            <button onClick={() => setSuccess(false)} className={btnClass}>
-              {isSettingPassword ? 'Đặt lại mật khẩu khác' : 'Đổi mật khẩu khác'}
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {!isSettingPassword && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu hiện tại</label>
-                <div className="relative">
-                  <input
-                    type={showOld ? 'text' : 'password'}
-                    placeholder="........"
-                    className={inputClass}
-                    autoComplete="current-password"
-                    {...register('oldPassword', { required: 'Mật khẩu hiện tại là bắt buộc' })}
-                  />
-                  <EyeToggle show={showOld} onToggle={() => setShowOld(v => !v)} />
-                </div>
-                {errors.oldPassword && <p className="text-red-500 text-xs mt-1">{errors.oldPassword.message}</p>}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu mới</label>
-              <div className="relative">
-                <input
-                  type={showNew ? 'text' : 'password'}
-                  placeholder="Ít nhất 8 ký tự"
-                  className={inputClass}
-                  autoComplete="new-password"
-                  {...register('newPassword', {
-                    required: 'Mật khẩu mới là bắt buộc',
-                    minLength: { value: 8, message: 'Mật khẩu phải có ít nhất 8 ký tự' },
-                  })}
-                />
-                <EyeToggle show={showNew} onToggle={() => setShowNew(v => !v)} />
-              </div>
-              {errors.newPassword && <p className="text-red-500 text-xs mt-1">{errors.newPassword.message}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Xác nhận mật khẩu mới</label>
-              <div className="relative">
-                <input
-                  type={showConfirm ? 'text' : 'password'}
-                  placeholder="Nhập lại mật khẩu mới"
-                  className={inputClass}
-                  autoComplete="new-password"
-                  {...register('confirmPassword', {
-                    required: 'Vui lòng xác nhận mật khẩu',
-                    validate: v => v === newPassword || 'Mật khẩu xác nhận không khớp',
-                  })}
-                />
-                <EyeToggle show={showConfirm} onToggle={() => setShowConfirm(v => !v)} />
-              </div>
-              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>}
-            </div>
-
-            <button type="submit" disabled={isSubmitting} className={`${btnClass} mt-2`}>
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isSettingPassword ? 'Đặt mật khẩu' : 'Đổi mật khẩu'}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// -- Forgot Password section ---------------------------------------------------
-
-function ForgotPasswordSection() {
-  const currentUser = authService.getCurrentUser();
-  const email = currentUser?.email ?? '';
-  const [step, setStep] = useState<ForgotStep>('email');
-  const [otp, setOtp] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [otpExpiresIn, setOtpExpiresIn] = useState(0);
-
-  useEffect(() => {
-    if (countdown > 0) {
-      const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [countdown]);
-
-  useEffect(() => {
-    if (otpExpiresIn > 0) {
-      const t = setTimeout(() => setOtpExpiresIn(s => s - 1), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [otpExpiresIn]);
-
-  const reset = () => {
-    setStep('email'); setOtp('');
-    setPassword(''); setConfirmPassword('');
-    setErrors({}); setCountdown(0); setOtpExpiresIn(0);
-  };
-
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) { setErrors({ email: 'Không xác định được email người dùng' }); return; }
-    setLoading(true);
-    try {
-      await authService.sendOtp(email);
-      setStep('otp'); setCountdown(60); setOtpExpiresIn(60); setErrors({});
-    } catch (err) {
-      setErrors({ email: err instanceof Error ? err.message : 'Không gửi được mã OTP' });
-    } finally { setLoading(false); }
-  };
-
-  const handleOtpSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp.length !== 6) { setErrors({ otp: 'Vui lòng nhập đầy đủ mã OTP' }); return; }
-    setLoading(true);
-    try {
-      await authService.verifyOtp(email, otp);
-      setStep('reset'); setErrors({});
-    } catch (err) {
-      setErrors({ otp: err instanceof Error ? err.message : 'Mã OTP không hợp lệ' });
-    } finally { setLoading(false); }
-  };
-
-  const handleResendOtp = async () => {
-    if (countdown > 0) return;
-    setLoading(true);
-    try {
-      await authService.sendOtp(email);
-      setCountdown(60); setOtpExpiresIn(60); setOtp(''); setErrors({});
-    } catch (err) {
-      setErrors({ otp: err instanceof Error ? err.message : 'Không gửi lại được mã OTP' });
-    } finally { setLoading(false); }
-  };
-
-  const handleResetSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errs: Record<string, string> = {};
-    if (!password) errs.password = 'Mật khẩu là bắt buộc';
-    else if (password.length < 8) errs.password = 'Mật khẩu phải có ít nhất 8 ký tự';
-    if (!confirmPassword) errs.confirmPassword = 'Vui lòng xác nhận mật khẩu';
-    else if (password !== confirmPassword) errs.confirmPassword = 'Mật khẩu không khớp';
-    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-    setLoading(true);
-    try {
-      await authService.resetPassword(email, password);
-      setStep('success'); setErrors({});
-    } catch (err) {
-      setErrors({ password: err instanceof Error ? err.message : 'Không đặt lại được mật khẩu' });
-    } finally { setLoading(false); }
-  };
-
-  const formattedExpiry = `${String(Math.floor(otpExpiresIn / 60)).padStart(2, '0')}:${String(otpExpiresIn % 60).padStart(2, '0')}`;
-
-  const inputClass = 'w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm transition-colors';
-  const btnClass = 'w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2';
-  const flowSteps = ['email', 'otp', 'reset'] as const;
-  const stepIndex = step === 'success' ? flowSteps.length : flowSteps.indexOf(step);
-
-  const stepIndicator = (
-    <div className="flex items-center gap-2 mb-6">
-      {flowSteps.map((s, i) => (
-        <div key={s} className="flex items-center gap-2">
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-            stepIndex > i
-              ? 'bg-blue-600 text-white'
-              : step === s
-              ? 'bg-blue-100 text-blue-600 border-2 border-blue-600'
-              : 'bg-gray-100 dark:bg-gray-900 text-gray-400'
-          }`}>
-            {i + 1}
-          </div>
-          {i < 2 && <div className={`h-0.5 w-8 ${stepIndex > i ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`} />}
-        </div>
-      ))}
-    </div>
-  );
-
-  return (
-    <div className="max-w-lg">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Quên mật khẩu</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Đặt lại mật khẩu qua email của bạn</p>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm dark:shadow-none">
-        {step !== 'success' && stepIndicator}
-
-        {step === 'email' && (
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
-                <Mail className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">Bước 1: Nhập email</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Chúng tôi sẽ gửi mã OTP đến email của bạn</p>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-              <div className="flex items-center gap-2 px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-300">
-                <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                <span>{email}</span>
-              </div>
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-            </div>
-            <button type="submit" disabled={loading} className={btnClass}>
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Gửi mã xác thực
-            </button>
-          </form>
-        )}
-
-        {step === 'otp' && (
-          <form onSubmit={handleOtpSubmit} className="space-y-4">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
-                <Lock className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">Bước 2: Xác thực OTP</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Mã đã gửi đến <span className="font-medium text-blue-600">{email}</span>
-                </p>
-              </div>
-            </div>
-            <OTPInput value={otp} onChange={(v) => { setOtp(v); setErrors({}); }} error={errors.otp} />
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              Mã hết hạn sau:{' '}
-              <span className={otpExpiresIn > 10 ? 'font-semibold text-amber-600' : 'font-semibold text-red-500'}>
-                {formattedExpiry}
-              </span>
-            </p>
-            <button type="submit" disabled={loading} className={btnClass}>
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Xác thực
-            </button>
-            <div className="flex items-center justify-end text-sm">
-              {countdown > 0 ? (
-                <span className="text-gray-400">Gửi lại sau {countdown}s</span>
-              ) : (
-                <button type="button" onClick={handleResendOtp} disabled={loading} className="text-blue-600 hover:text-blue-700 font-medium">
-                  Gửi lại mã
-                </button>
-              )}
-            </div>
-          </form>
-        )}
-
-        {step === 'reset' && (
-          <form onSubmit={handleResetSubmit} className="space-y-4">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-11 h-11 bg-blue-50 rounded-full flex items-center justify-center flex-shrink-0">
-                <KeyRound className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-800 dark:text-gray-200 text-sm">Bước 3: Đặt mật khẩu mới</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Tạo mật khẩu mới cho tài khoản của bạn</p>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mật khẩu mới</label>
-              <div className="relative">
-                <input type={showPassword ? 'text' : 'password'} placeholder="Ít nhất 8 ký tự" value={password}
-                  onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: '' })); }}
-                  className={`${inputClass} pr-11`} autoComplete="new-password" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Xác nhận mật khẩu</label>
-              <div className="relative">
-                <input type={showConfirmPassword ? 'text' : 'password'} placeholder="Nhập lại mật khẩu mới" value={confirmPassword}
-                  onChange={(e) => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: '' })); }}
-                  className={`${inputClass} pr-11`} autoComplete="new-password" />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
-                >
-                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
-            </div>
-            <button type="submit" disabled={loading} className={btnClass}>
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Đặt lại mật khẩu
-            </button>
-          </form>
-        )}
-
-        {step === 'success' && (
-          <div className="flex flex-col items-center text-center py-4 space-y-4">
-            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="w-9 h-9 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">Đặt lại thành công!</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Mật khẩu của bạn đã được cập nhật.</p>
-            </div>
-            <button onClick={reset} className={btnClass}>Đặt lại mật khẩu khác</button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// -- Main page -----------------------------------------------------------------
 
 export default function SettingsPage() {
-  const [active, setActive] = useState<SettingsSection>('change-password');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => parseTab(searchParams.get('tab')));
+
+  const { settings, updateSettings, isDirty, save, discard, saving } = useUserSettings();
+
+  useEffect(() => {
+    const tab = parseTab(searchParams.get('tab'));
+    setActiveTab(tab);
+  }, [searchParams]);
+
+  const handleSelectTab = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    setSearchParams(tab === 'security' ? {} : { tab }, { replace: true });
+  };
+
+  const sectionProps = useMemo(
+    () => ({
+      settings,
+      updateSettings,
+      isDirty,
+      saving,
+      onSave: () => void save(),
+      onDiscard: discard,
+    }),
+    [settings, updateSettings, isDirty, saving, save, discard],
+  );
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background">
+    <div className="settings-page min-h-screen bg-background font-['Be_Vietnam_Pro',system-ui,sans-serif]">
       <Header />
-      <div className="pt-14 flex">
-        <SettingsSidebar active={active} onSelect={setActive} />
-        <main className="flex-1 p-8">
-          {active === 'change-password' && <ChangePasswordSection />}
-          {active === 'forgot-password' && <ForgotPasswordSection />}
-        </main>
+
+      <div className="mx-auto max-w-6xl px-4 pb-12 pt-[calc(56px+1.5rem)] lg:px-8">
+        <div className="mb-6 lg:hidden">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Cài đặt</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Quản lý tài khoản và trải nghiệm KConnecta</p>
+        </div>
+
+        <SettingsMobileNav active={activeTab} onSelect={handleSelectTab} />
+
+        <div className="mt-6 flex flex-col gap-8 lg:mt-8 lg:flex-row lg:gap-12">
+          <aside className="hidden w-[260px] shrink-0 lg:block">
+            <div className="sticky top-[calc(56px+2rem)]">
+              <SettingsSidebar active={activeTab} onSelect={handleSelectTab} />
+            </div>
+          </aside>
+
+          <main className="min-w-0 flex-1">
+            <header className="mb-8 border-b border-border pb-6">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">
+                {SETTINGS_TAB_LABELS[activeTab]}
+              </h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                {activeTab === 'security' &&
+                  'Bảo vệ tài khoản với mật khẩu mạnh và xác thực hai lớp.'}
+                {activeTab === 'privacy' &&
+                  'Kiểm soát ai có thể xem hồ sơ, bài viết và danh sách chặn.'}
+                {activeTab === 'notifications' &&
+                  'Tùy chỉnh cách bạn nhận thông báo trên KConnecta.'}
+                {activeTab === 'appearance' &&
+                  'Điều chỉnh giao diện và ngôn ngữ hiển thị.'}
+              </p>
+            </header>
+
+            {activeTab === 'security' && <SecuritySection {...sectionProps} />}
+            {activeTab === 'privacy' && <PrivacySection {...sectionProps} />}
+            {activeTab === 'notifications' && <NotificationsSection {...sectionProps} />}
+            {activeTab === 'appearance' && <AppearanceSection {...sectionProps} />}
+          </main>
+        </div>
       </div>
     </div>
   );
 }
-
-
-
