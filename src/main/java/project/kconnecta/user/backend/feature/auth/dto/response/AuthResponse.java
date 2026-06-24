@@ -19,6 +19,7 @@ public class AuthResponse {
     private boolean requiresTwoFactor;
     private String twoFactorToken;
     private String token;
+    private String refreshToken;
     private AccountStatus accountStatus;
     private String blockedReason;
     private LocalDateTime lockedUntil;

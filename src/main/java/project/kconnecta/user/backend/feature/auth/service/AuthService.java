@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.common.enums.OtpType;
 import project.kconnecta.user.backend.common.util.JwtUtil;
 import project.kconnecta.user.backend.config.security.TokenBlacklistService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
+import project.kconnecta.user.backend.exception.InvalidRefreshTokenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
@@ -67,6 +68,7 @@ public class AuthService {
     private final SettingsService settingsService;
     private final SettingsServiceImpl settingsServiceImpl;
     private final TwoFactorPendingService twoFactorPendingService;
+    private final RefreshTokenService refreshTokenService;
 
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
@@ -82,7 +84,10 @@ public class AuthService {
         account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         accountRepository.save(account);
         userRepository.findByAccountEmail(request.getEmail())
-                .ifPresent(u -> activityLogService.log(u.getId(), u.getUsername(), ActivityLogType.PASSWORD_CHANGED));
+                .ifPresent(u -> {
+                    activityLogService.log(u.getId(), u.getUsername(), ActivityLogType.PASSWORD_CHANGED);
+                    refreshTokenService.revokeAllForUser(u.getId());
+                });
     }
 
     public AuthResponse register(RegisterRequest request) {
@@ -214,11 +219,27 @@ public class AuthService {
                 UUID userId = jwtUtil.extractUserId(token);
                 String username = jwtUtil.extractUsername(token);
                 activityLogService.log(userId, username, ActivityLogType.LOGOUT);
+                UUID sid = jwtUtil.extractSessionId(token);
+                if (sid != null) {
+                    refreshTokenService.revoke(sid);
+                }
             }
         } catch (Exception ignored) {
             // malformed or expired JWT — still blacklist
         }
         tokenBlacklistService.blacklistToken(token);
+    }
+
+    /** Xoay refresh token → cấp access token mới + refresh token mới. */
+    public AuthResponse refresh(String rawRefreshToken) {
+        RefreshTokenService.RotationResult r = refreshTokenService.rotate(rawRefreshToken);
+        User user = userRepository.findById(r.userId())
+                .orElseThrow(() -> new InvalidRefreshTokenException("Nguoi dung khong ton tai"));
+        String access = jwtUtil.generateToken(user.getId(), user.getUsername(), r.sid());
+        return AuthResponse.builder()
+                .token(access)
+                .refreshToken(r.newRefreshToken())
+                .build();
     }
 
     public AuthResponse googleLogin(GoogleLoginRequest request, HttpServletRequest httpRequest) {
@@ -340,7 +361,10 @@ public class AuthService {
         account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         accountRepository.save(account);
         userRepository.findByAccountId(account.getId())
-                .ifPresent(u -> activityLogService.log(u.getId(), u.getUsername(), ActivityLogType.RESET_PASSWORD));
+                .ifPresent(u -> {
+                    activityLogService.log(u.getId(), u.getUsername(), ActivityLogType.RESET_PASSWORD);
+                    refreshTokenService.revokeAllForUser(u.getId());
+                });
         otpService.clear(request.getEmail());
     }
 
@@ -514,6 +538,9 @@ public class AuthService {
 
     private AuthResponse toResponse(User user, UUID sessionId) {
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), sessionId);
+        String refreshToken = sessionId != null
+                ? refreshTokenService.issue(user.getId(), sessionId)
+                : null;
         return AuthResponse.builder()
                 .id(user.getId())
                 .email(user.getAccount().getEmail())
@@ -522,6 +549,7 @@ public class AuthService {
                 .hasPassword(user.getAccount().getPasswordHash() != null)
                 .requiresProfileSetup(false)
                 .token(token)
+                .refreshToken(refreshToken)
                 .accountStatus(user.getAccount().getStatus())
                 .build();
     }

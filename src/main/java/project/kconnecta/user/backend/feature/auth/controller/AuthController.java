@@ -103,6 +103,20 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Dang xuat thanh cong"));
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody Map<String, String> body, HttpServletRequest httpRequest) {
+        String ip = resolveClientIp(httpRequest);
+        if (rateLimitService.isRateLimited("refresh", ip, 30, Duration.ofMinutes(1))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
+        }
+        String refreshToken = body.get("refreshToken");
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Thieu refresh token"));
+        }
+        return ResponseEntity.ok(authService.refresh(refreshToken));
+    }
+
     @PostMapping("/google-login")
     public ResponseEntity<AuthResponse> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request,

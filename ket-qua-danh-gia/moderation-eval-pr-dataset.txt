@@ -1,0 +1,37 @@
+============================================================
+ ĐÁNH GIÁ BỘ PHÂN LOẠI KIỂM DUYỆT AI (Gemini, tier-2, độc lập)
+============================================================
+Dataset        : /moderation-eval/dataset.csv
+Model cấu hình : gemini-3.1-flash-lite
+Tổng mẫu       : 46  (vi phạm chiếm ~48%)
+AI thất bại     : 1  (Optional.empty — loại khỏi tính chỉ số; production = fail-closed)
+Mẫu đã chấm     : 45
+------------------------------------------------------------
+Ma trận nhầm lẫn (lớp dương = VI PHẠM):
+  TP (bắt đúng vi phạm)     = 22
+  FN (BỎ LỌT vi phạm)       = 0   <-- rủi ro an toàn nội dung
+  FP (CHẶN NHẦM bài sạch)   = 0   <-- rủi ro trải nghiệm
+  TN (bỏ qua đúng bài sạch) = 23
+------------------------------------------------------------
+  Precision (độ chính xác cờ vi phạm) = 1.000
+  Recall    (tỉ lệ vi phạm bắt được)  = 1.000
+  F1                                  = 1.000
+  Accuracy                            = 1.000
+  False-Positive-Rate (chặn nhầm)     = 0.000
+------------------------------------------------------------
+LƯU Ý KHI TRÍCH DẪN:
+  - Cỡ mẫu nhỏ: mỗi vi phạm bị bỏ lọt làm recall đổi ~4.5 điểm %.
+  - Đây là AI tier-2 ĐỘC LẬP, không phải pipeline production (tier-1 lọc trước).
+  - Tập cân bằng làm precision 'đẹp' hơn thực tế (nội dung thật đa số là sạch).
+  - dataset.csv là tập hạt giống — mở rộng bằng nhãn người thật trước khi báo cáo.
+  - CÒN 1 mẫu AI_FAILED. Xem mục 'Quota' trong README.
+
+FALSE NEGATIVES — vi phạm AI bỏ lọt (đáng lo nhất, bàn trong KLTN) (0):
+  (không có)
+
+FALSE POSITIVES — bài sạch AI chặn nhầm (0):
+  (không có)
+
+AI THẤT BẠI (không có verdict) 1 mẫu:
+  #19 [review_film] Đánh giá phim xem hôm qua: cốt truyện ổn, diễn viên tốt, nhạc phim hơi yếu, 7/10.
+============================================================

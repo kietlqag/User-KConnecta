@@ -53,6 +53,7 @@ server:
 jwt:
   secret: ${JWT_SECRET}  # Required — no default. Set JWT_SECRET env var. Local fallback lives in application-local.yml only.
   expiration: ${JWT_EXPIRATION:86400000}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:1800000}   # 30 phút — tuổi thọ access token khi dùng refresh token
 
 google:
   oauth:

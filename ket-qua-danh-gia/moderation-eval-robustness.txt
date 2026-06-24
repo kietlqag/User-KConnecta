@@ -1,0 +1,25 @@
+============================================================
+ ĐỘ BỀN NGÔN NGỮ CỦA KIỂM DUYỆT AI (recall theo kiểu biến tấu)
+============================================================
+Model cấu hình : gemini-3.1-flash-lite
+Tổng mẫu       : 40 (tất cả đều là VI PHẠM — lý tưởng recall = 1.000)
+------------------------------------------------------------
+Kiểu                N     Bắt   Bỏ lọt    Recall
+------------------------------------------------------------
+english             8       8        0     1.000
+no_diacritics       8       8        0     1.000
+obfuscated          8       7        0     1.000  (AI_FAILED=1)
+plain_vi            8       8        0     1.000
+teencode            8       8        0     1.000
+------------------------------------------------------------
+Chênh lệch (bias gap): kiểu tốt nhất 'english' (1.000) - tệ nhất 'english' (1.000) = 0.000
+  → chênh lệch càng lớn = điểm mù ngôn ngữ càng rõ (thường english/plain_vi cao,
+    obfuscated/no_diacritics thấp). Đây là số liệu trả lời trực tiếp Q87.
+------------------------------------------------------------
+LƯU Ý: cỡ mẫu nhỏ — coi đây là TÍN HIỆU xu hướng, không phải số tuyệt đối.
+Mở rộng mỗi kiểu (đặc biệt thêm kiểu 'noi_lai' do người curate) để củng cố.
+CÒN 1 mẫu AI_FAILED. Xem mục 'Quota' trong README.
+
+VI PHẠM BỊ BỎ LỌT (theo kiểu):
+  (không có — AI bắt hết mọi kiểu trên tập này)
+============================================================

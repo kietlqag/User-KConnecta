@@ -48,6 +48,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    // 401 refresh token không hợp lệ / bị tái dùng
+    @ExceptionHandler({InvalidRefreshTokenException.class, RefreshTokenReuseException.class})
+    public ResponseEntity<?> handleRefreshToken(RuntimeException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
     // 400 domain bad request
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<?> handleBadRequest(BadRequestException ex) {

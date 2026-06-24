@@ -18,8 +18,11 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration:86400000}") // 24h mặc định
+    @Value("${jwt.expiration:86400000}") // 24h mặc định (giữ cho tương thích)
     private long expiration;
+
+    @Value("${jwt.access-expiration:1800000}") // 30 phút — tuổi thọ access token khi dùng refresh token
+    private long accessExpiration;
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
@@ -34,7 +37,7 @@ public class JwtUtil {
                 .subject(userId.toString())
                 .claim("username", username)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration));
+                .expiration(new Date(System.currentTimeMillis() + accessExpiration));
         if (sessionId != null) {
             builder.claim("sid", sessionId.toString());
         }
