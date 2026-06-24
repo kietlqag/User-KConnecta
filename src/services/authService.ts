@@ -26,6 +26,7 @@ export interface AuthUser {
   fullName: string;
   username: string;
   token?: string;
+  refreshToken?: string;
   accountStatus?: 'ACTIVE' | 'INACTIVE' | 'BLOCKED' | 'DELETED';
   blockedReason?: string;
   lockedUntil?: string;
@@ -86,6 +87,23 @@ export function isUuid(value: string | undefined | null): boolean {
 }
 
 export const authService = {
+  // Cập nhật cặp token vào storage đang dùng (gọi sau khi refresh access token).
+  updateTokens(tokens: { token: string; refreshToken?: string }) {
+    for (const storage of [localStorage, sessionStorage]) {
+      const raw = storage.getItem(AUTH_USER_KEY);
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw);
+        const target = parsed?.user ?? parsed;
+        target.token = tokens.token;
+        if (tokens.refreshToken) target.refreshToken = tokens.refreshToken;
+        storage.setItem(AUTH_USER_KEY, JSON.stringify(parsed));
+      } catch {
+        /* ignore */
+      }
+    }
+  },
+
   updateProfile: (id: string, data: Partial<RegisterData>) => {
     if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
     return api.put<AuthUser>(`/users/${id}`, data);

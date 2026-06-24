@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getApiBaseUrl } from '@/utils/apiBaseUrl';
+import { authService } from '@/services/authService';
 
 function getToken(): string | null {
   try {
@@ -13,6 +14,37 @@ function getToken(): string | null {
     }
   } catch { /* ignore */ }
   return null;
+}
+
+function getRefreshToken(): string | null {
+  try {
+    const AUTH_KEY = 'authUser';
+    for (const storage of [localStorage, sessionStorage]) {
+      const raw = storage.getItem(AUTH_KEY);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      const rt = parsed?.user?.refreshToken ?? parsed?.refreshToken ?? null;
+      if (rt) return rt;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+// Đảm bảo nhiều request 401 đồng thời chỉ kích hoạt MỘT lần refresh.
+let refreshPromise: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  const rt = getRefreshToken();
+  if (!rt) throw new Error('No refresh token');
+  // Dùng axios "trần" (không qua axiosInstance) để KHÔNG đi vào interceptor → tránh đệ quy.
+  const resp = await axios.post(
+    `${getApiBaseUrl()}/auth/refresh`,
+    { refreshToken: rt },
+    { headers: { 'Content-Type': 'application/json' } },
+  );
+  const data = resp.data as { token: string; refreshToken?: string };
+  authService.updateTokens({ token: data.token, refreshToken: data.refreshToken });
+  return data.token;
 }
 
 const axiosInstance = axios.create({
@@ -31,11 +63,28 @@ axiosInstance.interceptors.request.use(config => {
 
 axiosInstance.interceptors.response.use(
   response => response,
-  error => {
+  async error => {
     if (axios.isAxiosError(error)) {
       const status = error.response?.status;
       const url = error.config?.url ?? '';
       const isAuthEndpoint = url.startsWith('/auth/');
+
+      // Access token hết hạn → thử refresh MỘT lần rồi retry request gốc.
+      const original = error.config as (typeof error.config & { _retried?: boolean }) | undefined;
+      if (status === 401 && !isAuthEndpoint && original && !original._retried && getRefreshToken()) {
+        try {
+          if (!refreshPromise) {
+            refreshPromise = refreshAccessToken().finally(() => { refreshPromise = null; });
+          }
+          const newToken = await refreshPromise;
+          original._retried = true;
+          original.headers = original.headers ?? {};
+          original.headers['Authorization'] = `Bearer ${newToken}`;
+          return axiosInstance(original);
+        } catch {
+          // refresh thất bại → rơi xuống nhánh logout bên dưới
+        }
+      }
 
       if (status === 401 && !isAuthEndpoint) {
         const data = error.response?.data;

@@ -39,6 +39,7 @@ import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidati
 
 import { toApiScheduledAt, debugScheduleLog } from './postScheduleUtils';
 import { GroupPollComposer } from '@/features/groups/components/GroupPollComposer/GroupPollComposer';
+import { computeEmojiPickerPosition, type EmojiPickerPosition } from '@/utils/emojiPickerPosition';
 
 interface ProfileCreatePostModalProps {
   isOpen: boolean;
@@ -93,7 +94,7 @@ export function ProfileCreatePostModal({
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [emojiPickerPos, setEmojiPickerPos] = useState({ top: 0, right: 0 });
+  const [emojiPickerPos, setEmojiPickerPos] = useState<EmojiPickerPosition>({ top: 0, right: 0, maxHeight: 435 });
   const [showPoll, setShowPoll] = useState(initialShowPoll);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollAllowAddOptions, setPollAllowAddOptions] = useState(true);
@@ -131,8 +132,19 @@ export function ProfileCreatePostModal({
       const insideButton = emojiButtonRef.current?.contains(target);
       if (!insidePicker && !insideButton) setShowEmojiPicker(false);
     };
+    const handleReposition = () => {
+      if (emojiButtonRef.current) {
+        setEmojiPickerPos(
+          computeEmojiPickerPosition(emojiButtonRef.current.getBoundingClientRect()),
+        );
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleReposition);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleReposition);
+    };
   }, [showEmojiPicker]);
 
   const handleEmojiSelect = useCallback((emoji: { native?: string }) => {
@@ -664,11 +676,9 @@ export function ProfileCreatePostModal({
                   type="button"
                   onClick={() => {
                     if (!showEmojiPicker && emojiButtonRef.current) {
-                      const rect = emojiButtonRef.current.getBoundingClientRect();
-                      setEmojiPickerPos({
-                        top: rect.top - 8,
-                        right: window.innerWidth - rect.right,
-                      });
+                      setEmojiPickerPos(
+                        computeEmojiPickerPosition(emojiButtonRef.current.getBoundingClientRect()),
+                      );
                     }
                     setShowEmojiPicker(prev => !prev);
                   }}
@@ -705,9 +715,6 @@ export function ProfileCreatePostModal({
                     className="rounded-full p-2 transition-colors hover:bg-muted"
                   >
                     <Video className="h-6 w-6 text-red-500" />
-                  </button>
-                  <button className="rounded-full p-2 transition-colors hover:bg-muted">
-                    <Users className="h-6 w-6 text-emerald-500" />
                   </button>
                   {isGroupPost && !showPoll && (
                     <button
@@ -904,8 +911,12 @@ export function ProfileCreatePostModal({
       {showEmojiPicker && createPortal(
         <div
           ref={emojiPickerRef}
-          className="fixed z-[200]"
-          style={{ bottom: window.innerHeight - emojiPickerPos.top, right: emojiPickerPos.right }}
+          className="fixed z-[200] overflow-auto rounded-lg shadow-xl"
+          style={{
+            top: emojiPickerPos.top,
+            right: emojiPickerPos.right,
+            maxHeight: emojiPickerPos.maxHeight,
+          }}
         >
           <Picker
             data={data}

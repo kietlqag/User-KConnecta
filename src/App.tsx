@@ -11,7 +11,7 @@ import { I18nLanguageSync } from '@/i18n/I18nLanguageSync';
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem storageKey="kconnecta-theme">
+      <ThemeProvider attribute="class" defaultTheme="light" storageKey="kconnecta-theme">
         <MenuProvider>
           <SidebarProvider>
             <I18nLanguageSync />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, Monitor, Moon, Sun } from 'lucide-react';
+import { ChevronLeft, Moon, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 interface DisplayAccessibilityPanelProps {
@@ -19,12 +19,6 @@ const themeOptions = [
     description: 'Luôn dùng giao diện tối',
     icon: Moon,
   },
-  {
-    value: 'system',
-    label: 'Theo hệ thống',
-    description: 'Tự động theo thiết bị của bạn',
-    icon: Monitor,
-  },
 ] as const;
 
 export function DisplayAccessibilityPanel({ onBack }: DisplayAccessibilityPanelProps) {
@@ -35,7 +29,7 @@ export function DisplayAccessibilityPanel({ onBack }: DisplayAccessibilityPanelP
     setMounted(true);
   }, []);
 
-  const activeTheme = mounted ? (theme ?? 'system') : 'system';
+  const activeTheme = mounted ? (theme === 'dark' ? 'dark' : 'light') : 'light';
 
   return (
     <div className="p-2">
