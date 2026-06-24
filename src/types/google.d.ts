@@ -9,6 +9,8 @@ declare global {
             auto_select?: boolean;
             cancel_on_tap_outside?: boolean;
             context?: 'signin' | 'signup' | 'use';
+            use_fedcm_for_button?: boolean;
+            button_auto_select?: boolean;
           }) => void;
           renderButton: (
             parent: HTMLElement,
@@ -25,6 +27,20 @@ declare global {
           ) => void;
           disableAutoSelect: () => void;
           cancel: () => void;
+        };
+        oauth2: {
+          initTokenClient: (options: {
+            client_id: string;
+            scope: string;
+            callback: (response: {
+              access_token?: string;
+              error?: string;
+              error_description?: string;
+            }) => void;
+          }) => {
+            requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
+          };
+          revoke: (accessToken: string, callback: () => void) => void;
         };
       };
     };

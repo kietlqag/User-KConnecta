@@ -18,7 +18,13 @@ export function RegisterPage() {
   const googleSignupSession = useMemo(
     () =>
       resolveGoogleSignupSession(
-        location.state as { googleSignup?: boolean; googleIdToken?: string; email?: string } | null,
+        location.state as {
+          googleSignup?: boolean;
+          googleIdToken?: string;
+          googleAccessToken?: string;
+          email?: string;
+          suggestedName?: string;
+        } | null,
       ),
     [location.state],
   );
@@ -288,6 +294,8 @@ export function RegisterPage() {
               password={signupData.password}
               isGoogleSignup={isGoogleSignup}
               googleIdToken={googleSignupSession?.googleIdToken}
+              googleAccessToken={googleSignupSession?.googleAccessToken}
+              googleSuggestedName={googleSignupSession?.suggestedName}
               onBack={isGoogleSignup ? handleGoogleSignupBack : () => setCurrentStep("password")}
             />
           )}

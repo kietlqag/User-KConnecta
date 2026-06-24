@@ -12,7 +12,13 @@ import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
 import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
-import { decodeGoogleIdTokenPayload, saveGoogleSignupSession } from "@/features/auth/utils/googleSignupSession";
+import { saveGoogleSignupSession } from "@/features/auth/utils/googleSignupSession";
+import {
+  createGoogleTokenClient,
+  loadGoogleIdentityScript,
+  requestGoogleAccountPicker,
+  type GoogleTokenClient,
+} from "@/features/auth/utils/googleSignInClient";
 
 interface LoginFormData {
   email: string;
@@ -217,7 +223,7 @@ export function LoginPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const googleTokenClientRef = useRef<GoogleTokenClient | null>(null);
   const authLockRef = useRef(false);
   const [blockedUser, setBlockedUser] = useState<AuthUser | null>(() => {
     const currentUser = authService.getCurrentUser();
@@ -244,6 +250,7 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGoogleReady, setIsGoogleReady] = useState(false);
   const isAuthenticating = isLoading || isGoogleLoading;
 
   const [showPassword, setShowPassword] = useState(false);
@@ -268,119 +275,6 @@ export function LoginPage() {
     authLockRef.current = false;
     setIsGoogleLoading(false);
   }, []);
-
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      setGoogleError("Thiếu VITE_GOOGLE_CLIENT_ID ở frontend");
-      return;
-    }
-
-    const googleLocale = i18n.language === "en" ? "en" : "vi";
-    const scriptSrc = `https://accounts.google.com/gsi/client?hl=${googleLocale}`;
-
-    let cancelled = false;
-    let script = document.querySelector<HTMLScriptElement>('script[src*="accounts.google.com/gsi/client"]');
-
-    const renderGoogleButton = () => {
-      if (cancelled || !window.google?.accounts.id || !googleButtonRef.current) return;
-
-      googleButtonRef.current.innerHTML = "";
-      window.google.accounts.id.disableAutoSelect();
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        context: "signin",
-        callback: async ({ credential }) => {
-          if (authLockRef.current) return;
-          if (!credential) {
-            setGoogleError("Google không trả về token đăng nhập");
-            return;
-          }
-
-          authLockRef.current = true;
-          setGoogleError(null);
-          setIsGoogleLoading(true);
-          try {
-            const user = await authService.googleLogin(credential);
-            const tokenPayload = decodeGoogleIdTokenPayload(credential);
-            const resolvedEmail = user.email?.trim() || tokenPayload.email?.trim() || "";
-
-            if (user.requiresProfileSetup) {
-              if (!resolvedEmail) {
-                setGoogleError("Không lấy được email từ tài khoản Google");
-                return;
-              }
-
-              saveGoogleSignupSession({
-                googleSignup: true,
-                googleIdToken: credential,
-                email: resolvedEmail,
-              });
-              resetGoogleAuth();
-              navigate("/auth/register", {
-                replace: true,
-                state: {
-                  googleSignup: true,
-                  googleIdToken: credential,
-                  email: resolvedEmail,
-                },
-              });
-              return;
-            }
-            if (user.requiresTwoFactor && user.twoFactorToken) {
-              setTwoFactorPending({
-                email: user.email || "",
-                twoFactorToken: user.twoFactorToken,
-              });
-              return;
-            }
-            await finishLogin(user);
-          } catch (err) {
-            setGoogleError(err instanceof Error ? err.message : "Đăng nhập Google thất bại");
-          } finally {
-            resetGoogleAuth();
-          }
-        },
-      });
-
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        type: "standard",
-        theme: "outline",
-        text: "signin_with",
-        shape: "pill",
-        size: "large",
-        width: Math.min(380, googleButtonRef.current.offsetWidth || 380),
-        logo_alignment: "left",
-        locale: googleLocale,
-      });
-    };
-
-    if (script && script.src !== scriptSrc) {
-      script.remove();
-      script = null;
-    }
-
-    if (script) {
-      script.addEventListener("load", renderGoogleButton);
-      renderGoogleButton();
-    } else {
-      script = document.createElement("script");
-      script.src = scriptSrc;
-      script.async = true;
-      script.defer = true;
-      script.onload = renderGoogleButton;
-      script.onerror = () => setGoogleError("Không tải được Google Identity Services");
-      document.head.appendChild(script);
-    }
-
-    return () => {
-      cancelled = true;
-      window.google?.accounts.id?.cancel?.();
-      if (script) script.removeEventListener("load", renderGoogleButton);
-    };
-  }, [navigate, redirectTo, resetGoogleAuth, i18n.language]);
 
   useEffect(() => {
     const prevHtmlOverflow = document.documentElement.style.overflow;
@@ -506,6 +400,106 @@ export function LoginPage() {
     }
     setTwoFactorPending(null);
     navigate(redirectTo, { replace: true });
+  };
+
+  const finishLoginRef = useRef(finishLogin);
+  finishLoginRef.current = finishLogin;
+
+  const handleGoogleAccessToken = useCallback(
+    async (accessToken: string) => {
+      if (authLockRef.current) return;
+
+      authLockRef.current = true;
+      setGoogleError(null);
+      setIsGoogleLoading(true);
+      try {
+        const user = await authService.googleLogin({ accessToken });
+        const resolvedEmail = user.email?.trim() || "";
+
+        if (user.requiresProfileSetup) {
+          if (!resolvedEmail) {
+            setGoogleError("Không lấy được email từ tài khoản Google");
+            return;
+          }
+
+          saveGoogleSignupSession({
+            googleSignup: true,
+            googleAccessToken: accessToken,
+            email: resolvedEmail,
+            suggestedName: user.fullName,
+          });
+          resetGoogleAuth();
+          navigate("/auth/register", {
+            replace: true,
+            state: {
+              googleSignup: true,
+              googleAccessToken: accessToken,
+              email: resolvedEmail,
+              suggestedName: user.fullName,
+            },
+          });
+          return;
+        }
+        if (user.requiresTwoFactor && user.twoFactorToken) {
+          setTwoFactorPending({
+            email: user.email || "",
+            twoFactorToken: user.twoFactorToken,
+          });
+          return;
+        }
+        await finishLoginRef.current(user);
+      } catch (err) {
+        setGoogleError(err instanceof Error ? err.message : "Đăng nhập Google thất bại");
+      } finally {
+        resetGoogleAuth();
+      }
+    },
+    [navigate, resetGoogleAuth],
+  );
+
+  const handleGoogleAccessTokenRef = useRef(handleGoogleAccessToken);
+  handleGoogleAccessTokenRef.current = handleGoogleAccessToken;
+
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setGoogleError("Thiếu VITE_GOOGLE_CLIENT_ID ở frontend");
+      return;
+    }
+
+    const googleLocale = i18n.language === "en" ? "en" : "vi";
+    let cancelled = false;
+
+    loadGoogleIdentityScript(googleLocale)
+      .then(() => {
+        if (cancelled) return;
+        window.google?.accounts.id.disableAutoSelect();
+        googleTokenClientRef.current = createGoogleTokenClient(
+          clientId,
+          (accessToken) => {
+            void handleGoogleAccessTokenRef.current(accessToken);
+          },
+          (message) => setGoogleError(message),
+        );
+        setIsGoogleReady(true);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setGoogleError(err instanceof Error ? err.message : "Không tải được Google Identity Services");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      googleTokenClientRef.current = null;
+      setIsGoogleReady(false);
+    };
+  }, [i18n.language]);
+
+  const handleGoogleSignIn = () => {
+    if (!googleTokenClientRef.current || authLockRef.current || !isGoogleReady) return;
+    setGoogleError(null);
+    requestGoogleAccountPicker(googleTokenClientRef.current);
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -864,10 +858,20 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-3">
-                <div
-                  ref={googleButtonRef}
-                  className={`flex min-h-[44px] items-center justify-center ${isAuthenticating ? "pointer-events-none opacity-60" : ""}`}
-                />
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={isAuthenticating || !isGoogleReady}
+                  className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-opacity hover:bg-muted disabled:pointer-events-none disabled:opacity-60"
+                >
+                  <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  <span>{i18n.language === "en" ? "Sign in with Google" : "Đăng nhập bằng Google"}</span>
+                </button>
                 {isGoogleLoading && <p className="text-center text-sm text-muted-foreground">Đang xác thực với Google...</p>}
                 {googleError && <p className="text-center text-sm text-red-500">{googleError}</p>}
               </div>

@@ -35,6 +35,8 @@ interface ProfileSetupStepProps {
   password: string;
   isGoogleSignup?: boolean;
   googleIdToken?: string;
+  googleAccessToken?: string;
+  googleSuggestedName?: string;
   onBack: () => void;
 }
 
@@ -45,6 +47,8 @@ export function ProfileSetupStep({
   password,
   isGoogleSignup = false,
   googleIdToken,
+  googleAccessToken,
+  googleSuggestedName,
   onBack,
 }: ProfileSetupStepProps) {
   const navigate = useNavigate();
@@ -109,11 +113,12 @@ export function ProfileSetupStep({
   }, [locationQuery, wards]);
 
   useEffect(() => {
-    if (!isGoogleSignup || !googleIdToken) return;
-    const { name } = decodeGoogleIdTokenPayload(googleIdToken);
-    if (!name?.trim()) return;
-    setProfileData((prev) => (prev.fullName.trim() ? prev : { ...prev, fullName: name.trim() }));
-  }, [googleIdToken, isGoogleSignup]);
+    if (!isGoogleSignup) return;
+    const nameFromToken = googleIdToken ? decodeGoogleIdTokenPayload(googleIdToken).name : undefined;
+    const suggestedName = nameFromToken?.trim() || googleSuggestedName?.trim();
+    if (!suggestedName) return;
+    setProfileData((prev) => (prev.fullName.trim() ? prev : { ...prev, fullName: suggestedName }));
+  }, [googleIdToken, googleSuggestedName, isGoogleSignup]);
 
   useEffect(() => {
     const loadProvinces = async () => {
@@ -432,13 +437,14 @@ export function ProfileSetupStep({
     setSubmitError('');
 
     try {
-      if (isGoogleSignup && !googleIdToken) {
+      if (isGoogleSignup && !googleIdToken && !googleAccessToken) {
         throw new Error('Thiếu phiên đăng ký Google, vui lòng đăng nhập lại');
       }
 
       const authUser = isGoogleSignup
         ? await authService.googleCompleteRegister({
-            idToken: googleIdToken ?? '',
+            idToken: googleIdToken,
+            accessToken: googleAccessToken,
             fullName: profileData.fullName,
             username: profileData.username,
             dateOfBirth: profileData.dateOfBirth,

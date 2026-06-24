@@ -68,7 +68,8 @@ export interface RegisterData {
 }
 
 export interface GoogleCompleteRegisterData {
-  idToken: string;
+  idToken?: string;
+  accessToken?: string;
   fullName: string;
   username: string;
   dateOfBirth: string;
@@ -150,8 +151,8 @@ export const authService = {
   setPassword: (email: string, newPassword: string) =>
     api.post<{ message: string }>('/auth/set-password', { email, newPassword }),
 
-  googleLogin: (idToken: string) =>
-    api.post<AuthUser>('/auth/google-login', { idToken }),
+  googleLogin: (credential: { idToken?: string; accessToken?: string }) =>
+    api.post<AuthUser>('/auth/google-login', credential),
 
   googleCompleteRegister: (data: GoogleCompleteRegisterData) =>
     api.post<AuthUser>('/auth/google-complete-register', data),

@@ -1,7 +1,9 @@
 export interface GoogleSignupSession {
   googleSignup: true;
-  googleIdToken: string;
+  googleIdToken?: string;
+  googleAccessToken?: string;
   email: string;
+  suggestedName?: string;
 }
 
 const STORAGE_KEY = 'kconnecta.googleSignupSession';
@@ -38,11 +40,14 @@ export function readGoogleSignupSession(): GoogleSignupSession | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as Partial<GoogleSignupSession>;
-    if (!parsed.googleSignup || !parsed.googleIdToken || !parsed.email) return null;
+    if (!parsed.googleSignup || !parsed.email) return null;
+    if (!parsed.googleIdToken && !parsed.googleAccessToken) return null;
     return {
       googleSignup: true,
       googleIdToken: parsed.googleIdToken,
+      googleAccessToken: parsed.googleAccessToken,
       email: parsed.email,
+      suggestedName: parsed.suggestedName,
     };
   } catch {
     return null;
@@ -62,11 +67,14 @@ export function resolveGoogleSignupSession(
     : {};
   const email = locationState?.email?.trim() || fromToken.email?.trim() || '';
 
-  if (locationState?.googleSignup && locationState.googleIdToken && email) {
+  const hasCredential = Boolean(locationState?.googleIdToken || locationState?.googleAccessToken);
+  if (locationState?.googleSignup && hasCredential && email) {
     const session: GoogleSignupSession = {
       googleSignup: true,
       googleIdToken: locationState.googleIdToken,
+      googleAccessToken: locationState.googleAccessToken,
       email,
+      suggestedName: locationState.suggestedName,
     };
     saveGoogleSignupSession(session);
     return session;
