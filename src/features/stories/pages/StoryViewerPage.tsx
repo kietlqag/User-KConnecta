@@ -22,7 +22,6 @@ import {
   Flag,
   Trash2,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { storyService, type StoryResponse } from '@/services/storyService';
 import { useDeleteStoryMutation } from '@/features/stories/hooks/useStories';
@@ -304,18 +303,66 @@ export function StoryViewerPage() {
     if (!slide || !author || deleteStoryMutation.isPending) return;
 
     const deletedStoryId = slide.id;
+    const previousAuthors = authors;
 
     setIsMenuOpen(false);
     setIsPaused(true);
 
+    const nextAuthors = authors
+      .map((item) =>
+        item.userId !== author.userId
+          ? item
+          : { ...item, slides: item.slides.filter((s) => s.id !== deletedStoryId) },
+      )
+      .filter((item) => item.slides.length > 0);
+
+    if (nextAuthors.length === 0) {
+      setAuthors([]);
+      try {
+        await deleteStoryMutation.mutateAsync(deletedStoryId);
+        navigate('/home');
+      } catch {
+        setAuthors(previousAuthors);
+        setIsPaused(false);
+      }
+      return;
+    }
+
+    let nextAuthorIndex = currentAuthorIndex;
+    let nextSlideIndex = currentSlideIndex;
+    const updatedAuthor = nextAuthors.find((item) => item.userId === author.userId);
+
+    if (!updatedAuthor) {
+      nextAuthorIndex = Math.min(currentAuthorIndex, nextAuthors.length - 1);
+      nextSlideIndex = 0;
+    } else if (currentSlideIndex >= updatedAuthor.slides.length) {
+      nextSlideIndex = updatedAuthor.slides.length - 1;
+    }
+
+    setAuthors(nextAuthors);
+    setCurrentAuthorIndex(nextAuthorIndex);
+    setCurrentSlideIndex(nextSlideIndex);
+    setProgress(0);
+    progressRef.current = 0;
+
     try {
       await deleteStoryMutation.mutateAsync(deletedStoryId);
-      toast.success('Đã xóa tin thành công');
-      navigate('/home');
+      setIsPaused(false);
     } catch {
+      setAuthors(previousAuthors);
+      setCurrentAuthorIndex(currentAuthorIndex);
+      setCurrentSlideIndex(currentSlideIndex);
       setIsPaused(false);
     }
-  }, [slide, author, deleteStoryMutation, navigate]);
+  }, [
+    slide,
+    author,
+    deleteStoryMutation,
+    authors,
+    currentAuthorIndex,
+    currentSlideIndex,
+    navigate,
+  ]);
 
   if (loading) {
     return (
