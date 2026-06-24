@@ -117,20 +117,6 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
           </button>
         </div>
       </div>
-
-      <div className="px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-          <Link to="/privacy" onClick={onClose} className="hover:underline">
-            Chính sách bảo mật
-          </Link>
-          <Link to="/terms" onClick={onClose} className="hover:underline">
-            Điều khoản dịch vụ
-          </Link>
-          <Link to="/contact" onClick={onClose} className="hover:underline">
-            Liên hệ
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }

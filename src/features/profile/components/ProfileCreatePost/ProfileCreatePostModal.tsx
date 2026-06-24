@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import {
@@ -14,16 +15,16 @@ import {
   UserCheck,
   Loader2,
   AlertCircle,
-  ExternalLink,
   Lock,
   Shield,
   BarChart3,
+  FileText,
 } from 'lucide-react';
 import { useGroupById } from '@/features/groups/hooks/useGroups';
 import { getGroupPrivacyShortLabel } from './postPublishContext';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
-import { postService, type CreatePostMediaRequest } from '@/services/postService';
+import { postService, type CreatePostMediaRequest, type PostResponse } from '@/services/postService';
 import { compressImage } from '@/utils/imageUtils';
 import { CurrentUserAvatar } from '@/components/shared';
 import { ProfilePostAudienceModal } from './ProfilePostAudienceModal';
@@ -35,17 +36,22 @@ import {
 } from './ProfilePostScheduleModal';
 import { ProfilePostSettingsModal } from './ProfilePostSettingsModal';
 import { usePublicPolicies } from '@/hooks/usePublicPolicies';
-import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidation';
+import { useRefreshPoliciesOnOpen } from '@/hooks/useRefreshPoliciesOnOpen';
+import { usePostRateLimit } from '@/hooks/usePostRateLimit';
+import { formatPostRateLimitMessage, isPostRateLimitReached } from '@/utils/postRateLimit';
+import { validatePostAgainstPolicy, checkKeywords, validatePostMediaFiles } from '@/utils/policyValidation';
+import { buildPostMediaAcceptAttribute, getPostMediaKind, toApiMediaType, type PostMediaKind } from '@/utils/allowedFileTypes';
 
 import { toApiScheduledAt, debugScheduleLog } from './postScheduleUtils';
 import { GroupPollComposer } from '@/features/groups/components/GroupPollComposer/GroupPollComposer';
 import { computeEmojiPickerPosition, type EmojiPickerPosition } from '@/utils/emojiPickerPosition';
+import { PostAllowedFormatsHint } from './PostAllowedFormatsHint';
 
 interface ProfileCreatePostModalProps {
   isOpen: boolean;
   onClose: () => void;
   username: string;
-  onPostCreated?: () => void;
+  onPostCreated?: (post: PostResponse) => void;
   groupId?: string;
   initialShowImagePicker?: boolean;
   initialShowPoll?: boolean;
@@ -81,13 +87,21 @@ export function ProfileCreatePostModal({
     id: string;
     file: File;
     previewUrl: string;
-    type: 'image' | 'video';
+    type: PostMediaKind;
     uploadedUrl?: string;
     uploading: boolean;
     uploadFailed?: boolean;
   }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { data: publicPolicy } = usePublicPolicies();
+  const { data: publicPolicy, isLoading: policyLoading } = usePublicPolicies();
+  useRefreshPoliciesOnOpen(isOpen);
+  const queryClient = useQueryClient();
+  const { data: rateLimit } = usePostRateLimit(isOpen);
+  const rateLimitMessage = useMemo(
+    () => (rateLimit ? formatPostRateLimitMessage(rateLimit) : null),
+    [rateLimit],
+  );
+  const rateLimitBlocked = isPostRateLimitReached(rateLimit);
   const uploadPromisesRef = useRef<Map<string, Promise<string>>>(new Map());
   const uploadControllersRef = useRef<Map<string, AbortController>>(new Map());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -178,23 +192,42 @@ export function ProfileCreatePostModal({
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const newImages = files.map(file => ({
-      id: Math.random().toString(36).substring(7),
-      file,
-      previewUrl: URL.createObjectURL(file),
-      type: file.type.startsWith('video/') ? 'video' as const : 'image' as const,
-      uploading: true,
-    }));
+    if (policyLoading || !publicPolicy) {
+      toast.error('Đang tải quy định đăng bài. Vui lòng thử lại sau.');
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    const mediaError = validatePostMediaFiles(files, publicPolicy);
+    if (mediaError) {
+      toast.error(mediaError);
+      if (e.target) e.target.value = '';
+      return;
+    }
+
+    const newImages = files.map(file => {
+      const kind = getPostMediaKind(file);
+      return {
+        id: Math.random().toString(36).substring(7),
+        file,
+        previewUrl: kind === 'document' ? '' : URL.createObjectURL(file),
+        type: kind,
+        uploading: true,
+      };
+    });
 
     setSelectedImages(prev => [...prev, ...newImages]);
     if (e.target) e.target.value = '';
 
-    // Eager upload: compress image first, then upload in background
     newImages.forEach(img => {
       const controller = new AbortController();
       uploadControllersRef.current.set(img.id, controller);
 
-      const promise = compressImage(img.file)
+      const uploadFile = img.type === 'video' || img.type === 'document'
+        ? Promise.resolve(img.file)
+        : compressImage(img.file);
+
+      const promise = uploadFile
         .then(compressed => postService.uploadPostImage(compressed, controller.signal))
         .then(res => {
           uploadControllersRef.current.delete(img.id);
@@ -206,6 +239,11 @@ export function ProfileCreatePostModal({
         .catch(err => {
           uploadControllersRef.current.delete(img.id);
           if (err instanceof Error && err.name === 'AbortError') return '';
+          const message =
+            err instanceof Error && err.message
+              ? err.message
+              : 'Không thể tải file lên. Vui lòng thử lại.';
+          toast.error(message);
           setSelectedImages(prev =>
             prev.map(i => i.id === img.id ? { ...i, uploading: false, uploadFailed: true } : i),
           );
@@ -224,7 +262,9 @@ export function ProfileCreatePostModal({
     setSelectedImages(prev => {
       const removed = prev.find(img => img.id === id);
       if (removed) {
-        URL.revokeObjectURL(removed.previewUrl);
+        if (removed.previewUrl) {
+          URL.revokeObjectURL(removed.previewUrl);
+        }
         // Delete from Cloudinary if already uploaded (fire-and-forget)
         if (removed.uploadedUrl) {
           postService.deletePostMedia(removed.uploadedUrl).catch(() => {});
@@ -245,7 +285,9 @@ export function ProfileCreatePostModal({
       if (img.uploadedUrl) {
         postService.deletePostMedia(img.uploadedUrl).catch(() => {});
       }
-      URL.revokeObjectURL(img.previewUrl);
+      if (img.previewUrl) {
+        URL.revokeObjectURL(img.previewUrl);
+      }
     });
 
     setSelectedImages([]);
@@ -325,6 +367,12 @@ export function ProfileCreatePostModal({
       return;
     }
 
+    if (rateLimitBlocked) {
+      toast.error(rateLimitMessage ?? 'Bạn đã đăng quá nhiều bài trong phút qua.');
+      void queryClient.invalidateQueries({ queryKey: ['posts', 'rate-limit'] });
+      return;
+    }
+
     setIsPosting(true);
     try {
       // 1. Collect media — use cached URLs, wait only for still-uploading ones
@@ -339,7 +387,7 @@ export function ProfileCreatePostModal({
               url = pending ? await pending : (await postService.uploadPostImage(img.file)).url;
             }
             return {
-              mediaType: img.type === 'video' ? 'VIDEO' as const : 'IMAGE' as const,
+              mediaType: toApiMediaType(img.type),
               fileUrl: url,
               sortOrder: index,
             };
@@ -363,7 +411,7 @@ export function ProfileCreatePostModal({
 
       const effectiveGroupId = groupId ?? selectedGroupId ?? undefined;
       const apiPrivacy = isGroupPost ? ('PUBLIC' as const) : mapPrivacyToApi();
-      await postService.createPost({
+      const createdPost = await postService.createPost({
         authorId: user?.id || '',
         ...(effectiveGroupId && { groupId: effectiveGroupId }),
         content: postContent.trim(),
@@ -383,8 +431,9 @@ export function ProfileCreatePostModal({
       });
 
       toast.success(isScheduled ? 'Đã lên lịch đăng bài' : 'Đăng bài thành công');
+      void queryClient.invalidateQueries({ queryKey: ['posts', 'rate-limit'] });
       if (!isScheduled) {
-        onPostCreated?.();
+        onPostCreated?.(createdPost);
       }
       onClose();
       setPostContent('');
@@ -402,7 +451,11 @@ export function ProfileCreatePostModal({
       setPollOptions(['', '']);
       setPollAllowAddOptions(true);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể đăng bài');
+      const message = error instanceof Error ? error.message : 'Không thể đăng bài';
+      toast.error(message);
+      if (/quá nhanh|phút/i.test(message)) {
+        void queryClient.invalidateQueries({ queryKey: ['posts', 'rate-limit'] });
+      }
     } finally {
       setIsPosting(false);
     }
@@ -532,7 +585,7 @@ export function ProfileCreatePostModal({
               ref={textareaRef}
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
-              placeholder={isGroupPost ? 'Bạn viết gì đi...' : 'Bạn đang nghĩ gì?'}
+              placeholder={isGroupPost ? 'Bạn viết gì đi... (#hashtag giúp admin theo dõi xu hướng)' : 'Bạn đang nghĩ gì? Thêm #chủđề nếu muốn'}
               className="min-h-[120px] w-full resize-none border-none bg-transparent text-2xl text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
               autoFocus
             />
@@ -597,8 +650,14 @@ export function ProfileCreatePostModal({
                     <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
                       <Image className="h-6 w-6 text-green-600" />
                     </div>
-                    <p className="text-[17px] font-bold text-gray-900 dark:text-white">Thêm ảnh/video</p>
+                    <p className="text-[17px] font-bold text-gray-900 dark:text-white">Thêm ảnh/video/tài liệu</p>
                     <p className="text-[13px] text-gray-500 dark:text-gray-400">hoặc kéo và thả</p>
+                    {publicPolicy && (
+                      <PostAllowedFormatsHint
+                        allowedFileTypes={publicPolicy.postPolicy.allowedFileTypes}
+                        className="mt-2 px-4 text-center"
+                      />
+                    )}
                   </div>
                 ) : (
                   <div className="mt-12 max-h-[min(340px,45vh)] overflow-y-auto overscroll-contain pr-0.5">
@@ -615,6 +674,13 @@ export function ProfileCreatePostModal({
                             controls
                             playsInline
                           />
+                        ) : img.type === 'document' ? (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-100 p-3 dark:bg-gray-800">
+                            <FileText className="h-10 w-10 text-slate-600 dark:text-slate-300" />
+                            <span className="line-clamp-2 text-center text-xs font-medium text-gray-700 dark:text-gray-200">
+                              {img.file.name}
+                            </span>
+                          </div>
                         ) : (
                           <img
                             src={img.previewUrl}
@@ -663,9 +729,19 @@ export function ProfileCreatePostModal({
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   multiple
-                  accept="image/*,video/*"
+                  accept={
+                    publicPolicy
+                      ? buildPostMediaAcceptAttribute(publicPolicy.postPolicy.allowedFileTypes)
+                      : 'image/*,video/*'
+                  }
                   className="hidden"
                 />
+                {publicPolicy && (
+                  <PostAllowedFormatsHint
+                    allowedFileTypes={publicPolicy.postPolicy.allowedFileTypes}
+                    className="mt-2"
+                  />
+                )}
               </div>
             )}
 
@@ -745,7 +821,7 @@ export function ProfileCreatePostModal({
                 : hasVideo
                   ? 'Đang đăng hình ảnh/video...'
                   : 'Đang tải ảnh lên...';
-              const disabled = !hasContent || isUploading || isPosting || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions;
+              const disabled = !hasContent || isUploading || isPosting || rateLimitBlocked || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions;
               const useDirectPost = isGroupPost;
 
               return (
@@ -777,20 +853,18 @@ export function ProfileCreatePostModal({
                       Bạn không thể tạo cuộc thăm dò ý kiến không chứa văn bản trong bài viết.
                     </p>
                   )}
+                  {rateLimitMessage && (
+                    <p
+                      className={`mt-2 text-center text-xs ${
+                        rateLimitBlocked ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {rateLimitMessage}
+                    </p>
+                  )}
                 </>
               );
             })()}
-            <div className="mt-2 text-center">
-              <a
-                href="/policies"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-500 dark:text-gray-500 dark:hover:text-emerald-400 transition-colors"
-              >
-                <ExternalLink className="h-3 w-3" />
-                Xem chính sách cộng đồng
-              </a>
-            </div>
           </div>
         </div>
       </div>
@@ -906,6 +980,8 @@ export function ProfileCreatePostModal({
               }
         }
         selectedGroupName={selectedGroupName}
+        rateLimitMessage={rateLimitMessage}
+        rateLimitBlocked={rateLimitBlocked}
       />
 
       {showEmojiPicker && createPortal(

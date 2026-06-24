@@ -1,9 +1,12 @@
 import { api } from './api';
+import type { PostRateLimitStatus } from '@/types/post';
+
+export type { PostRateLimitStatus };
 
 export const SAVED_POSTS_CHANGED_EVENT = 'saved-posts-changed';
 
 export interface CreatePostMediaRequest {
-  mediaType: 'IMAGE' | 'VIDEO';
+  mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   fileUrl: string;
   thumbnailUrl?: string;
   sortOrder?: number;
@@ -125,7 +128,7 @@ export interface PostReactionDetailsResponse {
 
 export interface PostMediaResponse {
   id: string;
-  mediaType: 'IMAGE' | 'VIDEO';
+  mediaType: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   fileUrl?: string;
   mediaUrl?: string;
   thumbnailUrl?: string;
@@ -330,6 +333,7 @@ export const postService = {
     }
     return api.post<PostResponse>('/posts', data);
   },
+  getPostRateLimit: () => api.get<PostRateLimitStatus>('/posts/rate-limit'),
   updatePost: (postId: string, data: UpdatePostPayload) =>
     api.put<PostResponse>(`/posts/${postId}`, data),
   uploadPostImage: (file: File, signal?: AbortSignal) => {

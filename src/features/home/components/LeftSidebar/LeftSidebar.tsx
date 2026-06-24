@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import {
@@ -25,6 +25,12 @@ export const LeftSidebar = () => {
     mediaQuery.addEventListener('change', syncScreenSize);
     return () => mediaQuery.removeEventListener('change', syncScreenSize);
   }, []);
+
+  const handlePolicyLinkClick = () => {
+    if (!isLargeScreen) {
+      setLeftSidebarOpen(false);
+    }
+  };
 
   const handleNavigate = (href: string) => {
     navigate(href);
@@ -153,8 +159,21 @@ export const LeftSidebar = () => {
           </div>
         )}
 
-        <div className="mt-auto shrink-0 border-t border-gray-200 px-3 py-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
-          KConnecta © {new Date().getFullYear()}
+        <div className="mt-auto shrink-0 border-t border-gray-200 px-3 py-3 dark:border-gray-700">
+          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+            <Link to="/privacy" onClick={handlePolicyLinkClick} className="hover:underline hover:text-gray-700 dark:hover:text-gray-300">
+              Chính sách bảo mật
+            </Link>
+            <Link to="/terms" onClick={handlePolicyLinkClick} className="hover:underline hover:text-gray-700 dark:hover:text-gray-300">
+              Điều khoản dịch vụ
+            </Link>
+            <Link to="/contact" onClick={handlePolicyLinkClick} className="hover:underline hover:text-gray-700 dark:hover:text-gray-300">
+              Liên hệ
+            </Link>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            KConnecta © {new Date().getFullYear()}
+          </p>
         </div>
       </aside>
     </>

@@ -1,6 +1,7 @@
+import { FileText } from 'lucide-react';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
-export type PostGalleryItem = { type: 'IMAGE' | 'VIDEO'; url: string };
+export type PostGalleryItem = { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string };
 
 interface PostMediaGalleryProps {
   items: PostGalleryItem[];
@@ -40,6 +41,17 @@ function MediaTile({
     >
       {item.type === 'IMAGE' ? (
         <ImageWithFallback src={item.url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      ) : item.type === 'DOCUMENT' ? (
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-100 p-3 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FileText className="h-10 w-10" />
+          <span className="text-xs font-semibold">Tải tài liệu</span>
+        </a>
       ) : (
         <video
           src={item.url}

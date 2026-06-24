@@ -79,10 +79,6 @@ export default function ContactPage() {
             ,{' '}
             <Link to="/terms" className="font-medium text-emerald-600 hover:underline dark:text-emerald-400">
               Điều khoản dịch vụ
-            </Link>{' '}
-            và{' '}
-            <Link to="/policies" className="font-medium text-emerald-600 hover:underline dark:text-emerald-400">
-              Chính sách cộng đồng
             </Link>
             .
           </p>

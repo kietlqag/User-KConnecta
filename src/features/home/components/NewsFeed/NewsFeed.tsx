@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { Newspaper } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Stories } from '../Stories';
 import { CreatePost } from '../CreatePost';
 import { Post } from '../../../../components/shared';
@@ -11,7 +12,8 @@ import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { type PaginatedResponse, type PostResponse } from '@/services/postService';
 import { mapApiPost } from '@/utils/postUtils';
 import { getSeenPostIds, markPostsSeen } from '@/utils/seenPosts';
-import { POSTS_FEED_KEY, useHighlightedPost, usePostsFeed } from '../../hooks/usePosts';
+import { POSTS_FEED_KEY, HOME_FEED_REFRESH_EVENT, useHighlightedPost, usePostsFeed } from '../../hooks/usePosts';
+import { scrollToHomeTop } from '../../utils/scrollToHomeTop';
 
 // Khi rời tab ≥ ngưỡng này rồi quay lại → reload feed tươi mới (về đầu).
 const AWAY_RELOAD_MS = 60_000;
@@ -33,6 +35,20 @@ export function NewsFeed() {
   // Snapshot of seen post IDs at mount — used to surface new posts above already-seen ones on refresh
   const seenAtMount = useRef(getSeenPostIds());
   const fetchNextPageRef = useRef<() => void>(() => {});
+  const [feedScrollAnim, setFeedScrollAnim] = useState(false);
+  const feedAnimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerFeedScrollAnim = useCallback(() => {
+    if (feedAnimTimerRef.current) clearTimeout(feedAnimTimerRef.current);
+    setFeedScrollAnim(true);
+    feedAnimTimerRef.current = setTimeout(() => setFeedScrollAnim(false), 760);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (feedAnimTimerRef.current) clearTimeout(feedAnimTimerRef.current);
+    };
+  }, []);
 
   // Synchronize currentUser and invalidate feed on auth change
   useEffect(() => {
@@ -50,6 +66,23 @@ export function NewsFeed() {
 
   // Reload the feed fresh (reset to page 0 + scroll to top) when returning to the
   // tab after being away ≥ AWAY_RELOAD_MS. Short tab switches keep scroll/state.
+  const reloadFeedFresh = useCallback(() => {
+    seenAtMount.current = getSeenPostIds();
+    triggerFeedScrollAnim();
+    void scrollToHomeTop().then(() => {
+      void queryClient.resetQueries({ queryKey: POSTS_FEED_KEY });
+    });
+  }, [queryClient, triggerFeedScrollAnim]);
+
+  useEffect(() => {
+    const onHomeRefresh = () => {
+      seenAtMount.current = getSeenPostIds();
+      triggerFeedScrollAnim();
+    };
+    window.addEventListener(HOME_FEED_REFRESH_EVENT, onHomeRefresh);
+    return () => window.removeEventListener(HOME_FEED_REFRESH_EVENT, onHomeRefresh);
+  }, [triggerFeedScrollAnim]);
+
   useEffect(() => {
     let hiddenAt: number | null = null;
     const onVisibility = () => {
@@ -57,15 +90,14 @@ export function NewsFeed() {
         hiddenAt = Date.now();
       } else if (document.visibilityState === 'visible') {
         if (hiddenAt != null && Date.now() - hiddenAt >= AWAY_RELOAD_MS) {
-          void queryClient.resetQueries({ queryKey: POSTS_FEED_KEY });
-          window.scrollTo({ top: 0, left: 0 });
+          reloadFeedFresh();
         }
         hiddenAt = null;
       }
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [queryClient]);
+  }, [reloadFeedFresh]);
 
   const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage, error, refetch, isRefetching } =
     usePostsFeed(currentUser?.id);
@@ -193,18 +225,30 @@ export function NewsFeed() {
 
       {!isLoading && error && (
         <FeedErrorState
-          onRetry={() => void refetch()}
+          onRetry={() => {
+            triggerFeedScrollAnim();
+            void scrollToHomeTop().then(() => {
+              void refetch();
+            });
+          }}
           isRetrying={isRefetching}
           detail={getFeedErrorDetail(error)}
         />
       )}
 
+      <div
+        className={cn(
+          'space-y-0 transition-[opacity,transform] duration-[720ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:transform-none',
+          feedScrollAnim && 'pointer-events-none opacity-80 -translate-y-3',
+        )}
+      >
       {posts.map((post, index) => (
         <React.Fragment key={post.id}>
           <Post {...post} onDelete={handleDelete} />
           {index === 2 && <FriendSuggestions />}
         </React.Fragment>
       ))}
+      </div>
 
       {/* Sentinel: IntersectionObserver watches this to trigger fetchNextPage */}
       <div ref={sentinelRef} />

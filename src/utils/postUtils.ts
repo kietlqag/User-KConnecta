@@ -18,7 +18,7 @@ export interface FeedPost {
   groupId?: string;
   page?: { id: string; name: string; avatar?: string };
   pageId?: string;
-  mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+  mediaList?: { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string }[];
   isLivePost?: boolean;
   privacy: PostResponse['privacy'];
   poll?: PostPollResponse | null;

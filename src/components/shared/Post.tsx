@@ -112,7 +112,7 @@ export interface PostProps {
   };
   group?: Group;
   commentsData?: Comment[];
-  mediaList?: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+  mediaList?: { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string }[];
   isLivePost?: boolean;
   privacy?: Privacy;
   onDelete?: (postId: string) => void;
@@ -293,7 +293,11 @@ export function Post({
 
   const firstItem = galleryItems[0];
   const mediaUrl = firstItem?.url;
-  const mediaType = firstItem?.type === 'VIDEO' ? 'video' : 'image';
+  const mediaType = firstItem?.type === 'VIDEO'
+    ? 'video'
+    : firstItem?.type === 'DOCUMENT'
+      ? 'document'
+      : 'image';
   const activeReactions = getActiveReactions(reactionCounts);
   const totalReactionCount = getTotalReactionCount(reactionCounts);
 
@@ -729,13 +733,25 @@ export function Post({
             }}
           />
         ) : mediaUrl ? (
-          <div className="relative cursor-pointer bg-black" onClick={() => openLightbox(0)}>
+          <div
+            className={`relative bg-black ${mediaType === 'document' ? '' : 'cursor-pointer'}`}
+            onClick={mediaType === 'document' ? undefined : () => openLightbox(0)}
+          >
             {mediaType === 'image' ? (
               <ImageWithFallback
                 src={mediaUrl}
                 alt="Post content"
                 className={`${mediaMaxClass} w-full object-contain`}
               />
+            ) : mediaType === 'document' ? (
+              <a
+                href={mediaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${mediaMaxClass} flex w-full flex-col items-center justify-center gap-2 bg-slate-100 py-10 text-slate-800 dark:bg-slate-800 dark:text-slate-100`}
+              >
+                <span className="text-sm font-semibold">Tải tài liệu đính kèm</span>
+              </a>
             ) : (
               <video
                 src={mediaUrl}

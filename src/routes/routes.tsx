@@ -37,7 +37,6 @@ import { SavedPage } from '../features/saved/pages/SavedPage';
 import { AlbumListPage, AlbumDetailPage, CreateAlbumPage } from '../features/albums/pages';
 import SettingsPage from '../features/settings/pages/SettingsPage';
 import MyReportsPage from '../features/reports/pages/MyReportsPage';
-import CommunityPoliciesPage from '../features/policies/pages/CommunityPoliciesPage';
 import PrivacyPolicyPage from '../features/policies/pages/PrivacyPolicyPage';
 import TermsOfServicePage from '../features/policies/pages/TermsOfServicePage';
 import ContactPage from '../features/policies/pages/ContactPage';
@@ -62,10 +61,6 @@ export const router = createBrowserRouter([
   {
     Component: RealtimeLayout,
     children: [
-      {
-        path: '/policies',
-        Component: CommunityPoliciesPage,
-      },
       {
         path: '/privacy',
         Component: PrivacyPolicyPage,

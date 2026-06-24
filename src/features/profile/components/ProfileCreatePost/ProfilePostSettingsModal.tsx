@@ -1,4 +1,4 @@
-import { ArrowLeft, Lock, Clock, Users, Bookmark, Loader2, Shield, MapPin } from 'lucide-react';
+import { ArrowLeft, Lock, Clock, Users, Bookmark, Loader2, Shield, MapPin, AlertCircle } from 'lucide-react';
 import {
   type PostPublishContext,
   type GroupPrivacyDisplay,
@@ -23,6 +23,8 @@ interface ProfilePostSettingsModalProps {
   groupName?: string;
   groupPrivacy?: GroupPrivacyDisplay;
   postActionLabel?: string;
+  rateLimitMessage?: string | null;
+  rateLimitBlocked?: boolean;
 }
 
 export function ProfilePostSettingsModal({
@@ -43,6 +45,8 @@ export function ProfilePostSettingsModal({
   groupName,
   groupPrivacy = 'private',
   postActionLabel = 'Đăng',
+  rateLimitMessage = null,
+  rateLimitBlocked = false,
 }: ProfilePostSettingsModalProps) {
   if (!isOpen) return null;
 
@@ -199,6 +203,19 @@ export function ProfilePostSettingsModal({
           </div>
         </div>
 
+        {rateLimitMessage ? (
+          <div
+            className={`mx-4 mb-0 flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm ${
+              rateLimitBlocked
+                ? 'bg-amber-50 text-amber-800 dark:bg-amber-900/25 dark:text-amber-200'
+                : 'bg-gray-50 text-gray-600 dark:bg-gray-700/50 dark:text-gray-300'
+            }`}
+          >
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{rateLimitMessage}</span>
+          </div>
+        ) : null}
+
         <div className="sticky bottom-0 flex items-center gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <button
             type="button"
@@ -211,7 +228,7 @@ export function ProfilePostSettingsModal({
           <button
             type="button"
             onClick={onPost}
-            disabled={isPosting}
+            disabled={isPosting || rateLimitBlocked}
             className="flex-1 rounded-lg bg-emerald-500 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-emerald-300"
           >
             {isPosting ? (

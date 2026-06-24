@@ -1,4 +1,5 @@
 import type { PublicPolicyResponse } from '@/types/policy';
+import { validatePostMediaFile as validateMediaFile } from '@/utils/allowedFileTypes';
 
 export type PostPolicyAction = 'create' | 'edit';
 
@@ -48,6 +49,24 @@ export function validatePostAgainstPolicy(
   }
 
   return validateTextKeywords(text, policy, action);
+}
+
+export function validatePostMediaFile(
+  file: File,
+  policy: PublicPolicyResponse | undefined,
+): string | null {
+  return validateMediaFile(file, policy);
+}
+
+export function validatePostMediaFiles(
+  files: File[],
+  policy: PublicPolicyResponse | undefined,
+): string | null {
+  for (const file of files) {
+    const err = validateMediaFile(file, policy);
+    if (err) return err;
+  }
+  return null;
 }
 
 export function checkKeywords(

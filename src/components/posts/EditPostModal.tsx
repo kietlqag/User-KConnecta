@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Image, Loader2, AlertCircle } from 'lucide-react';
+import { X, Image, Loader2, AlertCircle, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/authService';
@@ -7,16 +7,20 @@ import { postService, type CreatePostMediaRequest } from '@/services/postService
 import { compressImage } from '@/utils/imageUtils';
 import { CurrentUserAvatar } from '@/components/shared';
 import { usePublicPolicies } from '@/hooks/usePublicPolicies';
-import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidation';
+import { useRefreshPoliciesOnOpen } from '@/hooks/useRefreshPoliciesOnOpen';
+import { PostAllowedFormatsHint } from '@/features/profile/components/ProfileCreatePost/PostAllowedFormatsHint';
+import { validatePostAgainstPolicy, checkKeywords, validatePostMediaFiles } from '@/utils/policyValidation';
+import { buildPostMediaAcceptAttribute, getPostMediaKind, toApiMediaType, type PostMediaKind } from '@/utils/allowedFileTypes';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 
 type MediaItem = {
   id: string;
-  type: 'image' | 'video';
+  type: PostMediaKind;
   url: string;
   previewUrl: string;
   isExisting: boolean;
   file?: File;
+  fileName?: string;
   uploading?: boolean;
   uploadFailed?: boolean;
 };
@@ -26,10 +30,10 @@ export interface EditPostModalProps {
   onClose: () => void;
   postId: string;
   initialContent: string;
-  initialMedia: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+  initialMedia: { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string }[];
   onPostUpdated?: (data: {
     content: string;
-    mediaList: { type: 'IMAGE' | 'VIDEO'; url: string }[];
+    mediaList: { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string }[];
   }) => void;
 }
 
@@ -47,7 +51,8 @@ export function EditPostModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadPromisesRef = useRef<Map<string, Promise<string>>>(new Map());
   const uploadControllersRef = useRef<Map<string, AbortController>>(new Map());
-  const { data: publicPolicy } = usePublicPolicies();
+  const { data: publicPolicy, isLoading: policyLoading } = usePublicPolicies();
+  useRefreshPoliciesOnOpen(isOpen);
   const queryClient = useQueryClient();
   const currentUser = authService.getCurrentUser();
 
@@ -57,7 +62,7 @@ export function EditPostModal({
     setMediaItems(
       initialMedia.map((m, i) => ({
         id: `existing-${i}-${m.url}`,
-        type: m.type === 'VIDEO' ? 'video' : 'image',
+        type: m.type === 'VIDEO' ? 'video' : m.type === 'DOCUMENT' ? 'document' : 'image',
         url: m.url,
         previewUrl: m.url,
         isExisting: true,
@@ -78,15 +83,29 @@ export function EditPostModal({
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
 
+    if (policyLoading || !publicPolicy) {
+      toast.error('Đang tải quy định đăng bài. Vui lòng thử lại sau.');
+      e.target.value = '';
+      return;
+    }
+
+    const mediaError = validatePostMediaFiles(files, publicPolicy);
+    if (mediaError) {
+      toast.error(mediaError);
+      e.target.value = '';
+      return;
+    }
+
     const newItems: MediaItem[] = files.map((file) => {
-      const isVideo = file.type.startsWith('video/');
+      const kind = getPostMediaKind(file);
       return {
         id: `new-${Date.now()}-${Math.random()}`,
-        type: isVideo ? 'video' : 'image',
+        type: kind,
         url: '',
-        previewUrl: URL.createObjectURL(file),
+        previewUrl: kind === 'document' ? '' : URL.createObjectURL(file),
         isExisting: false,
         file,
+        fileName: file.name,
         uploading: true,
       };
     });
@@ -98,7 +117,7 @@ export function EditPostModal({
       const controller = new AbortController();
       uploadControllersRef.current.set(item.id, controller);
 
-      const promise = (item.type === 'video'
+      const promise = (item.type === 'video' || item.type === 'document'
         ? postService.uploadPostImage(item.file, controller.signal)
         : compressImage(item.file).then((compressed) => postService.uploadPostImage(compressed, controller.signal))
       )
@@ -114,6 +133,11 @@ export function EditPostModal({
         .catch((err) => {
           uploadControllersRef.current.delete(item.id);
           if (err instanceof Error && err.name === 'AbortError') return '';
+          const message =
+            err instanceof Error && err.message
+              ? err.message
+              : 'Không thể tải file lên. Vui lòng thử lại.';
+          toast.error(message);
           setMediaItems((prev) =>
             prev.map((m) =>
               m.id === item.id ? { ...m, uploading: false, uploadFailed: true } : m,
@@ -136,7 +160,9 @@ export function EditPostModal({
     setMediaItems((prev) => {
       const removed = prev.find((m) => m.id === id);
       if (removed && !removed.isExisting) {
-        URL.revokeObjectURL(removed.previewUrl);
+        if (removed.previewUrl) {
+          URL.revokeObjectURL(removed.previewUrl);
+        }
         if (removed.url) {
           postService.deletePostMedia(removed.url).catch(() => {});
         }
@@ -153,7 +179,9 @@ export function EditPostModal({
 
     mediaItems.forEach((item) => {
       if (!item.isExisting) {
-        URL.revokeObjectURL(item.previewUrl);
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
         if (item.url) {
           postService.deletePostMedia(item.url).catch(() => {});
         }
@@ -199,7 +227,7 @@ export function EditPostModal({
     setIsSaving(true);
     try {
       const media: CreatePostMediaRequest[] = mediaItems.map((m, i) => ({
-        mediaType: m.type === 'video' ? 'VIDEO' : 'IMAGE',
+        mediaType: toApiMediaType(m.type),
         fileUrl: m.url,
         sortOrder: i,
       }));
@@ -310,6 +338,13 @@ export function EditPostModal({
                       controls
                       playsInline
                     />
+                  ) : item.type === 'document' ? (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gray-100 p-3 dark:bg-gray-900">
+                      <FileText className="h-10 w-10 text-slate-600 dark:text-slate-300" />
+                      <span className="line-clamp-2 text-center text-xs font-medium text-gray-700 dark:text-gray-200">
+                        {item.fileName ?? 'Tài liệu'}
+                      </span>
+                    </div>
                   ) : (
                     <img
                       src={item.previewUrl}
@@ -343,7 +378,11 @@ export function EditPostModal({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,video/*"
+            accept={
+              publicPolicy
+                ? buildPostMediaAcceptAttribute(publicPolicy.postPolicy.allowedFileTypes)
+                : 'image/*,video/*'
+            }
             multiple
             className="hidden"
             onChange={handleFileSelect}
@@ -352,12 +391,18 @@ export function EditPostModal({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isSaving}
+            disabled={isSaving || policyLoading}
             className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             <Image className="h-4 w-4" />
-            Thêm ảnh/video
+            Thêm file đính kèm
           </button>
+          {publicPolicy && (
+            <PostAllowedFormatsHint
+              allowedFileTypes={publicPolicy.postPolicy.allowedFileTypes}
+              className="mt-2"
+            />
+          )}
         </div>
 
         <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-700">

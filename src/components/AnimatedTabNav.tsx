@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface TabItem {
@@ -9,9 +9,10 @@ interface TabItem {
 
 interface AnimatedTabNavProps {
   items: TabItem[];
+  onHomeClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 }
 
-export function AnimatedTabNav({ items }: AnimatedTabNavProps) {
+export function AnimatedTabNav({ items, onHomeClick }: AnimatedTabNavProps) {
   const location = useLocation();
   const navRef = useRef<HTMLDivElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({
@@ -93,6 +94,7 @@ export function AnimatedTabNav({ items }: AnimatedTabNavProps) {
           <Link
             key={index}
             to={item.href}
+            onClick={item.href === '/home' ? onHomeClick : undefined}
             className={`relative flex items-center justify-center px-10 py-2 rounded-lg transition-colors ${
               isActive
                 ? 'text-primary'

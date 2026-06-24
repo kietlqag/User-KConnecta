@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { Search, Home, Users, Shapes, Clapperboard, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
@@ -17,6 +18,7 @@ import { searchHistoryService } from '@/services/searchHistoryService';
 import { UserAvatar } from '@/components/shared/UserAvatar';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
 import { LIVE_NAV_LABEL } from '@/components/shared';
+import { refreshHomeFeed } from '../../hooks/usePosts';
 
 export function Header() {
   const { t } = useTranslation();
@@ -29,6 +31,7 @@ export function Header() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const isHomePage = location.pathname === '/home' || location.pathname === '/home/';
   const { subscribeNotificationEvents } = useRealtimeCall();
@@ -100,6 +103,18 @@ export function Header() {
 
   const unreadMessagesCount = useMessengerUnreadCount();
 
+  const handleHomeClick = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>) => {
+      event.preventDefault();
+      const onHome = location.pathname === '/home' || location.pathname === '/home/';
+      if (!onHome || location.search) {
+        navigate('/home', { replace: onHome });
+      }
+      void refreshHomeFeed(queryClient);
+    },
+    [location.pathname, location.search, navigate, queryClient],
+  );
+
   const navItems = useMemo(() => [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: t('nav.home') },
     { icon: <Users className="w-6 h-6" />, href: '/friends', label: t('nav.friends') },
@@ -136,8 +151,11 @@ export function Header() {
                 <Menu className={`w-6 h-6 ${isLeftSidebarOpen ? 'text-primary' : 'text-foreground'}`} />
               </button>
             )}
-            <Link to="/home" className="flex items-center gap-2 hover:bg-muted rounded-full p-2 transition-colors">
-              <img src={logoV2} alt="KConnecta Logo V2" className="w-10 h-10 object-contain dark:drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]" />
+            <Link
+              to="/home"
+              onClick={handleHomeClick}
+              className="flex items-center gap-2 hover:bg-muted rounded-full p-2 transition-colors"
+            >              <img src={logoV2} alt="KConnecta Logo V2" className="w-10 h-10 object-contain dark:drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]" />
             </Link>
             
             <div className="flex-1 relative">
@@ -170,8 +188,7 @@ export function Header() {
           </div>
 
           {/* Center Section - Navigation */}
-          <AnimatedTabNav items={navItems} />
-
+          <AnimatedTabNav items={navItems} onHomeClick={handleHomeClick} />
           {/* Right Section - User Actions */}
           <div className="flex flex-1 max-w-[320px] items-center justify-end gap-1.5">
             <button

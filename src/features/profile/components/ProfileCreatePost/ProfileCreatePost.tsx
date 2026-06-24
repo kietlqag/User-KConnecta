@@ -3,10 +3,11 @@ import { Image } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ProfileCreatePostModal } from './ProfileCreatePostModal';
 import { CurrentUserAvatar, LiveFeatureIcon, LIVE_NAV_LABEL } from '@/components/shared';
+import type { PostResponse } from '@/services/postService';
 
 interface ProfileCreatePostProps {
   username: string;
-  onPostCreated?: () => void;
+  onPostCreated?: (post: PostResponse) => void;
 }
 
 export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePostProps) {

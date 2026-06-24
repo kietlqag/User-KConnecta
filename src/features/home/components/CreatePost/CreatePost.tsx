@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ProfileCreatePostModal } from '../../../profile/components/ProfileCreatePost/ProfileCreatePostModal';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { CurrentUserAvatar, LiveFeatureIcon, LIVE_NAV_LABEL } from '@/components/shared';
-import { POSTS_FEED_KEY } from '../../hooks/usePosts';
+import { prependPostToHomeFeed } from '../../hooks/usePosts';
 
 export function CreatePost() {
   const queryClient = useQueryClient();
@@ -79,7 +79,11 @@ export function CreatePost() {
         onClose={closeCreateModal}
         username={currentUser?.fullName || 'Người dùng'}
         initialShowImagePicker={openWithImagePicker}
-        onPostCreated={() => queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY })}
+        onPostCreated={(post) => {
+          if (!post.groupId) {
+            prependPostToHomeFeed(queryClient, currentUser?.id, post);
+          }
+        }}
       />
     </>
   );
