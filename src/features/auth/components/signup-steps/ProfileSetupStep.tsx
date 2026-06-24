@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleUserRound,
+  Mail,
   MapPin,
   Mars,
   User,
@@ -18,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { locationService, type Province, type Ward } from '@/services/locationService';
 import { AuthInput } from '../AuthInput';
+import { clearGoogleSignupSession, decodeGoogleIdTokenPayload } from '../../utils/googleSignupSession';
 
 interface ProfileData {
   fullName: string;
@@ -105,6 +107,13 @@ export function ProfileSetupStep({
     const q = normalizeText(locationQuery);
     return wards.filter((ward) => normalizeText(ward.name).includes(q));
   }, [locationQuery, wards]);
+
+  useEffect(() => {
+    if (!isGoogleSignup || !googleIdToken) return;
+    const { name } = decodeGoogleIdTokenPayload(googleIdToken);
+    if (!name?.trim()) return;
+    setProfileData((prev) => (prev.fullName.trim() ? prev : { ...prev, fullName: name.trim() }));
+  }, [googleIdToken, isGoogleSignup]);
 
   useEffect(() => {
     const loadProvinces = async () => {
@@ -438,6 +447,9 @@ export function ProfileSetupStep({
             bio: profileData.bio || undefined,
           })
         : await authService.register({ email, password, ...profileData });
+      if (isGoogleSignup) {
+        clearGoogleSignupSession();
+      }
       authService.saveCurrentUser(authUser);
       setShowSuccessModal(true);
       window.setTimeout(() => {
@@ -468,8 +480,20 @@ export function ProfileSetupStep({
 
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Thiết lập hồ sơ</h2>
-        <p className="text-gray-600 dark:text-gray-400">Hoàn tất thông tin để tạo tài khoản</p>
+        <p className="text-gray-600 dark:text-gray-400">
+          {isGoogleSignup ? 'Hoàn tất thông tin cho tài khoản Google của bạn' : 'Hoàn tất thông tin để tạo tài khoản'}
+        </p>
       </div>
+
+      {isGoogleSignup && email && (
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center dark:border-emerald-900/50 dark:bg-emerald-950/30">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Tiếp tục với Google</p>
+          <p className="mt-1 inline-flex items-center justify-center gap-2 text-base font-semibold text-emerald-700 dark:text-emerald-300">
+            <Mail className="h-4 w-4 shrink-0" />
+            <span className="break-all">{email}</span>
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <AuthInput

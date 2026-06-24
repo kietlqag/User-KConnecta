@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
-import { Link } from "react-router-dom";
-import { useLocation } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
 import { EmailStep, OTPVerificationStep, PasswordStep, ProfileSetupStep } from "../components/signup-steps";
+import { resolveGoogleSignupSession, clearGoogleSignupSession } from "../utils/googleSignupSession";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
 
 type SignupStep = "email" | "otp" | "password" | "profile";
@@ -14,12 +14,19 @@ interface SignupData {
 
 export function RegisterPage() {
   const location = useLocation();
-  const googleSignupState = (location.state as { googleSignup?: boolean; googleIdToken?: string; email?: string } | null);
-  const isGoogleSignup = googleSignupState?.googleSignup === true && !!googleSignupState.googleIdToken && !!googleSignupState.email;
+  const navigate = useNavigate();
+  const googleSignupSession = useMemo(
+    () =>
+      resolveGoogleSignupSession(
+        location.state as { googleSignup?: boolean; googleIdToken?: string; email?: string } | null,
+      ),
+    [location.state],
+  );
+  const isGoogleSignup = Boolean(googleSignupSession);
 
-  const [currentStep, setCurrentStep] = useState<SignupStep>("email");
+  const [currentStep, setCurrentStep] = useState<SignupStep>(isGoogleSignup ? "profile" : "email");
   const [signupData, setSignupData] = useState<SignupData>({
-    email: googleSignupState?.email ?? "",
+    email: googleSignupSession?.email ?? "",
     password: "",
   });
 
@@ -96,9 +103,17 @@ export function RegisterPage() {
   };
 
   useEffect(() => {
-    if (!isGoogleSignup) return;
+    if (!googleSignupSession) return;
+    setSignupData((prev) =>
+      prev.email === googleSignupSession.email ? prev : { ...prev, email: googleSignupSession.email },
+    );
     setCurrentStep("profile");
-  }, [isGoogleSignup]);
+  }, [googleSignupSession]);
+
+  const handleGoogleSignupBack = () => {
+    clearGoogleSignupSession();
+    navigate("/auth/login", { replace: true });
+  };
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
@@ -272,8 +287,8 @@ export function RegisterPage() {
               email={signupData.email}
               password={signupData.password}
               isGoogleSignup={isGoogleSignup}
-              googleIdToken={googleSignupState?.googleIdToken}
-              onBack={() => setCurrentStep(isGoogleSignup ? "email" : "password")}
+              googleIdToken={googleSignupSession?.googleIdToken}
+              onBack={isGoogleSignup ? handleGoogleSignupBack : () => setCurrentStep("password")}
             />
           )}
 

@@ -12,6 +12,7 @@ import { useTranslation, Trans } from "react-i18next";
 import { toast } from "sonner";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
 import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
+import { decodeGoogleIdTokenPayload, saveGoogleSignupSession } from "@/features/auth/utils/googleSignupSession";
 
 interface LoginFormData {
   email: string;
@@ -299,13 +300,27 @@ export function LoginPage() {
           setIsGoogleLoading(true);
           try {
             const user = await authService.googleLogin(credential);
+            const tokenPayload = decodeGoogleIdTokenPayload(credential);
+            const resolvedEmail = user.email?.trim() || tokenPayload.email?.trim() || "";
+
             if (user.requiresProfileSetup) {
+              if (!resolvedEmail) {
+                setGoogleError("Không lấy được email từ tài khoản Google");
+                return;
+              }
+
+              saveGoogleSignupSession({
+                googleSignup: true,
+                googleIdToken: credential,
+                email: resolvedEmail,
+              });
+              resetGoogleAuth();
               navigate("/auth/register", {
                 replace: true,
                 state: {
                   googleSignup: true,
                   googleIdToken: credential,
-                  email: user.email,
+                  email: resolvedEmail,
                 },
               });
               return;
