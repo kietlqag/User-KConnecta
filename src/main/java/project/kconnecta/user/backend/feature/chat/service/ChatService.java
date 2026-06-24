@@ -24,6 +24,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSession
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationSummaryResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.PrivatePeerConversationResponse;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -64,6 +65,7 @@ public interface ChatService {
     PinnedMessageResponse setPinnedMessage(String currentUsername, PinnedMessageRequest request);
     List<PinnedMessageResponse> getPinnedMessages(String currentUsername);
     List<ConversationSummaryResponse> getConversationSummaries(String currentUsername, List<UUID> peerUserIds, List<UUID> conversationIds);
+    List<PrivatePeerConversationResponse> getPrivatePeerConversations(String currentUsername);
     int getTotalPrivateUnreadCount(String currentUsername);
     CallSessionSnapshotResponse getCallSessionSnapshot(String currentUsername, UUID callId);
 }

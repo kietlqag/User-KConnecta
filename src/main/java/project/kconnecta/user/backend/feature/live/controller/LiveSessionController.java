@@ -171,6 +171,14 @@ public class LiveSessionController {
         return ResponseEntity.ok(liveSessionService.getByPostId(postId, principal == null ? null : principal.getUserId()));
     }
 
+    @GetMapping("/by-group/{groupId}")
+    public ResponseEntity<List<LiveSessionResponse>> listByGroup(
+            @PathVariable UUID groupId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(liveSessionService.listByGroup(groupId, principal == null ? null : principal.getUserId()));
+    }
+
     @GetMapping("/active")
     public ResponseEntity<List<LiveSessionResponse>> listActive(
             @AuthenticationPrincipal UserPrincipal principal

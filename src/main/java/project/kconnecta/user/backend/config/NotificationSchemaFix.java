@@ -22,7 +22,7 @@ public class NotificationSchemaFix implements ApplicationRunner {
             "'LIKE','COMMENT','SHARE'," +
             "'FRIEND_REQUEST','FRIEND_ACCEPTED','FRIEND_REMOVED'," +
             "'GROUP_ACTIVITY','GROUP_INVITE','GROUP_JOIN_REQUEST','GROUP_POST_PINNED'," +
-            "'MENTION','BIRTHDAY','EVENT','MEMORY','SYSTEM'";
+            "'MENTION','BIRTHDAY','BIRTHDAY_WISH','EVENT','MEMORY','SYSTEM'";
 
     @Override
     public void run(ApplicationArguments args) {

@@ -14,10 +14,8 @@ public class UserSettingsResponse {
     private UUID userId;
     private boolean twoFactorEnabled;
     private SettingsVisibility profileVisibility;
-    private SettingsVisibility postsVisibility;
     private boolean notifyPosts;
     private boolean notifyMessages;
-    private boolean notifyEmail;
     private SettingsTheme theme;
     private String language;
     private List<BlockedUserResponse> blockedUsers;

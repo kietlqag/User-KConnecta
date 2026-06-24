@@ -33,6 +33,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.ChatAssetPageRes
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationSummaryResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.PrivatePeerConversationResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.PinnedMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationMemberResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupJoinLinkPreviewResponse;
@@ -62,6 +63,7 @@ import project.kconnecta.user.backend.feature.chat.repository.ChatPinnedMessageR
 import project.kconnecta.user.backend.feature.chat.repository.GroupCallSessionRepository;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 import project.kconnecta.user.backend.feature.policy.service.PolicyContentValidator;
+import project.kconnecta.user.backend.feature.settings.service.SettingsService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -86,6 +88,7 @@ public class ChatServiceImpl implements ChatService {
     private static final String CHAT_ACTION_PREFIX = "__CHAT_ACTION__:";
     private static final String IMAGE_MESSAGE_PREFIX = "__IMAGE__:";
     private static final String FILE_MESSAGE_PREFIX = "__FILE__:";
+    private static final String VIDEO_MESSAGE_PREFIX = "__VIDEO_MSG__:";
     private static final String REPLY_PREFIX = "__REPLY__:";
     private static final String LINK_REGEX = "https?://[^\\s<>\"']+";
 
@@ -111,6 +114,7 @@ public class ChatServiceImpl implements ChatService {
     private final GroupCallSessionRepository groupCallSessionRepository;
     private final PolicyContentValidator policyContentValidator;
     private final ActivityLogService activityLogService;
+    private final SettingsService settingsService;
 
     @Override
     public void sendPrivateMessage(String currentUsername, PrivateMessageRequest request) {
@@ -122,6 +126,10 @@ public class ChatServiceImpl implements ChatService {
 
         User receiver = userRepository.findById(request.getReceiverId())
                 .orElseThrow(() -> new RuntimeException("Receiver not found"));
+
+        if (settingsService.isBlockedEitherDirection(sender.getId(), receiver.getId())) {
+            throw new ForbiddenException("Không thể nhắn tin với người dùng này");
+        }
 
         LocalDateTime now = LocalDateTime.now();
 
@@ -1410,6 +1418,49 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<PrivatePeerConversationResponse> getPrivatePeerConversations(String currentUsername) {
+        User currentUser = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        UUID currentUserId = currentUser.getId();
+
+        Map<UUID, Integer> unreadByPeer = new HashMap<>();
+        for (ChatMessageRepository.PrivateUnreadCountRow row : chatMessageRepository.countAllUnreadPrivateByPeer(currentUserId)) {
+            unreadByPeer.put(row.getPeerUserId(), row.getUnreadCount() == null ? 0 : row.getUnreadCount());
+        }
+
+        List<PrivatePeerConversationResponse> result = new ArrayList<>();
+        for (ChatMessageRepository.PrivateSummaryRow row : chatMessageRepository.findAllLatestPrivateSummaries(currentUserId)) {
+            if (row.getPeerUserId() == null || row.getPeerUserId().equals(currentUserId)) {
+                continue;
+            }
+            User peer = userRepository.findById(row.getPeerUserId()).orElse(null);
+            if (peer == null) {
+                continue;
+            }
+            result.add(new PrivatePeerConversationResponse(
+                    row.getPeerUserId(),
+                    peer.getFullName(),
+                    peer.getAvatarUrl(),
+                    row.getLastMessageContent(),
+                    row.getLastMessageSenderId(),
+                    row.getLastMessageCreatedAt(),
+                    unreadByPeer.getOrDefault(row.getPeerUserId(), 0)
+            ));
+        }
+
+        result.sort((a, b) -> {
+            LocalDateTime left = a.getLastMessageCreatedAt();
+            LocalDateTime right = b.getLastMessageCreatedAt();
+            if (left == null && right == null) return 0;
+            if (left == null) return 1;
+            if (right == null) return -1;
+            return right.compareTo(left);
+        });
+        return result;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public int getTotalPrivateUnreadCount(String currentUsername) {
         User currentUser = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -1744,6 +1795,13 @@ public class ChatServiceImpl implements ChatService {
     }
 
     private List<ChatAssetItemResponse> extractMediaAssets(ChatMessage message, String content) {
+        if (content.startsWith(VIDEO_MESSAGE_PREFIX)) {
+            JsonNode payload = parseJsonContent(content.substring(VIDEO_MESSAGE_PREFIX.length()));
+            if (payload == null) return Collections.emptyList();
+            String url = safeText(payload.get("videoUrl"));
+            if (url == null || url.isBlank()) return Collections.emptyList();
+            return List.of(assetItem(message, "video", url, "Video", null, 0));
+        }
         if (!content.startsWith(IMAGE_MESSAGE_PREFIX)) return Collections.emptyList();
         JsonNode payload = parseJsonContent(content.substring(IMAGE_MESSAGE_PREFIX.length()));
         if (payload == null) return Collections.emptyList();
@@ -1804,7 +1862,7 @@ public class ChatServiceImpl implements ChatService {
             JsonNode payload = parseJsonContent(content.substring(IMAGE_MESSAGE_PREFIX.length()));
             return payload == null ? "" : safeText(payload.get("caption"));
         }
-        if (content.startsWith(FILE_MESSAGE_PREFIX) || content.startsWith(CHAT_ACTION_PREFIX) || content.startsWith("__CALL_LOG__:") || content.startsWith("__VOICE__:")) {
+        if (content.startsWith(FILE_MESSAGE_PREFIX) || content.startsWith(VIDEO_MESSAGE_PREFIX) || content.startsWith(CHAT_ACTION_PREFIX) || content.startsWith("__CALL_LOG__:") || content.startsWith("__VOICE__:")) {
             return "";
         }
         return content;

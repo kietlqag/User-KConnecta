@@ -29,6 +29,7 @@ import project.kconnecta.user.backend.feature.chat.dto.response.ChatHistoryPageR
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatAssetPageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ChatMessageResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationSummaryResponse;
+import project.kconnecta.user.backend.feature.chat.dto.response.PrivatePeerConversationResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupConversationResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.GroupCallSessionResponse;
 import project.kconnecta.user.backend.feature.chat.dto.response.ConversationPinResponse;
@@ -153,6 +154,14 @@ public class ChatController {
             return ResponseEntity.status(401).build();
         }
         return ResponseEntity.ok(chatService.getConversationSummaries(principal.getName(), peerUserIds, conversationIds));
+    }
+
+    @GetMapping("/conversations/private-peers")
+    public ResponseEntity<List<PrivatePeerConversationResponse>> getPrivatePeerConversations(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(chatService.getPrivatePeerConversations(principal.getName()));
     }
 
     @PutMapping("/conversations/{conversationId}")

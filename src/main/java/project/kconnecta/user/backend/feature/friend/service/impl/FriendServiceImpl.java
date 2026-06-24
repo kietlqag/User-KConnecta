@@ -116,11 +116,11 @@ public class FriendServiceImpl implements FriendService {
             }
         }
 
-        // Sort candidates by mutual friend count descending, take top 20
+        // Sort candidates by mutual friend count descending, take top 40
         List<UUID> sortedCandidates = mutualCountMap.entrySet().stream()
                 .sorted(Map.Entry.<UUID, Integer>comparingByValue().reversed())
                 .map(Map.Entry::getKey)
-                .limit(20)
+                .limit(40)
                 .toList();
 
         List<FriendResponse> result = new ArrayList<>();
@@ -147,12 +147,12 @@ public class FriendServiceImpl implements FriendService {
                     .forEach(result::add);
         }
 
-        // Fallback: if BFS yields fewer than 10 results, fill with strangers (no mutual friends)
-        if (result.size() < 10) {
+        // Fallback: if BFS yields fewer than 40 results, fill with strangers (no mutual friends)
+        if (result.size() < 40) {
             Set<UUID> fullyExcluded = new HashSet<>(excluded);
             result.forEach(r -> fullyExcluded.add(r.getUserId()));
 
-            int needed = 10 - result.size();
+            int needed = 40 - result.size();
             userRepository.findSuggestionsExcluding(fullyExcluded, PageRequest.of(0, needed))
                     .forEach(u -> result.add(FriendResponse.builder()
                             .friendshipId(null)

@@ -36,8 +36,6 @@ public interface SettingsService {
 
     boolean isBlockedByMe(UUID blockerId, UUID blockedId);
 
-    boolean isNotifyEmailEnabled(UUID userId);
-
     List<LoginSessionResponse> getLoginSessions(UUID userId, UUID currentSessionId);
 
     void revokeSession(UUID userId, UUID sessionId);

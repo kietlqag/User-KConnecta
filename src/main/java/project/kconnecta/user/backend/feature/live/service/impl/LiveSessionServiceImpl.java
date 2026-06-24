@@ -429,6 +429,51 @@ public class LiveSessionServiceImpl implements LiveSessionService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<LiveSessionResponse> listByGroup(UUID groupId, UUID viewerUserId) {
+        LocalDateTime staleScheduledCutoff = LocalDateTime.now().minusDays(7);
+        return liveSessionRepository.findAllByGroupIdOrderByCreatedAtDesc(groupId)
+                .stream()
+                .filter(session -> session.getStatus() != LiveSessionStatus.CANCELED
+                        && session.getStatus() != LiveSessionStatus.DRAFT)
+                .filter(session -> !isStaleScheduledSession(session, staleScheduledCutoff))
+                .filter(session -> liveAccessService.canView(session, viewerUserId))
+                .sorted((left, right) -> compareGroupEvents(left, right))
+                .map(session -> toResponse(session, viewerUserId))
+                .toList();
+    }
+
+    private boolean isStaleScheduledSession(LiveSession session, LocalDateTime staleScheduledCutoff) {
+        if (session.getStatus() != LiveSessionStatus.SCHEDULED || session.getScheduledAt() == null) {
+            return false;
+        }
+        return session.getScheduledAt().isBefore(staleScheduledCutoff);
+    }
+
+    private int compareGroupEvents(LiveSession left, LiveSession right) {
+        int leftPriority = groupEventPriority(left.getStatus());
+        int rightPriority = groupEventPriority(right.getStatus());
+        if (leftPriority != rightPriority) {
+            return Integer.compare(leftPriority, rightPriority);
+        }
+        java.time.LocalDateTime leftTime = left.getScheduledAt() != null ? left.getScheduledAt() : left.getCreatedAt();
+        java.time.LocalDateTime rightTime = right.getScheduledAt() != null ? right.getScheduledAt() : right.getCreatedAt();
+        if (left.getStatus() == LiveSessionStatus.ENDED) {
+            return rightTime.compareTo(leftTime);
+        }
+        return leftTime.compareTo(rightTime);
+    }
+
+    private int groupEventPriority(LiveSessionStatus status) {
+        return switch (status) {
+            case LIVE -> 0;
+            case SCHEDULED -> 1;
+            case ENDED -> 2;
+            default -> 3;
+        };
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public LiveSessionStatsResponse getStats(UUID sessionId, UUID viewerUserId) {
         LiveSession session = findSession(sessionId);
         liveAccessService.requireCanView(session, viewerUserId);

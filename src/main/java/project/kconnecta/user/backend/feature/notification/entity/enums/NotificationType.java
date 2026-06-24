@@ -13,6 +13,7 @@ public enum NotificationType {
     GROUP_POST_PINNED,
     MENTION,
     BIRTHDAY,
+    BIRTHDAY_WISH,
     EVENT,
     MEMORY,
     SYSTEM

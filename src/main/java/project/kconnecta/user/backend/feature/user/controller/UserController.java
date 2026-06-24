@@ -77,10 +77,21 @@ public class UserController {
         UUID viewerId = principal != null ? principal.getUserId() : null;
         if (viewerId == null || !viewerId.equals(user.getId())) {
             if (!settingsService.canViewProfile(viewerId, user.getId())) {
-                throw new ForbiddenException("Ban khong co quyen xem ho so nay");
+                return ResponseEntity.ok(toRestrictedProfilePreview(user));
             }
         }
         return ResponseEntity.ok(user);
+    }
+
+    private static UserResponse toRestrictedProfilePreview(UserResponse full) {
+        return UserResponse.builder()
+                .id(full.getId())
+                .username(full.getUsername())
+                .fullName(full.getFullName())
+                .avatarUrl(full.getAvatarUrl())
+                .coverPhotoUrl(full.getCoverPhotoUrl())
+                .profileContentRestricted(true)
+                .build();
     }
 
     @GetMapping("/username/{username}")

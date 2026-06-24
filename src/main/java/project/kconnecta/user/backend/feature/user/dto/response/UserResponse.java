@@ -39,4 +39,6 @@ public class UserResponse implements Serializable {
     private String coverPhotoUrl;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    /** True when the viewer may only see basic header info, not profile content. */
+    private Boolean profileContentRestricted;
 }

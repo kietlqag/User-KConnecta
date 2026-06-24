@@ -33,6 +33,6 @@ public class NotificationResponse {
     public static class NotificationUser {
         private UUID id;
         private String name;
-        private String avatar;
+        private String avatarUrl;
     }
 }

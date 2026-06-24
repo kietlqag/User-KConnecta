@@ -20,6 +20,7 @@ public class SearchPostDto implements Serializable {
     private String type; // "post"
     private AuthorDto author;
     private String timestamp;
+    private String publishedAt;
     private String content;
     private String image;
     private String video;

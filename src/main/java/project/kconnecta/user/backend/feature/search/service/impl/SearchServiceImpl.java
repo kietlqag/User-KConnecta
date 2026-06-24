@@ -291,6 +291,8 @@ public class SearchServiceImpl implements SearchService {
                             .type(m.getMediaType().name()).url(m.getFileUrl()).build())
                     .toList();
 
+            LocalDateTime publishedAt = p.getPublishedAt() != null ? p.getPublishedAt() : p.getCreatedAt();
+
             return SearchPostDto.builder()
                     .id(p.getId().toString()).type("post")
                     .author(SearchPostDto.AuthorDto.builder()
@@ -300,7 +302,8 @@ public class SearchServiceImpl implements SearchService {
                             .groupName(p.getGroup() != null ? p.getGroup().getName() : null)
                             .groupIconUrl(p.getGroup() != null ? p.getGroup().getCoverPhotoUrl() : null)
                             .build())
-                    .timestamp(formatTimestamp(p.getPublishedAt() != null ? p.getPublishedAt() : p.getCreatedAt()))
+                    .timestamp(formatTimestamp(publishedAt))
+                    .publishedAt(publishedAt != null ? publishedAt.toString() : null)
                     .content(p.getContent() != null ? p.getContent() : "")
                     .image(imageUrl).video(videoUrl)
                     .likes(reactionCounts.getOrDefault(p.getId(), 0L))

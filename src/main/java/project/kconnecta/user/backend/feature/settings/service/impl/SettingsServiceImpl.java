@@ -63,17 +63,11 @@ public class SettingsServiceImpl implements SettingsService {
         if (request.getProfileVisibility() != null) {
             settings.setProfileVisibility(request.getProfileVisibility());
         }
-        if (request.getPostsVisibility() != null) {
-            settings.setPostsVisibility(request.getPostsVisibility());
-        }
         if (request.getNotifyPosts() != null) {
             settings.setNotifyPosts(request.getNotifyPosts());
         }
         if (request.getNotifyMessages() != null) {
             settings.setNotifyMessages(request.getNotifyMessages());
-        }
-        if (request.getNotifyEmail() != null) {
-            settings.setNotifyEmail(request.getNotifyEmail());
         }
         if (request.getTheme() != null) {
             settings.setTheme(request.getTheme());
@@ -98,7 +92,7 @@ public class SettingsServiceImpl implements SettingsService {
         return switch (type) {
             case LIKE, COMMENT, SHARE, MENTION, FRIEND_REQUEST, FRIEND_ACCEPTED,
                  GROUP_ACTIVITY, GROUP_INVITE, GROUP_JOIN_REQUEST, GROUP_POST_PINNED,
-                 BIRTHDAY, EVENT, MEMORY, SYSTEM -> settings.isNotifyPosts();
+                 BIRTHDAY, BIRTHDAY_WISH, EVENT, MEMORY, SYSTEM -> settings.isNotifyPosts();
             default -> true;
         };
     }
@@ -123,7 +117,7 @@ public class SettingsServiceImpl implements SettingsService {
     @Override
     @Transactional(readOnly = true)
     public PostPrivacy getDefaultPostPrivacy(UUID userId) {
-        return mapToPostPrivacy(getOrCreate(userId).getPostsVisibility());
+        return PostPrivacy.PUBLIC;
     }
 
     @Override
@@ -185,12 +179,6 @@ public class SettingsServiceImpl implements SettingsService {
             return false;
         }
         return userBlockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isNotifyEmailEnabled(UUID userId) {
-        return getOrCreate(userId).isNotifyEmail();
     }
 
     @Override
@@ -298,10 +286,8 @@ public class SettingsServiceImpl implements SettingsService {
                 .userId(userId)
                 .twoFactorEnabled(settings.isTwoFactorEnabled())
                 .profileVisibility(settings.getProfileVisibility())
-                .postsVisibility(settings.getPostsVisibility())
                 .notifyPosts(settings.isNotifyPosts())
                 .notifyMessages(settings.isNotifyMessages())
-                .notifyEmail(settings.isNotifyEmail())
                 .theme(settings.getTheme())
                 .language(settings.getLanguage())
                 .blockedUsers(getBlockedUsers(userId))
@@ -313,14 +299,6 @@ public class SettingsServiceImpl implements SettingsService {
         return friendshipRepository.findBetweenUsers(userA, userB)
                 .map(f -> f.getStatus() == FriendshipStatus.ACCEPTED)
                 .orElse(false);
-    }
-
-    private PostPrivacy mapToPostPrivacy(SettingsVisibility visibility) {
-        return switch (visibility) {
-            case PUBLIC -> PostPrivacy.PUBLIC;
-            case FRIENDS -> PostPrivacy.FRIENDS;
-            case PRIVATE -> PostPrivacy.PRIVATE;
-        };
     }
 
     private String resolveClientIp(HttpServletRequest request) {

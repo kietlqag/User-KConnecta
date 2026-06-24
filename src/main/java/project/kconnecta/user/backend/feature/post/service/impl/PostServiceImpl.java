@@ -666,6 +666,9 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable) {
+        if (!authorId.equals(currentUserId) && !settingsService.canViewProfile(currentUserId, authorId)) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
         // Load all accessible posts for this author (privacy-filtered), then merge with shares in memory.
         // Native SQL avoids heavy JPQL parsing that can OOM on small Render instances.
         List<Post> allPosts = postRepository

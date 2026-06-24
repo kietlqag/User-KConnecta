@@ -62,6 +62,8 @@ public interface LiveSessionService {
 
     List<LiveSessionResponse> listByHost(UUID hostUserId, UUID requesterUserId);
 
+    List<LiveSessionResponse> listByGroup(UUID groupId, UUID viewerUserId);
+
     LiveSessionStatsResponse getStats(UUID sessionId, UUID viewerUserId);
 
     int activateDueScheduledSessions();

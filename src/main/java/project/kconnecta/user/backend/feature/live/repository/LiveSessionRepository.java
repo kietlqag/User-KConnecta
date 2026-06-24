@@ -13,6 +13,7 @@ public interface LiveSessionRepository extends JpaRepository<LiveSession, UUID> 
     List<LiveSession> findAllByStatusOrderByCreatedAtDesc(LiveSessionStatus status);
     List<LiveSession> findAllByStatusOrderByScheduledAtAsc(LiveSessionStatus status);
     List<LiveSession> findAllByHostIdOrderByCreatedAtDesc(UUID hostId);
+    List<LiveSession> findAllByGroupIdOrderByCreatedAtDesc(UUID groupId);
     Optional<LiveSession> findByPostId(UUID postId);
     List<LiveSession> findAllByStatusAndScheduledAtLessThanEqual(LiveSessionStatus status, LocalDateTime scheduledAt);
     List<LiveSession> findAllByStatusAndScheduledAtBetween(
