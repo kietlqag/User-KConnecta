@@ -13,9 +13,10 @@
   isUnread: boolean;
   unreadCount?: number;
   isGroup?: boolean;
+  isStranger?: boolean;
   themeColor?: string | null;
 }
 
-export type MessengerFilter = 'all' | 'unread' | 'groups';
+export type MessengerFilter = 'all' | 'unread' | 'strangers' | 'groups';
 
 

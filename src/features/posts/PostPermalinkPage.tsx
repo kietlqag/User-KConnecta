@@ -82,7 +82,7 @@ export function PostPermalinkPage() {
             <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{error}</p>
             <Link
               to="/home"
-              className="mt-4 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="mt-4 inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
             >
               <ArrowLeft className="h-4 w-4" />
               Về trang chủ

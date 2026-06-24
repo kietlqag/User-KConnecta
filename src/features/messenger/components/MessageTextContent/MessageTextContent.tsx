@@ -28,7 +28,7 @@ export function MessageTextContent({ text, isOwn = false, onGroupJoinLinkClick }
               type="button"
               onClick={() => onGroupJoinLinkClick(token)}
               className={`font-semibold underline underline-offset-2 cursor-pointer ${
-                isOwn ? 'text-white hover:text-blue-100' : 'text-blue-600 hover:text-blue-700 dark:text-blue-400'
+                isOwn ? 'text-white hover:text-emerald-100' : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400'
               }`}
             >
               Liên kết tham gia nhóm
@@ -43,7 +43,7 @@ export function MessageTextContent({ text, isOwn = false, onGroupJoinLinkClick }
             target="_blank"
             rel="noopener noreferrer"
             className={`underline underline-offset-2 ${
-              isOwn ? 'text-white hover:text-blue-100' : 'text-blue-600 hover:text-blue-700 dark:text-blue-400'
+              isOwn ? 'text-white hover:text-emerald-100' : 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400'
             }`}
           >
             {part}

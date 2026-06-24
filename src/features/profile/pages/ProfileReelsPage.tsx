@@ -171,7 +171,7 @@ export function ProfileReelsPage() {
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <Clapperboard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <Clapperboard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Watch</h2>
           </div>
         </div>
@@ -185,7 +185,7 @@ export function ProfileReelsPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
                   activeTab === tab.key
-                    ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                    ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
                     : 'border-transparent text-gray-600 hover:bg-muted dark:text-gray-400'
                 }`}
               >
@@ -226,7 +226,7 @@ export function ProfileReelsPage() {
                 <button
                   type="button"
                   onClick={() => navigate('/watch')}
-                  className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                 >
                   Khám phá Watch
                 </button>

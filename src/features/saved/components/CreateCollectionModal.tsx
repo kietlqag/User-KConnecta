@@ -91,7 +91,7 @@ export function CreateCollectionModal({
               className={`w-full px-3 py-2.5 border rounded-lg text-[15px] text-gray-900 dark:text-gray-100 outline-none transition-colors ${
                 nameError
                   ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
-                  : 'border-gray-300 dark:border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500'
+                  : 'border-gray-300 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
               }`}
             />
             <div className="flex items-start justify-between mt-1">
@@ -121,7 +121,7 @@ export function CreateCollectionModal({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="flex-1 py-2.5 rounded-lg bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 transition-colors"
+            className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors"
           >
             {isSubmitting ? 'Đang tạo...' : 'Tạo'}
           </button>

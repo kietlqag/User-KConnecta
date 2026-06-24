@@ -186,7 +186,7 @@ export const SavedPage = () => {
               if (isLoadingAny) {
                 return (
                   <div className="flex flex-col items-center justify-center py-20">
-                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+                    <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mb-4" />
                     <p className="text-gray-500 dark:text-gray-400">
                       {collectionLoading ? 'Đang tải bộ sưu tập...' : 'Đang tải bài viết đã lưu...'}
                     </p>

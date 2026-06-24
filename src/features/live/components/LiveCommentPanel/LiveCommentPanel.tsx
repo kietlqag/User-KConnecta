@@ -5,6 +5,7 @@ import { authService } from '@/services/authService';
 import { liveService, type LivePinnedCommentResponse, type LiveSessionToolStateResponse } from '@/services/liveService';
 import { postService, type PostCommentResponse } from '@/services/postService';
 import { LiveCommentItem } from '../LiveCommentItem';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 interface LiveCommentPanelProps {
   postId?: string;
@@ -206,7 +207,7 @@ export function LiveCommentPanel({
     });
   };
 
-  const inputAvatar = currentUserAvatar || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(currentUserName)}`;
+  const inputAvatar = currentUserAvatar?.trim() || '';
   const showDefaultPinned = Boolean(
     defaultPinnedComment?.enabled
     && defaultPinnedComment.commentText?.trim()
@@ -272,7 +273,7 @@ export function LiveCommentPanel({
                         }
                         void loadReplies(comment.id);
                       }}
-                      className="ml-11 mt-1 text-xs font-semibold text-blue-600 hover:underline"
+                      className="ml-11 mt-1 text-xs font-semibold text-emerald-600 hover:underline"
                     >
                       {expandedReplies[comment.id]
                         ? 'Ẩn phản hồi'
@@ -299,14 +300,14 @@ export function LiveCommentPanel({
       </div>
 
       {replyTarget && (
-        <div className="mt-2 flex items-center justify-between rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800">
+        <div className="mt-2 flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           <span className="truncate">
             Đang trả lời <strong>{replyTarget.userFullName || replyTarget.username || 'người dùng'}</strong>
           </span>
           <button
             type="button"
             onClick={() => setReplyTarget(null)}
-            className="rounded-full p-1 hover:bg-blue-100"
+            className="rounded-full p-1 hover:bg-emerald-100"
             aria-label="Hủy trả lời"
           >
             <X className="h-4 w-4" />
@@ -315,10 +316,12 @@ export function LiveCommentPanel({
       )}
 
       <div className="mt-3 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700 pt-3">
-        <img
-          src={inputAvatar}
-          alt={currentUserName}
-          className="h-10 w-10 shrink-0 rounded-full object-cover bg-gray-200 dark:bg-gray-700"
+        <UserAvatar
+          name={currentUserName}
+          avatarUrl={inputAvatar}
+          userId={currentUser?.id}
+          rounded="full"
+          className="h-10 w-10 shrink-0"
         />
         <input
           value={commentText}
@@ -334,7 +337,7 @@ export function LiveCommentPanel({
           type="button"
           disabled={!commentText.trim() || isSendingComment || disabled || !postId}
           onClick={() => void handleSubmitComment()}
-          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-gray-300 dark:bg-gray-600"
+          className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-gray-300 dark:bg-gray-600"
         >
           Gửi
         </button>

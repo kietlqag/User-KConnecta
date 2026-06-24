@@ -1,5 +1,5 @@
-﻿import { useState } from 'react';
-import { Search, MoreHorizontal, ExternalLink, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import { Search, ExternalLink, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ConversationItem } from '../ConversationItem';
 import { Conversation, MessengerFilter } from '../../types/messenger.types';
@@ -19,10 +19,13 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
   const filters: { key: MessengerFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
     { key: 'unread', label: 'Chưa đọc' },
+    { key: 'strangers', label: 'Người lạ' },
   ];
 
   const filteredConversations = conversations.filter((conv) => {
     if (activeFilter === 'unread' && !conv.isUnread) return false;
+    if (activeFilter === 'strangers' && !conv.isStranger) return false;
+    if (activeFilter === 'all' && conv.isStranger) return false;
     if (searchQuery && !conv.user.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
@@ -50,9 +53,6 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
                 title="Tải lại"
               >
                 <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </button>
-              <button className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors cursor-pointer">
-                <MoreHorizontal className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
               <button
                 onClick={() => {
@@ -83,7 +83,9 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
                 key={filter.key}
                 onClick={() => setActiveFilter(filter.key)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
                   activeFilter === filter.key
-                    ? 'bg-blue-100 text-blue-600'
+                    ? filter.key === 'strangers'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                      : 'bg-emerald-100 text-emerald-600'
                     : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
@@ -99,7 +101,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
           ) : error ? (
             <div className="text-center py-8 text-sm">
               <p className="text-red-500 mb-2">Không thể tải danh sách</p>
-              <button onClick={reload} className="text-blue-500 hover:underline text-sm cursor-pointer">
+              <button onClick={reload} className="text-emerald-500 hover:underline text-sm cursor-pointer">
                 Thử lại
               </button>
             </div>
@@ -113,9 +115,11 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
             ))
           ) : (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
-              {conversations.length === 0
-                ? 'Chưa có đoạn chat nào.'
-                : 'Không tìm thấy cuộc trò chuyện'}
+              {activeFilter === 'strangers'
+                ? 'Chưa có tin nhắn từ người lạ.'
+                : conversations.length === 0
+                  ? 'Chưa có đoạn chat nào.'
+                  : 'Không tìm thấy cuộc trò chuyện'}
             </div>
           )}
         </div>
@@ -125,7 +129,7 @@ export const MessengerPanel = ({ onClose }: MessengerPanelProps) => {
             onClick={() => {
               navigate('/messages');
               onClose();
-            }} className="w-full text-center text-blue-600 hover:bg-muted py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+            }} className="w-full text-center text-emerald-600 hover:bg-muted py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             Xem tất cả trong Messenger
           </button>

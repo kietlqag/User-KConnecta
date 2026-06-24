@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { ChevronLeft, ChevronRight, Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume1, Volume2, X } from 'lucide-react';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import type { GroupCallParticipant } from '../../types/message.types';
 
 type CallStatus = 'idle' | 'calling' | 'ringing' | 'connecting' | 'in_call' | 'ended' | 'error';
@@ -183,7 +184,7 @@ export function CallOverlayModal({
                 <p className="text-xs text-gray-500 dark:text-gray-400">{participant.userId === callerUserId ? 'Người bắt đầu cuộc gọi' : statusLabel(participant.status)}</p>
               </div>
             </div>
-            <span className={`h-2.5 w-2.5 rounded-full ${participant.status === 'joined' ? 'bg-green-500' : participant.status === 'ringing' ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
+            <span className={`h-2.5 w-2.5 rounded-full ${participant.status === 'joined' ? 'bg-green-500' : participant.status === 'ringing' ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
           </div>
         ))}
       </div>
@@ -221,7 +222,7 @@ export function CallOverlayModal({
           {closeButton}
 
           <div className="pt-8 text-center">
-            <img src={user.avatar} alt={user.name} className="mx-auto h-24 w-24 rounded-full object-cover" />
+            <UserAvatar name={user.name} avatarUrl={user.avatar} rounded="full" className="mx-auto h-24 w-24" />
             <p className="mt-5 text-[22px] font-semibold leading-tight text-gray-900 dark:text-gray-100">{user.name}</p>
             <p className="mt-2 text-[16px] text-gray-500 dark:text-gray-400">
               {isGroupCall
@@ -328,7 +329,7 @@ export function CallOverlayModal({
           </>
         ) : (
           <div className="pt-8 text-center">
-            <img src={user.avatar} alt={user.name} className="mx-auto h-24 w-24 rounded-full object-cover" />
+            <UserAvatar name={user.name} avatarUrl={user.avatar} rounded="full" className="mx-auto h-24 w-24" />
             <p className="mt-5 text-[22px] font-semibold leading-tight text-gray-900 dark:text-gray-100">{user.name}</p>
             <p className="mt-2 text-[16px] text-gray-500 dark:text-gray-400">{callStatusText}</p>
           </div>
@@ -337,7 +338,7 @@ export function CallOverlayModal({
         <div className="mt-8 flex items-center justify-center gap-7">
           <button
             onClick={onToggleSpeaker}
-            className={`${`${iconButtonClassName} cursor-pointer` } ${speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+            className={`${`${iconButtonClassName} cursor-pointer` } ${speakerMode === 'outer' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
             title={speakerMode === 'outer' ? 'Đang loa ngoài, bấm để chuyển loa trong' : 'Đang loa trong, bấm để chuyển loa ngoài'}
           >
             {speakerMode === 'outer' ? <Volume2 className="h-6 w-6 text-white" /> : <Volume1 className="h-6 w-6 text-gray-700 dark:text-gray-300" />}
@@ -346,7 +347,7 @@ export function CallOverlayModal({
           {isVideoCall && (
             <button
               onClick={onToggleCamera}
-              className={`${`${iconButtonClassName} cursor-pointer` } ${isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
+              className={`${`${iconButtonClassName} cursor-pointer` } ${isCameraEnabled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
               title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
             >
               {isCameraEnabled ? <Video className="h-6 w-6 text-white" /> : <VideoOff className="h-6 w-6 text-gray-700 dark:text-gray-300" />}
@@ -356,7 +357,7 @@ export function CallOverlayModal({
           {callStatus === 'in_call' && (
             <button
               onClick={onToggleMute}
-              className={`${`${iconButtonClassName} cursor-pointer` } ${isMuted ? 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+              className={`${`${iconButtonClassName} cursor-pointer` } ${isMuted ? 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
               title={isMuted ? 'Bật mic' : 'Tắt mic'}
             >
               {isMuted ? <MicOff className="h-6 w-6 text-gray-700 dark:text-gray-300" /> : <Mic className="h-6 w-6 text-white" />}

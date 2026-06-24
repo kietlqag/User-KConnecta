@@ -83,7 +83,7 @@ export const GroupsLeftSidebar = ({
         <div className="relative mb-4" ref={searchWrapRef}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
-            type="search"
+            type="text"
             value={searchQuery}
             onChange={e => {
               setSearchQuery(e.target.value);
@@ -92,7 +92,7 @@ export const GroupsLeftSidebar = ({
             onFocus={() => setShowSearchPanel(true)}
             onKeyDown={handleSearchKeyDown}
             placeholder="Tìm kiếm nhóm"
-            className="w-full pl-10 pr-9 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-gray-200 dark:focus:bg-gray-700 focus:ring-2 focus:ring-blue-500/30 transition-colors text-[15px]"
+            className="w-full pl-10 pr-9 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-gray-200 dark:focus:bg-gray-700 focus:ring-2 focus:ring-emerald-500/30 transition-colors text-[15px]"
             aria-label="Tìm kiếm nhóm"
             aria-expanded={showSearchPanel}
             autoComplete="off"
@@ -143,10 +143,10 @@ export const GroupsLeftSidebar = ({
                   else if (section.id === 'discover') navigate('/groups/discover');
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-900 dark:text-gray-100 hover:bg-muted'
+                  isActive ? 'bg-emerald-50 text-emerald-600' : 'text-gray-900 dark:text-gray-100 hover:bg-muted'
                 }`}
               >
-                <div className={isActive ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400'}>{section.icon}</div>
+                <div className={isActive ? 'text-emerald-600' : 'text-gray-600 dark:text-gray-400'}>{section.icon}</div>
                 <span className="font-medium">{section.label}</span>
               </button>
             );

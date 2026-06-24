@@ -304,7 +304,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                 {/* Section: Residence & Education */}
                 <section className="space-y-6">
                   <div className="flex items-center gap-4 pb-2 border-b dark:border-gray-800">
-                    <div className="w-1.5 h-6 bg-blue-500 rounded-full"></div>
+                    <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
                     <h3 className="text-xl font-bold text-gray-900 dark:text-white">Cuộc sống & Học vấn</h3>
                   </div>
                   

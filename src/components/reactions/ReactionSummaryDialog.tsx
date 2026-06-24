@@ -121,7 +121,7 @@ export function ReactionSummaryDialog({
               className={cn(
                 'border-b-[3px] pb-3 text-[16px] font-semibold transition-colors',
                 activeFilter === 'ALL'
-                  ? 'border-blue-500 text-gray-900 dark:text-gray-100'
+                  ? 'border-emerald-500 text-gray-900 dark:text-gray-100'
                   : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-200',
               )}
             >
@@ -139,7 +139,7 @@ export function ReactionSummaryDialog({
                 className={cn(
                   'flex items-center gap-1.5 border-b-[3px] pb-3 text-[16px] font-semibold transition-colors',
                   activeFilter === reaction.type
-                    ? 'border-blue-500 text-gray-900 dark:text-gray-100'
+                    ? 'border-emerald-500 text-gray-900 dark:text-gray-100'
                     : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-200',
                 )}
               >
@@ -172,7 +172,7 @@ export function ReactionSummaryDialog({
                     className={cn(
                       'flex w-full items-center gap-2 px-3 py-2 text-left text-[14px]',
                       activeFilter === reaction.type
-                        ? 'bg-blue-50 font-semibold text-gray-900 dark:text-gray-100'
+                        ? 'bg-emerald-50 font-semibold text-gray-900 dark:text-gray-100'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-muted',
                     )}
                   >

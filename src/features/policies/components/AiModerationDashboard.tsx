@@ -59,7 +59,7 @@ function extractAiConfig(policy: PublicPolicyResponse | undefined): AiConfig {
 
 const SENSITIVITY_LABELS = [
   { max: 25, label: 'Relaxed', desc: 'Chỉ bắt vi phạm rõ ràng', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200' },
-  { max: 50, label: 'Balanced', desc: 'Cân bằng chính xác & phủ', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200' },
+  { max: 50, label: 'Balanced', desc: 'Cân bằng chính xác & phủ', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
   { max: 75, label: 'Strict', desc: 'Bắt nhiều, có thể false positive', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
   { max: 100, label: 'Very Strict', desc: 'Cực nghiêm, nhiều false positive', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200' },
 ];
@@ -72,7 +72,7 @@ function scoreToAction(score: number, cfg: AiConfig): { label: string; color: st
   if (score >= 90 && cfg.autoBan) return { label: 'Auto Ban', color: 'text-red-700' };
   if (score >= 70 && cfg.autoHidePost) return { label: 'Auto Hide', color: 'text-orange-600' };
   if (score >= 50 && cfg.autoWarning) return { label: 'Auto Warning', color: 'text-yellow-600' };
-  if (score >= 30) return { label: 'Flag for Review', color: 'text-blue-600' };
+  if (score >= 30) return { label: 'Flag for Review', color: 'text-emerald-600' };
   return { label: 'No Action', color: 'text-green-600' };
 }
 
@@ -106,7 +106,7 @@ function scoreText(text: string): TestResult {
 const MOCK_ACTIVITY: ActivityItem[] = [
   { id: 1, time: '2 phút trước', contentType: 'Bài viết', score: 87, action: 'Auto Hide', actionColor: 'text-orange-600', content: 'Nội dung chứa ngôn từ xúc phạm...' },
   { id: 2, time: '15 phút trước', contentType: 'Bình luận', score: 62, action: 'Auto Warning', actionColor: 'text-yellow-600', content: 'Có dấu hiệu spam link...' },
-  { id: 3, time: '31 phút trước', contentType: 'Bài viết', score: 38, action: 'Flag Review', actionColor: 'text-blue-600', content: 'Có thể chứa thông tin lừa đảo...' },
+  { id: 3, time: '31 phút trước', contentType: 'Bài viết', score: 38, action: 'Flag Review', actionColor: 'text-emerald-600', content: 'Có thể chứa thông tin lừa đảo...' },
   { id: 4, time: '1 giờ trước', contentType: 'Ảnh', score: 91, action: 'Auto Hide', actionColor: 'text-orange-600', content: 'Phát hiện nội dung NSFW...' },
   { id: 5, time: '2 giờ trước', contentType: 'Bình luận', score: 18, action: 'No Action', actionColor: 'text-green-600', content: 'Nội dung sạch' },
   { id: 6, time: '3 giờ trước', contentType: 'Bài viết', score: 74, action: 'Auto Hide', actionColor: 'text-orange-600', content: 'Hate speech detected...' },
@@ -234,7 +234,7 @@ export function AiModerationDashboard({ policy }: Props) {
 
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <StatCard icon={<FileText className="w-5 h-5 text-blue-600" />} label="Posts scanned today" value="1,284" sub="↑ 12% so với hôm qua" color="bg-blue-50" />
+        <StatCard icon={<FileText className="w-5 h-5 text-emerald-600" />} label="Posts scanned today" value="1,284" sub="↑ 12% so với hôm qua" color="bg-emerald-50" />
         <StatCard icon={<ShieldAlert className="w-5 h-5 text-orange-500" />} label="Flagged content" value="47" sub="3.7% tổng bài quét" color="bg-orange-50" />
         <StatCard icon={<EyeOff className="w-5 h-5 text-red-500" />} label="Auto hidden" value="23" sub="Ẩn tự động hôm nay" color="bg-red-50" />
         <StatCard icon={<AlertTriangle className="w-5 h-5 text-yellow-500" />} label="Auto warnings" value="18" sub="Cảnh báo gửi đi" color="bg-yellow-50" />
@@ -406,7 +406,7 @@ export function AiModerationDashboard({ policy }: Props) {
             <tbody className="divide-y divide-gray-50">
               {[
                 { range: '0% – 29%', action: 'No Action', color: 'bg-green-100 text-green-700', active: true, desc: 'Nội dung sạch, không cần can thiệp' },
-                { range: '30% – 49%', action: 'Flag for Review', color: 'bg-blue-100 text-blue-700', active: true, desc: 'Đánh dấu để admin xét duyệt thủ công' },
+                { range: '30% – 49%', action: 'Flag for Review', color: 'bg-emerald-100 text-emerald-700', active: true, desc: 'Đánh dấu để admin xét duyệt thủ công' },
                 { range: '50% – 69%', action: 'Auto Warning', color: 'bg-yellow-100 text-yellow-700', active: cfg.autoWarning, desc: 'Gửi cảnh báo đến người dùng' },
                 { range: '70% – 89%', action: 'Auto Hide', color: 'bg-orange-100 text-orange-700', active: cfg.autoHidePost, desc: 'Ẩn nội dung tự động, chờ review' },
                 { range: '90% – 100%', action: 'Auto Ban', color: 'bg-red-100 text-red-700', active: cfg.autoBan, desc: 'Khóa tài khoản vi phạm nghiêm trọng' },
@@ -456,7 +456,7 @@ export function AiModerationDashboard({ policy }: Props) {
                   <td className="px-5 py-3.5 text-gray-400 text-xs whitespace-nowrap">{item.time}</td>
                   <td className="px-5 py-3.5">
                     <span className="flex items-center gap-1.5 text-xs">
-                      {item.contentType === 'Bài viết' && <FileText className="w-3.5 h-3.5 text-blue-400" />}
+                      {item.contentType === 'Bài viết' && <FileText className="w-3.5 h-3.5 text-emerald-400" />}
                       {item.contentType === 'Bình luận' && <MessageSquare className="w-3.5 h-3.5 text-green-400" />}
                       {item.contentType === 'Ảnh' && <Image className="w-3.5 h-3.5 text-purple-400" />}
                       <span className="text-gray-600 dark:text-gray-400">{item.contentType}</span>

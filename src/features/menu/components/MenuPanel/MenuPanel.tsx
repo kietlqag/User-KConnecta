@@ -44,33 +44,33 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
   const socialItems: MenuItem[] = [
     {
       id: 'events',
-      icon: <Calendar className="w-5 h-5 text-blue-600" />,
+      icon: <Calendar className="w-5 h-5 text-emerald-600" />,
       title: 'Sự kiện',
       description: 'Tổ chức hoặc tìm sự kiện cùng những hoạt động khác trên mạng xã hội và ở xung quanh đây.',
     },
     {
       id: 'friends',
-      icon: <Users className="w-5 h-5 text-blue-600" />,
+      icon: <Users className="w-5 h-5 text-emerald-600" />,
       title: 'Bạn bè',
       description: 'Tìm kiếm bạn bè hoặc những người bạn có thể biết.',
       href: '/friends',
     },
     {
       id: 'groups',
-      icon: <Users className="w-5 h-5 text-blue-600" />,
+      icon: <Users className="w-5 h-5 text-emerald-600" />,
       title: 'Nhóm',
       description: 'Kết nối với những người cùng chung sở thích.',
       href: '/groups',
     },
     {
       id: 'newsfeed',
-      icon: <Rss className="w-5 h-5 text-blue-600" />,
+      icon: <Rss className="w-5 h-5 text-emerald-600" />,
       title: 'Bảng tin',
       description: 'Xem bài viết phù hợp với sở thích của bạn bè, nhóm, trang và những thứ khác.',
     },
     {
       id: 'pages',
-      icon: <Flag className="w-5 h-5 text-blue-600" />,
+      icon: <Flag className="w-5 h-5 text-emerald-600" />,
       title: 'Trang',
       description: 'Khám phá và kết nối với các doanh nghiệp trên Facebook.',
     },

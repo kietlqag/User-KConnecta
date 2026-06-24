@@ -53,7 +53,7 @@ export function GroupMembersTab({
             <button
               type="button"
               onClick={onInvite}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span className="text-lg leading-none">+</span> Mời thành viên
             </button>
@@ -66,14 +66,14 @@ export function GroupMembersTab({
             placeholder="Tìm kiếm thành viên"
             value={memberSearch}
             onChange={e => onMemberSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white dark:bg-gray-800 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white dark:bg-gray-800 transition-all"
           />
         </div>
       </div>
 
       {adminMembers.length > 0 && (
         <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+          <h3 className="mb-3 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
             Quản trị viên · {adminMembers.length}
           </h3>
           <div className="space-y-1">
@@ -83,7 +83,7 @@ export function GroupMembersTab({
                   <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} userId={member.userId} rounded="full" className="w-12 h-12 shrink-0" initialsClassName="text-sm font-semibold" />
                   <div>
                     <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] group-hover:underline">{member.fullName}</div>
-                    <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                    <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
                       <Shield className="w-3 h-3" /> Quản trị viên
                     </div>
                     <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatJoinedAt(member.joinedAt)}</div>
@@ -99,7 +99,7 @@ export function GroupMembersTab({
       )}
 
       <div className="p-4">
-        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+        <h3 className="mb-3 text-[15px] font-semibold text-gray-900 dark:text-gray-100">
           Thành viên · {regularMembers.length}
         </h3>
         {regularMembers.length === 0 ? (

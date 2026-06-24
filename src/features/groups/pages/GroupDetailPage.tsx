@@ -12,8 +12,8 @@ import {
   EditGroupNameModal,
   GroupTabBar,
   GroupMembersTab,
-  GroupPlaceholderTab,
   GroupMediaTab,
+  GroupEventsTab,
   GroupAlbumsTab,
 } from '../components';
 import { GroupRequestsTab } from '../components/GroupRequestsTab/GroupRequestsTab';
@@ -281,7 +281,7 @@ export const GroupDetailPage = () => {
                   />
                 ) : (
                   <>
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-700 via-orange-500 to-red-500 opacity-90" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 via-orange-500 to-red-500 opacity-90" />
                     <svg className="absolute inset-0 w-full h-full opacity-80" viewBox="0 0 1200 400" preserveAspectRatio="none">
                       <rect width="1200" height="400" fill="url(#grad)" />
                       <defs>
@@ -298,7 +298,7 @@ export const GroupDetailPage = () => {
                     <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-12 p-8">
                       <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800/20 backdrop-blur" />
                       <div className="w-32 h-32 bg-yellow-400/30 rotate-12" />
-                      <div className="w-40 h-40 rounded-full bg-blue-500/20 backdrop-blur" />
+                      <div className="w-40 h-40 rounded-full bg-emerald-500/20 backdrop-blur" />
                     </div>
                   </>
                 )}
@@ -324,7 +324,7 @@ export const GroupDetailPage = () => {
                     <button
                       onClick={() => selectedFile && uploadCoverMutation.mutate(selectedFile)}
                       disabled={uploadCoverMutation.isPending}
-                      className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-semibold shadow-sm dark:shadow-none transition-colors"
+                      className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-semibold shadow-sm dark:shadow-none transition-colors"
                     >
                       {uploadCoverMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
                     </button>
@@ -440,7 +440,7 @@ export const GroupDetailPage = () => {
                           });
                         }}
                         disabled={joinGroupMutation.isPending}
-                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
                       >
                         {joinGroupMutation.isPending ? 'Đang xử lý...' : 'Tham gia nhóm'}
                       </button>
@@ -457,7 +457,7 @@ export const GroupDetailPage = () => {
                       <>
                         <button
                           onClick={() => setIsInviteModalOpen(true)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
                         >
                           <span className="text-xl leading-none -mt-0.5">+</span> Mời
                         </button>
@@ -497,7 +497,7 @@ export const GroupDetailPage = () => {
             {group && (
               <div
                 className={
-                  activeTab === 'discussion' || activeTab === 'events' || activeTab === 'documents'
+                  activeTab === 'discussion' || activeTab === 'events'
                     ? 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 lg:gap-6 items-start'
                     : undefined
                 }
@@ -567,24 +567,12 @@ export const GroupDetailPage = () => {
                     )
                   )}
 
-                  {(activeTab === 'events' || activeTab === 'documents') && (
-                    <GroupPlaceholderTab
-                      tabId={activeTab}
-                      isAdmin={isAdmin}
-                      isApprovedMember={group?.role === 'ADMIN' || group?.role === 'MEMBER'}
-                      onCreateEvent={() => toast.info('Tạo sự kiện — đang phát triển')}
-                      onPostWithMedia={() => {
-                        setActiveTab('discussion');
-                        setTimeout(() => {
-                          scrollToComposer();
-                          setComposerOpen(true);
-                        }, 0);
-                      }}
-                    />
+                  {activeTab === 'events' && groupId && (
+                    isPrivateLocked ? privateLockScreen : <GroupEventsTab groupId={groupId} />
                   )}
                 </div>
 
-                {(activeTab === 'discussion' || activeTab === 'events' || activeTab === 'documents') && (
+                {(activeTab === 'discussion' || activeTab === 'events') && (
                 <aside className="order-1 lg:order-2 lg:sticky lg:top-14 lg:max-h-[calc(100vh-56px)] lg:overflow-y-auto lg:pb-4 sidebar-scrollbar">
                   <GroupDetailSidebar
                     group={group}
@@ -725,7 +713,7 @@ export const GroupDetailPage = () => {
                       )
                     }
                     className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
-                      group.memberApprovalRequired ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                      group.memberApprovalRequired ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <span

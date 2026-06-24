@@ -1,6 +1,6 @@
-import { Users, UserPlus, Sparkles, Cake, List, Settings } from 'lucide-react';
+import { Users, UserPlus, Cake, Home } from 'lucide-react';
 
-export type FriendsTab = 'home' | 'requests' | 'suggestions' | 'all-friends' | 'birthdays';
+export type FriendsTab = 'home' | 'requests' | 'all-friends' | 'birthdays';
 
 interface SidebarItem {
   id: FriendsTab;
@@ -17,23 +17,16 @@ interface FriendsLeftSidebarProps {
 
 export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: FriendsLeftSidebarProps) => {
   const sidebarItems: SidebarItem[] = [
-    { id: 'home', label: 'Trang chủ', icon: <Users className="w-5 h-5" /> },
+    { id: 'home', label: 'Trang chủ', icon: <Home className="w-5 h-5" /> },
     { id: 'requests', label: 'Lời mời kết bạn', icon: <UserPlus className="w-5 h-5" />, count: requestCount },
-    { id: 'suggestions', label: 'Gợi ý', icon: <Sparkles className="w-5 h-5" /> },
     { id: 'all-friends', label: 'Tất cả bạn bè', icon: <Users className="w-5 h-5" /> },
     { id: 'birthdays', label: 'Sinh nhật', icon: <Cake className="w-5 h-5" /> },
-    { id: 'custom-lists', label: 'Danh sách tùy chỉnh', icon: <List className="w-5 h-5" /> },
   ];
 
   return (
-    <div className="sticky top-14 hidden min-h-[calc(100vh-56px)] w-[clamp(280px,23vw,360px)] shrink-0 overflow-y-auto border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 sidebar-scrollbar md:block">
+    <div className="hidden h-full w-[clamp(280px,23vw,360px)] shrink-0 overflow-hidden border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 md:block">
       <div className="p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bạn bè</h1>
-          <button className="p-2 hover:bg-muted rounded-full transition-colors cursor-pointer">
-            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-          </button>
-        </div>
+        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">Bạn bè</h1>
 
         <div className="space-y-1">
           {sidebarItems.map((item) => (

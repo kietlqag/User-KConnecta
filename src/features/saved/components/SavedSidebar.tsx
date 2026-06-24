@@ -24,12 +24,12 @@ export const SavedSidebar = ({
       <div className="flex-1 overflow-y-auto px-2 py-2">
         <button
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left group ${
-            activeCollection === 'all' ? 'bg-blue-50 text-blue-600' : 'hover:bg-muted'
+            activeCollection === 'all' ? 'bg-emerald-50 text-emerald-600' : 'hover:bg-muted'
           }`}
           onClick={() => onSelectCollection?.('all')}
         >
           <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-            activeCollection === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+            activeCollection === 'all' ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
           }`}>
             <Bookmark className="w-5 h-5" />
           </div>
@@ -47,7 +47,7 @@ export const SavedSidebar = ({
                 <button
                   key={col.id}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left group relative ${
-                    activeCollection === col.id ? 'bg-blue-50' : 'hover:bg-muted'
+                    activeCollection === col.id ? 'bg-emerald-50' : 'hover:bg-muted'
                   }`}
                   onClick={() => onSelectCollection?.(col.id)}
                 >
@@ -72,10 +72,10 @@ export const SavedSidebar = ({
         )}
 
         <button
-          className="mt-4 w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors text-left"
+          className="mt-4 w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors text-left"
           onClick={onCreateCollection}
         >
-          <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center">
             <Plus className="w-5 h-5" />
           </div>
           <span className="font-semibold text-[15px]">Tạo bộ sưu tập mới</span>

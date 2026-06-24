@@ -657,12 +657,12 @@ export default function LiveViewerPage() {
           {(toolState?.hostNotice || toolState?.featuredLinkUrl || toolState?.pollEnabled) && (
             <div className="mt-4 shrink-0 space-y-3">
               {toolState.hostNotice && (
-                <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800">
+                <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
                   {toolState.hostNotice}
                 </div>
               )}
               {toolState.featuredLinkUrl && (
-                <a href={toolState.featuredLinkUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-gray-100 dark:bg-gray-900 p-3 text-sm font-semibold text-blue-700">
+                <a href={toolState.featuredLinkUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-gray-100 dark:bg-gray-900 p-3 text-sm font-semibold text-emerald-700">
                   {toolState.featuredLinkTitle || toolState.featuredLinkUrl}
                 </a>
               )}
@@ -684,22 +684,22 @@ export default function LiveViewerPage() {
                           onClick={() => void handleVotePoll(index)}
                           className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
                             isSelected
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-blue-50'
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-emerald-50'
                           } ${!canVote ? 'cursor-default' : ''}`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span>{option}</span>
                             {totalVotes > 0 && (
-                              <span className={isSelected ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'}>
+                              <span className={isSelected ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}>
                                 {percent}% ({count})
                               </span>
                             )}
                           </div>
                           {totalVotes > 0 && (
-                            <div className={`mt-1 h-1.5 rounded-full ${isSelected ? 'bg-blue-400' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                            <div className={`mt-1 h-1.5 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-gray-700'}`}>
                               <div
-                                className={`h-1.5 rounded-full ${isSelected ? 'bg-white dark:bg-gray-800' : 'bg-blue-600'}`}
+                                className={`h-1.5 rounded-full ${isSelected ? 'bg-white dark:bg-gray-800' : 'bg-emerald-600'}`}
                                 style={{ width: `${percent}%` }}
                               />
                             </div>

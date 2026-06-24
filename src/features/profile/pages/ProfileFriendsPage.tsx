@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Search } from 'lucide-react';
-import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { authService } from '@/services/authService';
 import { friendService } from '@/services/friendService';
 import { useProfileLayoutContext } from './ProfileLayout';
@@ -15,7 +15,6 @@ interface FriendItem {
   mutualFriends: number;
 }
 
-const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?name=User&background=random';
 
 function FriendSkeleton() {
   return (
@@ -119,10 +118,12 @@ export function ProfileFriendsPage() {
                 onClick={() => navigate(`/profile/${friend.username || friend.userId}`)}
               >
                 <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 dark:border-gray-700">
-                  <ImageWithFallback
-                    src={friend.avatarUrl || DEFAULT_AVATAR}
-                    alt={friend.fullName}
-                    className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                  <UserAvatar
+                    name={friend.fullName}
+                    avatarUrl={friend.avatarUrl}
+                    userId={friend.userId}
+                    rounded="lg"
+                    className="w-full h-full transition-transform duration-200 group-hover:scale-105"
                   />
                 </div>
                 <div className="flex-1 min-w-0">

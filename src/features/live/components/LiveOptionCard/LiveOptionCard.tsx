@@ -1,45 +1,51 @@
 import { ReactNode } from 'react';
 
+type LiveOptionTone = 'emerald' | 'violet';
+
 interface LiveOptionCardProps {
   icon: ReactNode;
   title: string;
   description: string;
   buttonText: string;
-  buttonVariant: 'primary' | 'secondary';
+  tone?: LiveOptionTone;
   onClick: () => void;
 }
+
+const toneStyles: Record<LiveOptionTone, { iconWrap: string; button: string }> = {
+  emerald: {
+    iconWrap: 'bg-emerald-100 dark:bg-emerald-900/30',
+    button: 'bg-emerald-600 text-white hover:bg-emerald-700',
+  },
+  violet: {
+    iconWrap: 'bg-violet-100 dark:bg-violet-900/30',
+    button: 'bg-violet-600 text-white hover:bg-violet-700',
+  },
+};
 
 export const LiveOptionCard = ({
   icon,
   title,
   description,
   buttonText,
-  buttonVariant,
+  tone = 'emerald',
   onClick,
 }: LiveOptionCardProps) => {
+  const styles = toneStyles[tone];
+
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 flex flex-col items-center text-center hover:shadow-lg transition-shadow">
-      {/* Icon */}
-      <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${
-        buttonVariant === 'primary' ? 'bg-green-100' : 'bg-gray-100 dark:bg-gray-900'
-      }`}>
+    <div className="flex flex-col items-center rounded-lg bg-white p-8 text-center shadow-md transition-shadow hover:shadow-lg dark:bg-gray-800">
+      <div className={`mb-6 flex h-20 w-20 items-center justify-center rounded-full ${styles.iconWrap}`}>
         {icon}
       </div>
 
-      {/* Title */}
-      <h3 className="text-xl font-semibold mb-3">{title}</h3>
+      <h3 className="mb-3 text-xl font-semibold">{title}</h3>
 
-      {/* Description */}
-      <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{description}</p>
+      <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">{description}</p>
 
-      {/* Button */}
       <button
+        type="button"
         onClick={onClick}
-        className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors ${
-          buttonVariant === 'primary'
-            ? 'bg-green-600 text-white hover:bg-green-700'
-            : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300'
-        }`}
+        className={`w-full rounded-lg px-6 py-3 font-semibold transition-colors ${styles.button}`}
       >
         {buttonText}
       </button>

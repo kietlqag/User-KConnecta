@@ -63,7 +63,7 @@ export function ProfileScheduledPage() {
     <div className="max-w-[680px] mx-auto px-4 py-6">
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none overflow-hidden">
         <div className="flex items-center gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
-          <Calendar className="w-5 h-5 text-blue-600" />
+          <Calendar className="w-5 h-5 text-emerald-600" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Bài viết đã lên lịch</h2>
           {!loading && <span className="ml-auto text-sm text-gray-500 dark:text-gray-400 font-medium">{posts.length} bài</span>}
         </div>
@@ -90,8 +90,8 @@ export function ProfileScheduledPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-4 h-4 text-blue-500 shrink-0" />
-                      <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                      <Clock className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatScheduledAt(post.scheduledAt)}
                       </span>
                     </div>

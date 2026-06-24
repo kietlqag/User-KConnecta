@@ -106,7 +106,7 @@ export function AlbumSidebarCarousel({ albums }: AlbumSidebarCarouselProps) {
                 type="button"
                 onClick={() => goTo(i)}
                 className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
-                  i === index ? 'w-4 bg-blue-600' : 'w-1.5 bg-gray-300 dark:bg-gray-600'
+                  i === index ? 'w-4 bg-emerald-600' : 'w-1.5 bg-gray-300 dark:bg-gray-600'
                 }`}
                 aria-label={`Album ${i + 1}`}
               />

@@ -48,7 +48,7 @@ export const CreateGroupPage = () => {
 
           {/* User Info */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-blue-100 overflow-hidden shrink-0">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 overflow-hidden shrink-0">
               <img src="https://i.pravatar.cc/150?u=1" alt="User Avatar" className="w-full h-full object-cover" />
             </div>
             <div>
@@ -66,9 +66,9 @@ export const CreateGroupPage = () => {
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                   placeholder=" "
-                  className="peer w-full px-3 pt-5 pb-2 border border-gray-300 dark:border-gray-700 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors bg-transparent"
+                  className="peer w-full px-3 pt-5 pb-2 border border-gray-300 dark:border-gray-700 rounded-md outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors bg-transparent"
                 />
-                <label className="absolute left-3 top-3.5 text-gray-500 dark:text-gray-400 text-[15px] pointer-events-none transition-all peer-placeholder-shown:text-[15px] peer-placeholder-shown:top-3.5 peer-focus:top-1 peer-focus:text-[11px] peer-focus:text-blue-500 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[11px]">
+                <label className="absolute left-3 top-3.5 text-gray-500 dark:text-gray-400 text-[15px] pointer-events-none transition-all peer-placeholder-shown:text-[15px] peer-placeholder-shown:top-3.5 peer-focus:top-1 peer-focus:text-[11px] peer-focus:text-emerald-500 peer-[:not(:placeholder-shown)]:top-1 peer-[:not(:placeholder-shown)]:text-[11px]">
                   Tên nhóm
                 </label>
               </div>
@@ -79,7 +79,7 @@ export const CreateGroupPage = () => {
                 type="button"
                 onClick={() => setIsPrivacyOpen(!isPrivacyOpen)}
                 className={`w-full flex items-center justify-between px-3 py-2 border rounded-md transition-colors ${
-                  isPrivacyOpen ? 'border-blue-500 ring-1 ring-blue-500 shadow-sm dark:shadow-none' : 'border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  isPrivacyOpen ? 'border-emerald-500 ring-1 ring-emerald-500 shadow-sm dark:shadow-none' : 'border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -91,7 +91,7 @@ export const CreateGroupPage = () => {
                     )}
                   </div>
                   <div className="text-left flex flex-col justify-center">
-                    <span className={`text-[12px] font-medium leading-tight ${isPrivacyOpen ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <span className={`text-[12px] font-medium leading-tight ${isPrivacyOpen ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
                       Chọn quyền riêng tư
                     </span>
                     <span className="text-[17px] text-gray-900 dark:text-gray-100">
@@ -99,7 +99,7 @@ export const CreateGroupPage = () => {
                     </span>
                   </div>
                 </div>
-                <ChevronDown className={`w-5 h-5 transition-transform ${isPrivacyOpen ? 'text-blue-600 rotate-180' : 'text-gray-700 dark:text-gray-300'}`} />
+                <ChevronDown className={`w-5 h-5 transition-transform ${isPrivacyOpen ? 'text-emerald-600 rotate-180' : 'text-gray-700 dark:text-gray-300'}`} />
               </button>
 
               {isPrivacyOpen && (
@@ -128,8 +128,8 @@ export const CreateGroupPage = () => {
                         </div>
                       </div>
                       <div className="shrink-0 pt-2 flex items-center">
-                        <div className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-colors ${privacy === 'public' ? 'border-blue-600' : 'border-gray-400'}`}>
-                          {privacy === 'public' && <div className="w-3 h-3 rounded-full bg-blue-600" />}
+                        <div className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-colors ${privacy === 'public' ? 'border-emerald-600' : 'border-gray-400'}`}>
+                          {privacy === 'public' && <div className="w-3 h-3 rounded-full bg-emerald-600" />}
                         </div>
                       </div>
                     </div>
@@ -152,8 +152,8 @@ export const CreateGroupPage = () => {
                         </div>
                       </div>
                       <div className="shrink-0 pt-2 flex items-center">
-                        <div className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-colors ${privacy === 'private' ? 'border-blue-600' : 'border-gray-400'}`}>
-                          {privacy === 'private' && <div className="w-3 h-3 rounded-full bg-blue-600" />}
+                        <div className={`w-6 h-6 rounded-full border-[2px] flex items-center justify-center transition-colors ${privacy === 'private' ? 'border-emerald-600' : 'border-gray-400'}`}>
+                          {privacy === 'private' && <div className="w-3 h-3 rounded-full bg-emerald-600" />}
                         </div>
                       </div>
                     </div>
@@ -166,10 +166,10 @@ export const CreateGroupPage = () => {
               <input
                 type="text"
                 placeholder="Mời bạn bè (không bắt buộc)"
-                className="w-full px-3 py-3.5 border border-gray-300 dark:border-gray-700 rounded-md outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors text-[15px]"
+                className="w-full px-3 py-3.5 border border-gray-300 dark:border-gray-700 rounded-md outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors text-[15px]"
               />
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Gợi ý: <span className="text-blue-600 cursor-pointer">Hoàng Ngọc Lam</span>, <span className="text-blue-600 cursor-pointer">Hán Dì Diệu</span>, <span className="text-blue-600 cursor-pointer">Cự Depression</span>
+                Gợi ý: <span className="text-emerald-600 cursor-pointer">Hoàng Ngọc Lam</span>, <span className="text-emerald-600 cursor-pointer">Hán Dì Diệu</span>, <span className="text-emerald-600 cursor-pointer">Cự Depression</span>
               </div>
             </div>
           </div>
@@ -181,7 +181,7 @@ export const CreateGroupPage = () => {
             onClick={() => createGroupMutation.mutate()}
             className={`w-full py-2.5 rounded-lg font-semibold transition-colors ${
               groupName.trim() && !createGroupMutation.isPending
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
             }`}
             disabled={!groupName.trim() || createGroupMutation.isPending}
@@ -201,13 +201,13 @@ export const CreateGroupPage = () => {
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
                 <button
                   onClick={() => setPreviewMode('desktop')}
-                  className={`p-1.5 rounded-md transition-colors ${previewMode === 'desktop' ? 'bg-white dark:bg-gray-800 shadow-sm dark:shadow-none text-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300'}`}
+                  className={`p-1.5 rounded-md transition-colors ${previewMode === 'desktop' ? 'bg-white dark:bg-gray-800 shadow-sm dark:shadow-none text-emerald-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300'}`}
                 >
                   <Monitor className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => setPreviewMode('mobile')}
-                  className={`p-1.5 rounded-md transition-colors ${previewMode === 'mobile' ? 'bg-white dark:bg-gray-800 shadow-sm dark:shadow-none text-blue-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300'}`}
+                  className={`p-1.5 rounded-md transition-colors ${previewMode === 'mobile' ? 'bg-white dark:bg-gray-800 shadow-sm dark:shadow-none text-emerald-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300'}`}
                 >
                   <Smartphone className="w-5 h-5" />
                 </button>
@@ -249,7 +249,7 @@ export const CreateGroupPage = () => {
               {/* Tabs */}
               <div className="flex items-center px-8 gap-1 pb-1">
                 {['Giới thiệu', 'Bài viết', 'Thành viên', 'Sự kiện'].map((tab, idx) => (
-                  <div key={idx} className={`px-4 py-3.5 font-medium text-[15px] cursor-not-allowed ${idx === 0 ? 'text-blue-600 border-b-[3px] border-blue-600 rounded-t' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <div key={idx} className={`px-4 py-3.5 font-medium text-[15px] cursor-not-allowed ${idx === 0 ? 'text-emerald-600 border-b-[3px] border-emerald-600 rounded-t' : 'text-gray-500 dark:text-gray-400'}`}>
                     {tab}
                   </div>
                 ))}
@@ -275,7 +275,7 @@ export const CreateGroupPage = () => {
                          Ảnh/video
                        </div>
                        <div className="flex-1 flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg cursor-not-allowed text-gray-500 dark:text-gray-400 font-semibold text-[15px]">
-                         <Users className="w-6 h-6 text-blue-500" />
+                         <Users className="w-6 h-6 text-emerald-500" />
                          Gắn thẻ người khác
                        </div>
                        <div className="flex-1 flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg cursor-not-allowed text-gray-500 dark:text-gray-400 font-semibold text-[15px]">

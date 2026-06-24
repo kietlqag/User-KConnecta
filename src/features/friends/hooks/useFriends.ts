@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { friendService } from '@/services/friendService';
+import { resolveUserAvatarUrl } from '@/utils/userAvatarUtils';
 import { Friend } from '../types/friends.types';
 
 export function useFriends(userId: string | undefined) {
@@ -11,7 +12,7 @@ export function useFriends(userId: string | undefined) {
         id: f.friendshipId!,
         userId: f.userId,
         name: f.fullName,
-        avatar: f.avatarUrl || '',
+        avatar: resolveUserAvatarUrl(f.avatarUrl) || '',
         mutualFriends: f.mutualFriends,
         isFriend: true,
       }));

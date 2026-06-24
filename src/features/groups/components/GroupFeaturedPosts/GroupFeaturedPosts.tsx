@@ -58,7 +58,7 @@ export function GroupFeaturedPosts({ groupId, isAdmin }: GroupFeaturedPostsProps
   return (
     <section className="mb-4" aria-label="Bài viết nổi bật">
       <div className="flex items-center gap-2 mb-3 px-1">
-        <Pin className="w-[18px] h-[18px] text-blue-600 dark:text-blue-400" style={{ fill: 'currentColor', fillOpacity: 0.2 }} />
+        <Pin className="w-[18px] h-[18px] text-emerald-600 dark:text-emerald-400" style={{ fill: 'currentColor', fillOpacity: 0.2 }} />
         <h2 className="text-[17px] font-bold text-gray-900 dark:text-gray-100">Bài viết nổi bật</h2>
         <span className="text-sm font-medium text-gray-400 dark:text-gray-500">· {pins.length}</span>
         {unreadCount > 0 && (
@@ -76,11 +76,11 @@ export function GroupFeaturedPosts({ groupId, isAdmin }: GroupFeaturedPostsProps
           return (
             <div
               key={pin.pinId}
-              className="overflow-hidden rounded-2xl border border-blue-200/60 dark:border-blue-900/40 bg-card shadow-sm"
+              className="overflow-hidden rounded-2xl border border-emerald-200/60 dark:border-emerald-900/40 bg-card shadow-sm"
             >
               {/* Pin ribbon — connects the featured badge with the post into one card */}
-              <div className="flex items-center flex-wrap gap-2 border-b border-blue-100 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/20 px-3 py-2">
-                <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-blue-800 dark:text-blue-200">
+              <div className="flex items-center flex-wrap gap-2 border-b border-emerald-100 dark:border-emerald-900/40 bg-emerald-50/70 dark:bg-emerald-950/20 px-3 py-2">
+                <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-emerald-800 dark:text-emerald-200">
                   <span className="text-sm leading-none">{meta.icon}</span>
                   {meta.label} · Nổi bật
                 </span>

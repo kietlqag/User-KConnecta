@@ -89,7 +89,7 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
               {notifications.some((n) => n.isUnread) && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-blue-600 font-medium hover:underline cursor-pointer"
+                  className="text-xs text-emerald-600 font-medium hover:underline cursor-pointer"
                 >
                   Đánh dấu tất cả đã đọc
                 </button>
@@ -102,7 +102,7 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
               onClick={() => setActiveFilter('all')}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
                 activeFilter === 'all'
-                  ? 'bg-blue-100 text-blue-600'
+                  ? 'bg-emerald-100 text-emerald-600'
                   : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
@@ -112,7 +112,7 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
               onClick={() => setActiveFilter('unread')}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
                 activeFilter === 'unread'
-                  ? 'bg-blue-100 text-blue-600'
+                  ? 'bg-emerald-100 text-emerald-600'
                   : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
             >
@@ -149,7 +149,7 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
         <div className="p-3 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={onClose}
-            className="w-full text-center text-blue-600 hover:bg-muted py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+            className="w-full text-center text-emerald-600 hover:bg-muted py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             Đóng
           </button>

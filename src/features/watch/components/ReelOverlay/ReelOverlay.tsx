@@ -74,7 +74,7 @@ export const ReelOverlay = ({ creator, caption, postedAt, privacy, group, music 
                 {creator.name}
               </span>
               {creator.verified && (
-                <CheckCircle className="w-4 h-4 text-blue-500 fill-blue-500 flex-shrink-0" />
+                <CheckCircle className="w-4 h-4 text-emerald-500 fill-emerald-500 flex-shrink-0" />
               )}
               <span>·</span>
               <PrivacyIcon className="w-3.5 h-3.5 text-white/80 flex-shrink-0" aria-label={privacyLabel}>
@@ -94,7 +94,7 @@ export const ReelOverlay = ({ creator, caption, postedAt, privacy, group, music 
                 {creator.name}
               </h3>
               {creator.verified && (
-                <CheckCircle className="w-5 h-5 text-blue-500 fill-blue-500 shrink-0" />
+                <CheckCircle className="w-5 h-5 text-emerald-500 fill-emerald-500 shrink-0" />
               )}
               <PrivacyIcon
                 className="w-4 h-4 text-white/80 shrink-0"

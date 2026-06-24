@@ -43,6 +43,7 @@ export interface AuthUser {
   dateOfBirth?: string;
   avatarUrl?: string;
   coverPhotoUrl?: string;
+  profileContentRestricted?: boolean;
   requiresProfileSetup?: boolean;
   requiresTwoFactor?: boolean;
   twoFactorToken?: string;

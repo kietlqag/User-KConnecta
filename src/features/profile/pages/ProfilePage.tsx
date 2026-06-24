@@ -83,9 +83,7 @@ export function ProfilePage() {
           res.map((f: any) => ({
             id: f.userId,
             name: f.fullName,
-            avatar:
-              f.avatarUrl ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(f.fullName)}&background=random`,
+            avatar: f.avatarUrl?.trim() || '',
           })),
         ),
       )
@@ -123,9 +121,9 @@ export function ProfilePage() {
         const element = document.getElementById(`post-${highlightPostId}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          element.classList.add('ring-2', 'ring-blue-500', 'ring-offset-2', 'rounded-lg');
+          element.classList.add('ring-2', 'ring-emerald-500', 'ring-offset-2', 'rounded-lg');
           setTimeout(() => {
-            element.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-2');
+            element.classList.remove('ring-2', 'ring-emerald-500', 'ring-offset-2');
           }, 3000);
         }
       }, 500);

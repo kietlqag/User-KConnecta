@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { chatService } from '@/services/chatService';
 import { CallMinimizedBar, CallOverlayModal } from '@/features/messenger/components';
 import { useChatSocket } from '@/features/messenger/hooks/useChatSocket';
+import { notifyMessengerUnreadChanged } from '@/features/messenger/utils/messengerEvents';
 import { useVoiceCall } from '@/features/messenger/hooks/useVoiceCall';
 import { useCallSounds } from '@/features/messenger/hooks/useCallSounds';
 import { calculateCallDurationSeconds, normalizeCallDurationSeconds } from '@/features/messenger/utils/callDuration';
@@ -250,7 +251,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     chatErrorListenersRef.current.forEach((listener) => listener(error));
   }, []);
 
-  const { connected, sendMessage, sendGroupMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen } = useChatSocket(
+  const { connected, sendMessage, sendGroupMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen: sendConversationSeenRaw } = useChatSocket(
     currentUser?.token,
     handleIncomingMessage,
     handleIncomingCallSignal,
@@ -261,6 +262,11 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     handleIncomingNotificationEvent,
     handleIncomingChatError,
   );
+
+  const sendConversationSeen = useCallback((peerUserId: string) => {
+    sendConversationSeenRaw(peerUserId);
+    window.setTimeout(() => notifyMessengerUnreadChanged(), 250);
+  }, [sendConversationSeenRaw]);
 
   const voiceCall = useVoiceCall({
     currentUserId: currentUser?.id,
@@ -550,14 +556,14 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   const incomingAvatar =
     incomingGroupCaller?.avatar ||
     incomingProfile?.avatarUrl ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(incomingName)}&background=random`;
+    '';
   const activeName = voiceCall.activeGroupConversationId
     ? activeGroupCaller?.name || 'Cuộc gọi nhóm'
     : activeProfile?.fullName || voiceCall.activePeerDisplayName || voiceCall.incomingFromUsername || 'Người dùng';
   const activeAvatar =
     (voiceCall.activeGroupConversationId ? undefined : activeProfile?.avatarUrl) ||
     voiceCall.activePeerAvatarUrl ||
-    `https://ui-avatars.com/api/?name=${encodeURIComponent(activeName)}&background=random`;
+    '';
   const isVideoCall = isCallOngoing && voiceCall.callMediaType === 'video';
   const showGlobalMinimizedBar = !showCallModal && (voiceCall.isRinging || isCallOngoing);
   const minimizedMode = voiceCall.isRinging ? 'incoming' : effectiveCallStatus === 'in_call' ? 'in_call' : 'outgoing';

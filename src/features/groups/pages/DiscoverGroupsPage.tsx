@@ -32,8 +32,8 @@ export const DiscoverGroupsPage = () => {
       activeSectionId="discover"
     >
       <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-full bg-blue-100 p-3">
-          <Compass className="h-6 w-6 text-blue-600" />
+        <div className="rounded-full bg-emerald-100 p-3">
+          <Compass className="h-6 w-6 text-emerald-600" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Khám phá nhóm</h1>
@@ -72,14 +72,14 @@ export const DiscoverGroupsPage = () => {
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-400 to-indigo-600 text-4xl font-bold text-white opacity-80">
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-400 to-emerald-600 text-4xl font-bold text-white opacity-80">
                     {group.name.charAt(0)}
                   </div>
                 )}
               </div>
 
               <div className="flex flex-1 flex-col p-4">
-                <h3 className="mb-1 line-clamp-2 text-[17px] font-bold leading-tight text-gray-900 transition-colors group-hover:text-blue-600 dark:text-gray-100">
+                <h3 className="mb-1 line-clamp-2 text-[17px] font-bold leading-tight text-gray-900 transition-colors group-hover:text-emerald-600 dark:text-gray-100">
                   {group.name}
                 </h3>
                 <div className="mb-3 flex items-center gap-1.5 text-[13px] text-gray-500 dark:text-gray-400">
@@ -93,7 +93,7 @@ export const DiscoverGroupsPage = () => {
                     type="button"
                     onClick={() => handleJoinGroup(group.id)}
                     disabled={joinGroupMutation.isPending}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-70"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2 text-[15px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-70"
                   >
                     {joinGroupMutation.isPending ? (
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />

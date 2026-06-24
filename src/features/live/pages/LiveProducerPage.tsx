@@ -1,4 +1,4 @@
-﻿import {
+import {
   Activity,
   Bell,
   Camera,
@@ -855,23 +855,23 @@ export default function LiveProducerPage() {
           </div>
 
           <div className="p-2 space-y-1">
-            <button onClick={() => setMainSection('dashboard')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'dashboard' ? 'bg-blue-50 dark:bg-blue-900/30 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
-              <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
+            <button onClick={() => setMainSection('dashboard')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'dashboard' ? 'bg-emerald-50 dark:bg-emerald-900/30 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
+              <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'dashboard' ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
                 <Monitor className="w-5 h-5" />
               </span>
               Bảng điều khiển
             </button>
 
-            <button onClick={() => setMainSection('details')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'details' ? 'bg-blue-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
-              <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'details' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
+            <button onClick={() => setMainSection('details')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'details' ? 'bg-emerald-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
+              <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'details' ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
                 <ChartNoAxesColumn className="w-5 h-5" />
               </span>
               Thông tin chi tiết
             </button>
 
             <div>
-              <button onClick={() => setMainSection('settings')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'settings' ? 'bg-blue-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
-                <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'settings' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
+              <button onClick={() => setMainSection('settings')} className={`w-full rounded-xl px-3 py-3 text-left font-semibold flex items-center gap-3 ${mainSection === 'settings' ? 'bg-emerald-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'}`}>
+                <span className={`h-10 w-10 rounded-full flex items-center justify-center ${mainSection === 'settings' ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
                   <Settings className="w-5 h-5" />
                 </span>
                 Cài đặt
@@ -880,7 +880,7 @@ export default function LiveProducerPage() {
 
               {mainSection === 'settings' && (
                 <div className="ml-14 mt-1 space-y-1">
-                  <button onClick={() => setSettingsSub('video')} className={`block w-full text-left rounded-lg px-3 py-2 font-medium ${settingsSub === 'video' ? 'bg-blue-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-700'}`}>Video đang phát</button>
+                  <button onClick={() => setSettingsSub('video')} className={`block w-full text-left rounded-lg px-3 py-2 font-medium ${settingsSub === 'video' ? 'bg-emerald-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-700'}`}>Video đang phát</button>
                 </div>
               )}
             </div>
@@ -917,7 +917,7 @@ export default function LiveProducerPage() {
         <main className="flex-1 min-w-0 p-5 xl:p-6">
           {(toolMessage || toolError || isRecoveringSession) && (
             <div className={`mb-4 rounded-xl px-4 py-3 text-sm font-medium ${
-              toolError ? 'bg-red-50 text-red-700' : isRecoveringSession ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
+              toolError ? 'bg-red-50 text-red-700' : isRecoveringSession ? 'bg-emerald-50 text-emerald-700' : 'bg-green-50 text-green-700'
             }`}>
               {toolError || (isRecoveringSession ? 'Đang khôi phục phiên live của host...' : toolMessage)}
             </div>
@@ -985,21 +985,21 @@ export default function LiveProducerPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
-                      <ThumbsUp className="w-4 h-4 text-blue-600 shrink-0" />
+                      <ThumbsUp className="w-4 h-4 text-emerald-600 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xl font-bold leading-none">{reactionCount}</p>
                         <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Cảm xúc</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-gray-900 p-3">
-                      <Share2 className="w-4 h-4 text-blue-600 shrink-0" />
+                      <Share2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xl font-bold leading-none">{shareCount}</p>
                         <p className="text-xs text-gray-600 dark:text-gray-400 truncate">Lượt chia sẻ</p>
                       </div>
                     </div>
                   </div>
-                  <button onClick={() => setMainSection('details')} className="w-full rounded-xl bg-blue-50 text-blue-700 text-sm font-semibold py-2">Xem thông tin chi tiết</button>
+                  <button onClick={() => setMainSection('details')} className="w-full rounded-xl bg-emerald-50 text-emerald-700 text-sm font-semibold py-2">Xem thông tin chi tiết</button>
                 </section>
 
                 <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
@@ -1036,7 +1036,7 @@ export default function LiveProducerPage() {
                   <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">Chia sẻ liên kết video trực tiếp với người kiểm duyệt.</p>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 rounded-full bg-gray-100 dark:bg-gray-900 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem live'}</div>
-                    <button onClick={() => void handleCopyViewerUrl()} disabled={!viewerUrl} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2 disabled:text-gray-400 disabled:cursor-not-allowed">Sao chép</button>
+                    <button onClick={() => void handleCopyViewerUrl()} disabled={!viewerUrl} className="rounded-xl bg-emerald-50 text-emerald-700 font-semibold px-4 py-2 disabled:text-gray-400 disabled:cursor-not-allowed">Sao chép</button>
                   </div>
                 </section>
               </div>
@@ -1128,16 +1128,16 @@ export default function LiveProducerPage() {
                         markToolFormDirty();
                         setPollOptions((prev) => (prev.length >= 6 ? prev : [...prev, '']));
                       }}
-                      className="w-full rounded-xl border border-dashed border-blue-500 text-blue-600 py-2.5 font-medium"
+                      className="w-full rounded-xl border border-dashed border-emerald-500 text-emerald-600 py-2.5 font-medium"
                     >
                       Thêm lựa chọn
                     </button>
                     <div className="grid grid-cols-2 gap-2">
                       <button onClick={() => void handleClearPoll()} className="rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2.5 font-semibold">Xóa</button>
-                      <button onClick={() => void handleSavePoll()} className="rounded-xl bg-blue-600 text-white py-2.5 font-semibold">Lưu thăm dò</button>
+                      <button onClick={() => void handleSavePoll()} className="rounded-xl bg-emerald-600 text-white py-2.5 font-semibold">Lưu thăm dò</button>
                     </div>
                     {toolState?.pollQuestion && toolState.pollOptions.length > 0 && (
-                      <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-800 space-y-2">
+                      <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800 space-y-2">
                         <p>
                           {toolState.pollEnabled
                             ? `Thăm dò đang bật: ${toolState.pollQuestion}`
@@ -1156,7 +1156,7 @@ export default function LiveProducerPage() {
                                     <span>{percent}% ({count})</span>
                                   </div>
                                   <div className="mt-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                                    <div className="h-2 rounded-full bg-blue-600" style={{ width: `${percent}%` }} />
+                                    <div className="h-2 rounded-full bg-emerald-600" style={{ width: `${percent}%` }} />
                                   </div>
                                 </div>
                               );
@@ -1183,7 +1183,7 @@ export default function LiveProducerPage() {
                       className="min-h-[110px] w-full resize-none rounded-xl bg-gray-100 dark:bg-gray-900 px-4 py-3 outline-none"
                       placeholder="Ghi chú/thông báo cho host hoặc người kiểm duyệt..."
                     />
-                    <button onClick={() => void handleSaveHostNotice()} className="w-full rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Lưu thông báo</button>
+                    <button onClick={() => void handleSaveHostNotice()} className="w-full rounded-xl bg-emerald-50 text-emerald-700 font-semibold py-2.5">Lưu thông báo</button>
                   </div>
                 </section>
 
@@ -1213,10 +1213,10 @@ export default function LiveProducerPage() {
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <button onClick={() => void handleClearFeaturedLink()} className="rounded-xl bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 py-2.5 font-semibold">Xóa</button>
-                      <button onClick={() => void handleSaveFeaturedLink()} className="rounded-xl bg-blue-50 text-blue-700 font-semibold py-2.5">Lưu liên kết</button>
+                      <button onClick={() => void handleSaveFeaturedLink()} className="rounded-xl bg-emerald-50 text-emerald-700 font-semibold py-2.5">Lưu liên kết</button>
                     </div>
                     {hasFeaturedLink && (
-                      <a href={toolState?.featuredLinkUrl ?? '#'} target="_blank" rel="noreferrer" className="block rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-700">
+                      <a href={toolState?.featuredLinkUrl ?? '#'} target="_blank" rel="noreferrer" className="block rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-700">
                         {toolState?.featuredLinkTitle}
                       </a>
                     )}
@@ -1231,7 +1231,7 @@ export default function LiveProducerPage() {
                   <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">Xem trước giao diện người xem (không tính vào lượt xem).</p>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 rounded-full bg-gray-100 dark:bg-gray-900 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem trước'}</div>
-                    <button onClick={() => navigate(getLiveViewerPreviewUrl(sessionId))} className="rounded-xl bg-blue-50 text-blue-700 font-semibold px-4 py-2">Xem như người xem</button>
+                    <button onClick={() => navigate(getLiveViewerPreviewUrl(sessionId))} className="rounded-xl bg-emerald-50 text-emerald-700 font-semibold px-4 py-2">Xem như người xem</button>
                   </div>
                 </section>
               </div>
@@ -1315,7 +1315,7 @@ export default function LiveProducerPage() {
                       setIsStartingScreenShare(false);
                     }}
                     className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold ${
-                      videoSourceMode === 'screen' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'
+                      videoSourceMode === 'screen' ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200'
                     }`}
                   >
                     <Monitor className="h-4 w-4" />

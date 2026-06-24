@@ -242,6 +242,8 @@ export const liveService = {
     api.get<LiveSessionResponse[]>('/live/sessions/active'),
   listScheduledSessions: () =>
     api.get<LiveSessionResponse[]>('/live/sessions/scheduled'),
+  listGroupSessions: (groupId: string) =>
+    api.get<LiveSessionResponse[]>(`/live/sessions/by-group/${encodeURIComponent(groupId)}`),
   updateScheduledSession: (
     sessionId: string,
     payload: {

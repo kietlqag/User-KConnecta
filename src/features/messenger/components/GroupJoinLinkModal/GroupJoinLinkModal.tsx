@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Users, X } from 'lucide-react';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { toast } from 'sonner';
 import { chatService, type GroupJoinLinkPreviewResponse } from '@/services/chatService';
 
@@ -39,11 +40,8 @@ export function GroupJoinLinkModal({ token, onClose, onJoined, onOpenGroup }: Gr
     };
   }, [token]);
 
-  const avatarUrl = useMemo(() => {
-    if (preview?.avatarUrl?.trim()) return preview.avatarUrl.trim();
-    const name = preview?.conversationName || 'Group';
-    return `https://ui-avatars.com/api/?background=2563eb&color=ffffff&bold=true&name=${encodeURIComponent(name)}`;
-  }, [preview?.avatarUrl, preview?.conversationName]);
+  const groupName = preview?.conversationName || 'Nhóm chat';
+  const groupAvatar = preview?.avatarUrl?.trim() || '';
 
   const handlePrimaryAction = async () => {
     if (!preview) return;
@@ -117,7 +115,7 @@ export function GroupJoinLinkModal({ token, onClose, onJoined, onOpenGroup }: Gr
             <p className="text-sm text-red-500">{error}</p>
           ) : preview ? (
             <>
-              <img src={avatarUrl} alt={preview.conversationName} className="mx-auto h-20 w-20 rounded-full object-cover" />
+              <UserAvatar name={groupName} avatarUrl={groupAvatar} variant="group" rounded="full" className="mx-auto h-20 w-20" />
               <h4 className="mt-4 text-xl font-bold text-gray-900 dark:text-gray-100">{preview.conversationName}</h4>
               <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
                 <Users className="h-4 w-4" />
@@ -154,7 +152,7 @@ export function GroupJoinLinkModal({ token, onClose, onJoined, onOpenGroup }: Gr
             type="button"
             disabled={primaryDisabled}
             onClick={() => void handlePrimaryAction()}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600 cursor-pointer"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600 cursor-pointer"
           >
             {submitting ? 'Đang xử lý...' : primaryLabel}
           </button>

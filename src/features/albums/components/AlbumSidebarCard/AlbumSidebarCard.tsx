@@ -18,7 +18,7 @@ export function AlbumSidebarCard() {
           <button
             type="button"
             onClick={() => navigate('/albums')}
-            className="text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+            className="text-xs font-medium text-emerald-600 hover:underline dark:text-emerald-400"
           >
             Xem tất cả
           </button>
@@ -32,7 +32,7 @@ export function AlbumSidebarCard() {
             <button
               type="button"
               onClick={() => navigate('/albums/create')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
             >
               <ImagePlus className="w-4 h-4" />
               Tạo album

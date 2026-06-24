@@ -76,8 +76,8 @@ export function GroupSearchPage() {
       initialSearchQuery={query}
     >
       <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-full bg-blue-100 p-3">
-          <Search className="h-6 w-6 text-blue-600" />
+        <div className="rounded-full bg-emerald-100 p-3">
+          <Search className="h-6 w-6 text-emerald-600" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tìm kiếm nhóm</h1>
@@ -116,7 +116,7 @@ export function GroupSearchPage() {
           <button
             type="button"
             onClick={() => navigate('/groups/discover')}
-            className="font-semibold text-blue-600 hover:underline"
+            className="font-semibold text-emerald-600 hover:underline"
           >
             Khám phá nhóm
           </button>

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
-import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 interface AccountMenuProps {
   onClose: () => void;
@@ -61,7 +61,6 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
 
   const profileLink = currentUser ? `/profile/${currentUser.username || currentUser.id}` : '/auth/login';
   const fullName = currentUser?.fullName || 'Người dùng';
-  const avatarUrl = currentUser?.avatarUrl || avatarImage;
 
   return (
     <div
@@ -75,10 +74,12 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
           className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
           onClick={onClose}
         >
-          <img
-            src={avatarUrl}
-            alt={fullName}
-            className="w-9 h-9 rounded-full object-cover"
+          <UserAvatar
+            name={fullName}
+            avatarUrl={currentUser?.avatarUrl}
+            userId={currentUser?.id}
+            rounded="full"
+            className="w-9 h-9"
           />
           <span className="font-semibold text-gray-900 dark:text-white">{fullName}</span>
         </Link>
@@ -118,30 +119,16 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
       </div>
 
       <div className="px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-          <Link to="/policies" onClick={onClose} className="hover:underline cursor-pointer">
-            Chính sách
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+          <Link to="/privacy" onClick={onClose} className="hover:underline">
+            Chính sách bảo mật
           </Link>
-          {' Â· '}
-          <Link to="/settings" onClick={onClose} className="hover:underline cursor-pointer">
-            Cài đặt
+          <Link to="/terms" onClick={onClose} className="hover:underline">
+            Điều khoản dịch vụ
           </Link>
-          {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Quảng cáo</a>
-          {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Lựa chọn quảng cáo</a>
-          {' '}
-          <svg className="inline w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 0a8 8 0 100 16A8 8 0 008 0zm0 14.5A6.5 6.5 0 1114.5 8 6.508 6.508 0 018 14.5z"/>
-          </svg>
-          {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Cookie</a>
-          {' Â· '}
-          <a href="#" className="hover:underline cursor-pointer">Xem thêm</a>
-          {' '}
-          <svg className="inline w-3 h-3" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M12.5 8l-5-5v10z"/>
-          </svg>
+          <Link to="/contact" onClick={onClose} className="hover:underline">
+            Liên hệ
+          </Link>
         </div>
       </div>
     </div>

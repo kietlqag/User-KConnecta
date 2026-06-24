@@ -56,8 +56,8 @@ export function GroupSearchDropdown({
                 {group.icon ? (
                   <img src={group.icon} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
                 ) : (
-                  <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                    <Users className="w-4 h-4 text-blue-600" />
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                    <Users className="w-4 h-4 text-emerald-600" />
                   </div>
                 )}
                 <span className="font-medium text-[15px] text-gray-900 dark:text-gray-100 truncate">{group.name}</span>
@@ -103,7 +103,7 @@ export function GroupSearchDropdown({
         <button
           type="button"
           onClick={onViewAll}
-          className="w-full px-4 py-3 text-sm font-semibold text-blue-600 hover:bg-blue-50 border-t border-gray-100 dark:border-gray-800 transition-colors"
+          className="w-full px-4 py-3 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 border-t border-gray-100 dark:border-gray-800 transition-colors"
         >
           Xem tất cả kết quả
         </button>

@@ -55,7 +55,7 @@ interface StoryAuthor {
 }
 
 const REACTIONS = [
-  { icon: ThumbsUp, label: 'Thích', emoji: '👍', color: 'text-blue-500' },
+  { icon: ThumbsUp, label: 'Thích', emoji: '👍', color: 'text-emerald-500' },
   { icon: Heart, label: 'Yêu thích', emoji: '❤️', color: 'text-red-500' },
   { icon: Laugh, label: 'Haha', emoji: '😂', color: 'text-yellow-500' },
   { icon: Zap, label: 'Wow', emoji: '⚡', color: 'text-yellow-500' },
@@ -364,7 +364,7 @@ export function StoryViewerPage() {
             onClick={() => navigate('/stories/create')}
             className="flex items-center gap-3 w-full rounded-lg p-2 hover:bg-muted transition cursor-pointer"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-blue-600 shrink-0">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-emerald-600 shrink-0">
               <Plus className="h-6 w-6" />
             </div>
             <div className="text-left">
@@ -386,14 +386,14 @@ export function StoryViewerPage() {
                   key={a.userId}
                   onClick={() => handleSelectAuthor(index)}
                   className={`flex items-center gap-3 w-full rounded-lg px-2 py-2 transition cursor-pointer text-left ${
-                    index === currentAuthorIndex ? 'bg-blue-50' : 'hover:bg-muted'
+                    index === currentAuthorIndex ? 'bg-emerald-50' : 'hover:bg-muted'
                   }`}
                 >
                   <div className="relative shrink-0">
                     <img
                       src={a.avatarUrl}
                       alt={a.name}
-                      className="h-14 w-14 rounded-full object-cover border-[3px] border-blue-500"
+                      className="h-14 w-14 rounded-full object-cover border-[3px] border-emerald-500"
                     />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -510,7 +510,7 @@ export function StoryViewerPage() {
             <img
               src={author.avatarUrl}
               alt={author.name}
-              className="h-9 w-9 rounded-full border-2 border-blue-400 object-cover shrink-0"
+              className="h-9 w-9 rounded-full border-2 border-emerald-400 object-cover shrink-0"
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white drop-shadow truncate">{author.name}</p>
@@ -656,7 +656,7 @@ export function StoryViewerPage() {
               {replyText.trim() && (
                 <button
                   onClick={handleSendReply}
-                  className="text-blue-400 hover:text-blue-300 text-sm font-semibold transition shrink-0"
+                  className="text-emerald-400 hover:text-emerald-300 text-sm font-semibold transition shrink-0"
                 >
                   Gửi
                 </button>

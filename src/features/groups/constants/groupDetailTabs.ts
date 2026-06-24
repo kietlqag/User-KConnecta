@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { MessageSquare, Users, Calendar, Images, FileText, UserCheck, Album } from 'lucide-react';
+import { MessageSquare, Users, Calendar, Images, UserCheck, Album } from 'lucide-react';
 
 export const GROUP_DETAIL_TABS = [
   {
@@ -28,7 +28,7 @@ export const GROUP_DETAIL_TABS = [
     label: 'Sự kiện',
     shortLabel: 'Sự kiện',
     icon: Calendar,
-    ready: false,
+    ready: true,
   },
   {
     id: 'media',
@@ -43,13 +43,6 @@ export const GROUP_DETAIL_TABS = [
     shortLabel: 'Album',
     icon: Album,
     ready: true,
-  },
-  {
-    id: 'documents',
-    label: 'Tài liệu',
-    shortLabel: 'Tài liệu',
-    icon: FileText,
-    ready: false,
   },
 ] as const;
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { UserAvatar } from '@/components/shared';
 import { Notification } from '../../types/notifications.types';
 
 interface NotificationItemProps {
@@ -79,6 +80,9 @@ export const NotificationItem = ({
     } else if (notification.type === 'friend_accepted' && notification.user.id) {
       onClose?.();
       navigate(`/profile/${notification.user.id}`);
+    } else if ((notification.type === 'birthday' || notification.type === 'birthday_wish') && notification.user.id) {
+      onClose?.();
+      navigate(`/friends?tab=birthdays`);
     }
   };
   return (
@@ -89,12 +93,16 @@ export const NotificationItem = ({
       }`}
     >
       {/* Avatar */}
-      <div className="relative flex-shrink-0">
-        <img
-          src={notification.user.avatar}
-          alt={notification.user.name}
-          onClick={handleViewProfile}
-          className={`w-14 h-14 rounded-full object-cover ${notification.user.id ? 'cursor-pointer hover:opacity-90' : ''}`}
+      <div
+        className={`relative h-14 w-14 shrink-0 ${notification.user.id ? 'cursor-pointer' : ''}`}
+        onClick={handleViewProfile}
+      >
+        <UserAvatar
+          name={notification.user.name}
+          avatarUrl={notification.user.avatar}
+          userId={notification.user.id}
+          rounded="full"
+          className="h-14 w-14"
         />
       </div>
 
@@ -107,7 +115,7 @@ export const NotificationItem = ({
           >{notification.user.name}</span>{' '}
           {notification.text}
         </p>
-        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">{formatDate(notification.timestamp)}</span>
+        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{formatDate(notification.timestamp)}</span>
 
         {/* Group Invite Actions */}
         {notification.type === 'group_invite' && !notification.isActioned && (
@@ -126,7 +134,7 @@ export const NotificationItem = ({
                   setInviteLoading(null);
                 }
               }}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               {inviteLoading === 'accept' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Chấp nhận
@@ -170,7 +178,7 @@ export const NotificationItem = ({
                   setFriendLoading(null);
                 }
               }}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               {friendLoading === 'accept' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Chấp nhận
@@ -200,7 +208,7 @@ export const NotificationItem = ({
 
       {/* Unread Indicator */}
       {notification.isUnread && (
-        <div className="flex-shrink-0 w-3 h-3 bg-blue-600 rounded-full mt-2" />
+        <div className="flex-shrink-0 w-3 h-3 bg-emerald-600 rounded-full mt-2" />
       )}
     </div>
   );

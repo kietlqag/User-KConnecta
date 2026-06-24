@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { Outlet, useNavigate, useLocation, useParams, useOutletContext } from 'react-router-dom';
+import { Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Header } from '../../home/components/Header';
 import { EditProfileDialog, ProfileHeader, ProfileTabs } from '../components';
 import { authService, type AuthUser } from '@/services/authService';
@@ -44,7 +46,9 @@ export function ProfileLayout() {
   const [friendsCount, setFriendsCount] = React.useState(0);
   const [friendshipStatus, setFriendshipStatus] = React.useState<FriendshipStatusResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [accessDenied, setAccessDenied] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
+  const { t } = useTranslation();
 
   const isOwnProfile = isOwnProfileUser(currentUser, {
     resolvedProfileId: resolvedId,
@@ -55,6 +59,11 @@ export function ProfileLayout() {
     if (!userId || userId === 'undefined') { setLoading(false); return; }
     let cancelled = false;
     setLoading(true);
+    setAccessDenied(false);
+    setProfile(null);
+    setResolvedId('');
+    setFriendsCount(0);
+    setFriendshipStatus(null);
 
     const run = async () => {
       try {
@@ -78,17 +87,33 @@ export function ProfileLayout() {
         setFriendsCount(friendsRes.length);
         setFriendshipStatus(statusRes);
 
-        // Redirect /profile/UUID → /profile/username
+        const contentRestricted = Boolean(profileData.profileContentRestricted);
+        setAccessDenied(contentRestricted);
+
+        const profileKey = profileData.username || id;
+        const basePath = `/profile/${profileKey}`;
+
+        // Redirect /profile/UUID → /profile/username; strip sub-routes when content is restricted
         if (profileData.username && userId !== profileData.username) {
-          const subPath = location.pathname.replace(`/profile/${userId}`, '');
+          const subPath = contentRestricted ? '' : location.pathname.replace(`/profile/${userId}`, '');
           navigate(
-            { pathname: `/profile/${profileData.username}${subPath}`, search: location.search },
+            { pathname: `${basePath}${subPath}`, search: location.search },
             { replace: true },
           );
+        } else if (contentRestricted && location.pathname !== basePath) {
+          navigate({ pathname: basePath, search: location.search }, { replace: true });
         }
       } catch (err) {
         console.error('Error loading profile:', err);
-        if (!cancelled && currentUser && (userId === currentUser.id || userId === currentUser.username)) {
+        if (cancelled) return;
+
+        const status = (err as Error & { status?: number })?.status;
+        if (status === 403) {
+          setAccessDenied(true);
+          return;
+        }
+
+        if (currentUser && (userId === currentUser.id || userId === currentUser.username)) {
           setProfile(currentUser);
           setResolvedId(currentUser.id);
         }
@@ -173,8 +198,22 @@ export function ProfileLayout() {
           onAvatarUpload={isOwnProfile ? handleAvatarUpload : undefined}
           onCoverUpload={isOwnProfile ? handleCoverUpload : undefined}
         />
-        <ProfileTabs profileKey={profilePathKey} />
-        <Outlet context={context} />
+        {accessDenied ? (
+          <div className="mx-auto max-w-[680px] px-4 py-10">
+            <div className="flex flex-col items-center rounded-xl border border-border bg-card px-6 py-12 text-center shadow-sm">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                <Lock className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">{t('profile.accessDeniedTitle')}</h2>
+              <p className="mt-2 max-w-md text-sm text-muted-foreground">{t('profile.accessDeniedDesc')}</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <ProfileTabs profileKey={profilePathKey} />
+            <Outlet context={context} />
+          </>
+        )}
       </div>
       {isOwnProfile && profile && (
         <EditProfileDialog

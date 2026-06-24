@@ -20,28 +20,7 @@ export function GroupSetupChecklist({ progress, onDismiss, onStepAction }: Group
   const { completedCount, totalCount, isComplete, nextStep, steps, progressPercent } = progress;
 
   if (isComplete) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-            <Check className="w-5 h-5 text-green-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-[17px]">Nhóm đã sẵn sàng</h3>
-            <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
-              Bạn đã hoàn thành {totalCount}/{totalCount} bước. Tiếp tục mời thêm thành viên để phát triển cộng đồng.
-            </p>
-            <button
-              type="button"
-              onClick={() => onStepAction('invite')}
-              className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-[15px] transition-colors"
-            >
-              Mời bạn bè
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const visibleSteps = expanded ? steps : steps.filter(s => !s.done || s.id === nextStep?.id);
@@ -84,7 +63,7 @@ export function GroupSetupChecklist({ progress, onDismiss, onStepAction }: Group
           <button
             type="button"
             onClick={() => onStepAction(nextStep.id)}
-            className="w-full py-2.5 mb-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-[15px] transition-colors"
+            className="w-full py-2.5 mb-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-[15px] transition-colors"
           >
             Làm bước tiếp theo
           </button>
@@ -142,7 +121,7 @@ function SetupStepRow({ step, onAction }: { step: SetupStep; onAction: () => voi
         <button
           type="button"
           onClick={onAction}
-          className="shrink-0 px-3 py-1.5 text-[13px] font-semibold text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+          className="shrink-0 px-3 py-1.5 text-[13px] font-semibold text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
         >
           {step.actionLabel}
         </button>

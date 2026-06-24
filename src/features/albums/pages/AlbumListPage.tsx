@@ -80,7 +80,7 @@ export function AlbumListPage() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
-              <Images className="h-7 w-7 text-blue-600" />
+              <Images className="h-7 w-7 text-emerald-600" />
               Album của bạn
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -90,7 +90,7 @@ export function AlbumListPage() {
           <button
             type="button"
             onClick={() => navigate('/albums/create')}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-700"
           >
             <ImagePlus className="h-4 w-4" />
             Tạo album
@@ -106,7 +106,7 @@ export function AlbumListPage() {
             <button
               type="button"
               onClick={() => navigate('/albums/create')}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
             >
               <ImagePlus className="h-4 w-4" />
               Tạo album đầu tiên

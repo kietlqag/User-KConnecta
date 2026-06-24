@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { friendService } from '@/services/friendService';
 import { authService } from '@/services/authService';
@@ -44,7 +45,7 @@ export function RightSidebar() {
         setContacts(friends.map(f => ({
           id: f.userId,
           name: f.fullName,
-          avatar: f.avatarUrl || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(f.fullName)}`,
+          avatar: f.avatarUrl?.trim() || '',
         })));
       })
       .finally(() => setLoading(false));
@@ -59,35 +60,9 @@ export function RightSidebar() {
     });
   }, [subscribePresenceStatuses]);
 
-  const birthdays: any[] = [];
-
   return (
     <aside className="hidden lg:flex lg:flex-col w-[280px] xl:w-[360px] h-[calc(100vh-56px)] sticky top-14 overflow-hidden">
-      {/* Cố định: sinh nhật + kỷ niệm ảnh */}
-      <div className="shrink-0 px-4 pt-4 pb-2 space-y-4">
-        {birthdays.length > 0 && (
-          <>
-            <div>
-              <h3 className="text-gray-600 dark:text-gray-400 font-semibold mb-3">Sinh nhật</h3>
-              {birthdays.map((person) => (
-                <div key={person.id} className="flex items-center gap-3 p-2 rounded-lg">
-                  <ImageWithFallback
-                    src={person.avatar}
-                    alt={person.name}
-                    className="w-9 h-9 rounded-full object-cover"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-900 dark:text-gray-100">
-                      Hôm nay là sinh nhật của <span className="font-semibold">{person.name}</span>
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="h-px bg-gray-300 dark:bg-gray-700" />
-          </>
-        )}
-
+      <div className="shrink-0 px-4 pt-4 pb-2">
         <AlbumSidebarCard />
       </div>
 
@@ -149,10 +124,12 @@ export function RightSidebar() {
                 className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors cursor-pointer group"
               >
                 <div className="relative">
-                  <ImageWithFallback
-                    src={contact.avatar}
-                    alt={contact.name}
-                    className="w-9 h-9 rounded-full object-cover"
+                  <UserAvatar
+                    name={contact.name}
+                    avatarUrl={contact.avatar}
+                    userId={contact.id}
+                    rounded="full"
+                    className="w-9 h-9"
                   />
                   {presence[contact.id] && (
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full" />

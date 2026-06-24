@@ -88,7 +88,7 @@ export const GroupsPage = () => {
 
       {isFetchingNextPage && (
         <div className="p-4 text-center">
-          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-emerald-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
           <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Đang tải thêm...</span>
         </div>
       )}

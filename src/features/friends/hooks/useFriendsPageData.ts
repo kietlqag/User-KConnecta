@@ -42,7 +42,7 @@ function needsRequestsForContent(tab: FriendsTab) {
 }
 
 function needsSuggestions(tab: FriendsTab) {
-  return tab === 'home' || tab === 'suggestions';
+  return tab === 'home';
 }
 
 function needsFriendsList(tab: FriendsTab) {

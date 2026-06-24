@@ -238,9 +238,9 @@ export function RegisterPage() {
         </div>
 
         <div className="relative z-20 flex items-center gap-8 text-sm text-primary-foreground/60">
-          <a href="#" className="transition-colors hover:text-primary-foreground">Chính sách bảo mật</a>
-          <a href="#" className="transition-colors hover:text-primary-foreground">Điều khoản dịch vụ</a>
-          <a href="#" className="transition-colors hover:text-primary-foreground">Liên hệ</a>
+          <Link to="/privacy" className="transition-colors hover:text-primary-foreground">Chính sách bảo mật</Link>
+          <Link to="/terms" className="transition-colors hover:text-primary-foreground">Điều khoản dịch vụ</Link>
+          <Link to="/contact" className="transition-colors hover:text-primary-foreground">Liên hệ</Link>
         </div>
 
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />

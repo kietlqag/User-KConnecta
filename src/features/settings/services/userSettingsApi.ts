@@ -12,10 +12,8 @@ export interface UserSettingsApiResponse {
   userId: string;
   twoFactorEnabled: boolean;
   profileVisibility: VisibilityOption;
-  postsVisibility: VisibilityOption;
   notifyPosts: boolean;
   notifyMessages: boolean;
-  notifyEmail: boolean;
   theme: ThemeOption;
   language: LanguageOption;
   blockedUsers: {
@@ -37,10 +35,8 @@ export interface UserSettingsApiResponse {
 export interface UpdateUserSettingsPayload {
   twoFactorEnabled?: boolean;
   profileVisibility?: VisibilityOption;
-  postsVisibility?: VisibilityOption;
   notifyPosts?: boolean;
   notifyMessages?: boolean;
-  notifyEmail?: boolean;
   theme?: ThemeOption;
   language?: LanguageOption;
 }
@@ -49,7 +45,6 @@ function mapApiToUserSettings(data: UserSettingsApiResponse): UserSettings {
   return {
     twoFactorEnabled: data.twoFactorEnabled,
     profileVisibility: data.profileVisibility,
-    postsVisibility: data.postsVisibility,
     blockedUsers: data.blockedUsers.map(
       (user): BlockedUser => ({
         id: user.id,
@@ -60,7 +55,6 @@ function mapApiToUserSettings(data: UserSettingsApiResponse): UserSettings {
     ),
     notifyPosts: data.notifyPosts,
     notifyMessages: data.notifyMessages,
-    notifyEmail: data.notifyEmail,
     theme: data.theme,
     language: data.language,
     devices: data.devices.map(

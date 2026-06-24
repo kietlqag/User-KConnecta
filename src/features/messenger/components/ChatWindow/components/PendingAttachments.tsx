@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { X, FileText } from 'lucide-react';
 import { PendingImage, PendingFile } from '../hooks/useAttachments';
 
@@ -33,7 +33,7 @@ export const PendingAttachments: React.FC<PendingAttachmentsProps> = ({
         ))}
         {pendingFiles.map((f) => (
           <div key={f.id} className="relative flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 group pr-8">
-            <FileText className="w-5 h-5 text-blue-600" />
+            <FileText className="w-5 h-5 text-emerald-600" />
             <span className="text-xs font-medium truncate max-w-[120px]">{f.file.name}</span>
             <button
               onClick={() => removePendingFile(f.id)}

@@ -1,10 +1,11 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { createPortal } from 'react-dom';
 import { Smile, Reply, MoreVertical, PhoneMissed, Phone, Video, VideoOff, CornerUpLeft, Play, Pause, ChevronLeft, ChevronRight, X, FileText, Download, Newspaper, Users, Lock, Globe, Images } from 'lucide-react';
 import { Message } from '../../types/message.types';
 import { normalizeCallDurationSeconds } from '../../utils/callDuration';
 import { isGroupJoinLinkMessage, parseGroupJoinTokenFromUrl } from '../../utils/groupJoinLink';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { MessageTextContent } from '../MessageTextContent/MessageTextContent';
 import { VoiceWaveform } from '../VoiceWaveform/VoiceWaveform';
 import { useNavigate } from 'react-router-dom';
@@ -253,10 +254,7 @@ export const MessageBubble = ({
     ? {
         authorId: message.storyReplyAuthorId,
         authorName: message.storyReplyAuthorName || senderName,
-        authorAvatarUrl:
-          message.storyReplyAuthorAvatarUrl ||
-          senderAvatar ||
-          `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName || 'User')}&background=random`,
+        authorAvatarUrl: message.storyReplyAuthorAvatarUrl || senderAvatar || '',
         slideImageUrl: message.storyReplySlideImageUrl ?? null,
         slideBackgroundColor: message.storyReplySlideBackgroundColor ?? null,
         text: message.text || '',
@@ -289,13 +287,12 @@ export const MessageBubble = ({
   if (message.systemType === 'call_log' || message.systemType === 'missed_call') {
     const isCompleted = message.callLogKind === 'completed';
     const isVideoCall = message.callMediaType === 'video' || message.text.toLowerCase().includes('video');
-    const avatarUrl = senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName || 'User')}&background=random`;
     const avatar = (
-      <img
-        src={avatarUrl}
-        alt={senderName}
-        className="h-8 w-8 shrink-0 rounded-full object-cover"
-        title={senderName}
+      <UserAvatar
+        name={senderName || 'User'}
+        avatarUrl={senderAvatar}
+        rounded="full"
+        className="h-8 w-8 shrink-0"
       />
     );
     return (
@@ -347,7 +344,7 @@ export const MessageBubble = ({
 
   return (
     <div
-      className={`flex min-w-0 items-end gap-1.5 ${rowSpacing} ${rowPadding} ${message.isOwn ? 'justify-end' : 'justify-start'} ${isHighlighted ? 'bg-blue-50/50 ring-1 ring-blue-100' : ''} transition-all duration-500 rounded-lg px-1 sm:gap-2 sm:px-2 sm:-mx-2`}
+      className={`flex min-w-0 items-end gap-1.5 ${rowSpacing} ${rowPadding} ${message.isOwn ? 'justify-end' : 'justify-start'} ${isHighlighted ? 'bg-emerald-50/50 ring-1 ring-emerald-100' : ''} transition-all duration-500 rounded-lg px-1 sm:gap-2 sm:px-2 sm:-mx-2`}
       onMouseEnter={() => {
         setShowTimestamp(true);
         setIsHovering(true);
@@ -357,13 +354,11 @@ export const MessageBubble = ({
       {!message.isOwn && (
         <div className="w-7 h-7 flex-shrink-0">
           {showSenderAvatar ? (
-            <img
-              src={
-                senderAvatar ||
-                `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=random`
-              }
-              alt={senderName}
-              className="w-7 h-7 rounded-full object-cover"
+            <UserAvatar
+              name={senderName}
+              avatarUrl={senderAvatar}
+              rounded="full"
+              className="w-7 h-7"
             />
           ) : null}
         </div>
@@ -389,7 +384,7 @@ export const MessageBubble = ({
               onClick={() => message.replyToMessageId && onJumpToMessage?.(message.replyToMessageId)}
               disabled={!message.replyToMessageId} className={`relative z-[1] mt-0.5 inline-flex min-h-[48px] w-auto max-w-full rounded-2xl border px-2.5 py-2 text-left text-sm leading-tight transition-colors ${
                 message.isOwn
-                  ? 'ml-auto border-blue-200/90 bg-blue-100 text-blue-900 hover:bg-blue-200'
+                  ? 'ml-auto border-emerald-200/90 bg-emerald-100 text-emerald-900 hover:bg-emerald-200'
                   : 'border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
               } disabled:cursor-default disabled:opacity-80`}
               title={message.replyToMessageId ? 'Nhấn để đến tin nhắn gốc' : undefined}
@@ -432,7 +427,7 @@ export const MessageBubble = ({
                 className={`relative z-[2] -mt-3 inline-block w-fit max-w-full overflow-hidden rounded-2xl px-3 py-2 break-all text-left [overflow-wrap:anywhere] ${
                   message.isOwn ? 'mr-1' : 'ml-1'
                 } ${
-                  message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                  message.isOwn ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                 }`}
                 style={ownBubbleStyle}
               >
@@ -485,8 +480,8 @@ export const MessageBubble = ({
                     loading="lazy"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-100 via-indigo-100 to-blue-200">
-                    <Users className="h-10 w-10 text-blue-500/70" strokeWidth={1.5} />
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 via-emerald-100 to-emerald-200">
+                    <Users className="h-10 w-10 text-emerald-500/70" strokeWidth={1.5} />
                   </div>
                 )}
               </div>
@@ -526,7 +521,7 @@ export const MessageBubble = ({
                     loading="lazy"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-100 via-blue-100 to-violet-200">
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-violet-100 via-emerald-100 to-violet-200">
                     <Images className="h-10 w-10 text-violet-500/70" strokeWidth={1.5} />
                   </div>
                 )}
@@ -567,7 +562,7 @@ export const MessageBubble = ({
               {message.imageCaption && (
                 <div
                   className={`inline-block max-w-full overflow-hidden rounded-2xl px-3 py-2 text-sm leading-relaxed break-all [overflow-wrap:anywhere] sm:max-w-[260px] ${
-                    message.isOwn ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                    message.isOwn ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
                   }`}
                   style={ownBubbleStyle}
                 >
@@ -581,7 +576,7 @@ export const MessageBubble = ({
                 message.deleted ? 'px-2.5 py-1.5' : 'px-3 py-2'
               } ${
                 message.isOwn
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-emerald-600 text-white'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
               }`}
               style={ownBubbleStyle}
@@ -597,16 +592,16 @@ export const MessageBubble = ({
                   className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm transition-transform hover:scale-105 ${
                     isVoicePlaying
                       ? message.isOwn
-                        ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-blue-600'
-                        : 'ring-2 ring-blue-500/35 ring-offset-2 ring-offset-gray-200 dark:ring-offset-gray-700'
+                        ? 'ring-2 ring-white/70 ring-offset-2 ring-offset-emerald-600'
+                        : 'ring-2 ring-emerald-500/35 ring-offset-2 ring-offset-gray-200 dark:ring-offset-gray-700'
                       : ''
                   }`}
                   title={isVoicePlaying ? 'Tạm dừng' : 'Phát tin nhắn thoại'}
                 >
                   {isVoicePlaying ? (
-                    <Pause className="h-4 w-4 fill-current text-blue-600" />
+                    <Pause className="h-4 w-4 fill-current text-emerald-600" />
                   ) : (
-                    <Play className="h-4 w-4 fill-current text-blue-600" />
+                    <Play className="h-4 w-4 fill-current text-emerald-600" />
                   )}
                 </button>
 
@@ -675,11 +670,11 @@ export const MessageBubble = ({
                     REELS
                   </div>
                 </div>
-                <div className={`p-3 text-left ${message.isOwn ? 'bg-blue-700' : 'bg-gray-100 dark:bg-gray-900'}`}>
+                <div className={`p-3 text-left ${message.isOwn ? 'bg-emerald-700' : 'bg-gray-100 dark:bg-gray-900'}`}>
                   <p className={`text-sm font-semibold line-clamp-2 ${message.isOwn ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
                     {message.videoShareTitle || 'Xem video này trên KConnecta'}
                   </p>
-                  <p className={`mt-1 text-[11px] font-medium uppercase tracking-wider ${message.isOwn ? 'text-blue-100/70' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <p className={`mt-1 text-[11px] font-medium uppercase tracking-wider ${message.isOwn ? 'text-emerald-100/70' : 'text-gray-500 dark:text-gray-400'}`}>
                     Nhấn để xem nội dung
                   </p>
                 </div>
@@ -695,7 +690,7 @@ export const MessageBubble = ({
                     message.isOwn ? 'bg-white dark:bg-gray-800/20' : 'bg-white dark:bg-gray-800'
                   }`}
                 >
-                  <FileText className={`h-5 w-5 ${message.isOwn ? 'text-white' : 'text-blue-600'}`} />
+                  <FileText className={`h-5 w-5 ${message.isOwn ? 'text-white' : 'text-emerald-600'}`} />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">
@@ -711,11 +706,11 @@ export const MessageBubble = ({
                     event.stopPropagation();
                     void downloadFile(message.fileUrl, message.fileName);
                   }} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${
-                    message.isOwn ? 'hover:bg-white dark:bg-gray-800/20' : 'hover:bg-blue-50'
+                    message.isOwn ? 'hover:bg-white dark:bg-gray-800/20' : 'hover:bg-emerald-50'
                   }`}
                   title="Tải xuống"
                 >
-                  <Download className={`h-4 w-4 ${message.isOwn ? 'text-white/85' : 'text-blue-600'}`} />
+                  <Download className={`h-4 w-4 ${message.isOwn ? 'text-white/85' : 'text-emerald-600'}`} />
                 </button>
               </button>
               ) : groupJoinToken ? (

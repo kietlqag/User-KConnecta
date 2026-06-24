@@ -10,6 +10,7 @@ export type NotificationType =
   | 'group_join_request'
   | 'mention'
   | 'birthday'
+  | 'birthday_wish'
   | 'event'
   | 'memory'
   | 'system';

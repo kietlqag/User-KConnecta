@@ -38,12 +38,17 @@ import { AlbumListPage, AlbumDetailPage, CreateAlbumPage } from '../features/alb
 import SettingsPage from '../features/settings/pages/SettingsPage';
 import MyReportsPage from '../features/reports/pages/MyReportsPage';
 import CommunityPoliciesPage from '../features/policies/pages/CommunityPoliciesPage';
+import PrivacyPolicyPage from '../features/policies/pages/PrivacyPolicyPage';
+import TermsOfServicePage from '../features/policies/pages/TermsOfServicePage';
+import ContactPage from '../features/policies/pages/ContactPage';
 import { GuestRoute, ProtectedRoute } from './RouteGuards';
 import { RealtimeCallProvider } from '../contexts/RealtimeCallContext';
+import { MessageNotificationsListener } from '../features/messenger/components/MessageNotificationsListener';
 
 function RealtimeLayout() {
   return (
     <RealtimeCallProvider>
+      <MessageNotificationsListener />
       <Outlet />
     </RealtimeCallProvider>
   );
@@ -60,6 +65,18 @@ export const router = createBrowserRouter([
       {
         path: '/policies',
         Component: CommunityPoliciesPage,
+      },
+      {
+        path: '/privacy',
+        Component: PrivacyPolicyPage,
+      },
+      {
+        path: '/terms',
+        Component: TermsOfServicePage,
+      },
+      {
+        path: '/contact',
+        Component: ContactPage,
       },
       {
         Component: ProtectedRoute,

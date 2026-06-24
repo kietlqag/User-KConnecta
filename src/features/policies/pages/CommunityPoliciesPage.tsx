@@ -289,7 +289,7 @@ export default function CommunityPoliciesPage() {
             {/* Quy tắc cộng đồng */}
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
               <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                <Shield className="w-5 h-5 text-blue-600" />
+                <Shield className="w-5 h-5 text-emerald-600" />
                 Quy tắc cộng đồng
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
@@ -327,7 +327,7 @@ export default function CommunityPoliciesPage() {
             {/* Bài viết & media */}
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
               <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                <FileText className="w-5 h-5 text-blue-600" />
+                <FileText className="w-5 h-5 text-emerald-600" />
                 Giới hạn bài viết &amp; media
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
@@ -352,7 +352,7 @@ export default function CommunityPoliciesPage() {
             {/* Quyền riêng tư */}
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
               <h2 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-gray-100 mb-1">
-                <Lock className="w-5 h-5 text-blue-600" />
+                <Lock className="w-5 h-5 text-emerald-600" />
                 Quyền riêng tư &amp; dữ liệu của bạn
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
@@ -401,12 +401,12 @@ export default function CommunityPoliciesPage() {
             </section>
 
             {/* Report banner */}
-            <section className="bg-blue-50 rounded-xl border border-blue-100 p-4">
+            <section className="bg-emerald-50 rounded-xl border border-emerald-100 p-4">
               <div className="flex gap-3 items-start">
-                <XCircle className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                <XCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-semibold text-blue-900 mb-0.5">Thấy nội dung vi phạm?</p>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm font-semibold text-emerald-900 mb-0.5">Thấy nội dung vi phạm?</p>
+                  <p className="text-sm text-emerald-700">
                     Nhấn nút <span className="font-semibold">Báo cáo vi phạm</span> trên bài viết hoặc bình luận.
                     Đội ngũ kiểm duyệt sẽ xử lý trong vòng 24 giờ.
                   </p>

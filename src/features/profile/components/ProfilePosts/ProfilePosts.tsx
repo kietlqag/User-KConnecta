@@ -174,7 +174,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
 
           {loadingMore && (
             <div className="flex items-center justify-center gap-2 py-4 text-sm text-gray-500 dark:text-gray-400">
-              <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
               Đang tải thêm...
             </div>
           )}

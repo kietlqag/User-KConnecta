@@ -128,7 +128,7 @@ export function StoryFriendPickerModal({
                     <div
                       className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
                         isSelected
-                          ? 'border-blue-600 bg-blue-600'
+                          ? 'border-emerald-600 bg-emerald-600'
                           : 'border-gray-400 dark:border-gray-500'
                       }`}
                     >
@@ -145,14 +145,14 @@ export function StoryFriendPickerModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-6 py-2 font-semibold text-blue-600 transition-colors hover:bg-gray-100 dark:text-blue-400 dark:hover:bg-gray-700"
+            className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:text-emerald-400 dark:hover:bg-gray-700"
           >
             Hủy
           </button>
           <button
             type="button"
             onClick={() => onDone(tempSelected)}
-            className="rounded-lg bg-blue-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-blue-700"
+            className="rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white transition-colors hover:bg-emerald-700"
           >
             {tempSelected.length > 0 ? `Xong (${tempSelected.length})` : 'Tất cả bạn bè'}
           </button>

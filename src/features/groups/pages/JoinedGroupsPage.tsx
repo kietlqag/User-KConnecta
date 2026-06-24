@@ -18,7 +18,7 @@ export const JoinedGroupsPage = () => {
         <h1 className="text-[17px] font-semibold text-gray-900 dark:text-gray-100">
           {loadingJoined ? 'Đang tải...' : `Tất cả các nhóm bạn đã tham gia (${joinedGroups.length})`}
         </h1>
-        <button type="button" className="cursor-pointer text-[15px] font-medium text-blue-600 hover:text-blue-700 hover:underline">
+        <button type="button" className="cursor-pointer text-[15px] font-medium text-emerald-600 hover:text-emerald-700 hover:underline">
           Sắp xếp
         </button>
       </div>
@@ -67,7 +67,7 @@ export const JoinedGroupsPage = () => {
                 <button
                   type="button"
                   onClick={() => navigate(`/groups/${group.id}`)}
-                  className="flex-1 cursor-pointer rounded-md bg-blue-50 py-1.5 text-[15px] font-semibold text-blue-600 transition-colors hover:bg-blue-100"
+                  className="flex-1 cursor-pointer rounded-md bg-emerald-50 py-1.5 text-[15px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-100"
                 >
                   Xem nhóm
                 </button>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Info, Phone, PhoneOff, Video } from 'lucide-react';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { ChatUser } from '../../../types/message.types';
 import { formatLastActiveLabel } from '../../../utils/presenceLabel';
 
@@ -18,6 +19,8 @@ interface ChatHeaderProps {
   canStartVideoCall: boolean;
   isMuted: boolean;
   onToggleMute: () => void;
+  isChatInfoOpen?: boolean;
+  onToggleChatInfo?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -33,6 +36,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onStartVideoCall,
   canStartVoiceCall,
   canStartVideoCall,
+  isChatInfoOpen = true,
+  onToggleChatInfo,
 }) => {
   const voiceCallTitle = hasActiveVoiceCall ? 'Kết thúc cuộc gọi' : 'Gọi thoại';
   const presenceLabel = formatLastActiveLabel(user.isOnline, user.lastActiveAt);
@@ -50,10 +55,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </button>
         )}
         <div className="relative">
-          <img
-            src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
-            alt={user.name}
-            className="h-10 w-10 rounded-full object-cover"
+          <UserAvatar
+            name={user.name}
+            avatarUrl={user.avatar}
+            userId={user.id}
+            variant={user.id.startsWith('group:') ? 'group' : 'user'}
+            rounded="full"
+            className="h-10 w-10"
           />
           {user.isOnline && <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />}
         </div>
@@ -73,7 +81,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           {hasActiveVoiceCall ? (
             <PhoneOff className="h-5 w-5 text-red-500" />
           ) : (
-            <Phone className={`h-5 w-5 ${isStartingVoiceCall ? 'text-amber-500' : 'text-blue-600'}`} />
+            <Phone className={`h-5 w-5 ${isStartingVoiceCall ? 'text-amber-500' : 'text-emerald-600'}`} />
           )}
         </button>
         <button
@@ -82,11 +90,18 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           className="cursor-pointer rounded-full p-2.5 transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
           title="Gọi video"
         >
-          <Video className={`h-[22px] w-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-blue-600'}`} />
+          <Video className={`h-[22px] w-[22px] ${isVideoCall ? 'text-emerald-600' : 'text-emerald-600'}`} />
         </button>
-        {fullScreen && (
-          <button className="cursor-pointer rounded-full p-2.5 transition-colors hover:bg-muted" title="Thông tin">
-            <Info className="h-5 w-5 text-blue-600" />
+        {fullScreen && onToggleChatInfo && (
+          <button
+            type="button"
+            onClick={onToggleChatInfo}
+            className={`cursor-pointer rounded-full p-2.5 transition-colors hover:bg-muted ${
+              isChatInfoOpen ? 'bg-emerald-50 dark:bg-emerald-900/30' : ''
+            }`}
+            title={isChatInfoOpen ? 'Ẩn thông tin' : 'Hiện thông tin'}
+          >
+            <Info className={`h-5 w-5 ${isChatInfoOpen ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} />
           </button>
         )}
       </div>

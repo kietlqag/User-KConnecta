@@ -106,7 +106,7 @@ export function GroupMediaTab({ groupId }: GroupMediaTabProps) {
     <>
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-5">
         <div className="flex items-center gap-3 mb-5">
-          <Images className="w-6 h-6 text-blue-600" />
+          <Images className="w-6 h-6 text-emerald-600" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
             Ảnh và video
             {!loading && (

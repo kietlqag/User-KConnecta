@@ -39,12 +39,12 @@ export function GroupTabBar({ activeTab, onTabChange, memberCount, pendingCount,
               snap-start shrink-0 min-h-[44px] px-3 sm:px-4 py-2.5 font-semibold text-[15px] whitespace-nowrap transition-colors
               inline-flex items-center gap-1.5
               ${isActive
-                ? 'text-blue-600 border-b-[3px] border-blue-600 rounded-t'
+                ? 'text-emerald-600 border-b-[3px] border-emerald-600 rounded-t'
                 : 'text-gray-500 dark:text-gray-400 hover:bg-muted rounded-lg my-0.5'
               }
             `}
           >
-            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-500 dark:text-gray-400'}`} aria-hidden />
+            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} aria-hidden />
             <span className="inline sm:hidden">{tab.shortLabel}</span>
             <span className="hidden sm:inline">{label}</span>
           </button>

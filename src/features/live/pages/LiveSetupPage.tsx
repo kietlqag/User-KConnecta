@@ -1,4 +1,4 @@
-﻿import {
+import {
   Bell,
   Camera,
   Check,
@@ -50,7 +50,7 @@ const destinationOptions = [
     id: 'page',
     label: 'Đăng lên trang bạn quản lý',
     description: 'Chia sẻ đến trang của bạn',
-    icon: <FileText className="w-4 h-4 text-indigo-600" />,
+    icon: <FileText className="w-4 h-4 text-emerald-600" />,
   },
   {
     id: 'group',

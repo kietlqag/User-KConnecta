@@ -155,7 +155,7 @@ export function AlbumDetailPage() {
       <MainLayout>
         <div className="text-center py-20">
           <p className="text-gray-500 mb-4">Không tìm thấy album hoặc bạn không có quyền xem.</p>
-          <button type="button" onClick={() => navigate('/albums')} className="text-blue-600 hover:underline text-sm">
+          <button type="button" onClick={() => navigate('/albums')} className="text-emerald-600 hover:underline text-sm">
             Quay lại danh sách
           </button>
         </div>
@@ -222,7 +222,7 @@ export function AlbumDetailPage() {
               </button>
             )}
             {album.groupName && (
-              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">Nhóm: {album.groupName}</p>
+              <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">Nhóm: {album.groupName}</p>
             )}
             {album.createdAt && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -270,7 +270,7 @@ export function AlbumDetailPage() {
                     type="button"
                     disabled={uploading}
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60"
                   >
                     <ImagePlus className="w-4 h-4" />
                     {uploading ? 'Đang tải...' : 'Thêm ảnh/video'}
@@ -291,7 +291,7 @@ export function AlbumDetailPage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium"
               >
                 <ImagePlus className="w-4 h-4" />
                 Thêm ngay

@@ -1,0 +1,1 @@
+export { SearchRightPanel } from './SearchRightPanel';

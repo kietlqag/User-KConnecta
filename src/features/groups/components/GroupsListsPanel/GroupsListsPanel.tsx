@@ -34,12 +34,12 @@ export function GroupsListsPanel({
                 {group.icon ? (
                   <img src={group.icon} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                 ) : (
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-sm font-bold text-blue-700">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-sm font-bold text-emerald-700">
                     {group.name.charAt(0)}
                   </div>
                 )}
                 <div className="min-w-0 flex-1 text-left">
-                  <h4 className="truncate pt-0.5 text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-gray-100">
+                  <h4 className="truncate pt-0.5 text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-emerald-600 dark:text-gray-100">
                     {group.name}
                   </h4>
                   {group.lastActivity && (
@@ -58,7 +58,7 @@ export function GroupsListsPanel({
           <button
             type="button"
             onClick={() => navigate('/groups/joined')}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+            className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
           >
             Xem tất cả
           </button>
@@ -83,7 +83,7 @@ export function GroupsListsPanel({
                   </div>
                 )}
                 <div className="min-w-0 flex-1 text-left">
-                  <h4 className="truncate font-medium text-gray-900 transition-colors group-hover:text-blue-600 dark:text-gray-100">
+                  <h4 className="truncate font-medium text-gray-900 transition-colors group-hover:text-emerald-600 dark:text-gray-100">
                     {group.name}
                   </h4>
                   {group.lastActivity && (

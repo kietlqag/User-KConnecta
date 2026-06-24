@@ -1,6 +1,6 @@
 import { MessageCircle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { authService } from '../../../../services/authService';
 import { useFriendBirthdays, type BirthdayFriend } from '../../hooks/useFriendBirthdays';
 import { BirthdayNameHoverCard } from './BirthdayNameHoverCard';
@@ -99,13 +99,13 @@ const UpcomingCard = ({ friend }: UpcomingCardProps) => (
   <div className="flex items-center justify-between rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-4 shadow-sm dark:shadow-none">
     <div className="flex items-center gap-3">
       <Link to={`/profile/${friend.userId}`}>
-        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700">
-          <ImageWithFallback
-            src={friend.avatar}
-            alt={friend.name}
-            className="h-full w-full object-cover"
-          />
-        </div>
+        <UserAvatar
+          name={friend.name}
+          avatarUrl={friend.avatar}
+          userId={friend.userId}
+          rounded="full"
+          className="h-14 w-14 shrink-0 border border-gray-200 dark:border-gray-700"
+        />
       </Link>
       <div>
         <BirthdayNameHoverCard friend={friend}>
@@ -141,13 +141,13 @@ const MonthSection = ({ month, friends }: MonthSectionProps) => (
       {friends.map((f) => (
         <div key={f.id} className="group/avatar relative">
           <Link to={`/profile/${f.userId}`} aria-label={formatBirthdayHoverText(f.birthDate, f.name)}>
-            <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-white shadow-sm dark:shadow-none transition-transform group-hover/avatar:scale-105">
-              <ImageWithFallback
-                src={f.avatar}
-                alt={f.name}
-                className="h-full w-full object-cover"
-              />
-            </div>
+            <UserAvatar
+              name={f.name}
+              avatarUrl={f.avatar}
+              userId={f.userId}
+              rounded="full"
+              className="h-14 w-14 border-2 border-white shadow-sm transition-transform group-hover/avatar:scale-105 dark:border-gray-700"
+            />
           </Link>
           <div
             role="tooltip"

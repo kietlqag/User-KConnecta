@@ -1,12 +1,14 @@
 export type SearchFilterType = 'all' | 'posts' | 'people' | 'reels' | 'groups';
 export type SortType = 'relevance' | 'latest';
-
+export type PeopleRelationFilter = 'friends' | 'friends_of_friends' | 'everyone';
+export type GroupScopeFilter = 'all' | 'joined' | 'public' | 'private';
 export interface RecentSearchItem {
   id: string;
   type: 'person' | 'group' | 'keyword';
   text: string;
   avatar?: string;
   badge?: string;
+  targetId?: string;
 }
 
 export interface SearchResultPerson {
@@ -16,9 +18,11 @@ export interface SearchResultPerson {
   avatar: string;
   bio: string;
   mutualFriends?: number;
-  isFollowing: boolean;
+  /** True when the viewer is already friends with this person. */
+  isFriend: boolean;
+  /** @deprecated Use isFriend — kept for API mapping */
+  isFollowing?: boolean;
 }
-
 export interface SearchResultGroup {
   id: string;
   type: 'group';
@@ -42,8 +46,8 @@ export interface SearchResultPost {
     groupIconUrl?: string;
   };
   timestamp: string;
-  content: string;
-  image?: string;
+  publishedAt?: string;
+  content: string;  image?: string;
   video?: string;
   likes?: number;
   comments?: number;

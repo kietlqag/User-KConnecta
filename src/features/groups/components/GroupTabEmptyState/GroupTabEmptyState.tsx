@@ -31,7 +31,7 @@ export function GroupTabEmptyState({
         <button
           type="button"
           onClick={onAction}
-          className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-semibold text-[15px] transition-colors"
+          className="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-semibold text-[15px] transition-colors"
         >
           {actionLabel}
         </button>

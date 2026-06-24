@@ -161,7 +161,7 @@ function BirthdayHoverCardContent({ friend, open, onClose }: BirthdayHoverCardCo
         </span>
         <Link
           to={`/messages?with=${friend.userId}`}
-          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+          className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
         >
           <MessageCircle className="h-4 w-4" />
           Nhắn tin

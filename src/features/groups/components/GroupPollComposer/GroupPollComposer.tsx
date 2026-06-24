@@ -50,7 +50,7 @@ export function GroupPollComposer({
               value={option}
               onChange={(e) => updateOption(index, e.target.value)}
               placeholder={`Lựa chọn ${index + 1}`}
-              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-[15px] outline-none focus:border-blue-500 dark:border-gray-500 dark:bg-gray-800 dark:text-white"
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-[15px] outline-none focus:border-emerald-500 dark:border-gray-500 dark:bg-gray-800 dark:text-white"
             />
             {options.length > 2 && (
               <button
@@ -70,7 +70,7 @@ export function GroupPollComposer({
           <button
             type="button"
             onClick={addOption}
-            className="flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400"
+            className="flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
           >
             <Plus className="h-4 w-4" />
             Thêm lựa chọn

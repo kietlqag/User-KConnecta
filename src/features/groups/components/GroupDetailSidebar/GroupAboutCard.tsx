@@ -20,7 +20,7 @@ export function GroupAboutCard({ group, isAdmin, onEditDescription }: GroupAbout
           <button
             type="button"
             onClick={onEditDescription}
-            className="text-[13px] font-semibold text-blue-600 hover:underline"
+            className="text-[13px] font-semibold text-emerald-600 hover:underline"
           >
             Chỉnh sửa
           </button>
@@ -33,7 +33,7 @@ export function GroupAboutCard({ group, isAdmin, onEditDescription }: GroupAbout
         <button
           type="button"
           onClick={onEditDescription}
-          className="w-full text-left text-[15px] text-gray-500 dark:text-gray-400 leading-snug mb-4 p-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:border-blue-400 hover:bg-blue-50/50 transition-colors"
+          className="w-full text-left text-[15px] text-gray-500 dark:text-gray-400 leading-snug mb-4 p-3 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 hover:border-emerald-400 hover:bg-emerald-50/50 transition-colors"
         >
           Chưa có mô tả. Thêm vài dòng để người mới hiểu nhóm dành cho ai.
         </button>

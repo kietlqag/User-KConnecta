@@ -55,8 +55,8 @@ export interface SearchPostDto {
   savedByCurrentUser?: boolean;
   groupId?: string;
   mediaItems?: { type: string; url: string }[];
+  publishedAt?: string;
 }
-
 export interface SearchApiResponse {
   people: SearchPersonDto[];
   groups: SearchGroupDto[];

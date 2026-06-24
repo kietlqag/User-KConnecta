@@ -448,7 +448,7 @@ export function ProfileHeader({
                     </button>
                   )}
 
-                  {friendshipStatus?.status === 'ACCEPTED' ? (
+                  {!isBlockedByMe && profileUserId ? (
                     <button
                       onClick={() => navigate(`/messages?with=${profileUserId}`)}
                       className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium"

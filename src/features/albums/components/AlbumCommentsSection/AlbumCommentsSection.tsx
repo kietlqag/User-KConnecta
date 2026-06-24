@@ -49,13 +49,13 @@ export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void handleSubmit()}
             placeholder="Viết bình luận..."
-            className="flex-1 px-3 py-2 rounded-full bg-muted text-sm outline-none focus:ring-1 focus:ring-blue-500"
+            className="flex-1 px-3 py-2 rounded-full bg-muted text-sm outline-none focus:ring-1 focus:ring-emerald-500"
           />
           <button
             type="button"
             disabled={!text.trim() || addComment.isPending}
             onClick={() => void handleSubmit()}
-            className="p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="p-2 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
             aria-label="Gửi"
           >
             <Send className="w-4 h-4" />

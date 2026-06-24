@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowRight, SortAsc, SortDesc, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Header } from '../../home/components';
-import { SearchSidebar, PeopleResult, GroupResult, PostResult, ReelResult } from '../components';
+import { SearchSidebar, SearchRightPanel, PeopleResult, GroupResult, PostResult, ReelResult, SearchReelModal } from '../components';
 import {
+  GroupScopeFilter,
+  PeopleRelationFilter,
   SearchFilterType,
   SortType,
   SearchResult,
@@ -12,8 +15,25 @@ import {
   SearchResultPost,
   SearchResultReel,
 } from '../types/search.types';
+import { filterGroups, filterPeople, filterPostsByDate, sortPosts } from '../utils/searchFilterUtils';
+import { splitPostsByKind, mapSearchPostsToReels } from '../utils/searchReelUtils';
 import { searchService, SearchApiResponse } from '@/services/searchService';
+import { authService } from '@/services/authService';
+import { friendService } from '@/services/friendService';
+import { groupService } from '@/services/groupService';
 import type { ReactionType } from '@/services/postService';
+
+const PEOPLE_GRID_CLASS = 'grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
+const GROUPS_GRID_CLASS = 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4';
+const REELS_GRID_CLASS = 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5';
+const POSTS_GRID_CLASS = 'grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-2';
+
+function mapPerson(person: SearchApiResponse['people'][number]): SearchResultPerson {
+  return {
+    ...person,
+    isFriend: person.isFollowing,
+  };
+}
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 interface SectionHeaderProps {
@@ -28,7 +48,7 @@ const SectionHeader = ({ title, count, onSeeAll }: SectionHeaderProps) => (
     {count > 2 && (
       <button
         onClick={onSeeAll}
-        className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium hover:underline transition-colors cursor-pointer"
+        className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 text-sm font-medium hover:underline transition-colors cursor-pointer"
       >
         Xem tất cả
         <ArrowRight className="w-4 h-4" />
@@ -47,16 +67,21 @@ export default function SearchResultsPage() {
   const safeFilter = VALID_FILTERS.includes(filterFromUrl) ? filterFromUrl : 'all';
 
   const [activeFilter, setActiveFilter] = useState<SearchFilterType>(safeFilter);
+  const [peopleFilter, setPeopleFilter] = useState<PeopleRelationFilter>('everyone');
+  const [groupFilter, setGroupFilter] = useState<GroupScopeFilter>('all');
   const [sortType, setSortType] = useState<SortType>('relevance');
   const [dateFilter, setDateFilter] = useState('any');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeReelIndex, setActiveReelIndex] = useState<number | null>(null);
+  const currentUser = useMemo(() => authService.getCurrentUser(), []);
 
   // Sync filter from URL when navigating to a new search query
   useEffect(() => {
     const fromUrl = (searchParams.get('type') ?? 'all') as SearchFilterType;
     setActiveFilter(VALID_FILTERS.includes(fromUrl) ? fromUrl : 'all');
+    setActiveReelIndex(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
@@ -75,30 +100,10 @@ export default function SearchResultsPage() {
       .then((data: SearchApiResponse) => {
         const posts = data.posts as SearchResultPost[];
 
-        // Video posts also appear in the Reels tab
-        const reels: SearchResultReel[] = posts
-          .filter(p => p.video || isVideoUrl(p.image))
-          .map(p => {
-            const videoSrc = p.video ?? (isVideoUrl(p.image) ? p.image! : '');
-            return {
-              id: p.id,
-              type: 'reel' as const,
-              author: { name: p.author.name, avatar: p.author.avatar },
-              thumbnail: p.image ?? '',
-              videoUrl: videoSrc,
-              duration: '',
-              views: p.likes ?? 0,
-              title: p.content?.split('\n')[0] ?? '',
-              userReactionType: p.userReactionType,
-              timestamp: p.timestamp,
-            };
-          });
-
         const merged: SearchResult[] = [
-          ...(data.people as SearchResultPerson[]),
+          ...data.people.map(mapPerson),
           ...(data.groups as SearchResultGroup[]),
           ...posts,
-          ...reels,
         ];
         setResults(merged);
       })
@@ -106,75 +111,130 @@ export default function SearchResultsPage() {
       .finally(() => setLoading(false));
   }, [query]);
 
-  // Toggle handlers (optimistic UI — would be real API calls in production)
-  const handleFollowToggle = (id: string) => {
-    setResults(prev => prev.map(r =>
-      (r.id === id && r.type === 'person')
-        ? { ...r, isFollowing: !r.isFollowing }
-        : r,
-    ));
+  const handleFriendToggle = async (id: string) => {
+    if (!currentUser?.id) return;
+
+    const target = results.find((r): r is SearchResultPerson => r.type === 'person' && r.id === id);
+    if (!target) return;
+
+    try {
+      if (target.isFriend) {
+        const status = await friendService.getStatus(currentUser.id, id);
+        if (!status.friendshipId) return;
+        await friendService.deleteFriendship(status.friendshipId);
+        setResults((prev) => prev.map((r) =>
+          r.id === id && r.type === 'person' ? { ...r, isFriend: false } : r,
+        ));
+        toast.success('Đã hủy kết bạn');
+        return;
+      }
+
+      await friendService.sendFriendRequest(currentUser.id, id);
+      toast.success('Đã gửi lời mời kết bạn');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Không thể thực hiện thao tác kết bạn');
+    }
   };
 
-  const handleJoinToggle = (id: string) => {
-    setResults(prev => prev.map(r =>
-      (r.id === id && r.type === 'group')
-        ? { ...r, isMember: !r.isMember }
-        : r,
-    ));
+  const handleJoinToggle = async (id: string) => {
+    if (!currentUser?.id) return;
+
+    const target = results.find((r): r is SearchResultGroup => r.type === 'group' && r.id === id);
+    if (!target || target.isMember || target.isPending) return;
+
+    try {
+      const joined = await groupService.joinGroup(id, currentUser.id);
+      setResults((prev) => prev.map((r) =>
+        r.id === id && r.type === 'group'
+          ? {
+              ...r,
+              isMember: joined.status === 'APPROVED',
+              isPending: joined.status === 'PENDING',
+            }
+          : r,
+      ));
+      toast.success(joined.status === 'PENDING' ? 'Đã gửi yêu cầu tham gia nhóm' : 'Đã tham gia nhóm');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Không thể tham gia nhóm');
+    }
   };
 
   const handleReactionChange = (postId: string, reactionType: ReactionType | null) => {
     setResults(prev => prev.map(r => {
-      if (r.id !== postId) return r;
-      if (r.type === 'post' || r.type === 'reel') return { ...r, userReactionType: reactionType };
-      return r;
+      if (r.id !== postId || r.type !== 'post') return r;
+      return { ...r, userReactionType: reactionType };
     }));
   };
 
-  const isVideoUrl = (url?: string) =>
-    !!url && (/\.(mp4|mov|webm|ogg)(\?|$)/i.test(url) || url.includes('/video/'));
+  const allPosts = useMemo(
+    () => results.filter((r): r is SearchResultPost => r.type === 'post'),
+    [results],
+  );
+  const { reels, feedPosts: rawFeedPosts } = useMemo(
+    () => splitPostsByKind(allPosts),
+    [allPosts],
+  );
+  const watchReels = useMemo(
+    () => mapSearchPostsToReels(allPosts, reels.map((r) => r.id)),
+    [allPosts, reels],
+  );
 
-  // Typed buckets
-  const people = results.filter((r): r is SearchResultPerson => r.type === 'person');
-  const groups = results.filter((r): r is SearchResultGroup  => r.type === 'group');
-  const reels  = results.filter((r): r is SearchResultReel   => r.type === 'reel');
-  const posts  = results.filter((r): r is SearchResultPost   => r.type === 'post');
+  const handlePlayReel = useCallback((reelId: string) => {
+    const index = watchReels.findIndex((r) => r.id === reelId);
+    if (index !== -1) setActiveReelIndex(index);
+  }, [watchReels]);
 
-  const getSortedPosts = (list: SearchResultPost[]) => {
-    if (sortType === 'latest') {
-      return [...list].sort((a, b) =>
-        a.timestamp.includes('giờ') || a.timestamp.includes('phút') ? -1
-          : b.timestamp.includes('giờ') || b.timestamp.includes('phút') ? 1
-          : 0,
-      );
-    }
-    return list;
-  };
-
-  const filteredPosts = getSortedPosts(posts);
+  const allPeople = useMemo(
+    () => results.filter((r): r is SearchResultPerson => r.type === 'person'),
+    [results],
+  );
+  const allGroups = useMemo(
+    () => results.filter((r): r is SearchResultGroup => r.type === 'group'),
+    [results],
+  );
+  const people = useMemo(
+    () => (activeFilter === 'people' ? filterPeople(allPeople, peopleFilter) : allPeople),
+    [activeFilter, allPeople, peopleFilter],
+  );
+  const groups = useMemo(
+    () => (activeFilter === 'groups' ? filterGroups(allGroups, groupFilter) : allGroups),
+    [activeFilter, allGroups, groupFilter],
+  );
+  const posts = useMemo(
+    () => sortPosts(
+      filterPostsByDate(
+        rawFeedPosts,
+        activeFilter === 'all' || activeFilter === 'posts' ? dateFilter : 'any',
+      ),
+      activeFilter === 'all' || activeFilter === 'posts' ? sortType : 'relevance',
+    ),
+    [rawFeedPosts, dateFilter, sortType, activeFilter],
+  );
 
   const getFilteredResults = (): SearchResult[] => {
     switch (activeFilter) {
       case 'people': return people;
       case 'groups': return groups;
-      case 'posts':  return filteredPosts;
+      case 'posts':  return posts;
       case 'reels':  return reels;
-      default:       return results;
+      default:       return [...people, ...groups, ...posts];
     }
   };
 
-  const totalCount = activeFilter === 'all' ? results.length : getFilteredResults().length;
+  const totalCount = activeFilter === 'all'
+    ? people.length + groups.length + posts.length + reels.length
+    : getFilteredResults().length;
 
   const renderResult = (result: SearchResult) => {
     switch (result.type) {
       case 'person':
-        return <PeopleResult key={result.id} person={result} onFollowToggle={handleFollowToggle} />;
+        return <PeopleResult key={result.id} person={result} onFriendToggle={handleFriendToggle} />;
       case 'group':
         return <GroupResult key={result.id} group={result} onJoinToggle={handleJoinToggle} />;
       case 'post':
         return <PostResult key={result.id} post={result} onReactionChange={handleReactionChange} />;
       case 'reel':
-        return <ReelResult key={result.id} reel={result} onReactionChange={handleReactionChange} />;
+        return <ReelResult key={result.id} reel={result} onPlay={handlePlayReel} />;
       default:
         return null;
     }
@@ -183,7 +243,7 @@ export default function SearchResultsPage() {
   // ── Loading / Error states ────────────────────────────────────────────────
   const LoadingSpinner = () => (
     <div className="flex items-center justify-center py-20">
-      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
     </div>
   );
 
@@ -197,19 +257,13 @@ export default function SearchResultsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-background">
       <Header />
 
-      <div className="pt-14 flex">
-        {/* Left Sidebar */}
+      <div className="flex w-full pt-14">
         <SearchSidebar
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
-          sortType={sortType}
-          onSortChange={setSortType}
-          dateFilter={dateFilter}
-          onDateFilterChange={setDateFilter}
         />
 
-        {/* Main Content */}
-        <div className="flex-1 p-6 max-w-4xl">
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6">
 
           {/* No query entered */}
           {!query.trim() && (
@@ -229,32 +283,17 @@ export default function SearchResultsPage() {
           {/* ── Tab: TẤT CẢ ── */}
           {query.trim() && !loading && !error && activeFilter === 'all' && (
             <div className="space-y-8">
-              {/* Sort bar */}
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                  Tìm thấy {totalCount} kết quả{query ? ` cho "${query}"` : ''}
-                </h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Sắp xếp:</span>
-                  <button
-                    onClick={() => setSortType(sortType === 'relevance' ? 'latest' : 'relevance')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm dark:shadow-none cursor-pointer"
-                  >
-                    {sortType === 'relevance'
-                      ? <><SortAsc className="w-4 h-4" /> Liên quan nhất</>
-                      : <><SortDesc className="w-4 h-4" /> Mới nhất</>
-                    }
-                  </button>
-                </div>
-              </div>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+                Tìm thấy {totalCount} kết quả{query ? ` cho "${query}"` : ''}
+              </h2>
 
               {/* People */}
               {people.length > 0 && (
                 <section>
                   <SectionHeader title="Mọi người" count={people.length} onSeeAll={() => setActiveFilter('people')} />
-                  <div className="space-y-3">
-                    {people.slice(0, 2).map(p => (
-                      <PeopleResult key={p.id} person={p} onFollowToggle={handleFollowToggle} />
+                  <div className={PEOPLE_GRID_CLASS}>
+                    {people.slice(0, 4).map(p => (
+                      <PeopleResult key={p.id} person={p} onFriendToggle={handleFriendToggle} />
                     ))}
                   </div>
                 </section>
@@ -264,8 +303,8 @@ export default function SearchResultsPage() {
               {groups.length > 0 && (
                 <section>
                   <SectionHeader title="Nhóm" count={groups.length} onSeeAll={() => setActiveFilter('groups')} />
-                  <div className="grid grid-cols-2 gap-4">
-                    {groups.slice(0, 2).map(g => (
+                  <div className={GROUPS_GRID_CLASS}>
+                    {groups.slice(0, 4).map(g => (
                       <GroupResult key={g.id} group={g} onJoinToggle={handleJoinToggle} />
                     ))}
                   </div>
@@ -276,20 +315,20 @@ export default function SearchResultsPage() {
               {reels.length > 0 && (
                 <section>
                   <SectionHeader title="Thước phim" count={reels.length} onSeeAll={() => setActiveFilter('reels')} />
-                  <div className="space-y-3">
-                    {reels.slice(0, 2).map(r => (
-                      <ReelResult key={r.id} reel={r} onReactionChange={handleReactionChange} />
+                  <div className={REELS_GRID_CLASS}>
+                    {reels.slice(0, 5).map(r => (
+                      <ReelResult key={r.id} reel={r} onPlay={handlePlayReel} />
                     ))}
                   </div>
                 </section>
               )}
 
               {/* Posts */}
-              {filteredPosts.length > 0 && (
+              {posts.length > 0 && (
                 <section>
-                  <SectionHeader title="Bài viết" count={filteredPosts.length} onSeeAll={() => setActiveFilter('posts')} />
-                  <div className="space-y-3">
-                    {filteredPosts.slice(0, 2).map(p => (
+                  <SectionHeader title="Bài viết" count={posts.length} onSeeAll={() => setActiveFilter('posts')} />
+                  <div className={POSTS_GRID_CLASS}>
+                    {posts.slice(0, 4).map(p => (
                       <PostResult key={p.id} post={p} onReactionChange={handleReactionChange} />
                     ))}
                   </div>
@@ -305,42 +344,40 @@ export default function SearchResultsPage() {
           {/* ── Other Tabs ── */}
           {query.trim() && !loading && !error && activeFilter !== 'all' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-                  {activeFilter === 'people'  && `${people.length} người`}
-                  {activeFilter === 'groups'  && `${groups.length} nhóm`}
-                  {activeFilter === 'posts'   && `${filteredPosts.length} bài viết`}
-                  {activeFilter === 'reels'   && `${reels.length} thước phim`}
-                </h2>
-
-                {activeFilter === 'posts' && (
-                  <button
-                    onClick={() => setSortType(sortType === 'relevance' ? 'latest' : 'relevance')}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-sm dark:shadow-none cursor-pointer"
-                  >
-                    {sortType === 'relevance'
-                      ? <><SortAsc className="w-4 h-4" /> Liên quan nhất</>
-                      : <><SortDesc className="w-4 h-4" /> Mới nhất</>
-                    }
-                  </button>
-                )}
-              </div>
+              <h2 className="mb-2 text-xl font-semibold text-gray-800 dark:text-gray-200">
+                {activeFilter === 'people'  && `${people.length} người`}
+                {activeFilter === 'groups'  && `${groups.length} nhóm`}
+                {activeFilter === 'posts'   && `${posts.length} bài viết`}
+                {activeFilter === 'reels'   && `${reels.length} thước phim`}
+              </h2>
 
               {activeFilter === 'reels' && (
-                <div className="space-y-3">
-                  {reels.map(r => <ReelResult key={r.id} reel={r} onReactionChange={handleReactionChange} />)}
+                <div className={REELS_GRID_CLASS}>
+                  {reels.map(r => (
+                    <ReelResult key={r.id} reel={r} onPlay={handlePlayReel} />
+                  ))}
                 </div>
               )}
 
               {activeFilter === 'groups' && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className={GROUPS_GRID_CLASS}>
                   {groups.map(g => <GroupResult key={g.id} group={g} onJoinToggle={handleJoinToggle} />)}
                 </div>
               )}
 
-              {(activeFilter === 'people' || activeFilter === 'posts') && (
-                <div className="space-y-3">
-                  {getFilteredResults().map(r => renderResult(r))}
+              {activeFilter === 'people' && (
+                <div className={PEOPLE_GRID_CLASS}>
+                  {people.map(p => (
+                    <PeopleResult key={p.id} person={p} onFriendToggle={handleFriendToggle} />
+                  ))}
+                </div>
+              )}
+
+              {activeFilter === 'posts' && (
+                <div className={POSTS_GRID_CLASS}>
+                  {posts.map(p => (
+                    <PostResult key={p.id} post={p} onReactionChange={handleReactionChange} />
+                  ))}
                 </div>
               )}
 
@@ -349,8 +386,27 @@ export default function SearchResultsPage() {
               )}
             </div>
           )}
-        </div>
+        </main>
+
+        <SearchRightPanel
+          activeFilter={activeFilter}
+          peopleFilter={peopleFilter}
+          onPeopleFilterChange={setPeopleFilter}
+          groupFilter={groupFilter}
+          onGroupFilterChange={setGroupFilter}
+          sortType={sortType}
+          onSortChange={setSortType}
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
+        />
       </div>
+
+      <SearchReelModal
+        open={activeReelIndex !== null}
+        reels={watchReels}
+        initialIndex={activeReelIndex ?? 0}
+        onClose={() => setActiveReelIndex(null)}
+      />
     </div>
   );
 }

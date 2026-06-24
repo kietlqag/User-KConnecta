@@ -4,28 +4,20 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import {
   Users,
-  Clock,
   Bookmark,
   Shapes,
   Video,
-  Store,
-  Rss,
-  Calendar,
-  Flag,
-  ChevronDown,
-  Settings,
-  HelpCircle,
-  Moon
 } from 'lucide-react';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
-import { useManagedGroups } from '@/features/groups/hooks/useGroups';
+import { useTodayBirthdaysSidebar } from '@/features/birthdays/hooks/useBirthdays';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 export const LeftSidebar = () => {
   const navigate = useNavigate();
   const { isLeftSidebarOpen, setLeftSidebarOpen } = useSidebar();
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
-  const { data: managedGroups = [] } = useManagedGroups();
+  const { data: todayBirthdays = [] } = useTodayBirthdaysSidebar();
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -40,6 +32,7 @@ export const LeftSidebar = () => {
       setLeftSidebarOpen(false);
     }
   };
+
   useEffect(() => {
     const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
     window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
@@ -49,60 +42,51 @@ export const LeftSidebar = () => {
       window.removeEventListener('storage', syncAuthUser);
     };
   }, []);
+
   const fullName = currentUser?.fullName || 'Người dùng';
   const userId = currentUser?.id;
   const userUsername = currentUser?.username;
   const avatarUrl = currentUser?.avatarUrl;
-  const initials = fullName
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
 
   const menuItems = [
     {
       id: 'profile',
       icon: (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-white overflow-hidden">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt={fullName} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{initials}</span>
-          )}
-        </div>
+        <UserAvatar
+          name={fullName}
+          avatarUrl={avatarUrl}
+          userId={userId}
+          rounded="full"
+          className="h-9 w-9"
+        />
       ),
       label: fullName,
       href: `/profile/${userUsername || userId}`,
     },
     {
       id: 'friends',
-      icon: <Users className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
+      icon: <Users className="h-9 w-9 rounded-full bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" />,
       label: 'Bạn bè',
       href: '/friends',
     },
-
     {
       id: 'saved',
-      icon: <Bookmark className="w-9 h-9 p-2 rounded-full bg-purple-100 text-purple-600" />,
+      icon: <Bookmark className="h-9 w-9 rounded-full bg-violet-100 p-2 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400" />,
       label: 'Đã lưu',
       href: '/saved',
     },
     {
       id: 'groups',
-      icon: <Shapes className="w-9 h-9 p-2 rounded-full bg-emerald-100 text-emerald-600" />,
+      icon: <Shapes className="h-9 w-9 rounded-full bg-sky-100 p-2 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400" />,
       label: 'Nhóm',
       href: '/groups',
     },
     {
       id: 'video',
-      icon: <Video className="w-9 h-9 p-2 rounded-full bg-blue-100 text-blue-600" />,
+      icon: <Video className="h-9 w-9 rounded-full bg-orange-100 p-2 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />,
       label: 'Video',
       href: '/watch',
     },
-
-
-
   ];
 
   return (
@@ -110,7 +94,7 @@ export const LeftSidebar = () => {
       {isLeftSidebarOpen && !isLargeScreen && (
         <button
           type="button"
-          className="fixed inset-0 top-14 bg-black/40 z-20 cursor-default"
+          className="fixed inset-0 top-14 z-20 cursor-default bg-black/40"
           onClick={() => setLeftSidebarOpen(false)}
           aria-label="Đóng menu điều hướng"
         />
@@ -118,91 +102,61 @@ export const LeftSidebar = () => {
 
       <aside
         className={cn(
-          'fixed left-0 top-14 w-72 h-[calc(100vh-56px)] bg-sidebar border-r border-sidebar-border overflow-y-auto z-30 sidebar-scrollbar transition-transform duration-300 ease-in-out lg:translate-x-0',
-          isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          'fixed left-0 top-14 z-30 flex h-[calc(100vh-56px)] w-72 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out lg:translate-x-0',
+          isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
         aria-hidden={!isLargeScreen && !isLeftSidebarOpen}
       >
-      <div className="p-2">
-        {/* Menu Items */}
-        <nav className="space-y-1" role="navigation" aria-label="Main navigation">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavigate(item.href)}
-              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors text-left group cursor-pointer"
-              aria-label={item.label}
-            >
-              {item.icon}
-              <span className="font-medium text-sm text-gray-900 dark:text-gray-100 group-hover:text-gray-900 dark:hover:text-gray-100 dark:group-hover:text-gray-100">
-                {item.label}
-              </span>
-            </button>
-          ))}
-
-
-        </nav>
-
-        {/* Divider */}
-        <div className="my-3 border-t border-gray-300 dark:border-gray-700" />
-
-        {/* Your Shortcuts */}
-        <div className="px-2 mb-2">
-          <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">Lối tắt của bạn</h3>
-        </div>
-
-        <nav className="space-y-1 mb-4">
-          {managedGroups.length > 0 ? (
-            managedGroups.slice(0, 5).map((group) => (
+        <div className="shrink-0 p-2">
+          <nav className="space-y-1" role="navigation" aria-label="Main navigation">
+            {menuItems.map((item) => (
               <button
-                key={group.id}
-                onClick={() => handleNavigate(`/groups/${group.id}`)}
-                className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors text-left cursor-pointer"
+                key={item.id}
+                type="button"
+                onClick={() => handleNavigate(item.href)}
+                className="group flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label={item.label}
               >
-                <div className="w-9 h-9 rounded-lg bg-gray-300 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
-                  {group.icon ? (
-                    <img src={group.icon} alt={group.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Flag className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                  )}
-                </div>
-                <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{group.name}</span>
+                {item.icon}
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.label}</span>
               </button>
-            ))
-          ) : (
-            <button
-              onClick={() => handleNavigate('/groups/create')}
-              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors text-left cursor-pointer"
-            >
-              <div className="w-9 h-9 rounded-lg bg-gray-300 dark:bg-gray-600 flex items-center justify-center overflow-hidden">
-                <Flag className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              </div>
-              <span className="font-medium text-sm text-gray-900 dark:text-gray-100">Tạo nhóm đầu tiên của bạn</span>
-            </button>
-          )}
-        </nav>
-
-        {/* Footer Links */}
-        <div className="px-2 pt-4 pb-6 text-xs text-gray-500 dark:text-gray-400 space-y-2">
-          <div className="flex flex-wrap gap-1">
-            <a href="#" className="hover:underline cursor-pointer">Quyền riêng tư</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Điều khoản</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Quảng cáo</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Lựa chọn quảng cáo</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Cookie</a>
-            <span>·</span>
-            <a href="#" className="hover:underline cursor-pointer">Xem thêm</a>
-          </div>
-          <div className="text-gray-500 dark:text-gray-400">
-            KConnecta © 2025
-          </div>
+            ))}
+          </nav>
         </div>
-      </div>
-    </aside>
+
+        {todayBirthdays.length > 0 && (
+          <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
+            <div className="my-2 shrink-0 border-t border-gray-300 dark:border-gray-700" />
+            <h3 className="mb-2 shrink-0 px-1 text-sm font-semibold text-gray-600 dark:text-gray-400">Sinh nhật</h3>
+            <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-0.5 sidebar-scrollbar">
+              {todayBirthdays.map((person) => (
+                <button
+                  key={person.userId}
+                  type="button"
+                  onClick={() => handleNavigate('/friends?tab=birthdays')}
+                  className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <UserAvatar
+                    name={person.name}
+                    avatarUrl={person.avatar}
+                    userId={person.userId}
+                    rounded="full"
+                    className="h-9 w-9 shrink-0"
+                  />
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
+                    Hôm nay là sinh nhật của <span className="font-semibold">{person.name}</span>
+                    {person.age > 0 ? ` (${person.age} tuổi)` : ''}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-auto shrink-0 border-t border-gray-200 px-3 py-3 text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+          KConnecta © {new Date().getFullYear()}
+        </div>
+      </aside>
     </>
   );
 };

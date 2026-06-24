@@ -1,18 +1,17 @@
 import { useState } from 'react';
+import { User, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  getDisplayNameInitials,
-  getUserAvatarBgClass,
-  isPlaceholderAvatar,
-} from '@/utils/userAvatarUtils';
+import { isPlaceholderAvatar, resolveUserAvatarUrl } from '@/utils/userAvatarUtils';
 
 interface UserAvatarProps {
   name: string;
   avatarUrl?: string | null;
   userId?: string;
   className?: string;
-  initialsClassName?: string;
   rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  variant?: 'user' | 'group';
+  /** @deprecated Ignored — fallback uses gray icon instead of initials. */
+  initialsClassName?: string;
 }
 
 const ROUNDED_CLASS: Record<NonNullable<UserAvatarProps['rounded']>, string> = {
@@ -28,21 +27,19 @@ const ROUNDED_CLASS: Record<NonNullable<UserAvatarProps['rounded']>, string> = {
 export function UserAvatar({
   name,
   avatarUrl,
-  userId,
   className,
-  initialsClassName = 'text-4xl font-bold tracking-wide',
   rounded = 'none',
+  variant = 'user',
 }: UserAvatarProps) {
   const [imageFailed, setImageFailed] = useState(false);
-  const showFallback = isPlaceholderAvatar(avatarUrl) || imageFailed;
-  const initials = getDisplayNameInitials(name);
-  const colorSeed = userId || name;
-  const bgClass = getUserAvatarBgClass(colorSeed);
+  const resolvedUrl = resolveUserAvatarUrl(avatarUrl);
+  const showFallback = !resolvedUrl || imageFailed;
+  const FallbackIcon = variant === 'group' ? Users : User;
 
-  if (!showFallback && avatarUrl) {
+  if (!showFallback && resolvedUrl) {
     return (
       <img
-        src={avatarUrl}
+        src={resolvedUrl}
         alt={name}
         className={cn('h-full w-full object-cover', ROUNDED_CLASS[rounded], className)}
         onError={() => setImageFailed(true)}
@@ -53,14 +50,13 @@ export function UserAvatar({
   return (
     <div
       className={cn(
-        'flex h-full w-full items-center justify-center text-white select-none',
-        bgClass,
+        'flex h-full w-full items-center justify-center bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
         ROUNDED_CLASS[rounded],
         className,
       )}
       aria-label={name}
     >
-      <span className={initialsClassName}>{initials}</span>
+      <FallbackIcon className="h-[52%] w-[52%] min-h-4 min-w-4" strokeWidth={1.75} aria-hidden />
     </div>
   );
 }

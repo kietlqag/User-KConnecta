@@ -33,7 +33,7 @@ export function AlbumListCard({
       onDrop={onDrop}
       onDragEnd={onDragEnd}
       className={`group relative overflow-hidden rounded-xl border border-gray-200 bg-white text-left transition-shadow hover:shadow-lg dark:border-gray-700 dark:bg-gray-900 ${
-        isDragging ? 'opacity-70 ring-2 ring-blue-500' : ''
+        isDragging ? 'opacity-70 ring-2 ring-emerald-500' : ''
       } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
       <button type="button" onClick={onOpen} className="block w-full text-left">

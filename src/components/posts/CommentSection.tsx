@@ -224,7 +224,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
                     onClick={() => { setSortBy(opt.value); setSortMenuOpen(false); }}
                     className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                   >
-                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'}`}>
+                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-emerald-600' : 'text-gray-900 dark:text-gray-100'}`}>
                       {opt.label}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{opt.desc}</span>

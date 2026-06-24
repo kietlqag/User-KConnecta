@@ -65,7 +65,7 @@ export function AlbumMediaGrid({
           onDrop={() => handleDrop(index)}
           onDragEnd={() => setDragIndex(null)}
           className={`relative group aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 ${
-            dragIndex === index ? 'ring-2 ring-blue-500 opacity-70' : ''
+            dragIndex === index ? 'ring-2 ring-emerald-500 opacity-70' : ''
           } ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
         >
           <button type="button" onClick={() => onOpenLightbox(index)} className="w-full h-full">

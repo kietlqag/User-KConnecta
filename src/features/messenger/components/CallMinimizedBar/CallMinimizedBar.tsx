@@ -1,6 +1,8 @@
-﻿import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume1, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Phone, PhoneOff, Video, VideoOff, Volume1, Volume2 } from 'lucide-react';
 
 type CallMode = 'incoming' | 'in_call' | 'outgoing';
+
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 interface CallUser {
   name: string;
@@ -55,7 +57,7 @@ export function CallMinimizedBar({
       style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
       title="Mở lại cuộc gọi"
     >
-      <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full object-cover" />
+      <UserAvatar name={user.name} avatarUrl={user.avatar} rounded="full" className="w-8 h-8" />
       <div className="min-w-0">
         <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate max-w-[180px]">{user.name}</p>
         <p className="text-xs text-gray-500 dark:text-gray-400">{mode === 'incoming' ? incomingText : statusText}</p>
@@ -90,7 +92,7 @@ export function CallMinimizedBar({
                 e.stopPropagation();
                 onToggleSpeaker?.();
               }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'
+                speakerMode === 'outer' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
               title={speakerMode === 'outer' ? 'Đang loa ngoài' : 'Đang loa trong'}
             >
@@ -106,7 +108,7 @@ export function CallMinimizedBar({
                   e.stopPropagation();
                   onToggleCamera?.();
                 }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                  isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  isCameraEnabled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
                 title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
               >
@@ -118,7 +120,7 @@ export function CallMinimizedBar({
                 e.stopPropagation();
                 onToggleMute?.();
               }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                isMuted ? 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'
+                isMuted ? 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700' : 'bg-emerald-600 hover:bg-emerald-700'
               }`}
               title={isMuted ? 'Bật mic' : 'Tắt mic'}
             >
@@ -141,7 +143,7 @@ export function CallMinimizedBar({
                 e.stopPropagation();
                 onToggleSpeaker?.();
               }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                speakerMode === 'outer' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'
+                speakerMode === 'outer' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'
               }`}
               title={speakerMode === 'outer' ? 'Đang loa ngoài' : 'Đang loa trong'}
             >
@@ -157,7 +159,7 @@ export function CallMinimizedBar({
                   e.stopPropagation();
                   onToggleCamera?.();
                 }} className={`w-8 h-8 rounded-full transition-colors flex items-center justify-center ${
-                  isCameraEnabled ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  isCameraEnabled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
                 title={isCameraEnabled ? 'Tắt camera' : 'Bật camera'}
               >

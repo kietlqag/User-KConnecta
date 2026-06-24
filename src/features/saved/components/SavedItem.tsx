@@ -132,7 +132,7 @@ export const SavedItem = ({
             <button
               className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-[15px] transition-colors cursor-pointer ${
                 isAddedToCurrentCollection
-                  ? 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
                   : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100'
               }`}
               onClick={handleOpenCollectionModal}

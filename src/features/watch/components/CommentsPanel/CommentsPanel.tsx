@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type PostCommentResponse } from '@/services/postService';
 import { ReactionButton, reactions, type ReactionOption } from '@/components/reactions';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { formatPostTimestamp } from '@/utils/postUtils';
 
 interface CommentsPanelProps {
@@ -145,19 +146,18 @@ function PanelCommentRow({
     setComment(prev => ({ ...prev, replyCount: Math.max(0, (prev.replyCount ?? 0) - 1) }));
   };
 
-  const avatarSrc = (name: string | undefined, url?: string | null) =>
-    url || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(name || 'User')}`;
-
   const indentPx = depth > 0 ? Math.min(depth, 3) * 20 : 0;
   const isOwner = currentUser?.id === comment.userId;
 
   return (
     <div style={{ marginLeft: indentPx }}>
       <div className="flex gap-2 items-start">
-        <img
-          src={avatarSrc(comment.userFullName, comment.userAvatarUrl)}
-          alt={comment.userFullName}
-          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+        <UserAvatar
+          name={comment.userFullName || 'Người dùng'}
+          avatarUrl={comment.userAvatarUrl}
+          userId={comment.userId}
+          rounded="full"
+          className="w-8 h-8 flex-shrink-0"
         />
 
         <div className="flex-1 min-w-0">
@@ -225,10 +225,12 @@ function PanelCommentRow({
 
           {showReplyInput && (
             <div className={`flex items-center gap-2 mt-2 min-w-0 ${isSubmittingReply ? 'opacity-60 pointer-events-none' : ''}`}>
-              <img
-                src={avatarSrc(currentUser?.fullName, currentUser?.avatarUrl)}
-                alt=""
-                className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+              <UserAvatar
+                name={currentUser?.fullName || 'Bạn'}
+                avatarUrl={currentUser?.avatarUrl}
+                userId={currentUser?.id}
+                rounded="full"
+                className="w-7 h-7 flex-shrink-0"
               />
               <input
                 ref={replyInputRef}
@@ -372,10 +374,11 @@ export const CommentsPanel = ({ postId, creator, caption, postedAt, onClose, onC
         {/* Post header: tác giả + nội dung bài đăng */}
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <img
-              src={creator.avatar}
-              alt={creator.name}
-              className="w-10 h-10 rounded-full object-cover"
+            <UserAvatar
+              name={creator.name}
+              avatarUrl={creator.avatar}
+              rounded="full"
+              className="w-10 h-10"
             />
             <div className="min-w-0">
               <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{creator.name}</p>
@@ -407,7 +410,7 @@ export const CommentsPanel = ({ postId, creator, caption, postedAt, onClose, onC
                     onClick={() => { setSortBy(opt.value); setSortMenuOpen(false); }}
                     className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                   >
-                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-blue-600' : 'text-gray-900 dark:text-gray-100'}`}>
+                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-emerald-600' : 'text-gray-900 dark:text-gray-100'}`}>
                       {opt.label}
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{opt.desc}</span>
@@ -440,10 +443,12 @@ export const CommentsPanel = ({ postId, creator, caption, postedAt, onClose, onC
 
       <div className={`p-4 border-t border-gray-200 dark:border-gray-700 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex items-center gap-2">
-          <img
-            src={currentUser?.avatarUrl || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(currentUser?.fullName || 'User')}`}
-            alt="Your avatar"
-            className="w-8 h-8 rounded-full object-cover"
+          <UserAvatar
+            name={currentUser?.fullName || 'Bạn'}
+            avatarUrl={currentUser?.avatarUrl}
+            userId={currentUser?.id}
+            rounded="full"
+            className="w-8 h-8"
           />
           <input
             type="text"

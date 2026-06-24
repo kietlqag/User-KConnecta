@@ -18,7 +18,7 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
       <div className="flex items-center justify-between mb-5">
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <AlbumIcon className="w-5 h-5 text-blue-600" />
+            <AlbumIcon className="w-5 h-5 text-emerald-600" />
             Album nhóm
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -29,7 +29,7 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
           <button
             type="button"
             onClick={() => navigate(`/albums/create?groupId=${groupId}`)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
           >
             <ImagePlus className="w-4 h-4" />
             Tạo album
@@ -47,7 +47,7 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
             <button
               type="button"
               onClick={() => navigate(`/albums/create?groupId=${groupId}`)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium"
             >
               <ImagePlus className="w-4 h-4" />
               Tạo album đầu tiên

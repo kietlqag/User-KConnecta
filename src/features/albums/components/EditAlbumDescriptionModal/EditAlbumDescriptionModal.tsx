@@ -61,7 +61,7 @@ export function EditAlbumDescriptionModal({
             rows={5}
             maxLength={5000}
             placeholder="Ghi chú về album — chuyến đi, sự kiện, người tham gia..."
-            className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-[15px] text-gray-900 dark:text-gray-100 outline-none resize-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-[15px] text-gray-900 dark:text-gray-100 outline-none resize-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
             autoFocus
           />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">{description.length}/5000</p>

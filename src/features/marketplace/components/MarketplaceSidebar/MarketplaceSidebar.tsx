@@ -70,7 +70,7 @@ export const MarketplaceSidebar = () => {
 
       {/* Create Listing Button */}
       <div className="px-4 py-2">
-        <button className="w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
+        <button className="w-full px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors">
           <Plus className="w-5 h-5" />
           Tạo bài niêm yết mới
         </button>
@@ -79,7 +79,7 @@ export const MarketplaceSidebar = () => {
       {/* Location Filter */}
       <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
         <h3 className="text-sm font-semibold mb-2">Vị trí</h3>
-        <button className="w-full text-left text-sm text-blue-500 hover:underline flex items-center gap-2">
+        <button className="w-full text-left text-sm text-emerald-500 hover:underline flex items-center gap-2">
           <MapPin className="w-4 h-4" />
           Cau Nhiem, Vietnam · Trong vòng 65 km
         </button>

@@ -63,7 +63,7 @@ export function EditGroupDescriptionModal({
             maxLength={2000}
             rows={5}
             placeholder="Nhóm dành cho ai? Mục tiêu và quy tắc cơ bản..."
-            className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-[15px] text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+            className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-[15px] text-gray-900 dark:text-gray-100 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none"
           />
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">{text.length}/2000</p>
         </div>

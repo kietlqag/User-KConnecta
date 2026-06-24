@@ -349,7 +349,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
             <button
               onClick={() => void handleLike()}
               disabled={isLiking}
-              className={`text-xs font-semibold hover:underline cursor-pointer disabled:opacity-60 ${isLiked ? 'text-blue-600' : 'text-gray-600 dark:text-gray-400'}`}
+              className={`text-xs font-semibold hover:underline cursor-pointer disabled:opacity-60 ${isLiked ? 'text-emerald-600' : 'text-gray-600 dark:text-gray-400'}`}
             >
               Thích
             </button>
@@ -368,7 +368,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
             <span className="text-xs text-gray-500 dark:text-gray-400">{comment.timestamp}</span>
             {likeCount > 0 && (
               <div className="flex items-center gap-1">
-                <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
                   <ThumbsUp className="w-2.5 h-2.5 text-white fill-white" />
                 </div>
                 <span className="text-xs text-gray-600 dark:text-gray-400">{likeCount}</span>

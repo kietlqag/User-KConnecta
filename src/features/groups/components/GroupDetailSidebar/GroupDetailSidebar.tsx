@@ -37,7 +37,7 @@ export function GroupDetailSidebar({
 }: GroupDetailSidebarProps) {
   return (
     <div className="w-full md:w-[360px] shrink-0 flex flex-col gap-4">
-      {isAdmin && showSetupChecklist && (
+      {isAdmin && showSetupChecklist && !setupProgress.isComplete && (
         <GroupSetupChecklist
           progress={setupProgress}
           onDismiss={onDismissSetup}
@@ -45,7 +45,7 @@ export function GroupDetailSidebar({
         />
       )}
 
-      {isAdmin && !setupProgress.isComplete && (
+      {isAdmin && (
         <GroupQuickActions onInvite={onInvite} onCreatePost={onCreatePost} onCover={onCover} />
       )}
 

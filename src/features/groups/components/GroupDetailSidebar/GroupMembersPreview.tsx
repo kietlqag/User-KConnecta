@@ -30,7 +30,7 @@ export function GroupMembersPreview({ members, onViewAll }: GroupMembersPreviewP
         <button
           type="button"
           onClick={onViewAll}
-          className="text-[13px] font-semibold text-blue-600 hover:underline"
+          className="text-[13px] font-semibold text-emerald-600 hover:underline"
         >
           Xem tất cả
         </button>

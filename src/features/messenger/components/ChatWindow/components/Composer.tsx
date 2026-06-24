@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, X } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
@@ -138,9 +138,9 @@ export const Composer: React.FC<ComposerProps> = ({
       )}
 
       {replyToMessage && (
-        <div className="mb-2 px-3 py-2 bg-gray-50 dark:bg-gray-900 rounded-xl border-l-4 border-blue-500 flex items-center justify-between group">
+        <div className="mb-2 px-3 py-2 bg-gray-50 dark:bg-gray-900 rounded-xl border-l-4 border-emerald-500 flex items-center justify-between group">
           <div className="min-w-0">
-            <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider mb-0.5">Đang trả lời</p>
+            <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Đang trả lời</p>
             <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{replyToMessage.text}</p>
           </div>
           <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-full cursor-pointer">
@@ -162,7 +162,7 @@ export const Composer: React.FC<ComposerProps> = ({
               <Trash2 className="h-5 w-5" />
             </button>
 
-            <div className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 px-3 shadow-[0_8px_24px_rgba(37,99,235,0.28)]">
+            <div className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-emerald-500 px-3 shadow-[0_8px_24px_rgba(37,99,235,0.28)]">
               <span className="relative flex h-2.5 w-2.5 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-70" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
@@ -184,7 +184,7 @@ export const Composer: React.FC<ComposerProps> = ({
               type="button"
               onClick={onStopAndSendVoice}
               disabled={isSendingVoice}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-md transition-transform hover:scale-105 hover:bg-blue-700 disabled:opacity-50 cursor-pointer"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md transition-transform hover:scale-105 hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
               title="Gửi ghi âm"
             >
               <Send className="h-5 w-5 fill-current" />
@@ -200,14 +200,14 @@ export const Composer: React.FC<ComposerProps> = ({
                 className="p-2 hover:bg-muted rounded-full transition-colors disabled:opacity-50 cursor-pointer"
                 title="Gửi tin nhắn thoại"
               >
-                <Mic className="w-5 h-5 text-blue-600" />
+                <Mic className="w-5 h-5 text-emerald-600" />
               </button>
               <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
               <button
                 type="button"
                 onClick={onImageClick}
                 disabled={!connected || isSendingImage}
-                className="p-2 hover:bg-muted rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
+                className="p-2 hover:bg-muted rounded-full text-emerald-600 disabled:opacity-50 cursor-pointer"
                 title="Đính kèm ảnh"
               >
                 <ImageIcon className="w-5 h-5" />
@@ -216,7 +216,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onCameraClick}
                 disabled={!connected || isOpeningCamera}
-                className="p-2 hover:bg-muted rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
+                className="p-2 hover:bg-muted rounded-full text-emerald-600 disabled:opacity-50 cursor-pointer"
                 title="Chụp ảnh"
               >
                 <Camera className="w-5 h-5" />
@@ -233,7 +233,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 type="button"
                 onClick={onFileClick}
                 disabled={!connected || isSendingFile}
-                className="p-2 hover:bg-muted rounded-full text-blue-600 disabled:opacity-50 cursor-pointer"
+                className="p-2 hover:bg-muted rounded-full text-emerald-600 disabled:opacity-50 cursor-pointer"
                 title="Gửi file"
               >
                 <FileUp className="w-5 h-5" />
@@ -279,7 +279,7 @@ export const Composer: React.FC<ComposerProps> = ({
                     onEmojiClick();
                     setShowEmojiPicker((prev) => !prev);
                   }}
-                  className="cursor-pointer rounded-full p-1.5 text-blue-600 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700"
+                  className="cursor-pointer rounded-full p-1.5 text-emerald-600 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700"
                   title="Emoji"
                 >
                   <Smile className="w-5 h-5" />
@@ -291,7 +291,7 @@ export const Composer: React.FC<ComposerProps> = ({
               onClick={onSend}
               disabled={!canSend}
               className={`cursor-pointer rounded-full p-2 transition-all ${
-                canSend ? 'bg-blue-600 text-white hover:bg-blue-700' : 'text-blue-300'
+                canSend ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'text-emerald-300'
               }`}
             >
               <Send className="w-5 h-5" />

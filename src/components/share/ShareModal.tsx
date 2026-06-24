@@ -24,6 +24,7 @@ import { SharePreview } from './SharePreview';
 import {
   buildMessengerShareContent,
   getFeedShareErrorMessage,
+  getMessengerChipLabel,
   getShareLink,
   getSharePlaceholder,
   getStoryNavigateState,
@@ -247,7 +248,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                     placeholder="Tìm kiếm bạn bè..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-full bg-gray-100 dark:bg-gray-900 py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="w-full rounded-full bg-gray-100 dark:bg-gray-900 py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-emerald-300"
                   />
                 </div>
                 <div className="min-h-0">
@@ -282,7 +283,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                           type="button"
                           disabled={sendingToUserId === conv.user.id}
                           onClick={() => void handleSendToFriend(conv.user.id, conv.user.name)}
-                          className="shrink-0 rounded-full bg-indigo-100 px-4 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-200 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                          className="shrink-0 rounded-full bg-emerald-100 px-4 py-1.5 text-xs font-semibold text-emerald-600 hover:bg-emerald-200 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           {sendingToUserId === conv.user.id ? 'Đang gửi...' : 'Gửi'}
                         </button>
@@ -343,11 +344,11 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                                 key={opt.value}
                                 type="button"
                                 onClick={() => { setPrivacy(opt.value); setShowPrivacyMenu(false); }}
-                                className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer ${privacy === opt.value ? 'font-semibold text-blue-600' : 'text-gray-700 dark:text-gray-300'}`}
+                                className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer ${privacy === opt.value ? 'font-semibold text-emerald-600' : 'text-gray-700 dark:text-gray-300'}`}
                               >
                                 {opt.icon}
                                 {opt.label}
-                                {privacy === opt.value && <span className="ml-auto text-blue-500">✓</span>}
+                                {privacy === opt.value && <span className="ml-auto text-emerald-500">✓</span>}
                               </button>
                             ))}
                           </div>
@@ -405,13 +406,13 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                   <h3 className="mb-2.5 font-sans text-sm font-semibold text-gray-800 dark:text-gray-200">
                     Gửi bằng Messenger
                   </h3>
-                  <div className="scrollbar-thin -mx-1 flex flex-nowrap items-center gap-3 overflow-x-auto px-1 pb-1">
+                  <div className="scrollbar-thin -mx-1 flex flex-nowrap items-start gap-3 overflow-x-auto px-1 pb-1">
                     {loadingFriends ? (
                       <div className="flex flex-nowrap gap-3">
                         {[1, 2, 3, 4, 5].map((i) => (
                           <div key={i} className="flex w-[58px] shrink-0 flex-col items-center gap-1.5 animate-pulse">
                             <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700" />
-                            <div className="h-2 w-10 rounded bg-gray-200 dark:bg-gray-700" />
+                            <div className="h-[28px] w-10 rounded bg-gray-200 dark:bg-gray-700" />
                           </div>
                         ))}
                       </div>
@@ -425,7 +426,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                             onClick={() => void handleSendToFriend(conv.user.id, conv.user.name)}
                             className="group flex w-[58px] shrink-0 flex-col items-center gap-1.5 transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
                           >
-                            <div className="relative shrink-0">
+                            <div className="relative h-12 w-12 shrink-0">
                               <UserAvatar
                                 name={conv.user.name}
                                 avatarUrl={conv.user.avatar}
@@ -438,20 +439,22 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                                 <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-green-500" />
                               )}
                             </div>
-                            <span className="min-h-[28px] w-full text-center text-[11px] font-medium leading-tight text-gray-700 line-clamp-2 dark:text-gray-300">
-                              {conv.user.name.split(' ').pop()}
+                            <span className="flex min-h-[28px] w-full items-start justify-center text-center text-[11px] font-medium leading-tight text-gray-700 line-clamp-2 dark:text-gray-300">
+                              {getMessengerChipLabel(conv.user.name)}
                             </span>
                           </button>
                         ))}
                         <button
                           type="button"
                           onClick={() => setShowFriendPicker(true)}
-                          className="flex w-[58px] shrink-0 flex-col items-center gap-1 hover:opacity-80 cursor-pointer"
+                          className="flex w-[58px] shrink-0 flex-col items-center gap-1.5 hover:opacity-80 cursor-pointer"
                         >
-                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
                             <Search className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                           </div>
-                          <span className="text-center text-[11px] font-medium text-gray-500 dark:text-gray-400">Tìm thêm</span>
+                          <span className="flex min-h-[28px] w-full items-start justify-center text-center text-[11px] font-medium leading-tight text-gray-500 line-clamp-2 dark:text-gray-400">
+                            Tìm thêm
+                          </span>
                         </button>
                       </>
                     ) : (
@@ -471,8 +474,8 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                       onClick={handleShareToStory}
                       className="flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                     >
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100">
-                        <Newspaper className="h-4 w-4 text-blue-600" />
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100">
+                        <Newspaper className="h-4 w-4 text-emerald-600" />
                       </div>
                       <span className="text-center text-[11px] font-medium leading-tight text-gray-600 dark:text-gray-400">Chia sẻ lên tin</span>
                     </button>
@@ -483,8 +486,8 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                     onClick={() => setShowFriendPicker(true)}
                     className="flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100">
-                      <MessageCircle className="h-4 w-4 text-indigo-600" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100">
+                      <MessageCircle className="h-4 w-4 text-emerald-600" />
                     </div>
                     <span className="text-center text-[11px] font-medium leading-tight text-gray-600 dark:text-gray-400">Messenger</span>
                   </button>

@@ -54,18 +54,6 @@ export function PrivacySection({
       </SettingsSection>
 
       <SettingsSection
-        title={t('settings.privacy.postsTitle')}
-        description={t('settings.privacy.postsDesc')}
-      >
-        <SettingRow label={t('settings.privacy.postsLabel')}>
-          <VisibilitySelect
-            value={settings.postsVisibility}
-            onChange={(postsVisibility) => updateSettings({ postsVisibility })}
-          />
-        </SettingRow>
-      </SettingsSection>
-
-      <SettingsSection
         title={t('settings.privacy.blockedTitle')}
         description={t('settings.privacy.blockedDesc')}
       >

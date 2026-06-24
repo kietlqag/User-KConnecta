@@ -106,7 +106,7 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={150}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-[15px] text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-[15px] text-gray-900 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
             />
             <p className="mt-1 text-right text-xs text-gray-500">{title.length}/150</p>
           </div>
@@ -122,7 +122,7 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
               rows={4}
               maxLength={5000}
               placeholder="Ghi chú về album — chuyến đi, sự kiện, người tham gia..."
-              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-[15px] text-gray-900 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-[15px] text-gray-900 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
             />
             <p className="mt-1 text-right text-xs text-gray-500">{description.length}/5000</p>
           </div>
@@ -141,13 +141,13 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
                       onClick={() => setPrivacy(option.value)}
                       className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
                         active
-                          ? 'border-blue-500 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/40'
+                          ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40'
                           : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900'
                       }`}
                     >
                       <div
                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                          active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-300'
+                          active ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-300'
                         }`}
                       >
                         <Icon className="h-4 w-4" />
@@ -156,7 +156,7 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{option.hint}</p>
                       </div>
-                      {active && <Check className="h-4 w-4 shrink-0 text-blue-600" />}
+                      {active && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
                     </button>
                   );
                 })}
@@ -191,7 +191,7 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
                       type="button"
                       onClick={() => setCoverMediaId(item.id)}
                       className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${
-                        active ? 'border-blue-600 ring-2 ring-blue-200' : 'border-transparent'
+                        active ? 'border-emerald-600 ring-2 ring-emerald-200' : 'border-transparent'
                       }`}
                     >
                       {item.mediaType === 'VIDEO' ? (
@@ -200,7 +200,7 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
                         <img src={item.thumbnailUrl ?? item.url} alt="" className="h-full w-full object-cover" />
                       )}
                       {active && (
-                        <span className="absolute inset-0 flex items-center justify-center bg-blue-600/25">
+                        <span className="absolute inset-0 flex items-center justify-center bg-emerald-600/25">
                           <Check className="h-5 w-5 text-white drop-shadow" />
                         </span>
                       )}

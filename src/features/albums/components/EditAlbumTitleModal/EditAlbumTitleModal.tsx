@@ -60,7 +60,7 @@ export function EditAlbumTitleModal({
             onChange={(e) => setTitle(e.target.value)}
             maxLength={150}
             placeholder="Tên album"
-            className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-[15px] text-gray-900 dark:text-gray-100 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-700 rounded-lg text-[15px] text-gray-900 dark:text-gray-100 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
             autoFocus
             onKeyDown={(e) => {
               if (e.key === 'Enter' && canSave) void handleSave();

@@ -749,7 +749,7 @@ export function ProfileCreatePostModal({
                     disabled={disabled}
                     className={`w-full rounded-lg py-2.5 font-semibold transition-colors ${
                       !disabled
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                         : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
                     }`}
                   >
@@ -778,7 +778,7 @@ export function ProfileCreatePostModal({
                 href="/policies"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-blue-500 dark:text-gray-500 dark:hover:text-blue-400 transition-colors"
+                className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-emerald-500 dark:text-gray-500 dark:hover:text-emerald-400 transition-colors"
               >
                 <ExternalLink className="h-3 w-3" />
                 Xem chính sách cộng đồng

@@ -1,9 +1,16 @@
 import { api } from './api';
 import { Notification, NotificationType } from '../features/notifications/types/notifications.types';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
+import { resolveUserAvatarUrl } from '@/utils/userAvatarUtils';
 
 const API_URL = '/notifications';
 const GROUP_API_URL = '/groups';
+
+function resolveNotificationAvatar(rawUser: { avatar?: string; avatarUrl?: string } | null | undefined, isSystem: boolean): string {
+  if (isSystem) return logoV2;
+  const resolved = resolveUserAvatarUrl(rawUser?.avatarUrl ?? rawUser?.avatar);
+  return resolved ?? '';
+}
 
 /** Backend sends Java enum names (UPPER_SNAKE_CASE). Frontend expects lower_snake_case. */
 function mapApiNotification(raw: any): Notification {
@@ -18,14 +25,14 @@ function mapApiNotification(raw: any): Notification {
     isActioned: raw.isActioned ?? raw.actioned ?? false,
     isUnread: raw.isUnread ?? raw.unread ?? false,
     user: raw.user
-      ? { 
-          id: raw.user.id ? String(raw.user.id) : undefined, 
-          name: isSystem ? 'từ Admin' : (raw.user.name ?? 'Người dùng'), 
-          avatar: isSystem ? logoV2 : (raw.user.avatar ?? '') 
+      ? {
+          id: raw.user.id ? String(raw.user.id) : undefined,
+          name: isSystem ? 'từ Admin' : (raw.user.name ?? 'Người dùng'),
+          avatar: resolveNotificationAvatar(raw.user, isSystem),
         }
-      : { 
-          name: isSystem ? 'từ Admin' : 'Người dùng', 
-          avatar: isSystem ? logoV2 : '' 
+      : {
+          name: isSystem ? 'từ Admin' : 'Người dùng',
+          avatar: isSystem ? logoV2 : '',
         },
   };
 }

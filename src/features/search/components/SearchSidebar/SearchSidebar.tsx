@@ -1,14 +1,9 @@
-import { Globe, FileText, Users, Video, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
-import { SearchFilterType, SortType } from '../../types/search.types';
+import { Globe, FileText, Users, Video } from 'lucide-react';
+import { SearchFilterType } from '../../types/search.types';
 
 interface SearchSidebarProps {
   activeFilter: SearchFilterType;
   onFilterChange: (filter: SearchFilterType) => void;
-  sortType?: SortType;
-  onSortChange?: (sort: SortType) => void;
-  dateFilter?: string;
-  onDateFilterChange?: (date: string) => void;
 }
 
 const filterOptions = [
@@ -19,32 +14,13 @@ const filterOptions = [
   { id: 'groups' as SearchFilterType, label: 'Nhóm', icon: Users },
 ];
 
-const dateOptions = [
-  { value: 'any', label: 'Bất kỳ lúc nào' },
-  { value: 'today', label: 'Hôm nay' },
-  { value: 'week', label: 'Tuần này' },
-  { value: 'month', label: 'Tháng này' },
-  { value: 'year', label: 'Năm nay' },
-];
-
-export const SearchSidebar = ({
-  activeFilter,
-  onFilterChange,
-  sortType = 'relevance',
-  onSortChange,
-  dateFilter = 'any',
-  onDateFilterChange,
-}: SearchSidebarProps) => {
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
+export const SearchSidebar = ({ activeFilter, onFilterChange }: SearchSidebarProps) => {
   return (
-    <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4 sticky top-14 h-[calc(100vh-56px)] overflow-y-auto">
-      {/* Header */}
-      <h2 className="text-xl font-bold mb-4">Kết quả tìm kiếm</h2>
+    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 self-start overflow-y-auto border-r border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 md:block">
+      <h2 className="mb-4 text-lg font-bold">Kết quả tìm kiếm</h2>
 
-      {/* Filter Menu */}
-      <div className="space-y-1 mb-4">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mb-2">
+      <div className="space-y-1">
+        <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           Bộ lọc
         </h3>
         {filterOptions.map((filter) => {
@@ -54,143 +30,26 @@ export const SearchSidebar = ({
           return (
             <button
               key={filter.id}
+              type="button"
               onClick={() => onFilterChange(filter.id)}
-              className={`w-full flex items-center gap-3 px-2 py-2 rounded-lg transition-colors cursor-pointer ${
+              className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors ${
                 isActive
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'hover:bg-muted text-gray-700 dark:text-gray-300'
+                  ? 'bg-emerald-50 text-emerald-600'
+                  : 'text-gray-700 hover:bg-muted dark:text-gray-300'
               }`}
             >
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                isActive ? 'bg-blue-100' : 'bg-gray-200 dark:bg-gray-700'
-              }`}>
-                <Icon className="w-5 h-5" />
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                  isActive ? 'bg-emerald-100' : 'bg-gray-200 dark:bg-gray-700'
+                }`}
+              >
+                <Icon className="h-5 w-5" />
               </div>
-              <span className="font-medium text-sm">{filter.label}</span>
+              <span className="text-sm font-medium">{filter.label}</span>
             </button>
           );
         })}
       </div>
-
-      {/* Advanced Filters (shown for all/posts tabs) */}
-      {(activeFilter === 'all' || activeFilter === 'posts') && onSortChange && onDateFilterChange && (
-        <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
-          <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-              <SlidersHorizontal className="w-4 h-4" />
-              <span className="font-semibold text-sm">Bộ lọc nâng cao</span>
-            </div>
-            {showAdvanced ? (
-              <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            )}
-          </button>
-
-          {showAdvanced && (
-            <div className="mt-3 space-y-4 px-2">
-              {/* Sort */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                  Sắp xếp theo
-                </p>
-                <div className="space-y-1">
-                  {[
-                    { value: 'relevance' as SortType, label: 'Liên quan nhất' },
-                    { value: 'latest' as SortType, label: 'Mới nhất' },
-                  ].map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="sort"
-                        value={option.value}
-                        checked={sortType === option.value}
-                        onChange={() => onSortChange(option.value)}
-                        className="accent-blue-600"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Date Filter */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                  Thời gian đăng
-                </p>
-                <div className="space-y-1">
-                  {dateOptions.map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name="date"
-                        value={option.value}
-                        checked={dateFilter === option.value}
-                        onChange={() => onDateFilterChange(option.value)}
-                        className="accent-blue-600"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{option.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* People-specific filters */}
-      {activeFilter === 'people' && (
-        <div className="border-t border-gray-100 dark:border-gray-800 pt-4 px-2">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-            Lọc mọi người
-          </p>
-          <div className="space-y-2">
-            {[
-              { label: 'Bạn bè', value: 'friends' },
-              { label: 'Bạn của bạn bè', value: 'friends_of_friends' },
-              { label: 'Tất cả mọi người', value: 'everyone' },
-            ].map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 py-1.5">
-                <input type="radio" name="people_filter" value={opt.value} defaultChecked={opt.value === 'everyone'} className="accent-blue-600" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Groups-specific filters */}
-      {activeFilter === 'groups' && (
-        <div className="border-t border-gray-100 dark:border-gray-800 pt-4 px-2">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-            Lọc nhóm
-          </p>
-          <div className="space-y-2">
-            {[
-              { label: 'Tất cả nhóm', value: 'all' },
-              { label: 'Nhóm đã tham gia', value: 'joined' },
-              { label: 'Nhóm công khai', value: 'public' },
-              { label: 'Nhóm riêng tư', value: 'private' },
-            ].map((opt) => (
-              <label key={opt.value} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg px-2 py-1.5">
-                <input type="radio" name="group_filter" value={opt.value} defaultChecked={opt.value === 'all'} className="accent-blue-600" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+    </aside>
   );
 };

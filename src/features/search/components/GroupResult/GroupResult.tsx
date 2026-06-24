@@ -52,7 +52,7 @@ export const GroupResult = ({ group, onJoinToggle }: GroupResultProps) => {
               ? 'bg-gray-100 dark:bg-gray-900 text-gray-500 dark:text-gray-400 cursor-not-allowed'
               : group.isMember
               ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-emerald-600 text-white hover:bg-emerald-700'
           }`}
         >
           {group.isPending ? (

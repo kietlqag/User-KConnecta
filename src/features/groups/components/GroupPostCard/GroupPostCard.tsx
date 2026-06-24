@@ -71,7 +71,7 @@ export const GroupPostCard: React.FC<GroupPostCardProps> = ({
           <div className="fb-reactions-stats">
             <div className="fb-reaction-icons">
                {/* In a real app, these would be styled emoji spans or images */}
-               <div className="fb-reaction-icon bg-blue-500 flex items-center justify-center text-[10px]">👍</div>
+               <div className="fb-reaction-icon bg-emerald-500 flex items-center justify-center text-[10px]">👍</div>
                <div className="fb-reaction-icon bg-red-500 flex items-center justify-center text-[10px]">❤️</div>
                <div className="fb-reaction-icon bg-yellow-500 flex items-center justify-center text-[10px]">😆</div>
             </div>

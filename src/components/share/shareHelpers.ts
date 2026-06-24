@@ -6,6 +6,14 @@ import {
 } from './shareConstants';
 import type { ShareTarget } from './shareTypes';
 
+/** Short label under avatar in share modal (first name / last word). */
+export function getMessengerChipLabel(name?: string | null): string {
+  const trimmed = name?.trim();
+  if (!trimmed) return 'Người dùng';
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  return parts[parts.length - 1] || trimmed;
+}
+
 export function getSharePlaceholder(target: ShareTarget): string {
   switch (target.type) {
     case 'album':

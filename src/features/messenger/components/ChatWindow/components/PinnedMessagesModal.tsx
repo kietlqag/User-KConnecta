@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { MessageSquare, MoreHorizontal, Pin, PinOff, X } from 'lucide-react';
 
 export interface PinnedChatMessage {
@@ -122,10 +123,12 @@ export function PinnedMessagesModal({
                 const senderLabel = item.senderId === currentUserId ? 'Bạn' : item.senderName;
                 return (
                   <div key={item.messageId} className="flex gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <img
-                      src={item.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderLabel)}&background=random`}
-                      alt={senderLabel}
-                      className="h-10 w-10 shrink-0 rounded-full object-cover"
+                    <UserAvatar
+                      name={senderLabel}
+                      avatarUrl={item.senderAvatar}
+                      userId={item.senderId || undefined}
+                      rounded="full"
+                      className="h-10 w-10 shrink-0"
                     />
                     <button
                       type="button"

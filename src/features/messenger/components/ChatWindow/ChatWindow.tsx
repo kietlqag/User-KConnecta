@@ -1,5 +1,5 @@
 ﻿import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Pin } from 'lucide-react';
+import { Pin, UserRound } from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { ChatHeader } from './components/ChatHeader';
 import { MessageList } from './components/MessageList';
@@ -52,9 +52,13 @@ interface ChatWindowProps {
   groupMembers?: ChatUser[];
   themeColor?: string | null;
   jumpToMessageRequest?: { messageId: string; nonce: number } | null;
-  isFriend?: boolean;
+  canMessage?: boolean;
+  messagingDisabledReason?: string;
+  isStrangerChat?: boolean;
   rateLimitUntil?: number | null;
   onGroupJoinLinkClick?: (token: string) => void;
+  isChatInfoOpen?: boolean;
+  onToggleChatInfo?: () => void;
 }
 
 function formatVoiceDuration(totalSec: number) {
@@ -100,9 +104,13 @@ export const ChatWindow = ({
   groupMembers = [],
   themeColor,
   jumpToMessageRequest = null,
-  isFriend = true,
+  canMessage = true,
+  messagingDisabledReason = 'Bạn không thể nhắn tin với người này',
+  isStrangerChat = false,
   rateLimitUntil = null,
   onGroupJoinLinkClick,
+  isChatInfoOpen = true,
+  onToggleChatInfo,
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
@@ -282,7 +290,19 @@ export const ChatWindow = ({
         canStartVideoCall={canStartVideoCall}
         isMuted={isMuted}
         onToggleMute={onToggleMute}
+        isChatInfoOpen={isChatInfoOpen}
+        onToggleChatInfo={onToggleChatInfo}
       />
+
+      {isStrangerChat && (
+        <div className="shrink-0 flex items-start gap-2.5 border-b border-amber-200/80 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/25 px-4 py-2.5">
+          <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="text-sm leading-snug text-amber-900 dark:text-amber-100">
+            <span className="font-medium">Các bạn đang là người lạ.</span>{' '}
+            Bạn có thể nhắn tin nhưng chưa kết bạn với nhau. Hãy cẩn thận khi chia sẻ thông tin cá nhân.
+          </p>
+        </div>
+      )}
 
       {pinnedMessages.length > 0 && (
         <button
@@ -340,7 +360,7 @@ export const ChatWindow = ({
         onGroupJoinLinkClick={onGroupJoinLinkClick}
       />
 
-      {isFriend ? (
+      {canMessage ? (
         <>
           <PendingAttachments
             pendingImages={pendingImages}
@@ -388,7 +408,7 @@ export const ChatWindow = ({
         </>
       ) : (
         <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400 select-none">
-          Các bạn không còn là bạn bè để nhắn tin nữa
+          {messagingDisabledReason}
         </div>
       )}
 

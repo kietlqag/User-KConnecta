@@ -13,7 +13,7 @@ export function SharePreview({ target }: SharePreviewProps) {
         {target.coverUrl ? (
           <img src={target.coverUrl} alt={target.title} className="aspect-[16/9] w-full object-cover" />
         ) : (
-          <div className="flex aspect-[16/9] w-full items-center justify-center bg-gradient-to-br from-violet-100 to-blue-100 dark:from-gray-700 dark:to-gray-800">
+          <div className="flex aspect-[16/9] w-full items-center justify-center bg-gradient-to-br from-violet-100 to-emerald-100 dark:from-gray-700 dark:to-gray-800">
             <Images className="h-10 w-10 text-violet-500/70" aria-hidden />
           </div>
         )}
@@ -35,8 +35,8 @@ export function SharePreview({ target }: SharePreviewProps) {
         {target.coverUrl ? (
           <img src={target.coverUrl} alt={target.name} className="h-28 w-full object-cover" />
         ) : (
-          <div className="flex h-24 w-full items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-gray-700 dark:to-gray-800">
-            <Users className="h-8 w-8 text-blue-500/70" aria-hidden />
+          <div className="flex h-24 w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-100 dark:from-gray-700 dark:to-gray-800">
+            <Users className="h-8 w-8 text-emerald-500/70" aria-hidden />
           </div>
         )}
         <div className="p-3">

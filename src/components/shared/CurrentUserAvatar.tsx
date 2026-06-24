@@ -4,12 +4,10 @@ import { UserAvatar } from './UserAvatar';
 
 interface CurrentUserAvatarProps {
   className?: string;
-  fallbackClassName?: string;
 }
 
 export function CurrentUserAvatar({
   className = 'w-10 h-10',
-  fallbackClassName,
 }: CurrentUserAvatarProps) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
 
@@ -30,7 +28,6 @@ export function CurrentUserAvatar({
       userId={currentUser?.id}
       className={className}
       rounded="full"
-      initialsClassName={`text-sm font-semibold ${fallbackClassName || ''}`}
     />
   );
 }

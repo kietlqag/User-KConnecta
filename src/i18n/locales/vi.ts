@@ -22,6 +22,14 @@ export default {
     live: 'Live',
     navMenu: 'Menu điều hướng',
     menu: 'Menu',
+    notifications: 'Thông báo',
+  },
+  messenger: {
+    title: 'Tin nhắn',
+    newMessage: 'Tin nhắn mới',
+    viewMessage: 'Xem',
+    messageFrom: 'Tin nhắn từ {{name}}',
+    unknownSender: 'Người dùng',
   },
   account: {
     settings: 'Cài đặt và quyền riêng tư',
@@ -91,9 +99,6 @@ export default {
       profileTitle: 'Ai có thể xem hồ sơ của tôi',
       profileDesc: 'Kiểm soát ai được phép xem trang cá nhân và thông tin cơ bản.',
       profileLabel: 'Quyền xem hồ sơ',
-      postsTitle: 'Ai có thể xem bài viết của tôi',
-      postsDesc: 'Áp dụng mặc định cho các bài viết mới trên bảng feed.',
-      postsLabel: 'Quyền xem bài viết',
       blockedTitle: 'Danh sách người dùng bị chặn',
       blockedDesc: 'Những người bạn đã chặn sẽ không thể xem hồ sơ hoặc liên hệ với bạn.',
       blockedEmpty: 'Chưa chặn ai',
@@ -142,5 +147,8 @@ export default {
     friendAcceptFailed: 'Không thể chấp nhận lời mời kết bạn',
     unfriendSuccess: 'Đã hủy kết bạn',
     unfriendFailed: 'Không thể hủy kết bạn',
+    accessDeniedTitle: 'Không thể xem nội dung trang cá nhân',
+    accessDeniedDesc: 'Bạn không thể xem bài viết và nội dung trên trang này do cài đặt quyền riêng tư.',
+    accessDeniedBack: 'Quay lại',
   },
 } as const;

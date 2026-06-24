@@ -24,22 +24,25 @@ export const PostResult = ({ post, onReactionChange }: PostResultProps) => {
   }));
 
   return (
-    <Post
-      id={post.id}
-      author={{ id: post.author.id ?? '', name: post.author.name, avatar: post.author.avatar }}
-      timestamp={post.timestamp}
-      content={post.content}
-      image={imageSrc}
-      media={videoSrc ? { type: 'video' as const, url: videoSrc } : undefined}
-      likes={post.likes ?? 0}
-      comments={post.comments ?? 0}
-      shares={post.shares ?? 0}
-      isLiked={!!post.userReactionType}
-      isSaved={post.savedByCurrentUser ?? false}
-      currentUserReactionType={(post.userReactionType as ReactionType) ?? null}
-      group={group}
-      mediaList={mediaList}
-      onReactionChange={onReactionChange}
-    />
+    <div className="w-full">
+      <Post
+        id={post.id}
+        author={{ id: post.author.id ?? '', name: post.author.name, avatar: post.author.avatar }}
+        timestamp={post.timestamp}
+        content={post.content}
+        image={imageSrc}
+        media={videoSrc ? { type: 'video' as const, url: videoSrc } : undefined}
+        likes={post.likes ?? 0}
+        comments={post.comments ?? 0}
+        shares={post.shares ?? 0}
+        isLiked={!!post.userReactionType}
+        isSaved={post.savedByCurrentUser ?? false}
+        currentUserReactionType={(post.userReactionType as ReactionType) ?? null}
+        group={group}
+        mediaList={mediaList}
+        onReactionChange={onReactionChange}
+        compact
+      />
+    </div>
   );
 };

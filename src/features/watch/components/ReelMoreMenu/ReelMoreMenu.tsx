@@ -150,7 +150,7 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
             onClick={() => void handleToggleSave()}
           >
             <Bookmark
-              className={`h-5 w-5 shrink-0 ${isSaved ? 'fill-blue-400 text-blue-400' : 'text-gray-300'}`}
+              className={`h-5 w-5 shrink-0 ${isSaved ? 'fill-emerald-400 text-emerald-400' : 'text-gray-300'}`}
             />
             <span className="font-medium">{isSaved ? 'Bỏ lưu video' : 'Lưu video'}</span>
           </DropdownMenuItem>

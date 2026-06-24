@@ -19,7 +19,7 @@ export function ProfileLikesPage() {
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 overflow-hidden">
 
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-          <ThumbsUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          <ThumbsUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">Thích</h2>
         </div>
 
@@ -30,7 +30,7 @@ export function ProfileLikesPage() {
               onClick={() => setActiveTab(cat.id)}
               className={`px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors border-b-2 ${
                 activeTab === cat.id
-                  ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400'
+                  ? 'text-emerald-600 dark:text-emerald-400 border-emerald-600 dark:border-emerald-400'
                   : 'text-gray-600 dark:text-gray-400 border-transparent hover:bg-muted rounded-t-lg'
               }`}
             >

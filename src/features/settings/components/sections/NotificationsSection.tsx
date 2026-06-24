@@ -52,23 +52,6 @@ export function NotificationsSection({
         </SettingRow>
       </SettingsSection>
 
-      <SettingsSection
-        title="Thông báo qua email"
-        description="Nhận email tóm tắt hoạt động quan trọng trên tài khoản."
-      >
-        <SettingRow
-          label="Bật thông báo email"
-          description="Gửi email khi có hoạt động quan trọng hoặc cập nhật bảo mật."
-        >
-          <div className="flex justify-end sm:justify-start">
-            <Switch
-              checked={settings.notifyEmail}
-              onCheckedChange={(notifyEmail) => updateSettings({ notifyEmail })}
-            />
-          </div>
-        </SettingRow>
-      </SettingsSection>
-
       <SettingsSaveBar isDirty={isDirty} saving={saving} onSave={onSave} onDiscard={onDiscard} />
     </div>
   );

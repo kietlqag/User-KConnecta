@@ -30,8 +30,6 @@ export function mapPostToReel(post: PostResponse): Reel | null {
   const videoUrl = resolveVideoUrl(post);
   if (!videoUrl) return null;
 
-  const fallbackAvatar = `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(post.authorFullName || 'User')}`;
-
   return {
     id: post.id,
     videoUrl,
@@ -39,7 +37,7 @@ export function mapPostToReel(post: PostResponse): Reel | null {
     creator: {
       id: post.authorId,
       name: post.authorFullName,
-      avatar: post.authorAvatarUrl || fallbackAvatar,
+      avatar: post.authorAvatarUrl?.trim() || '',
     },
     caption: post.content || '',
     privacy: post.privacy,

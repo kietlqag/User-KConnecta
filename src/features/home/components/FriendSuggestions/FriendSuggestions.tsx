@@ -79,8 +79,8 @@ export const FriendSuggestions = () => {
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Bạn bè có thể biết</h3>
         <button
           type="button"
-          className="cursor-pointer text-sm font-semibold text-blue-600 hover:underline"
-          onClick={() => navigate('/friends?tab=suggestions')}
+          className="cursor-pointer text-sm font-semibold text-emerald-600 hover:underline"
+          onClick={() => navigate('/friends')}
         >
           Xem tất cả
         </button>

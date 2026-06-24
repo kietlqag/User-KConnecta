@@ -60,11 +60,46 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
   };
 
   const handleSuggestionClick = (item: SearchSuggestionDto) => {
-    const type = item.type === 'person' ? 'people' : 'groups';
-    goSearch(item.text, type);
+    if (item.type === 'person') {
+      searchHistoryService.add({
+        type: 'person',
+        text: item.text,
+        avatar: item.avatarUrl ?? undefined,
+        targetId: item.id,
+      });
+      navigate(`/profile/${item.id}`);
+      onClose();
+      return;
+    }
+
+    if (item.type === 'group') {
+      searchHistoryService.add({
+        type: 'group',
+        text: item.text,
+        avatar: item.avatarUrl ?? undefined,
+        targetId: item.id,
+      });
+      navigate(`/groups/${item.id}`);
+      onClose();
+      return;
+    }
+
+    goSearch(item.text);
   };
 
   const handleHistoryClick = (item: RecentSearchItem) => {
+    if (item.type === 'person' && item.targetId) {
+      navigate(`/profile/${item.targetId}`);
+      onClose();
+      return;
+    }
+
+    if (item.type === 'group' && item.targetId) {
+      navigate(`/groups/${item.targetId}`);
+      onClose();
+      return;
+    }
+
     const type = item.type === 'keyword' ? undefined
       : item.type === 'person' ? 'people'
       : item.type === 'group'  ? 'groups'
@@ -100,7 +135,7 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
           {showRecent && history.length > 0 && (
             <button
               onClick={handleClearAll}
-              className="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer"
+              className="text-emerald-600 hover:bg-emerald-50 px-3 py-1 rounded text-sm font-medium transition-colors cursor-pointer"
             >
               Xóa tất cả
             </button>
@@ -112,7 +147,7 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
           {/* ── Loading spinner ── */}
           {loading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+              <Loader2 className="w-5 h-5 text-emerald-500 animate-spin" />
             </div>
           )}
 
@@ -194,10 +229,14 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
 
           {/* ── Tip when typing ── */}
           {!loading && !showRecent && (
-            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-gray-100 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400">
+            <button
+              type="button"
+              onClick={() => goSearch(trimmedQuery)}
+              className="w-full flex items-center gap-2 px-4 py-2.5 border-t border-gray-100 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400 hover:bg-muted transition-colors cursor-pointer"
+            >
               <Search className="w-4 h-4" />
               <span>Nhấn Enter để tìm kiếm "{query}"</span>
-            </div>
+            </button>
           )}
         </div>
       </div>

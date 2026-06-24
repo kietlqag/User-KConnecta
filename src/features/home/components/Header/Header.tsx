@@ -1,14 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, Home, Users, Shapes, Clapperboard, Store, Grid3x3, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
+import { Search, Home, Users, Shapes, Clapperboard, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
-import { MenuPanel } from '../../../menu/components';
 import { AccountMenu } from '../../../account/components';
 import { SearchSuggestions } from '../../../search/components';
 import { RecentSearchItem } from '../../../search/types/search.types';
-import { useMenu } from '../../../../contexts/MenuContext';
 import { useSidebar } from '../../../../contexts/SidebarContext';
 import { AnimatedTabNav } from '../../../../components/AnimatedTabNav';
 import { useMessengerUnreadCount } from '../../../messenger/hooks/useMessengerUnreadCount';
@@ -16,7 +14,7 @@ import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { notificationService } from '@/services/notificationService';
 import { searchHistoryService } from '@/services/searchHistoryService';
-import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import logoV2 from '@/assets/LogoKConnecta_V2.png';
 import { LIVE_NAV_LABEL } from '@/components/shared';
 
@@ -31,11 +29,20 @@ export function Header() {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const isHomePage = location.pathname === '/home' || location.pathname === '/home/';
   const { subscribeNotificationEvents } = useRealtimeCall();
-  const { isMenuOpen, toggleMenu, setMenuOpen } = useMenu();
   const { isLeftSidebarOpen, toggleLeftSidebar } = useSidebar();
-  const userAvatar = currentUser?.avatarUrl || avatarImage;
+
+  useEffect(() => {
+    if (location.pathname === '/search') {
+      setSearchQuery(searchParams.get('q') ?? '');
+      return;
+    }
+    if (location.pathname === '/watch' && searchParams.get('from') === 'search') {
+      setSearchQuery(searchParams.get('q') ?? '');
+    }
+  }, [location.pathname, searchParams]);
 
   useEffect(() => {
     const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
@@ -101,6 +108,9 @@ export function Header() {
     { icon: <Radio className="w-6 h-6" />, href: '/live', label: LIVE_NAV_LABEL },
   ], [t]);
 
+  const headerActionBtnClass =
+    'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors cursor-pointer hover:bg-muted/80';
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-md shadow-sm z-50 border-b border-border">
       <div className="max-w-[1920px] mx-auto px-4">
@@ -112,7 +122,6 @@ export function Header() {
                 type="button"
                 onClick={() => {
                   toggleLeftSidebar();
-                  setMenuOpen(false);
                   setShowMessenger(false);
                   setShowNotifications(false);
                   setShowAccountMenu(false);
@@ -147,7 +156,6 @@ export function Header() {
                   if (e.key === 'Enter' && searchQuery.trim()) {
                     searchHistoryService.add({ type: 'keyword', text: searchQuery.trim() });
                     navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-                    setSearchQuery('');
                     setShowSearchSuggestions(false);
                   }
                 }}
@@ -165,73 +173,65 @@ export function Header() {
           <AnimatedTabNav items={navItems} />
 
           {/* Right Section - User Actions */}
-          <div className="flex items-center gap-2 flex-1 justify-end max-w-[320px]">
-            <button 
-              onClick={() => {
-                toggleMenu();
-                setShowMessenger(false);
-                setShowNotifications(false);
-                setShowAccountMenu(false);
-              }}
-              className={`hidden sm:flex p-2 hover:bg-muted/80 rounded-full transition-colors cursor-pointer ${
-                isMenuOpen ? 'bg-accent text-primary' : 'bg-muted'
-              }`}
-              title="Menu"
-              aria-label="Menu"
-              aria-expanded={isMenuOpen}
-              data-menu-toggle
-            >
-              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-primary' : 'text-foreground'}`} />
-            </button>
-            
-            <button 
+          <div className="flex flex-1 max-w-[320px] items-center justify-end gap-1.5">
+            <button
+              type="button"
               onClick={() => {
                 setShowMessenger(!showMessenger);
-                setMenuOpen(false);
                 setShowNotifications(false);
                 setShowAccountMenu(false);
               }}
-              className="hidden sm:flex relative p-2 bg-muted hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
+              className={headerActionBtnClass}
+              title={t('messenger.title', { defaultValue: 'Tin nhắn' })}
+              aria-label={t('messenger.title', { defaultValue: 'Tin nhắn' })}
             >
-              <MessageCircle className="w-5 h-5 text-foreground" />
+              <MessageCircle className="h-5 w-5 text-foreground" />
               {unreadMessagesCount > 0 && (
-                <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
                   {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
                 </span>
               )}
             </button>
-            
-            <button 
+
+            <button
+              type="button"
               onClick={() => {
                 setShowNotifications(!showNotifications);
-                setMenuOpen(false);
                 setShowMessenger(false);
                 setShowAccountMenu(false);
               }}
-              className="hidden sm:flex relative p-2 bg-muted hover:bg-muted/80 rounded-full transition-colors cursor-pointer"
+              className={`${headerActionBtnClass} hidden sm:flex`}
+              title={t('nav.notifications', { defaultValue: 'Thông báo' })}
+              aria-label={t('nav.notifications', { defaultValue: 'Thông báo' })}
             >
-              <Bell className="w-5 h-5 text-foreground" />
+              <Bell className="h-5 w-5 text-foreground" />
               {unreadNotifications > 0 && (
-                <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
             </button>
-            
-            <div className="relative">
+
+            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center">
               <button
+                type="button"
                 onClick={() => {
                   setShowAccountMenu(!showAccountMenu);
-                  setMenuOpen(false);
                   setShowMessenger(false);
                   setShowNotifications(false);
                 }}
-                className="w-10 h-10 rounded-full overflow-hidden hover:opacity-90 transition-opacity cursor-pointer"
+                className="h-9 w-9 shrink-0 overflow-hidden rounded-full transition-opacity hover:opacity-90 cursor-pointer"
                 data-account-toggle
               >
-                <img src={userAvatar} alt="Avatar" className="w-full h-full object-cover" />
+                <UserAvatar
+                  name={currentUser?.fullName || 'Bạn'}
+                  avatarUrl={currentUser?.avatarUrl}
+                  userId={currentUser?.id}
+                  rounded="full"
+                  className="h-9 w-9"
+                />
               </button>
-              
+
               {showAccountMenu && <AccountMenu onClose={() => setShowAccountMenu(false)} />}
             </div>
           </div>
@@ -242,8 +242,6 @@ export function Header() {
       {showMessenger && <MessengerPanel onClose={() => setShowMessenger(false)} />}
       {/* Notifications Panel */}
       {showNotifications && <NotificationsPanel onClose={() => setShowNotifications(false)} />}
-      {/* Menu Panel */}
-      {isMenuOpen && <MenuPanel onClose={() => setMenuOpen(false)} />}
     </header>
   );
 }

@@ -1,6 +1,7 @@
-﻿import React, { ForwardedRef, forwardRef } from 'react';
+import React, { ForwardedRef, forwardRef } from 'react';
 import { ChevronDown, Pencil, UserRoundPlus } from 'lucide-react';
 import { Message, ChatUser } from '../../../types/message.types';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { MessageBubble } from '../../MessageBubble';
 
 interface MessageListProps {
@@ -180,7 +181,7 @@ export const MessageList = forwardRef(({
                   {message.systemActionType === 'pin_message' && (
                     <>
                       {' '}
-                      <span className="font-semibold text-blue-600">Xem tất cả</span>
+                      <span className="font-semibold text-emerald-600">Xem tất cả</span>
                     </>
                   )}
                 </span>
@@ -214,10 +215,12 @@ export const MessageList = forwardRef(({
 
         {messages.length === 0 && isGroupChat && (
           <div className="flex min-h-[54vh] flex-col items-center justify-center px-6 py-8 text-center">
-            <img
-              src={groupAvatar || `https://ui-avatars.com/api/?background=2563eb&color=ffffff&bold=true&name=Group`}
-              alt={groupName || 'Nhóm chat'}
-              className="h-14 w-14 rounded-full object-cover"
+            <UserAvatar
+              name={groupName || 'Nhóm chat'}
+              avatarUrl={groupAvatar}
+              variant="group"
+              rounded="full"
+              className="h-14 w-14"
             />
             <h3 className="mt-3 text-2xl font-semibold leading-tight text-gray-900 dark:text-gray-100">{groupName || 'Nhóm chat'}</h3>
             <p className="mt-1.5 text-base text-gray-500 dark:text-gray-400">
@@ -249,7 +252,7 @@ export const MessageList = forwardRef(({
       {showJumpToLatest && (
         <button
           onClick={() => scrollToBottom()}
-          className="absolute bottom-20 right-4 z-20 cursor-pointer rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 text-blue-600 shadow-lg transition-all hover:bg-gray-50 dark:hover:bg-gray-800 animate-bounce"
+          className="absolute bottom-20 right-4 z-20 cursor-pointer rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 text-emerald-600 shadow-lg transition-all hover:bg-gray-50 dark:hover:bg-gray-800 animate-bounce"
           title="Cuộn xuống dưới cùng"
         >
           <ChevronDown className="w-5 h-5" />

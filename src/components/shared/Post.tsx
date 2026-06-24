@@ -123,6 +123,8 @@ export interface PostProps {
   onPin?: (postId: string) => void;
   onUnpin?: (postId: string) => void;
   poll?: PostPollResponse | null;
+  /** Narrower layout for search results and similar embedded views. */
+  compact?: boolean;
 }
 
 export function Post({
@@ -154,6 +156,7 @@ export function Post({
   sharedGroup,
   sharedAlbum,
   poll,
+  compact = false,
 }: PostProps) {
   // For share wrappers, save/share actions target the original post; interactions use the wrapper id.
   const originalPostId = sharedPost && originalPost ? originalPost.id : id;
@@ -418,10 +421,17 @@ export function Post({
     }
   };
 
+  const mediaMaxClass = compact ? 'max-h-64' : 'max-h-[600px]';
+
   return (
     <>
-      <div id={`post-${id}`} className="bg-card rounded-2xl shadow-sm border border-border mb-4">
-        <div className="p-4">
+      <div
+        id={`post-${id}`}
+        className={`bg-card shadow-sm border border-border ${
+          compact ? 'mb-2 rounded-xl' : 'mb-4 rounded-2xl'
+        }`}
+      >
+        <div className={compact ? 'p-3' : 'p-4'}>
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">
               <div className="relative">
@@ -636,8 +646,8 @@ export function Post({
                   className="w-full max-h-56 object-cover"
                 />
               ) : (
-                <div className="flex h-32 w-full items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-gray-700 dark:to-gray-800">
-                  <Users className="h-10 w-10 text-blue-500/70" aria-hidden />
+                <div className="flex h-32 w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-emerald-100 dark:from-gray-700 dark:to-gray-800">
+                  <Users className="h-10 w-10 text-emerald-500/70" aria-hidden />
                 </div>
               )}
               <div className="flex items-center justify-between gap-3 p-3">
@@ -707,6 +717,7 @@ export function Post({
         ) : hasLivePreview && !sharedPost ? null : galleryItems.length >= 2 ? (
           <PostMediaGallery
             items={galleryItems}
+            className={compact ? 'max-h-[min(280px,70vw)]' : undefined}
             onMediaClick={(itemIndex) => {
               const item = galleryItems[itemIndex];
               if (item.type !== 'IMAGE') return;
@@ -723,13 +734,13 @@ export function Post({
               <ImageWithFallback
                 src={mediaUrl}
                 alt="Post content"
-                className="max-h-[600px] w-full object-contain"
+                className={`${mediaMaxClass} w-full object-contain`}
               />
             ) : (
               <video
                 src={mediaUrl}
                 controls
-                className="max-h-[600px] w-full object-contain"
+                className={`${mediaMaxClass} w-full object-contain`}
                 onClick={(e) => e.stopPropagation()}
               />
             )}

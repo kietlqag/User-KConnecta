@@ -22,6 +22,14 @@ export default {
     live: 'Live',
     navMenu: 'Navigation menu',
     menu: 'Menu',
+    notifications: 'Notifications',
+  },
+  messenger: {
+    title: 'Messages',
+    newMessage: 'New message',
+    viewMessage: 'View',
+    messageFrom: 'Message from {{name}}',
+    unknownSender: 'User',
   },
   account: {
     settings: 'Settings & privacy',
@@ -91,9 +99,6 @@ export default {
       profileTitle: 'Who can see my profile',
       profileDesc: 'Control who can view your profile and basic info.',
       profileLabel: 'Profile visibility',
-      postsTitle: 'Who can see my posts',
-      postsDesc: 'Default for new posts on your feed.',
-      postsLabel: 'Post visibility',
       blockedTitle: 'Blocked users',
       blockedDesc: 'Blocked people cannot view your profile or contact you.',
       blockedEmpty: 'No one blocked',
@@ -142,5 +147,8 @@ export default {
     friendAcceptFailed: 'Could not accept friend request',
     unfriendSuccess: 'Unfriended',
     unfriendFailed: 'Could not unfriend',
+    accessDeniedTitle: 'Profile content unavailable',
+    accessDeniedDesc: 'You cannot view posts and other content on this profile due to privacy settings.',
+    accessDeniedBack: 'Go back',
   },
 } as const;

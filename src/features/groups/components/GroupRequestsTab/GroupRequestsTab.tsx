@@ -46,7 +46,7 @@ export function GroupRequestsTab({ groupId, onApproveSuccess }: GroupRequestsTab
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-8 flex flex-col items-center justify-center min-h-[300px]">
-        <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mb-3" />
         <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Đang tải danh sách yêu cầu...</p>
       </div>
     );
@@ -63,7 +63,7 @@ export function GroupRequestsTab({ groupId, onApproveSuccess }: GroupRequestsTab
   if (requests.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-12 text-center flex flex-col items-center justify-center min-h-[350px]">
-        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center mb-4 ring-8 ring-blue-50/50">
+        <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mb-4 ring-8 ring-emerald-50/50">
           <UserCheck className="w-8 h-8" />
         </div>
         <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Không có yêu cầu tham gia nào</h3>
@@ -79,7 +79,7 @@ export function GroupRequestsTab({ groupId, onApproveSuccess }: GroupRequestsTab
       <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
         <h3 className="font-bold text-gray-900 dark:text-gray-100 text-[17px] flex items-center gap-2">
           Yêu cầu tham gia
-          <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+          <span className="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">
             {requests.length}
           </span>
         </h3>
@@ -118,7 +118,7 @@ export function GroupRequestsTab({ groupId, onApproveSuccess }: GroupRequestsTab
                 <button
                   onClick={() => handleApprove(req.userId, req.fullName)}
                   disabled={approveMutation.isPending || rejectMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center gap-1 transition-all active:scale-[0.98] shadow-sm dark:shadow-none hover:shadow disabled:opacity-50 cursor-pointer"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center gap-1 transition-all active:scale-[0.98] shadow-sm dark:shadow-none hover:shadow disabled:opacity-50 cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Phê duyệt</span>

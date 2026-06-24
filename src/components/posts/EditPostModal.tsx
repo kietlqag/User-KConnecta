@@ -239,7 +239,7 @@ export function EditPostModal({
       <div className="relative flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
         {isSaving && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-white/80 backdrop-blur-[2px] dark:bg-gray-800/80">
-            <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+            <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang lưu thay đổi...</p>
           </div>
         )}
@@ -365,7 +365,7 @@ export function EditPostModal({
             type="button"
             disabled={isSaving || (!content.trim() && mediaItems.length === 0)}
             onClick={() => void handleSave()}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? (
               <>

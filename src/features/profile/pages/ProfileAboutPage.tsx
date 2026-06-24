@@ -134,7 +134,7 @@ export function ProfileAboutPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full rounded-lg px-3 py-2.5 text-left text-[15px] font-medium transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700/60'
                 }`}
               >

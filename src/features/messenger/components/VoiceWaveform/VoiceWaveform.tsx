@@ -60,7 +60,7 @@ export function VoiceWaveform({
         } else if (variant === 'own') {
           barClass = isPlayed ? 'bg-white' : isLive ? 'bg-white/75' : 'bg-white/40';
         } else {
-          barClass = isPlayed ? 'bg-blue-600' : isLive ? 'bg-blue-500/70' : 'bg-gray-400/55 dark:bg-gray-500/55';
+          barClass = isPlayed ? 'bg-emerald-600' : isLive ? 'bg-emerald-500/70' : 'bg-gray-400/55 dark:bg-gray-500/55';
         }
 
         return (

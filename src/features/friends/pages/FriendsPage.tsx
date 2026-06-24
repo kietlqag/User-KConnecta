@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FriendsLeftSidebar, FriendCard, FriendRequestCard } from '../components';
-import { SuggestionsSidebar } from '../components/SuggestionsSidebar';
-import { ProfilePreviewPanel } from '../components/ProfilePreviewPanel';
-import { BirthdayTab } from '../components/BirthdayTab';
+import { BirthdayPage } from '@/features/birthdays/components';
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
 import { MainLayout } from '../../../layouts';
 import { friendService, FRIENDSHIP_CHANGED_EVENT } from '../../../services/friendService';
@@ -12,14 +10,21 @@ import { toast } from 'sonner';
 import { useFriendsPageData } from '../hooks/useFriendsPageData';
 
 const PAGE_SIZE = 8;
+const HOME_SUGGESTIONS_MAX = 40;
 const FRIEND_GRID_CLASS =
   'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5';
 
 export const FriendsPage = () => {
   const [searchParams] = useSearchParams();
-  const initialTab = (searchParams.get('tab') as FriendsTab) || 'home';
+  const initialTabParam = searchParams.get('tab') as FriendsTab | 'custom-lists' | 'suggestions' | null;
+  const initialTab: FriendsTab =
+    initialTabParam &&
+    initialTabParam !== 'custom-lists' &&
+    initialTabParam !== 'suggestions' &&
+    ['home', 'requests', 'all-friends', 'birthdays'].includes(initialTabParam)
+      ? initialTabParam
+      : 'home';
   const [activeTab, setActiveTab] = useState<FriendsTab>(initialTab);
-  const [selectedSuggestionUserId, setSelectedSuggestionUserId] = useState<string | null>(null);
   const [pendingRequests, setPendingRequests] = useState<Record<string, string>>({});
   const [hiddenSuggestionIds, setHiddenSuggestionIds] = useState<Set<string>>(() => new Set());
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -57,7 +62,6 @@ export const FriendsPage = () => {
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-    setSelectedSuggestionUserId(null);
   }, [activeTab]);
 
   const handleAcceptRequest = async (id: string) => {
@@ -99,6 +103,9 @@ export const FriendsPage = () => {
   };
 
   const visibleSuggestions = suggestions.filter((s) => !hiddenSuggestionIds.has(s.id));
+  const homeSuggestions = visibleSuggestions.slice(0, HOME_SUGGESTIONS_MAX);
+  const visibleHomeSuggestions = homeSuggestions.slice(0, visibleCount);
+  const hasMoreHomeSuggestions = visibleCount < homeSuggestions.length;
 
   const handleUnfriend = async (id: string) => {
     await friendService.deleteFriendship(id);
@@ -136,38 +143,12 @@ export const FriendsPage = () => {
       );
     }
 
-    if (activeTab === 'suggestions') {
-      const visible = visibleSuggestions.slice(0, visibleCount);
-      const hasMore = visibleCount < visibleSuggestions.length;
-      return (
-        <section>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Những người bạn có thể biết</h2>
-          {visibleSuggestions.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">Không có gợi ý nào.</p>
-          ) : (
-            <>
-              <div className={FRIEND_GRID_CLASS}>
-                {visible.map((friend) => (
-                  <FriendCard
-                    key={friend.id}
-                    friend={friend}
-                    onAddFriend={handleAddFriend}
-                    onCancelFriendRequest={handleCancelFriendRequest}
-                    pendingFriendshipId={pendingRequests[friend.userId]}
-                    onRemoveSuggestion={handleRemoveSuggestion}
-                    showRemove
-                  />
-                ))}
-              </div>
-              {hasMore && <div ref={sentinelCallbackRef} className="h-8" />}
-            </>
-          )}
-        </section>
-      );
-    }
-
     if (activeTab === 'birthdays') {
-      return <BirthdayTab />;
+      return (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <BirthdayPage />
+        </div>
+      );
     }
 
     if (activeTab === 'all-friends') {
@@ -229,19 +210,13 @@ export const FriendsPage = () => {
           </section>
         )}
 
-        {visibleSuggestions.length > 0 && (
+        {homeSuggestions.length > 0 && (
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Những người bạn có thể biết</h2>
-              <button
-                onClick={() => setActiveTab('suggestions')}
-                className="text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer"
-              >
-                Xem tất cả
-              </button>
-            </div>
+            <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-gray-100">
+              Những người bạn có thể biết
+            </h2>
             <div className={FRIEND_GRID_CLASS}>
-              {visibleSuggestions.slice(0, 4).map((friend) => (
+              {visibleHomeSuggestions.map((friend) => (
                 <FriendCard
                   key={friend.id}
                   friend={friend}
@@ -253,10 +228,11 @@ export const FriendsPage = () => {
                 />
               ))}
             </div>
+            {hasMoreHomeSuggestions && <div ref={sentinelCallbackRef} className="h-8" />}
           </section>
         )}
 
-        {friendRequests.length === 0 && visibleSuggestions.length === 0 && (
+        {friendRequests.length === 0 && homeSuggestions.length === 0 && (
           <div className="text-center py-16">
             <div className="text-gray-400 mb-4">
               <svg className="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,53 +247,22 @@ export const FriendsPage = () => {
     );
   };
 
-  // Suggestions tab uses a dedicated 2-panel layout
-  if (activeTab === 'suggestions') {
-    const selectedSuggestion = visibleSuggestions.find(
-      (s) => s.userId === selectedSuggestionUserId,
-    );
-    return (
-      <MainLayout>
-        <div className="mx-auto h-[calc(100vh-3.5rem)] max-w-[1920px] overflow-hidden">
-          <div className="flex h-full min-w-0">
-            <SuggestionsSidebar
-              suggestions={visibleSuggestions}
-              loading={loading}
-              selectedUserId={selectedSuggestionUserId}
-              pendingRequests={pendingRequests}
-              hiddenIds={hiddenSuggestionIds}
-              onSelect={setSelectedSuggestionUserId}
-              onAddFriend={handleAddFriend}
-              onCancelFriendRequest={handleCancelFriendRequest}
-              onRemove={handleRemoveSuggestion}
-              onBack={() => setActiveTab('home')}
-            />
-            <main className="flex min-h-0 min-w-0 flex-1 overflow-hidden bg-gray-100 dark:bg-background">
-              <ProfilePreviewPanel
-                userId={selectedSuggestionUserId}
-                isPending={selectedSuggestionUserId ? !!pendingRequests[selectedSuggestionUserId] : false}
-                isFriend={false}
-                mutualFriends={selectedSuggestion?.mutualFriends ?? 0}
-                onAddFriend={handleAddFriend}
-                onCancelFriendRequest={handleCancelFriendRequest}
-              />
-            </main>
-          </div>
-        </div>
-      </MainLayout>
-    );
-  }
-
   return (
     <MainLayout>
-      <div className="mx-auto max-w-[1920px]">
-        <div className="flex min-w-0">
+      <div className="mx-auto h-[calc(100vh-3.5rem)] max-w-[1920px] overflow-hidden">
+        <div className="flex h-full min-w-0">
           <FriendsLeftSidebar
             activeTab={activeTab}
             onTabChange={setActiveTab}
             requestCount={friendRequests.length}
           />
-          <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <main
+            className={`min-h-0 min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 ${
+              activeTab === 'birthdays'
+                ? 'flex flex-col overflow-hidden'
+                : 'overflow-y-auto sidebar-scrollbar'
+            }`}
+          >
             {renderContent()}
           </main>
         </div>

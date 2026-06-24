@@ -124,20 +124,20 @@ export default function LiveVideoPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <LiveOptionCard
-                icon={<Video className="w-10 h-10 text-green-600" />}
+                icon={<Video className="h-10 w-10 text-emerald-600 dark:text-emerald-400" />}
                 title="Phát trực tiếp"
                 description="Phát trực tiếp một mình hoặc cùng với người khác"
                 buttonText="Thiết lập phát trực tuyến"
-                buttonVariant="primary"
+                tone="emerald"
                 onClick={handleGoLive}
               />
 
               <LiveOptionCard
-                icon={<Calendar className="w-10 h-10 text-gray-600 dark:text-gray-400" />}
+                icon={<Calendar className="h-10 w-10 text-violet-600 dark:text-violet-400" />}
                 title="Tạo sự kiện phát trực tiếp"
                 description="Tạo trước một sự kiện để chia sẻ với đối tượng"
                 buttonText="Tạo sự kiện"
-                buttonVariant="secondary"
+                tone="violet"
                 onClick={handleCreateEvent}
               />
             </div>

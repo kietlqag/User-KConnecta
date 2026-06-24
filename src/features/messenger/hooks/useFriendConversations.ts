@@ -9,6 +9,7 @@ import {
   mapContentToConversationPreview,
 } from '../utils/conversationPreview';
 import type { Conversation } from '../types/messenger.types';
+import { isMessageForActiveChat } from '../utils/activeChatTracker';
 
 interface UseFriendConversationsResult {
   conversations: Conversation[];
@@ -95,8 +96,10 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
     loadInFlightRef.current = Promise.all([
       friendService.getFriends(currentUser.id),
       includeGroups ? chatService.getMyGroupConversations() : Promise.resolve([]),
+      chatService.getPrivatePeerConversations(),
     ])
-      .then(async ([friends, groups]) => {
+      .then(async ([friends, groups, privatePeers]) => {
+        const friendIds = new Set(friends.map((friend) => friend.userId));
         const summaries = await chatService.getConversationSummaries({
           peerUserIds: friends.map((friend) => friend.userId),
           conversationIds: groups.map((group) => group.id),
@@ -129,12 +132,8 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
               id: friend.friendshipId ?? friend.userId,
               user: {
                 id: friend.userId,
-                name: friend.fullName,
-                avatar:
-                  friend.avatarUrl ??
-                  `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(
-                    friend.fullName || 'User',
-                  )}`,
+                name: friend.fullName?.trim() || friend.username || 'Người dùng',
+                avatar: friend.avatarUrl?.trim() || '',
                 isOnline: false,
               },
               lastMessage:
@@ -147,6 +146,38 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
             } satisfies Conversation,
           };
         });
+
+        const strangerItems = privatePeers
+          .filter((peer) => peer.peerUserId && !friendIds.has(peer.peerUserId))
+          .map((peer) => {
+            const rawPreview = mapContentToConversationPreview(peer.lastMessageContent);
+            const isOwnLastMessage = Boolean(
+              peer.lastMessageSenderId && currentUser.id && peer.lastMessageSenderId === currentUser.id,
+            );
+            const unreadCount = Math.max(0, peer.unreadCount ?? 0);
+            const previewTimestamp = peer.lastMessageCreatedAt;
+            const sortAt = (parseBackendDate(previewTimestamp) ?? new Date(0)).getTime();
+
+            return {
+              sortAt: Number.isFinite(sortAt) ? sortAt : 0,
+              conversation: {
+                id: peer.peerUserId,
+                user: {
+                  id: peer.peerUserId,
+                  name: peer.peerName?.trim() || 'Người dùng',
+                  avatar: peer.peerAvatarUrl?.trim() || '',
+                  isOnline: false,
+                },
+                lastMessage:
+                  formatConversationPreview(rawPreview, isOwnLastMessage) || 'Bắt đầu cuộc trò chuyện',
+                timestamp: formatTimestamp(previewTimestamp),
+                lastActivityAt: Number.isFinite(sortAt) ? sortAt : 0,
+                isUnread: unreadCount > 0,
+                unreadCount,
+                isStranger: true,
+              } satisfies Conversation,
+            };
+          });
 
         const groupItems = groups.map((group) => {
           const summary = groupSummaryByConversation.get(group.id);
@@ -165,11 +196,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
               user: {
                 id: `group:${group.id}`,
                 name: group.name,
-                avatar:
-                  group.avatarUrl ||
-                  `https://ui-avatars.com/api/?background=2563eb&color=ffffff&bold=true&name=${encodeURIComponent(
-                    group.name || 'Group',
-                  )}`,
+                avatar: group.avatarUrl?.trim() || '',
                 isOnline: false,
               },
               lastMessage: formatConversationPreview(rawPreview, isOwnLastMessage) || 'Chưa có tin nhắn',
@@ -184,7 +211,7 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
         });
 
         setConversations(
-          [...friendItems, ...groupItems]
+          [...friendItems, ...strangerItems, ...groupItems]
             .sort((first, second) => second.sortAt - first.sortAt)
             .map((item) => item.conversation),
         );
@@ -237,6 +264,16 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
         return;
       }
 
+      const incomingFromOther = msg.senderId !== currentUser.id;
+      const isViewingChat =
+        incomingFromOther &&
+        isMessageForActiveChat({
+          senderId: msg.senderId,
+          receiverId: msg.receiverId,
+          conversationId: msg.conversationId,
+          currentUserId: currentUser.id,
+        });
+
       setConversations((prev) => {
         const index = prev.findIndex((item) => item.user.id === chatUserId);
         if (index === -1) {
@@ -249,9 +286,10 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
           lastMessage: preview,
           timestamp: 'Vừa xong',
           lastActivityAt: Date.now(),
-          isUnread: msg.senderId !== currentUser.id,
-          unreadCount:
-            msg.senderId !== currentUser.id
+          isUnread: incomingFromOther && !isViewingChat,
+          unreadCount: isViewingChat
+            ? 0
+            : incomingFromOther
               ? Math.max(1, next[index].unreadCount ?? 0)
               : next[index].unreadCount,
         };

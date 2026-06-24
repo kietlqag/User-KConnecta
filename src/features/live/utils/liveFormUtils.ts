@@ -18,6 +18,25 @@ export const isScheduledSessionDue = (scheduledAt: string | null | undefined) =>
   return parsed.getTime() <= Date.now();
 };
 
+/** SCHEDULED but host never started — older than grace window. */
+export const isScheduledSessionStale = (
+  scheduledAt: string | null | undefined,
+  staleAfterMs = 7 * 24 * 60 * 60 * 1000,
+) => {
+  if (!scheduledAt) return false;
+  const parsed = new Date(scheduledAt);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return Date.now() - parsed.getTime() > staleAfterMs;
+};
+
+export const shouldShowGroupEvent = (session: {
+  status: string;
+  scheduledAt?: string | null;
+}) => {
+  if (session.status !== 'SCHEDULED') return true;
+  return !isScheduledSessionStale(session.scheduledAt);
+};
+
 export const formatScheduledDisplayFromIso = (value: string | null | undefined) => {
   if (!value) return '';
   const parsed = new Date(value);

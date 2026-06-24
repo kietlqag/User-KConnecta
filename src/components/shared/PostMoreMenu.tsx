@@ -153,7 +153,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               onClick={isPinned ? onUnpin : onPin}
             >
               <div className="mt-1">
-                <Pin className={`w-6 h-6 ${isPinned ? 'text-blue-600 fill-blue-600' : 'text-gray-900 dark:text-gray-100'}`} />
+                <Pin className={`w-6 h-6 ${isPinned ? 'text-emerald-600 fill-emerald-600' : 'text-gray-900 dark:text-gray-100'}`} />
               </div>
               <div className="flex flex-col">
                 <span className="font-semibold text-[15px]">{isPinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'}</span>
@@ -190,7 +190,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
           onClick={onToggleSave}
         >
           <div className="mt-1">
-            <Bookmark className={`w-6 h-6 ${isSaved ? 'text-blue-600 fill-blue-600' : 'text-gray-900 dark:text-gray-100 fill-gray-900'}`} />
+            <Bookmark className={`w-6 h-6 ${isSaved ? 'text-emerald-600 fill-emerald-600' : 'text-gray-900 dark:text-gray-100 fill-gray-900'}`} />
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-[15px]">{isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết'}</span>
@@ -250,7 +250,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
                       <p className="text-[12px] text-gray-500 dark:text-gray-400">{opt.desc}</p>
                     </div>
                     {privacy === opt.value && (
-                      <Check className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                     )}
                   </DropdownMenuItem>
                 ))}

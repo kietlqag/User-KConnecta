@@ -58,7 +58,7 @@ function extractCandidateType(candidate?: string | null) {
 }
 
 function participantAvatar(name: string, avatar?: string) {
-  return avatar?.trim() || `https://ui-avatars.com/api/?background=random&name=${encodeURIComponent(name || 'User')}`;
+  return avatar?.trim() || '';
 }
 
 function uniqueParticipants(participants: GroupCallParticipantSignal[]) {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, X, Check } from 'lucide-react';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { useFriends } from '@/features/friends/hooks/useFriends';
 import { authService } from '@/services/authService';
 import { useInviteFriends } from '@/features/groups/hooks/useGroups';
@@ -93,7 +94,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
                   placeholder="Tìm bạn bè theo tên"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 rounded-full text-[15px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 rounded-full text-[15px] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                 />
               </div>
             </div>
@@ -115,15 +116,17 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
                       onClick={() => toggleUserSelection(friend.userId)}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group"
                     >
-                      <img 
-                        src={friend.avatar} 
-                        alt={friend.name}
-                        className="w-9 h-9 rounded-full object-cover"
+                      <UserAvatar
+                        name={friend.name}
+                        avatarUrl={friend.avatar}
+                        userId={friend.userId}
+                        rounded="full"
+                        className="w-9 h-9 shrink-0"
                       />
                       <span className="flex-1 text-[15px] font-medium text-gray-900 dark:text-gray-100">{friend.name}</span>
                       <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${
                         selectedUserIds.includes(friend.userId)
-                          ? 'bg-blue-600 border-blue-600'
+                          ? 'bg-emerald-600 border-emerald-600'
                           : 'border-gray-300 dark:border-gray-700 group-hover:border-gray-400'
                       }`}>
                         {selectedUserIds.includes(friend.userId) && (
@@ -140,7 +143,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
           {/* Right Side: Selection Summary */}
           <div className="w-[40%] bg-gray-50 dark:bg-gray-900/50 flex flex-col">
             <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800">
-              <span className="text-[13px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">
                 Đã chọn {selectedUserIds.length} người bạn
               </span>
             </div>
@@ -148,10 +151,12 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {selectedFriends.map((friend) => (
                 <div key={friend.userId} className="flex items-center gap-3">
-                  <img 
-                    src={friend.avatar} 
-                    alt={friend.name}
-                    className="w-8 h-8 rounded-full object-cover"
+                  <UserAvatar
+                    name={friend.name}
+                    avatarUrl={friend.avatar}
+                    userId={friend.userId}
+                    rounded="full"
+                    className="w-8 h-8 shrink-0"
                   />
                   <span className="flex-1 text-[14px] font-medium text-gray-900 dark:text-gray-100 truncate">{friend.name}</span>
                   <button 
@@ -175,14 +180,14 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({
         <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3 bg-white dark:bg-gray-800">
           <button 
             onClick={onClose}
-            className="px-6 py-2 rounded-lg font-semibold text-blue-600 hover:bg-blue-50 transition-colors text-[15px]"
+            className="px-6 py-2 rounded-lg font-semibold text-emerald-600 hover:bg-emerald-50 transition-colors text-[15px]"
           >
             Hủy
           </button>
           <button 
             disabled={selectedUserIds.length === 0 || inviteMutation.isPending}
             onClick={handleInvite}
-            className="px-8 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:bg-gray-700 disabled:text-gray-400 text-white rounded-lg font-semibold transition-all text-[15px] shadow-sm dark:shadow-none flex items-center gap-2"
+            className="px-8 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-200 dark:bg-gray-700 disabled:text-gray-400 text-white rounded-lg font-semibold transition-all text-[15px] shadow-sm dark:shadow-none flex items-center gap-2"
           >
             {inviteMutation.isPending && (
               <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

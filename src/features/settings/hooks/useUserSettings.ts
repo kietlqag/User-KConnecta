@@ -13,6 +13,7 @@ import { DEFAULT_USER_SETTINGS } from '../types/userSettings.types';
 import { userSettingsApi } from '../services/userSettingsApi';
 
 import { applyAppLanguage } from '@/i18n';
+import { setNotifyMessagesEnabled } from '@/features/messenger/utils/messageNotificationPrefs';
 
 
 
@@ -59,6 +60,7 @@ export function useUserSettings() {
       }
 
       applyAppLanguage(data.language);
+      setNotifyMessagesEnabled(data.notifyMessages);
 
     } catch (error) {
 
@@ -112,13 +114,9 @@ export function useUserSettings() {
 
         profileVisibility: settings.profileVisibility,
 
-        postsVisibility: settings.postsVisibility,
-
         notifyPosts: settings.notifyPosts,
 
         notifyMessages: settings.notifyMessages,
-
-        notifyEmail: settings.notifyEmail,
 
         theme: settings.theme,
 
@@ -133,6 +131,7 @@ export function useUserSettings() {
       setTheme(data.theme);
 
       applyAppLanguage(data.language);
+      setNotifyMessagesEnabled(data.notifyMessages);
 
       toast.success(i18n.t('common.saved'));
 

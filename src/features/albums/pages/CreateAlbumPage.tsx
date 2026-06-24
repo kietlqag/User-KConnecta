@@ -88,7 +88,7 @@ export function CreateAlbumPage() {
   return (
     <MainLayout>
       <div className="relative -mt-14 bg-[#F8FAFC] pt-14 dark:bg-gray-950">
-        <div className="pointer-events-none absolute -left-24 top-28 h-72 w-72 rounded-full bg-blue-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-24 top-28 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
         <div className="pointer-events-none absolute right-0 top-48 h-80 w-80 rounded-full bg-violet-400/15 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-emerald-400/10 blur-3xl" />
 
@@ -142,7 +142,7 @@ export function CreateAlbumPage() {
                       </span>
                     )}
                     {groupId && (
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
                         <Users className="h-3.5 w-3.5" />
                         Album nhóm
                       </span>
@@ -226,13 +226,13 @@ export function CreateAlbumPage() {
                               onClick={() => setPrivacy(option.value)}
                               className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
                                 active
-                                  ? 'border-blue-500 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/40'
+                                  ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40'
                                   : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800'
                               }`}
                             >
                               <div
                                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                                  active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                                  active ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
                                 }`}
                               >
                                 <Icon className="h-4 w-4" />
@@ -241,7 +241,7 @@ export function CreateAlbumPage() {
                                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400">{option.hint}</p>
                               </div>
-                              {active && <Check className="h-4 w-4 shrink-0 text-blue-600" />}
+                              {active && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
                             </button>
                           );
                         })}
@@ -251,7 +251,7 @@ export function CreateAlbumPage() {
                 )}
 
                 {groupId && (
-                  <p className="rounded-[10px] border border-dashed border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm leading-relaxed text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200">
+                  <p className="rounded-[10px] border border-dashed border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm leading-relaxed text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
                     Album này thuộc nhóm — thành viên đã duyệt có thể xem và đóng góp ảnh.
                   </p>
                 )}

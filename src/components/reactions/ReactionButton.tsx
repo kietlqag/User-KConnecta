@@ -12,7 +12,7 @@ export interface ReactionOption {
 const CDN = 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg';
 
 export const reactions: ReactionOption[] = [
-  { type: 'LIKE',  emoji: `${CDN}/1f44d.svg`,   label: 'Thích',     color: 'text-blue-500'   },
+  { type: 'LIKE',  emoji: `${CDN}/1f44d.svg`,   label: 'Thích',     color: 'text-emerald-500'   },
   { type: 'LOVE',  emoji: `${CDN}/2764.svg`,     label: 'Yêu thích', color: 'text-red-500'    },
   { type: 'HAHA',  emoji: `${CDN}/1f606.svg`,    label: 'Haha',      color: 'text-yellow-500' },
   { type: 'WOW',   emoji: `${CDN}/1f62e.svg`,    label: 'Wow',       color: 'text-yellow-500' },

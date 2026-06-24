@@ -128,6 +128,16 @@ export interface ConversationSummaryResponse {
   unreadCount?: number;
 }
 
+export interface PrivatePeerConversationResponse {
+  peerUserId: string;
+  peerName: string;
+  peerAvatarUrl?: string | null;
+  lastMessageContent?: string | null;
+  lastMessageSenderId?: string | null;
+  lastMessageCreatedAt?: string | null;
+  unreadCount?: number;
+}
+
 export interface PinnedMessageResponse {
   id?: string | null;
   peerUserId?: string | null;
@@ -321,6 +331,9 @@ export const chatService = {
     const url = query ? `/chat/conversations/summaries?${query}` : '/chat/conversations/summaries';
     return api.get<ConversationSummaryResponse[]>(url);
   },
+
+  getPrivatePeerConversations: () =>
+    api.get<PrivatePeerConversationResponse[]>('/chat/conversations/private-peers'),
 
   setPinnedMessage: (payload: {
     peerUserId?: string;

@@ -22,7 +22,7 @@ type StoryEditorTool = 'text' | 'music' | 'alt-text' | 'image' | 'background' | 
 const COLOR_FILTERS = [
   { id: 'none',     label: 'Gốc',      style: '' },
   { id: 'warm',     label: 'Ấm',       style: 'bg-orange-400/30' },
-  { id: 'cool',     label: 'Lạnh',     style: 'bg-blue-400/30' },
+  { id: 'cool',     label: 'Lạnh',     style: 'bg-emerald-400/30' },
   { id: 'vintage',  label: 'Vintage',  style: 'bg-yellow-700/25 mix-blend-multiply' },
   { id: 'dark',     label: 'Tối',      style: 'bg-black/35' },
   { id: 'pink',     label: 'Hồng',     style: 'bg-pink-400/30' },
@@ -639,7 +639,7 @@ export function CreateStoryPage() {
                 className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 transition hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-colors ${
-                  privacySetting === 'public' ? 'bg-blue-500' :
+                  privacySetting === 'public' ? 'bg-emerald-500' :
                   privacySetting === 'only_me' ? 'bg-gray-400' : 'bg-green-500'
                 }`}>
                   {privacySetting === 'public' && <Globe className="h-4 w-4" />}
@@ -660,7 +660,7 @@ export function CreateStoryPage() {
               {isPrivacyDropdownOpen && (
                 <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
                   {([
-                    { value: 'public' as const, label: 'Công khai', sub: 'Tất cả mọi người', icon: <Globe className="h-4 w-4" />, color: 'bg-blue-500' },
+                    { value: 'public' as const, label: 'Công khai', sub: 'Tất cả mọi người', icon: <Globe className="h-4 w-4" />, color: 'bg-emerald-500' },
                     { value: 'friends' as const, label: 'Bạn bè', sub: 'Chọn bạn bè cụ thể', icon: <Users className="h-4 w-4" />, color: 'bg-green-500' },
                     { value: 'only_me' as const, label: 'Chỉ mình tôi', sub: 'Không hiển thị trên bảng tin', icon: <Lock className="h-4 w-4" />, color: 'bg-gray-400' },
                   ]).map((opt) => (
@@ -693,7 +693,7 @@ export function CreateStoryPage() {
                       </div>
                       {(opt.value === 'friends'
                         ? privacySetting === 'friends' || privacySetting === 'specific-friends'
-                        : privacySetting === opt.value) && <Check className="h-4 w-4 text-blue-500" />}
+                        : privacySetting === opt.value) && <Check className="h-4 w-4 text-emerald-500" />}
                     </button>
                   ))}
                 </div>
@@ -743,7 +743,7 @@ export function CreateStoryPage() {
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{option.label}</p>
                         <p className="text-xs text-gray-400">{option.sub}</p>
                       </div>
-                      {storyDurationHours === option.value && <Check className="h-4 w-4 text-blue-500" />}
+                      {storyDurationHours === option.value && <Check className="h-4 w-4 text-emerald-500" />}
                     </button>
                   ))}
                 </div>
@@ -824,7 +824,7 @@ export function CreateStoryPage() {
                   value={altText}
                   onChange={(event) => setAltText(event.target.value)}
                   placeholder="Văn bản thay thế tùy chỉnh"
-                  className="h-24 w-full resize-none rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                  className="h-24 w-full resize-none rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm outline-none focus:border-emerald-500"
                 />
               </div>
             )}
@@ -866,13 +866,13 @@ export function CreateStoryPage() {
                       key={f.id}
                       type="button"
                       onClick={() => setColorFilter(f.id)}
-                      className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition hover:bg-muted ${colorFilter === f.id ? 'ring-2 ring-blue-500' : ''}`}
+                      className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition hover:bg-muted ${colorFilter === f.id ? 'ring-2 ring-emerald-500' : ''}`}
                     >
                       <div className="relative h-12 w-full overflow-hidden rounded-md bg-gray-200 dark:bg-gray-700">
                         <img src={selectedImageUrl ?? ''} alt="" className="h-full w-full object-cover" />
                         {f.style && <div className={`absolute inset-0 ${f.style}`} />}
                         {colorFilter === f.id && (
-                          <div className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500">
+                          <div className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500">
                             <Check className="h-2.5 w-2.5 text-white" />
                           </div>
                         )}
@@ -896,7 +896,7 @@ export function CreateStoryPage() {
                       setImageScale(100);
                       lastScaleRef.current = 100;
                     }}
-                    className="text-xs font-medium text-blue-600 hover:text-blue-700 cursor-pointer transition underline"
+                    className="text-xs font-medium text-emerald-600 hover:text-emerald-700 cursor-pointer transition underline"
                   >
                      Khôi phục mặc định
                   </button>
@@ -916,7 +916,7 @@ export function CreateStoryPage() {
                         type="button"
                         onClick={() => setTextColor(color)}
                         className={`h-6 w-6 cursor-pointer rounded-full border-2 transition ${
-                          textColor === color ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'
+                          textColor === color ? 'border-emerald-500' : 'border-gray-200 dark:border-gray-700'
                         }`}
                         style={{ backgroundColor: color }}
                         aria-label={`Chọn màu chữ ${color}`}
@@ -941,7 +941,7 @@ export function CreateStoryPage() {
                           type="button"
                           onClick={() => setSelectedBg({ type: 'image', value: src })}
                           className={`h-14 w-full cursor-pointer rounded-lg border-2 overflow-hidden transition-transform hover:scale-105 ${
-                            isSelected ? 'border-blue-500 shadow-md' : 'border-transparent'
+                            isSelected ? 'border-emerald-500 shadow-md' : 'border-transparent'
                           }`}
                           aria-label="Chọn ảnh nền"
                         >
@@ -965,7 +965,7 @@ export function CreateStoryPage() {
                           type="button"
                           onClick={() => setSelectedBg({ type: preset.type, value: preset.value })}
                           className={`h-14 w-full cursor-pointer rounded-lg border-2 transition-transform hover:scale-105 ${
-                            isSelected ? 'border-blue-500 shadow-md' : 'border-transparent'
+                            isSelected ? 'border-emerald-500 shadow-md' : 'border-transparent'
                           }`}
                           style={swatchStyle}
                           aria-label={`Chọn phông nền ${preset.id}`}
@@ -992,7 +992,7 @@ export function CreateStoryPage() {
                 type="button"
                 onClick={handleSubmitStory}
                 disabled={createStory.isPending}
-                className="flex-1 cursor-pointer rounded-md bg-blue-600 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 cursor-pointer rounded-md bg-emerald-600 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {createStory.isPending ? 'Đang đăng...' : 'Chia sẻ lên tin'}
               </button>
@@ -1175,7 +1175,7 @@ export function CreateStoryPage() {
                           </button>
                           <div
                             role="presentation"
-                            className="absolute -left-2 -top-2 h-3.5 w-3.5 cursor-pointer rounded-full border border-white bg-blue-500 shadow cursor-nwse-resize"
+                            className="absolute -left-2 -top-2 h-3.5 w-3.5 cursor-pointer rounded-full border border-white bg-emerald-500 shadow cursor-nwse-resize"
                             onPointerDown={handleResizePointerDown}
                             onPointerMove={handleResizePointerMove}
                             onPointerUp={handleResizePointerUp}
@@ -1183,7 +1183,7 @@ export function CreateStoryPage() {
                           />
                           <div
                             role="presentation"
-                            className="absolute -right-2 -top-2 h-3.5 w-3.5 cursor-pointer rounded-full border border-white bg-blue-500 shadow cursor-nesw-resize"
+                            className="absolute -right-2 -top-2 h-3.5 w-3.5 cursor-pointer rounded-full border border-white bg-emerald-500 shadow cursor-nesw-resize"
                             onPointerDown={handleResizePointerDown}
                             onPointerMove={handleResizePointerMove}
                             onPointerUp={handleResizePointerUp}
@@ -1191,7 +1191,7 @@ export function CreateStoryPage() {
                           />
                           <div
                             role="presentation"
-                            className="absolute -left-2 -bottom-2 h-3.5 w-3.5 cursor-pointer rounded-full border border-white bg-blue-500 shadow cursor-nesw-resize"
+                            className="absolute -left-2 -bottom-2 h-3.5 w-3.5 cursor-pointer rounded-full border border-white bg-emerald-500 shadow cursor-nesw-resize"
                             onPointerDown={handleResizePointerDown}
                             onPointerMove={handleResizePointerMove}
                             onPointerUp={handleResizePointerUp}
@@ -1199,7 +1199,7 @@ export function CreateStoryPage() {
                           />
                           <div
                             role="presentation"
-                            className="absolute -right-2 -bottom-2 h-3.5 w-3.5 cursor-pointer rounded-full border border-white bg-blue-500 shadow cursor-nwse-resize"
+                            className="absolute -right-2 -bottom-2 h-3.5 w-3.5 cursor-pointer rounded-full border border-white bg-emerald-500 shadow cursor-nwse-resize"
                             onPointerDown={handleResizePointerDown}
                             onPointerMove={handleResizePointerMove}
                             onPointerUp={handleResizePointerUp}
@@ -1220,7 +1220,7 @@ export function CreateStoryPage() {
                       max={400}
                       value={imageScale}
                       onChange={(event) => setImageScale(Number(event.target.value))}
-                      className="flex-1 accent-blue-500 h-1 rounded-lg cursor-pointer"
+                      className="flex-1 accent-emerald-500 h-1 rounded-lg cursor-pointer"
                     />
                     <span className="text-xs font-mono font-bold text-white w-10 text-right">{imageScale}%</span>
                   </div>
@@ -1237,7 +1237,7 @@ export function CreateStoryPage() {
                       onChange={(event) => setTextSize(Number(event.target.value))}
                       aria-label="Chỉnh kích thước văn bản"
                       title="Chỉnh kích thước văn bản"
-                      className="flex-1 accent-blue-500 h-1 rounded-lg cursor-pointer"
+                      className="flex-1 accent-emerald-500 h-1 rounded-lg cursor-pointer"
                     />
                     <span className="text-xs font-mono font-bold text-white w-10 text-right">{textSize}px</span>
                   </div>
@@ -1263,7 +1263,7 @@ export function CreateStoryPage() {
                             type="button"
                             onClick={() => setSelectedTrackId(track.id)}
                             className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left transition ${
-                              isSelected ? 'bg-blue-50' : 'hover:bg-muted'
+                              isSelected ? 'bg-emerald-50' : 'hover:bg-muted'
                             }`}
                           >
                             <div className="h-8 w-8 rounded bg-gray-200 dark:bg-gray-700" />
@@ -1271,7 +1271,7 @@ export function CreateStoryPage() {
                               <p className="truncate text-xs font-medium text-gray-900 dark:text-gray-100">{track.title}</p>
                               <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{track.artist}</p>
                             </div>
-                            {isSelected && <Check className="h-4 w-4 text-blue-600" />}
+                            {isSelected && <Check className="h-4 w-4 text-emerald-600" />}
                           </button>
                         );
                       })}
@@ -1282,7 +1282,7 @@ export function CreateStoryPage() {
 
               <div className="mt-3 space-y-3">
                 {selectedTrack && (
-                  <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
                     Nhạc đã chọn: <span className="font-semibold">{selectedTrack.title}</span> - {selectedTrack.artist}
                   </div>
                 )}
@@ -1340,8 +1340,8 @@ export function CreateStoryPage() {
                     <p className="font-bold text-gray-900 dark:text-gray-100">Công khai</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Bất kỳ ai trên KConnecta</p>
                   </div>
-                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'public' ? 'border-blue-600' : 'border-gray-300 dark:border-gray-700'}`}>
-                    {privacySetting === 'public' && <div className="h-3 w-3 rounded-full bg-blue-600" />}
+                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'public' ? 'border-emerald-600' : 'border-gray-300 dark:border-gray-700'}`}>
+                    {privacySetting === 'public' && <div className="h-3 w-3 rounded-full bg-emerald-600" />}
                   </div>
                 </button>
 
@@ -1358,8 +1358,8 @@ export function CreateStoryPage() {
                     <p className="font-bold text-gray-900 dark:text-gray-100">Bạn bè</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Chỉ bạn bè của bạn trên KConnecta</p>
                   </div>
-                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'friends' ? 'border-blue-600' : 'border-gray-300 dark:border-gray-700'}`}>
-                    {privacySetting === 'friends' && <div className="h-3 w-3 rounded-full bg-blue-600" />}
+                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'friends' ? 'border-emerald-600' : 'border-gray-300 dark:border-gray-700'}`}>
+                    {privacySetting === 'friends' && <div className="h-3 w-3 rounded-full bg-emerald-600" />}
                   </div>
                 </button>
 
@@ -1376,8 +1376,8 @@ export function CreateStoryPage() {
                     <p className="font-bold text-gray-900 dark:text-gray-100">Tùy chỉnh</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Chọn đối tượng cho tin của bạn</p>
                   </div>
-                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'custom' ? 'border-blue-600' : 'border-gray-300 dark:border-gray-700'}`}>
-                    {privacySetting === 'custom' && <div className="h-3 w-3 rounded-full bg-blue-600" />}
+                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'custom' ? 'border-emerald-600' : 'border-gray-300 dark:border-gray-700'}`}>
+                    {privacySetting === 'custom' && <div className="h-3 w-3 rounded-full bg-emerald-600" />}
                   </div>
                 </button>
               </div>
@@ -1402,13 +1402,13 @@ export function CreateStoryPage() {
             <div className="flex justify-end gap-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-4">
               <button
                 onClick={() => setIsPrivacyModalOpen(false)}
-                className="px-6 py-2 text-sm font-bold text-blue-600 transition hover:bg-blue-50 rounded-md"
+                className="px-6 py-2 text-sm font-bold text-emerald-600 transition hover:bg-emerald-50 rounded-md"
               >
                 Hủy
               </button>
               <button
                 onClick={() => setIsPrivacyModalOpen(false)}
-                className="rounded-md bg-blue-600 px-8 py-2 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md"
+                className="rounded-md bg-emerald-600 px-8 py-2 text-sm font-bold text-white transition hover:bg-emerald-700 shadow-md"
               >
                 Lưu
               </button>
@@ -1450,7 +1450,7 @@ export function CreateStoryPage() {
             <div className="flex justify-end items-center gap-6 px-4 py-4">
               <button
                 onClick={() => setIsDiscardModalOpen(false)}
-                className="text-sm font-bold text-blue-600 transition hover:underline"
+                className="text-sm font-bold text-emerald-600 transition hover:underline"
               >
                 Tiếp tục chỉnh sửa
               </button>
@@ -1459,7 +1459,7 @@ export function CreateStoryPage() {
                   handleRemoveSelectedImage();
                   navigate(-1);
                 }}
-                className="rounded-lg bg-blue-600 px-10 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 shadow-md"
+                className="rounded-lg bg-emerald-600 px-10 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 shadow-md"
               >
                 Bỏ
               </button>

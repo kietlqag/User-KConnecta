@@ -1,5 +1,6 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MoreHorizontal, Pin, PinOff } from 'lucide-react';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { Conversation } from '../../types/messenger.types';
 
 interface ConversationItemProps {
@@ -35,16 +36,19 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
         className="w-full min-w-0 overflow-hidden px-2 py-2 pr-10 flex items-center gap-3 hover:bg-muted rounded-lg transition-colors cursor-pointer"
       >
         <div className="relative flex-shrink-0">
-          <img
-            src={conversation.user.avatar}
-            alt={conversation.user.name}
-            className="w-14 h-14 rounded-full object-cover"
+          <UserAvatar
+            name={conversation.user.name}
+            avatarUrl={conversation.user.avatar}
+            userId={conversation.user.id}
+            variant={conversation.isGroup ? 'group' : 'user'}
+            rounded="full"
+            className="w-14 h-14"
           />
           {conversation.user.isOnline && (
             <div className="absolute bottom-1 right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
           )}
           {conversation.isUnread && (
-            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-blue-500 border-2 border-white rounded-full" />
+            <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" />
           )}
         </div>
 
@@ -61,7 +65,7 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
         </div>
 
         {conversation.isUnread && (
-          <div className="flex-shrink-0 w-3 h-3 bg-blue-500 rounded-full" />
+          <div className="flex-shrink-0 w-3 h-3 bg-emerald-500 rounded-full" />
         )}
       </button>
 
@@ -99,5 +103,3 @@ export const ConversationItem = ({ conversation, onClick, isPinned = false, onTo
     </div>
   );
 };
-
-
