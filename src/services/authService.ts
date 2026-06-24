@@ -287,6 +287,7 @@ export const authService = {
     } finally {
       localStorage.removeItem(AUTH_USER_KEY);
       sessionStorage.removeItem(AUTH_USER_KEY);
+      window.google?.accounts?.id?.disableAutoSelect?.();
       notifyAuthUserChanged();
     }
   },

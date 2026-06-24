@@ -6,6 +6,9 @@ declare global {
           initialize: (options: {
             client_id: string;
             callback: (response: { credential?: string }) => void;
+            auto_select?: boolean;
+            cancel_on_tap_outside?: boolean;
+            context?: 'signin' | 'signup' | 'use';
           }) => void;
           renderButton: (
             parent: HTMLElement,
@@ -17,8 +20,11 @@ declare global {
               size?: 'large' | 'medium' | 'small';
               width?: number | string;
               logo_alignment?: 'left' | 'center';
+              locale?: string;
             }
           ) => void;
+          disableAutoSelect: () => void;
+          cancel: () => void;
         };
       };
     };

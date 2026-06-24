@@ -286,8 +286,12 @@ export function LoginPage() {
       if (cancelled || !window.google?.accounts.id || !googleButtonRef.current) return;
 
       googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.disableAutoSelect();
       window.google.accounts.id.initialize({
         client_id: clientId,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        context: "signin",
         callback: async ({ credential }) => {
           if (authLockRef.current) return;
           if (!credential) {
@@ -344,7 +348,7 @@ export function LoginPage() {
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         type: "standard",
         theme: "outline",
-        text: "continue_with",
+        text: "signin_with",
         shape: "pill",
         size: "large",
         width: Math.min(380, googleButtonRef.current.offsetWidth || 380),
@@ -373,9 +377,10 @@ export function LoginPage() {
 
     return () => {
       cancelled = true;
+      window.google?.accounts.id?.cancel?.();
       if (script) script.removeEventListener("load", renderGoogleButton);
     };
-  }, [formData.rememberMe, navigate, redirectTo, resetGoogleAuth, i18n.language]);
+  }, [navigate, redirectTo, resetGoogleAuth, i18n.language]);
 
   useEffect(() => {
     const prevHtmlOverflow = document.documentElement.style.overflow;
