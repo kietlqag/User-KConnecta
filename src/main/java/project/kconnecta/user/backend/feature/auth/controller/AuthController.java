@@ -107,7 +107,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request,
             HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(authService.googleLogin(request.getIdToken(), httpRequest));
+        return ResponseEntity.ok(authService.googleLogin(request, httpRequest));
     }
 
     @PostMapping("/google-complete-register")

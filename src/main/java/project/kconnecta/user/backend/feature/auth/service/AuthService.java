@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.feature.auth.service;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,7 @@ import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogT
 import project.kconnecta.user.backend.feature.activity.service.ActivityLogService;
 import project.kconnecta.user.backend.feature.auth.dto.request.ChangePasswordRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.GoogleCompleteRegisterRequest;
+import project.kconnecta.user.backend.feature.auth.dto.request.GoogleLoginRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.LoginRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.RegisterRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.ResendTwoFactorLoginRequest;
@@ -219,14 +221,15 @@ public class AuthService {
         tokenBlacklistService.blacklistToken(token);
     }
 
-    public AuthResponse googleLogin(String idToken, HttpServletRequest httpRequest) {
-        GoogleTokenInfo tokenInfo = verifyGoogleTokenAndAudience(idToken);
+    public AuthResponse googleLogin(GoogleLoginRequest request, HttpServletRequest httpRequest) {
+        GoogleTokenInfo tokenInfo = resolveGoogleTokenInfo(request.getIdToken(), request.getAccessToken());
 
         User user = userRepository.findByAccountEmail(tokenInfo.email()).orElse(null);
         if (user == null) {
             ensureGoogleAccountExists(tokenInfo);
             return AuthResponse.builder()
                     .email(tokenInfo.email())
+                    .fullName(tokenInfo.name())
                     .hasPassword(false)
                     .requiresProfileSetup(true)
                     .build();
@@ -260,7 +263,7 @@ public class AuthService {
     }
 
     public AuthResponse googleCompleteRegister(GoogleCompleteRegisterRequest request, HttpServletRequest httpRequest) {
-        GoogleTokenInfo tokenInfo = verifyGoogleTokenAndAudience(request.getIdToken());
+        GoogleTokenInfo tokenInfo = resolveGoogleTokenInfo(request.getIdToken(), request.getAccessToken());
 
         if (userRepository.findByAccountEmail(tokenInfo.email()).isPresent()) {
             throw new DuplicateResourceException("Email da duoc su dung");
@@ -362,6 +365,116 @@ public class AuthService {
             Thread.currentThread().interrupt();
             throw new ValidationException("Khong xac minh duoc Google token");
         }
+    }
+
+    private GoogleTokenInfo resolveGoogleTokenInfo(String idToken, String accessToken) {
+        boolean hasIdToken = idToken != null && !idToken.isBlank();
+        boolean hasAccessToken = accessToken != null && !accessToken.isBlank();
+
+        if (hasIdToken && hasAccessToken) {
+            throw new ValidationException("Chi gui idToken hoac accessToken");
+        }
+        if (hasIdToken) {
+            return verifyGoogleTokenAndAudience(idToken);
+        }
+        if (hasAccessToken) {
+            return verifyGoogleAccessTokenAndAudience(accessToken);
+        }
+        throw new ValidationException("Thieu thong tin xac thuc Google");
+    }
+
+    private GoogleTokenInfo verifyGoogleAccessTokenAndAudience(String accessToken) {
+        if (googleClientId == null || googleClientId.isBlank()) {
+            throw new ValidationException("GOOGLE_CLIENT_ID chua duoc cau hinh o backend");
+        }
+
+        try {
+            String encodedToken = URLEncoder.encode(accessToken, StandardCharsets.UTF_8);
+            HttpRequest tokenRequest = HttpRequest.newBuilder()
+                    .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?access_token=" + encodedToken))
+                    .timeout(Duration.ofSeconds(15))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> tokenResponse = GOOGLE_HTTP_CLIENT
+                    .send(tokenRequest, HttpResponse.BodyHandlers.ofString());
+
+            if (tokenResponse.statusCode() != 200) {
+                throw new ValidationException("Khong xac minh duoc Google token");
+            }
+
+            JsonNode tokenNode = objectMapper.readTree(tokenResponse.body());
+            String audience = readGoogleAudience(tokenNode);
+            if (!googleClientId.equals(audience)) {
+                throw new ValidationException("Google token khong hop le cho ung dung nay");
+            }
+
+            String email = readText(tokenNode, "email");
+            if (!isEmailVerified(tokenNode)) {
+                throw new ValidationException("Email Google chua duoc xac minh");
+            }
+
+            HttpRequest userInfoRequest = HttpRequest.newBuilder()
+                    .uri(URI.create("https://www.googleapis.com/oauth2/v3/userinfo"))
+                    .header("Authorization", "Bearer " + accessToken)
+                    .timeout(Duration.ofSeconds(15))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> userInfoResponse = GOOGLE_HTTP_CLIENT
+                    .send(userInfoRequest, HttpResponse.BodyHandlers.ofString());
+
+            if (userInfoResponse.statusCode() != 200) {
+                throw new ValidationException("Khong lay duoc thong tin Google");
+            }
+
+            JsonNode userNode = objectMapper.readTree(userInfoResponse.body());
+            if (email == null || email.isBlank()) {
+                email = readText(userNode, "email");
+            }
+            if (email == null || email.isBlank()) {
+                throw new ValidationException("Khong lay duoc email Google");
+            }
+
+            return new GoogleTokenInfo(
+                    email,
+                    true,
+                    audience,
+                    readText(userNode, "name"),
+                    readText(userNode, "picture")
+            );
+        } catch (IOException | InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new ValidationException("Khong xac minh duoc Google token");
+        }
+    }
+
+    private String readGoogleAudience(JsonNode node) {
+        String audience = readText(node, "aud");
+        if (audience != null && !audience.isBlank()) {
+            return audience;
+        }
+        return readText(node, "azp");
+    }
+
+    private String readText(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        if (value == null || value.isNull()) {
+            return null;
+        }
+        String text = value.asText();
+        return text == null || text.isBlank() ? null : text;
+    }
+
+    private boolean isEmailVerified(JsonNode node) {
+        JsonNode value = node.get("email_verified");
+        if (value == null || value.isNull()) {
+            return false;
+        }
+        if (value.isBoolean()) {
+            return value.booleanValue();
+        }
+        return "true".equalsIgnoreCase(value.asText());
     }
 
     private GoogleTokenInfo verifyGoogleTokenAndAudience(String idToken) {

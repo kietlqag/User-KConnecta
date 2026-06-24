@@ -9,8 +9,8 @@ import java.time.LocalDate;
 
 @Getter
 public class GoogleCompleteRegisterRequest {
-    @NotBlank
     private String idToken;
+    private String accessToken;
 
     @NotBlank
     private String fullName;
