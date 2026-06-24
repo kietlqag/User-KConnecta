@@ -12,7 +12,7 @@ import { useFriendsPageData } from '../hooks/useFriendsPageData';
 const PAGE_SIZE = 8;
 const HOME_SUGGESTIONS_MAX = 40;
 const FRIEND_GRID_CLASS =
-  'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5';
+  'grid grid-cols-2 items-start gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5';
 
 export const FriendsPage = () => {
   const [searchParams] = useSearchParams();
@@ -260,7 +260,7 @@ export const FriendsPage = () => {
             className={`min-h-0 min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 ${
               activeTab === 'birthdays'
                 ? 'flex flex-col overflow-hidden'
-                : 'overflow-y-auto sidebar-scrollbar'
+                : 'overflow-y-scroll overscroll-contain [scrollbar-gutter:stable] sidebar-scrollbar'
             }`}
           >
             {renderContent()}

@@ -39,6 +39,7 @@ export function useSavedWatchReels(currentUserId: string | undefined, enabled: b
   return {
     data: reels,
     isLoading,
+    isFetched: query.isFetched,
     isError: reels.length === 0 && !isLoading && query.isError,
     hasNextPage: false,
     isFetchingNextPage: false,

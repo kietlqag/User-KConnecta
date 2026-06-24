@@ -97,11 +97,7 @@ function groupByMonth(friends: BirthdayFriend[]): BirthdayMonthGroup[] {
     });
 
   return [...map.entries()]
-    .sort((a, b) => {
-      const aRel = a[0] > currentMonth ? a[0] - currentMonth : a[0] + 12 - currentMonth;
-      const bRel = b[0] > currentMonth ? b[0] - currentMonth : b[0] + 12 - currentMonth;
-      return aRel - bRel;
-    })
+    .sort((a, b) => a[0] - b[0])
     .map(([month, list]) => ({
       month,
       monthLabel: `Tháng ${month}`,

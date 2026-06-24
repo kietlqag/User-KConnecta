@@ -32,10 +32,12 @@ const WatchSidebar = ({
   activeTab,
   onTabChange,
   searchQuery,
+  showSavedTab,
 }: {
   activeTab: WatchTab;
   onTabChange: (tab: WatchTab) => void;
   searchQuery?: string | null;
+  showSavedTab: boolean;
 }) => (
   <aside className="hidden lg:flex fixed top-14 left-0 z-40 h-[calc(100vh-56px)] w-[320px] flex-col gap-1 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-4">
     <h1 className="px-3 pb-3 text-2xl font-bold text-gray-900 dark:text-white">Watch</h1>
@@ -58,14 +60,16 @@ const WatchSidebar = ({
           <Star className="h-6 w-6 shrink-0" />
           <span className="text-[15px] font-semibold">Dành cho bạn</span>
         </button>
-        <button
-          type="button"
-          onClick={() => onTabChange('saved')}
-          className={sidebarTabClass(activeTab === 'saved')}
-        >
-          <Bookmark className="h-6 w-6 shrink-0" />
-          <span className="text-[15px] font-semibold">Đã lưu</span>
-        </button>
+        {showSavedTab && (
+          <button
+            type="button"
+            onClick={() => onTabChange('saved')}
+            className={sidebarTabClass(activeTab === 'saved')}
+          >
+            <Bookmark className="h-6 w-6 shrink-0" />
+            <span className="text-[15px] font-semibold">Thước phim đã lưu</span>
+          </button>
+        )}
       </nav>
     )}
   </aside>
@@ -88,12 +92,34 @@ export const WatchPage = () => {
     return ids.length > 0 ? ids : null;
   }, [searchParams]);
   const isSearchWatchMode = fromSearch && !!searchQuery?.trim() && !!playlistIds?.length;
-  const isSavedWatchMode = !isSearchWatchMode && watchTab === 'saved';
+
+  const savedWatch = useSavedWatchReels(currentUser?.id ?? undefined, !!currentUser?.id);
+  const showSavedTab = Boolean(currentUser?.id);
+  const isSavedWatchMode = !isSearchWatchMode && watchTab === 'saved' && showSavedTab;
 
   const handleWatchTabChange = (tab: WatchTab) => {
+    if (tab === 'saved' && !showSavedTab) return;
     setWatchTab(tab);
     setCurrentReelIndex(0);
   };
+
+  useEffect(() => {
+    if (!showSavedTab && watchTab === 'saved') {
+      setWatchTab('forYou');
+      setCurrentReelIndex(0);
+    }
+  }, [showSavedTab, watchTab]);
+
+  useEffect(() => {
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     const syncAuth = () => {
@@ -110,7 +136,6 @@ export const WatchPage = () => {
 
   const watchFeed = useWatchFeed(currentUser?.id ?? undefined);
   const searchWatch = useSearchWatchReels(searchQuery, playlistIds, isSearchWatchMode);
-  const savedWatch = useSavedWatchReels(currentUser?.id ?? undefined, isSavedWatchMode);
 
   const {
     data: reels = [],
@@ -144,6 +169,11 @@ export const WatchPage = () => {
     viewportRef.current?.goNext();
   };
 
+  const handlePreviousRef = useRef(handlePrevious);
+  const handleNextRef = useRef(handleNext);
+  handlePreviousRef.current = handlePrevious;
+  handleNextRef.current = handleNext;
+
   useEffect(() => {
     if (isSearchWatchMode || isSavedWatchMode || reels.length === 0) return;
     if (currentReelIndex < reels.length - 2) return;
@@ -172,20 +202,22 @@ export const WatchPage = () => {
       if (isWatchOverlayTarget(e.target)) return;
       if (cooldown || Math.abs(e.deltaY) < 10) return;
 
+      e.preventDefault();
+      e.stopPropagation();
       cooldown = true;
       if (e.deltaY > 0) {
-        handleNext();
+        handleNextRef.current();
       } else {
-        handlePrevious();
+        handlePreviousRef.current();
       }
       window.setTimeout(() => {
         cooldown = false;
-      }, 600);
+      }, 450);
     };
 
-    window.addEventListener('wheel', handleWheel, { passive: true });
-    return () => window.removeEventListener('wheel', handleWheel);
-  }, [currentReelIndex, reels.length]);
+    window.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+    return () => window.removeEventListener('wheel', handleWheel, { capture: true });
+  }, []);
 
   const loadingMessage = useMemo(() => {
     if (!currentUser?.id) return 'Vui lòng đăng nhập để xem video.';
@@ -201,9 +233,42 @@ export const WatchPage = () => {
         activeTab={watchTab}
         onTabChange={handleWatchTabChange}
         searchQuery={isSearchWatchMode ? searchQuery : null}
+        showSavedTab={showSavedTab}
       />
 
-      <div className="mt-14 h-[calc(100vh-56px)] relative lg:pl-[320px]">
+      {!isSearchWatchMode && showSavedTab && (
+        <nav
+          className="lg:hidden fixed top-14 left-0 right-0 z-40 flex border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+          aria-label="Watch navigation"
+        >
+          <button
+            type="button"
+            onClick={() => handleWatchTabChange('forYou')}
+            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
+              watchTab === 'forYou'
+                ? 'border-b-2 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                : 'text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            <Star className="h-4 w-4" />
+            Dành cho bạn
+          </button>
+          <button
+            type="button"
+            onClick={() => handleWatchTabChange('saved')}
+            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
+              watchTab === 'saved'
+                ? 'border-b-2 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
+                : 'text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            <Bookmark className="h-4 w-4" />
+            Thước phim đã lưu
+          </button>
+        </nav>
+      )}
+
+      <div className={`mt-14 h-[calc(100vh-56px)] relative overflow-hidden overscroll-none lg:pl-[320px] ${showSavedTab && !isSearchWatchMode ? 'pt-12 lg:pt-0' : ''}`}>
         {loadingMessage ? (
           <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">{loadingMessage}</div>
         ) : isError ? (
@@ -228,17 +293,6 @@ export const WatchPage = () => {
           />
         ) : null}
       </div>
-
-      {!isLoading && reels.length > 0 && (
-        <div className="fixed top-14 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 z-50">
-          <div
-            className="h-full bg-emerald-600 transition-all duration-300"
-            style={{
-              width: `${((currentReelIndex + 1) / reels.length) * 100}%`,
-            }}
-          />
-        </div>
-      )}
     </div>
   );
 };

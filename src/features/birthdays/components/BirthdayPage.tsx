@@ -102,7 +102,7 @@ export function BirthdayPage() {
   const [wishInitialMessage, setWishInitialMessage] = useState('');
   const [historyTab, setHistoryTab] = useState<'received' | 'sent'>('received');
 
-  const { today, upcoming, byMonth, isSearching, loading, error } = useBirthdays(searchQuery);
+  const { today, byMonth, isSearching, loading, error } = useBirthdays(searchQuery);
   const wishHistory = useBirthdayWishes(historyTab);
   const sendWish = useSendBirthdayWish();
 
@@ -138,7 +138,9 @@ export function BirthdayPage() {
     );
   }
 
-  const hasResults = today.length > 0 || upcoming.length > 0 || byMonth.length > 0;
+  const hasSearchResults = today.length > 0 || byMonth.length > 0;
+  const showTodaySection = !isSearching || today.length > 0;
+  const showMonthSection = byMonth.length > 0;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
@@ -155,91 +157,69 @@ export function BirthdayPage() {
 
       <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-h-0 space-y-6 overflow-y-auto pr-1 sidebar-scrollbar">
-          {(today.length > 0 || byMonth.length > 0) && (
-            <div className="flex flex-col gap-6">
-              {today.length > 0 && (
-                <section className={PANEL_CLASS}>
-                  <div className="mb-4 flex items-center gap-2">
-                    <Gift className="h-5 w-5 text-pink-500" />
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Sinh nhật hôm nay</h2>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {today.map((friend) => (
-                      <BirthdayFriendCard
-                        key={friend.userId}
-                        friend={friend}
-                        onSendWish={(f, msg) => void handleQuickWish(f, msg!)}
-                        onOpenCustomWish={openCustomWish}
-                      />
-                    ))}
-                  </div>
-                </section>
+          {showTodaySection && (
+            <section className={PANEL_CLASS}>
+              <div className="mb-4 flex items-center gap-2">
+                <Gift className="h-5 w-5 text-pink-500" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Sinh nhật hôm nay</h2>
+              </div>
+              {today.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  {today.map((friend) => (
+                    <BirthdayFriendCard
+                      key={friend.userId}
+                      friend={friend}
+                      onSendWish={(f, msg) => void handleQuickWish(f, msg!)}
+                      onOpenCustomWish={openCustomWish}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">Không có sinh nhật hôm nay.</p>
               )}
-
-              {byMonth.length > 0 && (
-                <section className={PANEL_CLASS}>
-                  <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-gray-100">Sinh nhật theo tháng</h2>
-                  <div className="flex flex-col gap-4">
-                    {byMonth.map((group) => (
-                      <div
-                        key={group.month}
-                        className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50"
-                      >
-                        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{group.monthLabel}</h3>
-                        <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">{formatGroupLabel(group.friends)}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {group.friends.map((friend) => (
-                            <button
-                              key={friend.userId}
-                              type="button"
-                              onClick={() => openCustomWish(friend)}
-                              className="group relative"
-                              title={friend.name}
-                            >
-                              <UserAvatar
-                                name={friend.name}
-                                avatarUrl={friend.avatar}
-                                userId={friend.userId}
-                                rounded="full"
-                                className="h-14 w-14 border-2 border-white shadow-sm transition-transform group-hover:scale-105 dark:border-gray-700"
-                              />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
+            </section>
           )}
 
-      {upcoming.length > 0 && (
-        <section className={PANEL_CLASS}>
-          <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-gray-100">Sinh nhật sắp tới (7 ngày)</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {upcoming.map((friend) => (
-              <BirthdayFriendCard
-                key={friend.userId}
-                friend={friend}
-                onSendWish={(f, msg) => void handleQuickWish(f, msg!)}
-                onOpenCustomWish={openCustomWish}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+          {showMonthSection && (
+            <section className={PANEL_CLASS}>
+              <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-gray-100">Sinh nhật theo tháng</h2>
+              <div className="flex flex-col gap-4">
+                {byMonth.map((group) => (
+                  <div
+                    key={group.month}
+                    className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50"
+                  >
+                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{group.monthLabel}</h3>
+                    <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">{formatGroupLabel(group.friends)}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {group.friends.map((friend) => (
+                        <button
+                          key={friend.userId}
+                          type="button"
+                          onClick={() => openCustomWish(friend)}
+                          className="group relative"
+                          title={friend.name}
+                        >
+                          <UserAvatar
+                            name={friend.name}
+                            avatarUrl={friend.avatar}
+                            userId={friend.userId}
+                            rounded="full"
+                            className="h-14 w-14 border-2 border-white shadow-sm transition-transform group-hover:scale-105 dark:border-gray-700"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
-      {!hasResults && (
+      {isSearching && !hasSearchResults && (
         <div className="py-16 text-center text-gray-500 dark:text-gray-400">
-          <p className="text-lg font-medium">
-            {isSearching ? 'Không tìm thấy bạn bè phù hợp' : 'Không có sinh nhật nào sắp tới'}
-          </p>
-          <p className="mt-1 text-sm">
-            {isSearching
-              ? 'Thử từ khóa khác hoặc xóa ô tìm kiếm.'
-              : 'Bạn bè chưa cập nhật ngày sinh hoặc chưa có bạn bè.'}
-          </p>
+          <p className="text-lg font-medium">Không tìm thấy bạn bè phù hợp</p>
+          <p className="mt-1 text-sm">Thử từ khóa khác hoặc xóa ô tìm kiếm.</p>
         </div>
       )}
         </div>

@@ -67,23 +67,23 @@ export const FriendCard = ({
   const isSuggestion = showRemove && onRemoveSuggestion && !friend.isFriend && !pendingFriendshipId;
 
   return (
-    <div className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:shadow-none transition-all hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+    <div className="group relative flex min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm [contain:paint] dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
       <Link
         to={`/profile/${friend.userId}`}
-        className="relative block aspect-square w-full overflow-hidden bg-gray-100 dark:bg-gray-700"
+        className="relative block aspect-square w-full shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700"
       >
         <UserAvatar
           name={friend.name}
           avatarUrl={friend.avatar}
           userId={friend.userId}
-          className="transition-transform group-hover:scale-105"
+          className="h-full w-full"
         />
       </Link>
 
       <div className="flex min-h-[156px] flex-1 flex-col p-3">
         <div className="min-w-0">
           <Link to={`/profile/${friend.userId}`} className="block">
-            <h3 className="min-h-[1.5rem] truncate text-[15px] font-bold leading-6 text-gray-900 hover:underline dark:text-white">
+            <h3 className="min-h-[1.5rem] truncate text-[15px] font-bold leading-6 text-gray-900 dark:text-white">
               {friend.name}
             </h3>
           </Link>

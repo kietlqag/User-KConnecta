@@ -2,11 +2,12 @@ import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Play, Clapperboard, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
-import { authService } from '@/services/authService';
+import { authService, AUTH_USER_CHANGED_EVENT } from '@/services/authService';
 import { postService, SAVED_POSTS_CHANGED_EVENT } from '@/services/postService';
 import { mapPostsToReels } from '@/features/watch/utils/mapPostToReel';
 import type { Reel } from '@/features/watch/types/watch.types';
 import { useProfileLayoutContext } from './ProfileLayout';
+import { isOwnProfileUser } from '../utils/profileDisplayUtils';
 import {
   fetchAllUserPosts,
   isAbortError,
@@ -39,7 +40,7 @@ function ReelsGrid({
         >
           <video
             src={reel.videoUrl}
-            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+            className="h-full w-full object-cover"
             muted
             preload="metadata"
           />
@@ -76,8 +77,27 @@ function ReelsGrid({
 
 export function ProfileReelsPage() {
   const navigate = useNavigate();
-  const { resolvedId, isOwnProfile, loading: profileLoading } = useProfileLayoutContext();
-  const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
+  const { profile, resolvedId, isOwnProfile, loading: profileLoading } = useProfileLayoutContext();
+  const [currentUser, setCurrentUser] = React.useState(() => authService.getCurrentUser());
+
+  const isOwner = React.useMemo(
+    () =>
+      isOwnProfileUser(currentUser, {
+        resolvedProfileId: resolvedId || profile?.id,
+        routeUserId: profile?.username || resolvedId,
+      }) || isOwnProfile,
+    [currentUser, resolvedId, profile?.id, profile?.username, isOwnProfile],
+  );
+
+  React.useEffect(() => {
+    const syncAuth = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
+    window.addEventListener('storage', syncAuth);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
+      window.removeEventListener('storage', syncAuth);
+    };
+  }, []);
 
   const [activeTab, setActiveTab] = React.useState<ReelsTab>('yours');
   const [yourReels, setYourReels] = React.useState<Reel[]>([]);
@@ -99,7 +119,7 @@ export function ProfileReelsPage() {
   }, [resolvedId, currentUser?.id]);
 
   const loadSavedReels = React.useCallback(async () => {
-    if (!currentUser?.id || !isOwnProfile) return;
+    if (!currentUser?.id || !isOwner) return;
     setLoadingSaved(true);
     try {
       const posts = await postService.getSavedPosts(currentUser.id);
@@ -109,7 +129,7 @@ export function ProfileReelsPage() {
     } finally {
       setLoadingSaved(false);
     }
-  }, [currentUser?.id, isOwnProfile]);
+  }, [currentUser?.id, isOwner]);
 
   React.useEffect(() => {
     const controller = new AbortController();
@@ -118,12 +138,15 @@ export function ProfileReelsPage() {
   }, [loadYourReels]);
 
   React.useEffect(() => {
-    if (!isOwnProfile) return;
+    if (!isOwner) {
+      setActiveTab('yours');
+      return;
+    }
     void loadSavedReels();
-  }, [isOwnProfile, loadSavedReels]);
+  }, [isOwner, loadSavedReels]);
 
   React.useEffect(() => {
-    if (!isOwnProfile) return;
+    if (!isOwner) return;
 
     const handleSavedChanged = (event: Event) => {
       const detail = (event as CustomEvent<{ postId: string; saved: boolean }>).detail;
@@ -139,7 +162,7 @@ export function ProfileReelsPage() {
 
     window.addEventListener(SAVED_POSTS_CHANGED_EVENT, handleSavedChanged);
     return () => window.removeEventListener(SAVED_POSTS_CHANGED_EVENT, handleSavedChanged);
-  }, [isOwnProfile, loadSavedReels]);
+  }, [isOwner, loadSavedReels]);
 
   const handleUnsave = async (postId: string) => {
     if (!currentUser?.id) return;
@@ -155,16 +178,14 @@ export function ProfileReelsPage() {
     }
   };
 
-  const tabs: { key: ReelsTab; label: string }[] = isOwnProfile
-    ? [
-        { key: 'yours', label: 'Thước phim của bạn' },
-        { key: 'saved', label: 'Thước phim đã lưu' },
-      ]
-    : [{ key: 'yours', label: 'Thước phim' }];
+  const ownerTabs: { key: ReelsTab; label: string }[] = [
+    { key: 'yours', label: 'Thước phim của bạn' },
+    { key: 'saved', label: 'Thước phim đã lưu' },
+  ];
 
-  const reels = activeTab === 'saved' ? savedReels : yourReels;
+  const reels = isOwner && activeTab === 'saved' ? savedReels : yourReels;
   const isLoadingContent =
-    profileLoading || (activeTab === 'saved' ? loadingSaved : loadingYours);
+    profileLoading || (isOwner && activeTab === 'saved' ? loadingSaved : loadingYours);
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-6">
@@ -176,9 +197,9 @@ export function ProfileReelsPage() {
           </div>
         </div>
 
-        {tabs.length > 1 && (
+        {isOwner && (
           <div className="flex border-b border-gray-200 px-2 dark:border-gray-700">
-            {tabs.map((tab) => (
+            {ownerTabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
@@ -207,7 +228,7 @@ export function ProfileReelsPage() {
               <div className="relative mb-4 h-20 w-20">
                 <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
                 <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
-                  {activeTab === 'saved' ? (
+                  {isOwner && activeTab === 'saved' ? (
                     <Play className="h-10 w-10 text-gray-400 dark:text-gray-500" />
                   ) : (
                     <Clapperboard className="h-10 w-10 text-gray-400 dark:text-gray-500" />
@@ -215,14 +236,14 @@ export function ProfileReelsPage() {
                 </div>
               </div>
               <h3 className="mb-1 text-lg font-semibold text-gray-800 dark:text-gray-200">
-                {activeTab === 'saved' ? 'Chưa có thước phim đã lưu' : 'Chưa có thước phim nào'}
+                {isOwner && activeTab === 'saved' ? 'Chưa có thước phim đã lưu' : 'Chưa có thước phim nào'}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {activeTab === 'saved'
+                {isOwner && activeTab === 'saved'
                   ? 'Khi bạn lưu video trên Watch, chúng sẽ xuất hiện ở đây.'
                   : 'Các video từ bài viết sẽ xuất hiện ở đây.'}
               </p>
-              {activeTab === 'saved' && (
+              {isOwner && activeTab === 'saved' && (
                 <button
                   type="button"
                   onClick={() => navigate('/watch')}
@@ -235,7 +256,7 @@ export function ProfileReelsPage() {
           ) : (
             <ReelsGrid
               reels={reels}
-              showUnsave={activeTab === 'saved'}
+              showUnsave={isOwner && activeTab === 'saved'}
               onUnsave={handleUnsave}
               onOpen={(postId) => navigate(`/watch?id=${postId}`)}
             />

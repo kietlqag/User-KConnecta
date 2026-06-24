@@ -102,7 +102,7 @@ export const FriendSuggestions = () => {
             : suggestions.map((user) => (
                 <article
                   key={user.userId}
-                  className="flex shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none transition-shadow hover:shadow-md"
+                  className="flex shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:shadow-none"
                   style={{ width: CARD_WIDTH }}
                 >
                   <button

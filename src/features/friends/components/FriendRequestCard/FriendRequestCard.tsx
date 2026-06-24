@@ -32,8 +32,8 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
   };
 
   return (
-    <div className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none transition-shadow hover:shadow-md">
-      <div className="relative">
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm [contain:paint] dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
+      <div className="relative shrink-0">
         <Link to={`/profile/${request.userId}`} className="block aspect-square overflow-hidden bg-gray-100 dark:bg-background">
           <UserAvatar
             name={request.name}
@@ -57,7 +57,7 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
 
       <div className="flex min-h-[172px] flex-1 flex-col p-3">
         <Link to={`/profile/${request.userId}`}>
-          <h3 className="truncate text-[15px] font-bold leading-6 text-gray-900 dark:text-gray-100 hover:underline">
+          <h3 className="truncate text-[15px] font-bold leading-6 text-gray-900 dark:text-gray-100">
             {request.name}
           </h3>
         </Link>

@@ -11,7 +11,7 @@ interface ReelActionButtonProps {
 }
 
 export const reelActionIconClass =
-  'flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-800 shadow-sm border border-gray-200/80 transition-all hover:bg-gray-200 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:hover:bg-gray-700';
+  'flex h-10 w-10 items-center justify-center rounded-full border border-gray-200/80 bg-gray-100 text-gray-800 shadow-sm transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700';
 
 export const reelActionCountClass =
   'text-[11px] font-semibold leading-none text-gray-700 tabular-nums dark:text-gray-300';

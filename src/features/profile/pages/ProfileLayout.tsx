@@ -4,7 +4,7 @@ import { Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Header } from '../../home/components/Header';
 import { EditProfileDialog, ProfileHeader, ProfileTabs } from '../components';
-import { authService, type AuthUser } from '@/services/authService';
+import { authService, AUTH_USER_CHANGED_EVENT, type AuthUser } from '@/services/authService';
 import { friendService, FRIENDSHIP_CHANGED_EVENT, type FriendshipStatusResponse } from '@/services/friendService';
 import {
   buildEditProfileInitialData,
@@ -34,7 +34,17 @@ export function ProfileLayout() {
   const { userId: routeUserId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
+  const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(() => authService.getCurrentUser());
+
+  React.useEffect(() => {
+    const syncAuth = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
+    window.addEventListener('storage', syncAuth);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuth);
+      window.removeEventListener('storage', syncAuth);
+    };
+  }, []);
 
   const userId = React.useMemo(
     () => resolveRouteProfileUserId(routeUserId, currentUser),

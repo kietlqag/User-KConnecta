@@ -206,8 +206,12 @@ export const ReelPlayer = ({
   };
 
   return (
-    <div className={`flex items-center justify-center h-full px-6 relative transition-[padding] duration-200 ${showComments ? 'pr-[424px]' : ''}`}>
-      <div className="flex items-center gap-5">
+    <div className="flex h-full items-center justify-center overflow-hidden px-6">
+      <div
+        className={`flex items-center gap-5 will-change-transform ${
+          showComments ? '-translate-x-[212px]' : 'translate-x-0'
+        }`}
+      >
         <div className="relative h-[calc(100vh-120px)] w-[500px] max-w-[calc(100vw-8rem)] shrink-0 overflow-hidden rounded-xl bg-black shadow-[0_8px_40px_rgba(0,0,0,0.18)] group">
           <video
             key={reel.id}
@@ -276,10 +280,7 @@ export const ReelPlayer = ({
           />
 
           {/* Progress Bar Scrubber */}
-          <div className="absolute bottom-0 left-0 right-0 h-4 z-20 flex items-end pb-1 px-0 group/progress">
-            <div className="absolute bottom-4 left-4 text-white text-xs font-semibold drop-shadow-md opacity-0 group-hover/progress:opacity-100 transition-opacity pointer-events-none bg-black/40 px-2 py-1 rounded">
-              {formatTime(progress)} / {formatTime(duration)}
-            </div>
+          <div className="absolute bottom-0 left-0 right-0 z-20 flex h-4 items-end px-0 pb-1">
             <input
               type="range"
               min="0"
@@ -287,7 +288,7 @@ export const ReelPlayer = ({
               step="any"
               value={progress}
               onChange={handleSeek}
-              className="w-full h-1 bg-white/30 appearance-none outline-none cursor-pointer group-hover/progress:h-2 transition-all [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-0 [&::-webkit-slider-thumb]:h-0 group-hover/progress:[&::-webkit-slider-thumb]:w-3 group-hover/progress:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+              className="h-1 w-full cursor-pointer appearance-none bg-white/30 outline-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
               style={{
                 background: `linear-gradient(to right, #10b981 ${(progress / (duration || 1)) * 100}%, rgba(255,255,255,0.3) ${(progress / (duration || 1)) * 100}%)`
               }}

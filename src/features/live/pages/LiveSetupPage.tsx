@@ -5,7 +5,6 @@ import {
   ChevronDown,
   Circle,
   CircleCheck,
-  FileText,
   Globe,
   Lock,
   MessageSquare,
@@ -39,12 +38,6 @@ const destinationOptions = [
     icon: <UserRound className="w-4 h-4 text-violet-600" />,
   },
   {
-    id: 'page',
-    label: 'Đăng lên trang bạn quản lý',
-    description: 'Chia sẻ đến trang của bạn',
-    icon: <FileText className="w-4 h-4 text-emerald-600" />,
-  },
-  {
     id: 'group',
     label: 'Đăng trong nhóm',
     description: 'Chia sẻ trong các nhóm',
@@ -70,10 +63,8 @@ export default function LiveSetupPage() {
   }, [navigate, searchParams]);
   const [isDestinationOpen, setIsDestinationOpen] = useState(false);
   const [selectedDestination, setSelectedDestination] = useState<(typeof destinationOptions)[number]['id']>('profile');
-  const [selectedPages, setSelectedPages] = useState<LiveDestinationItem[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<LiveDestinationItem[]>([]);
   const [destinationSearch, setDestinationSearch] = useState('');
-  const [pageItems, setPageItems] = useState<LiveDestinationItem[]>([]);
   const [groupItems, setGroupItems] = useState<LiveDestinationItem[]>([]);
   const [isDestinationItemsOpen, setIsDestinationItemsOpen] = useState(false);
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
@@ -128,9 +119,10 @@ export default function LiveSetupPage() {
   const micProbeTokenRef = useRef(0);
   const selectedDestinationOption = destinationOptions.find((opt) => opt.id === selectedDestination);
   const selectedPrivacyOption = privacyOptions.find((opt) => opt.id === selectedPrivacy) ?? privacyOptions[0];
-  const hasPageItems = pageItems.length > 0;
   const hasGroupItems = groupItems.length > 0;
-  const destinationItems = selectedDestination === 'page' ? pageItems : groupItems;
+  const isGroupDestination = selectedDestination === 'group';
+  const isPrivacyLocked = isGroupDestination;
+  const destinationItems = groupItems;
   const filteredDestinationItems = useMemo(() => {
     const q = destinationSearch.trim().toLowerCase();
     if (!q) return destinationItems;
@@ -275,10 +267,8 @@ export default function LiveSetupPage() {
       setIsDestinationLoading(true);
       try {
         const data = await liveService.getDestinations(currentUserId);
-        setPageItems(data.pages ?? []);
         setGroupItems(data.groups ?? []);
       } catch {
-        setPageItems([]);
         setGroupItems([]);
       } finally {
         setIsDestinationLoading(false);
@@ -330,18 +320,21 @@ export default function LiveSetupPage() {
       setIsDestinationItemsOpen(false);
       return;
     }
-    if (selectedDestination === 'page' && !hasPageItems) {
-      setSelectedDestination('profile');
-      setIsDestinationItemsOpen(false);
-      return;
-    }
     if (selectedDestination === 'group' && !hasGroupItems) {
       setSelectedDestination('profile');
       setIsDestinationItemsOpen(false);
       return;
     }
     setIsDestinationItemsOpen(true);
-  }, [selectedDestination, hasPageItems, hasGroupItems]);
+  }, [selectedDestination, hasGroupItems]);
+
+  useEffect(() => {
+    if (!isGroupDestination) return;
+    setSelectedPrivacy('PUBLIC');
+    setIsPrivacyOpen(false);
+    setIsExceptEditorOpen(false);
+    setExcludedFriendIds([]);
+  }, [isGroupDestination]);
 
   useEffect(() => {
     let mounted = true;
@@ -771,8 +764,7 @@ export default function LiveSetupPage() {
     try {
       const started = await liveService.startLive({
         userId: currentUserId,
-        groupId: selectedDestination === 'group' ? selectedGroups[0]?.id : undefined,
-        pageId: selectedDestination === 'page' ? selectedPages[0]?.id : undefined,
+        groupId: isGroupDestination ? selectedGroups[0]?.id : undefined,
         title: postTitle.trim(),
         description: postDescription.trim(),
         privacy: mapPrivacyToPostApi(),
@@ -808,8 +800,7 @@ export default function LiveSetupPage() {
   const isPostDetailsCompleted = postTitle.trim().length >= 5 && postDescription.trim().length >= 10;
   const isDestinationSelectionValid =
     selectedDestination === 'profile' ||
-    (selectedDestination === 'page' && selectedPages.length > 0) ||
-    (selectedDestination === 'group' && selectedGroups.length > 0);
+    (isGroupDestination && selectedGroups.length > 0);
   const canGoLive = isSourceConnected && isPostDetailsCompleted && isDestinationSelectionValid;
 
   const checklist = useMemo(
@@ -869,11 +860,9 @@ export default function LiveSetupPage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Chọn nơi đăng</p>
                 <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
                   <span>
-                    {selectedDestination === 'page' && selectedPages.length > 0
-                      ? `${selectedPages.length} trang đã chọn`
-                      : selectedDestination === 'group' && selectedGroups.length > 0
-                        ? `${selectedGroups.length} nhóm đã chọn`
-                        : selectedDestinationOption?.label}
+                    {isGroupDestination && selectedGroups.length > 0
+                      ? `${selectedGroups.length} nhóm đã chọn`
+                      : selectedDestinationOption?.label}
                   </span>
                   <ChevronDown className={`w-6 h-6 transition-transform ${isDestinationOpen ? 'rotate-180' : ''}`} />
                 </div>
@@ -885,26 +874,26 @@ export default function LiveSetupPage() {
                     <button
                       key={option.id}
                       onClick={() => {
-                        const optionUnavailable =
-                          (option.id === 'page' && !hasPageItems) ||
-                          (option.id === 'group' && !hasGroupItems);
+                        const optionUnavailable = option.id === 'group' && !hasGroupItems;
                         if (optionUnavailable) return;
 
                         setSelectedDestination(option.id);
+                        if (option.id === 'group') {
+                          setSelectedPrivacy('PUBLIC');
+                          setIsPrivacyOpen(false);
+                          setIsExceptEditorOpen(false);
+                        }
                         setIsDestinationOpen(false);
                         setDestinationSearch('');
                       }}
-                      disabled={
-                        (option.id === 'page' && !hasPageItems) ||
-                        (option.id === 'group' && !hasGroupItems)
-                      }
+                      disabled={option.id === 'group' && !hasGroupItems}
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">{option.icon}</div>
                       <div className="flex-1">
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {(option.id === 'page' && !hasPageItems) || (option.id === 'group' && !hasGroupItems)
+                          {option.id === 'group' && !hasGroupItems
                             ? 'Chưa có dữ liệu để chọn'
                             : option.description}
                         </p>
@@ -916,14 +905,14 @@ export default function LiveSetupPage() {
               )}
             </div>
 
-            {(selectedDestination === 'page' || selectedDestination === 'group') && isDestinationItemsOpen && (
+            {isGroupDestination && isDestinationItemsOpen && (
               <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
                 <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
                   <Search className="h-4 w-4 text-gray-400" />
                   <input
                     value={destinationSearch}
                     onChange={(e) => setDestinationSearch(e.target.value)}
-                    placeholder={selectedDestination === 'page' ? 'Tìm trang...' : 'Tìm nhóm...'}
+                    placeholder="Tìm nhóm..."
                     className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
                   />
                 </div>
@@ -935,41 +924,29 @@ export default function LiveSetupPage() {
                   )}
                   {!isDestinationLoading &&
                     filteredDestinationItems.map((item) => {
-                      const isSelected = selectedDestination === 'page'
-                        ? selectedPages.some((page) => page.id === item.id)
-                        : selectedGroups.some((group) => group.id === item.id);
+                      const isSelected = selectedGroups.some((group) => group.id === item.id);
                       return (
                         <button
                           key={item.id}
                           type="button"
                           onClick={() => {
-                            if (selectedDestination === 'page') {
-                              setSelectedPages((prev) =>
-                                prev.some((page) => page.id === item.id)
-                                  ? prev.filter((page) => page.id !== item.id)
-                                  : [...prev, item],
-                              );
-                            } else {
-                              setSelectedGroups((prev) =>
-                                prev.some((group) => group.id === item.id)
-                                  ? prev.filter((group) => group.id !== item.id)
-                                  : [...prev, item],
-                              );
-                            }
+                            setSelectedGroups((prev) =>
+                              prev.some((group) => group.id === item.id)
+                                ? prev.filter((group) => group.id !== item.id)
+                                : [...prev, item],
+                            );
                           }}
                           className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-start gap-2 ${
                             isSelected ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
                           }`}
                         >
-                          {(selectedDestination === 'group' || selectedDestination === 'page') && (
-                            <span
+                          <span
                               className={`mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded border ${
                                 isSelected ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
                               }`}
                             >
                               {isSelected ? <Check className="h-3 w-3" /> : null}
                             </span>
-                          )}
                           <span className="block">
                             <p className="font-medium">{item.name}</p>
                             {item.description ? <p className="text-xs text-gray-500 dark:text-gray-400">{item.description}</p> : null}
@@ -984,8 +961,14 @@ export default function LiveSetupPage() {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsPrivacyOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                onClick={() => {
+                  if (isPrivacyLocked) return;
+                  setIsPrivacyOpen((prev) => !prev);
+                }}
+                disabled={isPrivacyLocked}
+                className={`w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-left bg-white dark:bg-gray-800 ${
+                  isPrivacyLocked ? 'cursor-not-allowed opacity-80' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
               >
                 <p className="text-sm text-gray-500 dark:text-gray-400">Quyền riêng tư</p>
                 <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -995,10 +978,15 @@ export default function LiveSetupPage() {
                       ? `${selectedPrivacyOption.label} (${excludedFriendIds.length})`
                       : selectedPrivacyOption.label}
                   </span>
-                  <ChevronDown className={`w-6 h-6 transition-transform ${isPrivacyOpen ? 'rotate-180' : ''}`} />
+                  {!isPrivacyLocked && (
+                    <ChevronDown className={`w-6 h-6 transition-transform ${isPrivacyOpen ? 'rotate-180' : ''}`} />
+                  )}
                 </div>
+                {isPrivacyLocked && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Bài đăng trong nhóm luôn công khai</p>
+                )}
               </button>
-              {isPrivacyOpen && (
+              {isPrivacyOpen && !isPrivacyLocked && (
                 <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none overflow-hidden">
                   {privacyOptions.map((option) => {
                     const Icon = option.icon;

@@ -80,6 +80,7 @@ export function SearchReelModal({ open, reels, initialIndex, onClose }: SearchRe
       if (isWatchOverlayTarget(e.target)) return;
       if (cooldown || Math.abs(e.deltaY) < 10) return;
 
+      e.preventDefault();
       cooldown = true;
       if (e.deltaY > 0) {
         handleNext();
@@ -91,7 +92,7 @@ export function SearchReelModal({ open, reels, initialIndex, onClose }: SearchRe
       }, 600);
     };
 
-    window.addEventListener('wheel', handleWheel, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: false });
     return () => window.removeEventListener('wheel', handleWheel);
   }, [open, handlePrevious, handleNext]);
 
