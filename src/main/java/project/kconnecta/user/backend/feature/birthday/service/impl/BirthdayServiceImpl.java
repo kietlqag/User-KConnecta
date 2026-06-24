@@ -98,7 +98,7 @@ public class BirthdayServiceImpl implements BirthdayService {
                 ).add(friend));
 
         return grouped.entrySet().stream()
-                .sorted(Comparator.comparingInt(entry -> monthDistance(currentMonth, entry.getKey())))
+                .sorted(Comparator.comparingInt(Map.Entry::getKey))
                 .map(entry -> BirthdayMonthGroupResponse.builder()
                         .month(entry.getKey())
                         .monthLabel("Tháng " + entry.getKey())
@@ -288,13 +288,6 @@ public class BirthdayServiceImpl implements BirthdayService {
                 .message(wish.getMessage())
                 .createdAt(wish.getCreatedAt())
                 .build();
-    }
-
-    private int monthDistance(int currentMonth, int targetMonth) {
-        if (targetMonth >= currentMonth) {
-            return targetMonth - currentMonth;
-        }
-        return targetMonth + 12 - currentMonth;
     }
 
     private String normalizeSearchText(String value) {
