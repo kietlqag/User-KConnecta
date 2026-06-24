@@ -44,6 +44,8 @@ export interface AuthUser {
   avatarUrl?: string;
   coverPhotoUrl?: string;
   requiresProfileSetup?: boolean;
+  requiresTwoFactor?: boolean;
+  twoFactorToken?: string;
 }
 
 export interface RegisterData {
@@ -134,6 +136,12 @@ export const authService = {
 
   login: (email: string, password: string) =>
     api.post<AuthUser>('/auth/login', { email, password }),
+
+  verifyTwoFactorLogin: (twoFactorToken: string, otp: string) =>
+    api.post<AuthUser>('/auth/verify-2fa-login', { twoFactorToken, otp }),
+
+  resendTwoFactorLogin: (twoFactorToken: string) =>
+    api.post<{ message: string }>('/auth/resend-2fa-login', { twoFactorToken }),
 
   changePassword: (email: string, oldPassword: string, newPassword: string) =>
     api.post<{ message: string }>('/auth/change-password', { email, oldPassword, newPassword }),

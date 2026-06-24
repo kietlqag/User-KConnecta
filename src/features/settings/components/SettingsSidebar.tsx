@@ -1,16 +1,13 @@
 import { Shield, ShieldCheck, Palette, Bell } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/components/ui/utils';
 import type { SettingsTab } from '../types/userSettings.types';
 
-const NAV_ITEMS: {
-  id: SettingsTab;
-  label: string;
-  icon: typeof Shield;
-}[] = [
-  { id: 'security', label: 'Bảo mật tài khoản', icon: Shield },
-  { id: 'privacy', label: 'Quyền riêng tư', icon: ShieldCheck },
-  { id: 'notifications', label: 'Thông báo', icon: Bell },
-  { id: 'appearance', label: 'Giao diện', icon: Palette },
+const NAV_ITEM_IDS: { id: SettingsTab; icon: typeof Shield }[] = [
+  { id: 'security', icon: Shield },
+  { id: 'privacy', icon: ShieldCheck },
+  { id: 'notifications', icon: Bell },
+  { id: 'appearance', icon: Palette },
 ];
 
 interface SettingsSidebarProps {
@@ -20,15 +17,17 @@ interface SettingsSidebarProps {
 }
 
 export function SettingsSidebar({ active, onSelect, className }: SettingsSidebarProps) {
+  const { t } = useTranslation();
+
   return (
-    <nav className={cn('flex flex-col', className)} aria-label="Cài đặt">
+    <nav className={cn('flex flex-col', className)} aria-label={t('settings.title')}>
       <div className="mb-6 hidden lg:block">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Cài đặt</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Quản lý tài khoản và trải nghiệm KConnecta</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t('settings.subtitle')}</p>
       </div>
 
       <ul className="space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEM_IDS.map((item) => {
           const Icon = item.icon;
           const isActive = active === item.id;
           return (
@@ -47,7 +46,7 @@ export function SettingsSidebar({ active, onSelect, className }: SettingsSidebar
                   className={cn('h-5 w-5 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')}
                   aria-hidden
                 />
-                <span className="text-sm">{item.label}</span>
+                <span className="text-sm">{t(`settings.tabs.${item.id}`)}</span>
               </button>
             </li>
           );
@@ -58,9 +57,11 @@ export function SettingsSidebar({ active, onSelect, className }: SettingsSidebar
 }
 
 export function SettingsMobileNav({ active, onSelect }: SettingsSidebarProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="scrollbar-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEM_IDS.map((item) => {
         const Icon = item.icon;
         const isActive = active === item.id;
         return (
@@ -76,7 +77,7 @@ export function SettingsMobileNav({ active, onSelect }: SettingsSidebarProps) {
             )}
           >
             <Icon className="h-4 w-4" aria-hidden />
-            {item.label}
+            {t(`settings.tabs.${item.id}`)}
           </button>
         );
       })}
@@ -84,9 +85,7 @@ export function SettingsMobileNav({ active, onSelect }: SettingsSidebarProps) {
   );
 }
 
-export const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
-  security: 'Bảo mật tài khoản',
-  privacy: 'Quyền riêng tư',
-  notifications: 'Thông báo',
-  appearance: 'Giao diện',
-};
+export function useSettingsTabLabel(tab: SettingsTab): string {
+  const { t } = useTranslation();
+  return t(`settings.tabs.${tab}`);
+}

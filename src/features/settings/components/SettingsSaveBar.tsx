@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
 interface SettingsSaveBarProps {
@@ -9,6 +10,7 @@ interface SettingsSaveBarProps {
 }
 
 export function SettingsSaveBar({ isDirty, saving, onSave, onDiscard }: SettingsSaveBarProps) {
+  const { t } = useTranslation();
   if (!isDirty) return null;
 
   return (
@@ -16,7 +18,7 @@ export function SettingsSaveBar({ isDirty, saving, onSave, onDiscard }: Settings
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
         {onDiscard ? (
           <Button type="button" variant="ghost" onClick={onDiscard} disabled={saving} className="rounded-[10px]">
-            Hủy
+            {t('settings.saveBar.discard')}
           </Button>
         ) : null}
         <Button
@@ -28,10 +30,10 @@ export function SettingsSaveBar({ isDirty, saving, onSave, onDiscard }: Settings
           {saving ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Đang lưu...
+              {t('common.saving')}
             </>
           ) : (
-            'Lưu thay đổi'
+            t('settings.saveBar.save')
           )}
         </Button>
       </div>

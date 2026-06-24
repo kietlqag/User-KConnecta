@@ -1,4 +1,6 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
@@ -11,17 +13,7 @@ import { SettingsSection } from '../SettingsSection';
 import { SettingRow } from '../SettingRow';
 import { SettingsSaveBar } from '../SettingsSaveBar';
 import type { LanguageOption, ThemeOption, UserSettings } from '../../types/userSettings.types';
-
-const THEME_OPTIONS: {
-  value: ThemeOption;
-  label: string;
-  description: string;
-  icon: typeof Sun;
-}[] = [
-  { value: 'light', label: 'Chế độ sáng', description: 'Giao diện sáng, dễ đọc ban ngày', icon: Sun },
-  { value: 'dark', label: 'Chế độ tối', description: 'Giảm chói mắt khi dùng ban đêm', icon: Moon },
-  { value: 'system', label: 'Theo hệ thống', description: 'Tự động theo thiết bị của bạn', icon: Monitor },
-];
+import { applyAppLanguage } from '@/i18n';
 
 interface AppearanceSectionProps {
   settings: UserSettings;
@@ -40,18 +32,29 @@ export function AppearanceSection({
   onSave,
   onDiscard,
 }: AppearanceSectionProps) {
+  const { t } = useTranslation();
+
+  const themeOptions = useMemo(
+    () => [
+      { value: 'light' as ThemeOption, label: t('settings.appearance.themeLight'), description: t('settings.appearance.themeLightDesc'), icon: Sun },
+      { value: 'dark' as ThemeOption, label: t('settings.appearance.themeDark'), description: t('settings.appearance.themeDarkDesc'), icon: Moon },
+      { value: 'system' as ThemeOption, label: t('settings.appearance.themeSystem'), description: t('settings.appearance.themeSystemDesc'), icon: Monitor },
+    ],
+    [t],
+  );
+
   return (
     <div className="space-y-8">
       <SettingsSection
-        title="Chế độ hiển thị"
-        description="Tùy chỉnh giao diện KConnecta theo sở thích của bạn."
+        title={t('settings.appearance.themeTitle')}
+        description={t('settings.appearance.themeDesc')}
       >
         <RadioGroup
           value={settings.theme}
           onValueChange={(value) => updateSettings({ theme: value as ThemeOption })}
           className="gap-2"
         >
-          {THEME_OPTIONS.map((option) => {
+          {themeOptions.map((option) => {
             const Icon = option.icon;
             const isActive = settings.theme === option.value;
             return (
@@ -90,22 +93,24 @@ export function AppearanceSection({
       </SettingsSection>
 
       <SettingsSection
-        title="Ngôn ngữ hệ thống"
-        description="Chọn ngôn ngữ hiển thị trên giao diện KConnecta."
+        title={t('settings.appearance.languageTitle')}
+        description={t('settings.appearance.languageDesc')}
       >
-        <SettingRow label="Ngôn ngữ">
+        <SettingRow label={t('settings.appearance.languageLabel')}>
           <Select
             value={settings.language}
-            onValueChange={(value) => updateSettings({ language: value as LanguageOption })}
+            onValueChange={(value) => {
+              const language = value as LanguageOption;
+              updateSettings({ language });
+              applyAppLanguage(language);
+            }}
           >
             <SelectTrigger className="w-full rounded-[10px] border-border bg-card sm:min-w-[220px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="rounded-[10px]">
-              <SelectItem value="vi">Tiếng Việt</SelectItem>
-              <SelectItem value="en" disabled>
-                English (sắp có)
-              </SelectItem>
+              <SelectItem value="vi">{t('settings.appearance.langVi')}</SelectItem>
+              <SelectItem value="en">{t('settings.appearance.langEn')}</SelectItem>
             </SelectContent>
           </Select>
         </SettingRow>

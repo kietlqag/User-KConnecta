@@ -1,5 +1,7 @@
 import { UserX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/shared/UserAvatar';
+import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '../SettingsSection';
 import { SettingRow } from '../SettingRow';
 import { SettingsSaveBar } from '../SettingsSaveBar';
@@ -13,12 +15,13 @@ interface PrivacySectionProps {
   saving: boolean;
   onSave: () => void;
   onDiscard: () => void;
+  unblockUser?: (userId: string) => Promise<void>;
 }
 
-function formatBlockedDate(iso: string) {
+function formatBlockedDate(iso: string, locale: string) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('vi-VN', {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-US' : 'vi-VN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -32,14 +35,17 @@ export function PrivacySection({
   saving,
   onSave,
   onDiscard,
+  unblockUser,
 }: PrivacySectionProps) {
+  const { t, i18n } = useTranslation();
+
   return (
     <div className="space-y-8">
       <SettingsSection
-        title="Ai có thể xem hồ sơ của tôi"
-        description="Kiểm soát ai được phép xem trang cá nhân và thông tin cơ bản."
+        title={t('settings.privacy.profileTitle')}
+        description={t('settings.privacy.profileDesc')}
       >
-        <SettingRow label="Quyền xem hồ sơ">
+        <SettingRow label={t('settings.privacy.profileLabel')}>
           <VisibilitySelect
             value={settings.profileVisibility}
             onChange={(profileVisibility) => updateSettings({ profileVisibility })}
@@ -48,10 +54,10 @@ export function PrivacySection({
       </SettingsSection>
 
       <SettingsSection
-        title="Ai có thể xem bài viết của tôi"
-        description="Áp dụng mặc định cho các bài viết mới trên bảng feed."
+        title={t('settings.privacy.postsTitle')}
+        description={t('settings.privacy.postsDesc')}
       >
-        <SettingRow label="Quyền xem bài viết">
+        <SettingRow label={t('settings.privacy.postsLabel')}>
           <VisibilitySelect
             value={settings.postsVisibility}
             onChange={(postsVisibility) => updateSettings({ postsVisibility })}
@@ -60,17 +66,17 @@ export function PrivacySection({
       </SettingsSection>
 
       <SettingsSection
-        title="Danh sách người dùng bị chặn"
-        description="Những người bạn đã chặn sẽ không thể xem hồ sơ hoặc liên hệ với bạn."
+        title={t('settings.privacy.blockedTitle')}
+        description={t('settings.privacy.blockedDesc')}
       >
         {settings.blockedUsers.length === 0 ? (
           <div className="flex flex-col items-center rounded-[12px] border border-dashed border-border bg-card px-6 py-10 text-center">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-muted">
               <UserX className="h-5 w-5 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium text-foreground">Chưa chặn ai</p>
+            <p className="text-sm font-medium text-foreground">{t('settings.privacy.blockedEmpty')}</p>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              Khi bạn chặn ai đó, họ sẽ xuất hiện trong danh sách này.
+              {t('settings.privacy.blockedEmptyDesc')}
             </p>
           </div>
         ) : (
@@ -90,9 +96,22 @@ export function PrivacySection({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    Đã chặn · {formatBlockedDate(user.blockedAt)}
+                    {t('settings.privacy.blockedAt', {
+                      date: formatBlockedDate(user.blockedAt, i18n.language),
+                    })}
                   </p>
                 </div>
+                {unblockUser ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 rounded-[10px]"
+                    onClick={() => void unblockUser(user.id)}
+                  >
+                    {t('settings.privacy.unblock')}
+                  </Button>
+                ) : null}
               </div>
             ))}
           </div>

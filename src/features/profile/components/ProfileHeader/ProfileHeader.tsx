@@ -1,13 +1,31 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Camera, Plus, Edit,
-  X, Loader2, UserPlus, UserCheck, UserX, MessageCircle, UserMinus,
+  X, Loader2, UserPlus, UserCheck, UserX, MessageCircle, UserMinus, MoreHorizontal, Ban,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { friendService, FRIENDSHIP_CHANGED_EVENT, type FriendshipStatusResponse } from '@/services/friendService';
 import { authService } from '@/services/authService';
+import { userSettingsApi } from '@/features/settings/services/userSettingsApi';
 import { UserAvatar } from '@/components/shared';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { isPlaceholderAvatar } from '@/utils/userAvatarUtils';
 import { PROFILE_DEFAULT_COVER } from '../../utils/profileDisplayUtils';
 
@@ -46,12 +64,16 @@ export function ProfileHeader({
   onCoverUpload,
 }: ProfileHeaderProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Lightbox / upload state
   const [viewerImage, setViewerImage]     = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [coverUploading, setCoverUploading]   = useState(false);
   const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [isBlockedByMe, setIsBlockedByMe] = useState(false);
+  const [blockActionLoading, setBlockActionLoading] = useState(false);
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
 
   // Image load tracking — prevents flash of default image
   const [coverLoaded, setCoverLoaded] = useState(false);
@@ -62,6 +84,20 @@ export function ProfileHeader({
   // Reset loaded flags whenever the image URL changes (e.g. after upload)
   useEffect(() => { setCoverLoaded(false); }, [coverPhoto]);
 
+  useEffect(() => {
+    if (isOwnProfile || !profileUserId) {
+      setIsBlockedByMe(false);
+      return;
+    }
+    let cancelled = false;
+    void userSettingsApi.getBlockStatus(profileUserId).then((status) => {
+      if (!cancelled) setIsBlockedByMe(status.blockedByMe);
+    }).catch(() => {
+      if (!cancelled) setIsBlockedByMe(false);
+    });
+    return () => { cancelled = true; };
+  }, [isOwnProfile, profileUserId]);
+
   /* -------- friend actions -------- */
   const handleSendFriendRequest = async () => {
     const currentUser = authService.getCurrentUser();
@@ -70,9 +106,9 @@ export function ProfileHeader({
     try {
       const res = await friendService.sendFriendRequest(currentUser.id, profileUserId);
       onFriendshipStatusChange?.({ friendshipId: res.friendshipId, status: 'PENDING', sentByMe: true });
-      toast.success('Đã gửi lời mời kết bạn');
+      toast.success(t('profile.friendRequestSent'));
     } catch {
-      toast.error('Không thể gửi lời mời kết bạn');
+      toast.error(t('profile.friendRequestFailed'));
     } finally {
       setFriendActionLoading(false);
     }
@@ -84,9 +120,9 @@ export function ProfileHeader({
     try {
       await friendService.deleteFriendship(friendshipStatus.friendshipId);
       onFriendshipStatusChange?.(null);
-      toast.success('Đã hủy lời mời kết bạn');
+      toast.success(t('profile.friendCancelSuccess'));
     } catch {
-      toast.error('Không thể hủy lời mời kết bạn');
+      toast.error(t('profile.friendCancelFailed'));
     } finally {
       setFriendActionLoading(false);
     }
@@ -99,9 +135,9 @@ export function ProfileHeader({
       const res = await friendService.acceptFriendRequest(friendshipStatus.friendshipId);
       onFriendshipStatusChange?.({ friendshipId: res.friendshipId, status: 'ACCEPTED', sentByMe: false });
       window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
-      toast.success('Đã chấp nhận lời mời kết bạn');
+      toast.success(t('profile.friendAcceptSuccess'));
     } catch {
-      toast.error('Không thể chấp nhận lời mời kết bạn');
+      toast.error(t('profile.friendAcceptFailed'));
     } finally {
       setFriendActionLoading(false);
     }
@@ -114,11 +150,41 @@ export function ProfileHeader({
       await friendService.deleteFriendship(friendshipStatus.friendshipId);
       onFriendshipStatusChange?.(null);
       window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
-      toast.success('Đã hủy kết bạn');
+      toast.success(t('profile.unfriendSuccess'));
     } catch {
-      toast.error('Không thể hủy kết bạn');
+      toast.error(t('profile.unfriendFailed'));
     } finally {
       setFriendActionLoading(false);
+    }
+  };
+
+  const handleBlockUser = async () => {
+    if (!profileUserId) return;
+    setBlockActionLoading(true);
+    try {
+      await userSettingsApi.blockUser(profileUserId);
+      setIsBlockedByMe(true);
+      onFriendshipStatusChange?.(null);
+      setBlockDialogOpen(false);
+      toast.success(t('profile.blockSuccess'));
+    } catch {
+      toast.error(t('profile.blockError'));
+    } finally {
+      setBlockActionLoading(false);
+    }
+  };
+
+  const handleUnblockUser = async () => {
+    if (!profileUserId) return;
+    setBlockActionLoading(true);
+    try {
+      await userSettingsApi.unblockUser(profileUserId);
+      setIsBlockedByMe(false);
+      toast.success(t('profile.unblockSuccess'));
+    } catch {
+      toast.error(t('profile.unblockError'));
+    } finally {
+      setBlockActionLoading(false);
     }
   };
 
@@ -301,7 +367,7 @@ export function ProfileHeader({
                     </p>
                   )}
                   <p className="text-gray-600 dark:text-gray-400 font-semibold mt-1">
-                    {friendsCount} người bạn
+                    {t('common.friends', { count: friendsCount })}
                   </p>
                 </>
               )}
@@ -322,14 +388,14 @@ export function ProfileHeader({
                     className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-[15px]"
                   >
                     <Plus className="w-5 h-5" />
-                    Thêm vào tin
+                    {t('profile.addStory')}
                   </button>
                   <button
                     onClick={onEditClick}
                     className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium text-[15px]"
                   >
                     <Edit className="w-4 h-4" />
-                    Chỉnh sửa trang cá nhân
+                    {t('profile.editProfile')}
                   </button>
                 </>
               ) : (
@@ -341,7 +407,7 @@ export function ProfileHeader({
                       className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
-                      Bạn bè
+                      {t('profile.friends')}
                     </button>
                   ) : friendshipStatus?.status === 'PENDING' && friendshipStatus.sentByMe ? (
                     <button
@@ -350,7 +416,7 @@ export function ProfileHeader({
                       className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-                      Đã gửi lời mời
+                      {t('profile.requestSent')}
                     </button>
                   ) : friendshipStatus?.status === 'PENDING' && !friendshipStatus.sentByMe ? (
                     <>
@@ -360,7 +426,7 @@ export function ProfileHeader({
                         className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                       >
                         {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
-                        Chấp nhận
+                        {t('profile.accept')}
                       </button>
                       <button
                         onClick={handleCancelFriendRequest}
@@ -368,7 +434,7 @@ export function ProfileHeader({
                         className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
                       >
                         {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserMinus className="w-4 h-4" />}
-                        Từ chối
+                        {t('profile.reject')}
                       </button>
                     </>
                   ) : (
@@ -378,7 +444,7 @@ export function ProfileHeader({
                       className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                      Thêm bạn bè
+                      {t('profile.addFriend')}
                     </button>
                   )}
 
@@ -388,19 +454,77 @@ export function ProfileHeader({
                       className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      Nhắn tin
+                      {t('profile.message')}
                     </button>
                   ) : (
                     <button
                       disabled
-                      title="Kết bạn để nhắn tin"
+                      title={t('profile.messageDisabled')}
                       className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 rounded-lg font-medium cursor-not-allowed"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      Nhắn tin
+                      {t('profile.message')}
                     </button>
                   )}
 
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        disabled={blockActionLoading}
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white transition-colors disabled:opacity-60"
+                        title={t('profile.more')}
+                      >
+                        {blockActionLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <MoreHorizontal className="w-5 h-5" />
+                        )}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-[10px]">
+                      {isBlockedByMe ? (
+                        <DropdownMenuItem onClick={() => void handleUnblockUser()} className="cursor-pointer">
+                          <Ban className="mr-2 h-4 w-4" />
+                          {t('profile.unblock')}
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onClick={() => setBlockDialogOpen(true)}
+                          className="cursor-pointer text-destructive focus:text-destructive"
+                        >
+                          <Ban className="mr-2 h-4 w-4" />
+                          {t('profile.block')}
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <AlertDialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+                    <AlertDialogContent className="rounded-[12px]">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {t('profile.blockConfirmTitle', { name: fullName || username || '' })}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('profile.blockConfirmDesc')}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={blockActionLoading}>{t('common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={(event) => {
+                            event.preventDefault();
+                            void handleBlockUser();
+                          }}
+                          disabled={blockActionLoading}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {t('profile.block')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </>
               )}
             </div>

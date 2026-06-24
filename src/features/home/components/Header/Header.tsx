@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Search, Home, Users, Shapes, Clapperboard, Store, Grid3x3, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
@@ -20,6 +21,7 @@ import logoV2 from '@/assets/LogoKConnecta_V2.png';
 import { LIVE_NAV_LABEL } from '@/components/shared';
 
 export function Header() {
+  const { t } = useTranslation();
   const [showMessenger, setShowMessenger] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
@@ -91,13 +93,13 @@ export function Header() {
 
   const unreadMessagesCount = useMessengerUnreadCount();
 
-  const navItems = [
-    { icon: <Home className="w-6 h-6" />, href: '/home', label: 'Home' },
-    { icon: <Users className="w-6 h-6" />, href: '/friends', label: 'Bạn bè' },
-    { icon: <Clapperboard className="w-6 h-6" />, href: '/watch', label: 'Watch' },
-    { icon: <Shapes className="w-6 h-6" />, href: '/groups', label: 'Groups' },
+  const navItems = useMemo(() => [
+    { icon: <Home className="w-6 h-6" />, href: '/home', label: t('nav.home') },
+    { icon: <Users className="w-6 h-6" />, href: '/friends', label: t('nav.friends') },
+    { icon: <Clapperboard className="w-6 h-6" />, href: '/watch', label: t('nav.watch') },
+    { icon: <Shapes className="w-6 h-6" />, href: '/groups', label: t('nav.groups') },
     { icon: <Radio className="w-6 h-6" />, href: '/live', label: LIVE_NAV_LABEL },
-  ];
+  ], [t]);
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-card/95 backdrop-blur-md shadow-sm z-50 border-b border-border">

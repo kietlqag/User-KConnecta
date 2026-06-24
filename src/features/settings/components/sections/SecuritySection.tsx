@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { CheckCircle2, Eye, EyeOff, Loader2, Monitor, Smartphone } from 'lucide-react';
+import { CheckCircle2, Eye, EyeOff, Loader2, LogOut, Monitor, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ interface SecuritySectionProps {
   saving: boolean;
   onSave: () => void;
   onDiscard: () => void;
+  revokeSession?: (sessionId: string) => Promise<void>;
 }
 
 function ChangePasswordBlock() {
@@ -216,6 +217,7 @@ export function SecuritySection({
   saving,
   onSave,
   onDiscard,
+  revokeSession,
 }: SecuritySectionProps) {
   return (
     <div className="space-y-8">
@@ -275,6 +277,16 @@ export function SecuritySection({
                   {device.location} · Hoạt động: {formatLastActive(device.lastActive)}
                 </p>
               </div>
+              {!device.isCurrent && revokeSession ? (
+                <button
+                  type="button"
+                  onClick={() => void revokeSession(device.id)}
+                  className="shrink-0 rounded-[10px] p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  title="Đăng xuất thiết bị này"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
           ))}
         </div>

@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type RefObject } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, LogOut, MailCheck } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, LogOut, MailCheck, ShieldCheck } from "lucide-react";
 import { authService, type AuthUser } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { OTPInput } from "@/features/auth/components/OTPInput/OTPInput";
+import { useTranslation, Trans } from "react-i18next";
+import { toast } from "sonner";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
 import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
 
@@ -108,7 +111,109 @@ function BlockedLoginContent({ user, onLogout }: { user: AuthUser; onLogout: () 
   );
 }
 
+interface TwoFactorPending {
+  email: string;
+  twoFactorToken: string;
+}
+
+function TwoFactorLoginContent({
+  pending,
+  onBack,
+  onSuccess,
+}: {
+  pending: TwoFactorPending;
+  onBack: () => void;
+  onSuccess: (user: AuthUser) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(60);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setTimeout(() => setResendCooldown((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleVerify = async (event: FormEvent) => {
+    event.preventDefault();
+    if (otp.length !== 6) {
+      setError(t("auth.otpIncomplete"));
+      return;
+    }
+    setVerifying(true);
+    setError("");
+    try {
+      const user = await authService.verifyTwoFactorLogin(pending.twoFactorToken, otp);
+      await onSuccess(user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("auth.otpInvalid"));
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0 || resending) return;
+    setResending(true);
+    try {
+      await authService.resendTwoFactorLogin(pending.twoFactorToken);
+      setResendCooldown(60);
+      toast.success(t("auth.otpResent"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t("auth.otpResendFailed"));
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const resendLabel = resendCooldown > 0
+    ? t("auth.resendOtpIn", { time: `${String(Math.floor(resendCooldown / 60)).padStart(2, "0")}:${String(resendCooldown % 60).padStart(2, "0")}` })
+    : t("auth.resendOtp");
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <ShieldCheck className="size-7" />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight">{t("auth.twoFactorTitle")}</h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          <Trans
+            i18nKey="auth.twoFactorDesc"
+            values={{ email: pending.email }}
+            components={{ strong: <span className="font-medium text-foreground" /> }}
+          />
+        </p>
+      </div>
+
+      <form onSubmit={handleVerify} className="space-y-5">
+        <OTPInput value={otp} onChange={(value) => { setOtp(value); setError(""); }} error={error} />
+        <Button type="submit" className="h-12 w-full text-base font-medium" disabled={verifying || otp.length !== 6}>
+          {verifying ? t("auth.verifying") : t("common.confirm")}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 w-full text-base font-medium"
+          onClick={() => void handleResend()}
+          disabled={verifying || resending || resendCooldown > 0}
+        >
+          {resending ? t("common.loading") : resendLabel}
+        </Button>
+        <Button type="button" variant="ghost" className="h-12 w-full text-base font-medium" onClick={onBack} disabled={verifying}>
+          {t("auth.backToLogin")}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export function LoginPage() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
@@ -149,6 +254,7 @@ export function LoginPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false);
   const [isPurplePeeking, setIsPurplePeeking] = useState(false);
+  const [twoFactorPending, setTwoFactorPending] = useState<TwoFactorPending | null>(null);
 
   const purpleRef = useRef<HTMLDivElement>(null);
   const blackRef = useRef<HTMLDivElement>(null);
@@ -169,8 +275,11 @@ export function LoginPage() {
       return;
     }
 
+    const googleLocale = i18n.language === "en" ? "en" : "vi";
+    const scriptSrc = `https://accounts.google.com/gsi/client?hl=${googleLocale}`;
+
     let cancelled = false;
-    let script = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+    let script = document.querySelector<HTMLScriptElement>('script[src*="accounts.google.com/gsi/client"]');
 
     const renderGoogleButton = () => {
       if (cancelled || !window.google?.accounts.id || !googleButtonRef.current) return;
@@ -201,13 +310,14 @@ export function LoginPage() {
               });
               return;
             }
-            await persistAndHydrateUser(user);
-            if (user.accountStatus === "BLOCKED") {
-              setBlockedUser(user);
-              navigate("/auth/login", { replace: true });
+            if (user.requiresTwoFactor && user.twoFactorToken) {
+              setTwoFactorPending({
+                email: user.email || "",
+                twoFactorToken: user.twoFactorToken,
+              });
               return;
             }
-            navigate(redirectTo, { replace: true });
+            await finishLogin(user);
           } catch (err) {
             setGoogleError(err instanceof Error ? err.message : "Đăng nhập Google thất bại");
           } finally {
@@ -224,15 +334,21 @@ export function LoginPage() {
         size: "large",
         width: Math.min(380, googleButtonRef.current.offsetWidth || 380),
         logo_alignment: "left",
+        locale: googleLocale,
       });
     };
+
+    if (script && script.src !== scriptSrc) {
+      script.remove();
+      script = null;
+    }
 
     if (script) {
       script.addEventListener("load", renderGoogleButton);
       renderGoogleButton();
     } else {
       script = document.createElement("script");
-      script.src = "https://accounts.google.com/gsi/client";
+      script.src = scriptSrc;
       script.async = true;
       script.defer = true;
       script.onload = renderGoogleButton;
@@ -244,7 +360,7 @@ export function LoginPage() {
       cancelled = true;
       if (script) script.removeEventListener("load", renderGoogleButton);
     };
-  }, [formData.rememberMe, navigate, redirectTo, resetGoogleAuth]);
+  }, [formData.rememberMe, navigate, redirectTo, resetGoogleAuth, i18n.language]);
 
   useEffect(() => {
     const prevHtmlOverflow = document.documentElement.style.overflow;
@@ -360,6 +476,18 @@ export function LoginPage() {
     }
   };
 
+  const finishLogin = async (user: AuthUser) => {
+    await persistAndHydrateUser(user);
+    if (user.accountStatus === "BLOCKED") {
+      setBlockedUser(user);
+      setTwoFactorPending(null);
+      navigate("/auth/login", { replace: true });
+      return;
+    }
+    setTwoFactorPending(null);
+    navigate(redirectTo, { replace: true });
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (authLockRef.current) return;
@@ -371,13 +499,14 @@ export function LoginPage() {
     setIsLoading(true);
     try {
       const user = await authService.login(formData.email, formData.password);
-      await persistAndHydrateUser(user);
-      if (user.accountStatus === "BLOCKED") {
-        setBlockedUser(user);
-        navigate("/auth/login", { replace: true });
+      if (user.requiresTwoFactor && user.twoFactorToken) {
+        setTwoFactorPending({
+          email: user.email || formData.email,
+          twoFactorToken: user.twoFactorToken,
+        });
         return;
       }
-      navigate(redirectTo, { replace: true });
+      await finishLogin(user);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đăng nhập thất bại");
     } finally {
@@ -618,15 +747,24 @@ export function LoginPage() {
 
           {blockedUser ? (
             <BlockedLoginContent user={blockedUser} onLogout={handleBlockedLogout} />
+          ) : twoFactorPending ? (
+            <TwoFactorLoginContent
+              pending={twoFactorPending}
+              onBack={() => {
+                setTwoFactorPending(null);
+                setError("");
+              }}
+              onSuccess={finishLogin}
+            />
           ) : (
             <>
               <div className="mb-10 text-center">
-                <h1 className="mb-2 text-3xl font-bold tracking-tight">Chào mừng bạn quay lại!</h1>
+                <h1 className="mb-2 text-3xl font-bold tracking-tight">{t("auth.welcomeBack")}</h1>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">{t("auth.email")}</Label>
                   <div className="relative">
                     <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -646,7 +784,7 @@ export function LoginPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">Mật khẩu</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">{t("auth.password")}</Label>
                   <div className="relative">
                     <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
@@ -679,20 +817,20 @@ export function LoginPage() {
                       onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, rememberMe: checked === true }))}
                       className="cursor-pointer"
                     />
-                    <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">Ghi nhớ đăng nhập</Label>
+                    <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">{t("auth.rememberMe")}</Label>
                   </div>
                   <Link
                     to="/auth/forgot-password"
                     className={`text-sm font-medium text-primary hover:underline ${isAuthenticating ? "pointer-events-none opacity-50" : ""}`}
                   >
-                    Quên mật khẩu?
+                    {t("auth.forgotPassword")}
                   </Link>
                 </div>
 
                 {error && <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3 text-sm text-red-400">{error}</div>}
 
                 <Button type="submit" className="h-12 w-full text-base font-medium" size="lg" disabled={isAuthenticating}>
-                  {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
+                  {isLoading ? t("auth.loggingIn") : t("auth.login")}
                 </Button>
               </form>
 
@@ -701,7 +839,7 @@ export function LoginPage() {
                   <div className="w-full border-t border-border" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-background px-4 text-muted-foreground">Hoặc</span>
+                  <span className="bg-background px-4 text-muted-foreground">{t("common.or")}</span>
                 </div>
               </div>
 
@@ -715,12 +853,12 @@ export function LoginPage() {
               </div>
 
               <div className="mt-8 text-center text-sm text-muted-foreground">
-                Chưa có tài khoản? {" "}
+                {t("auth.noAccount")}{" "}
                 <Link
                   to="/auth/register"
                   className={`font-medium text-foreground hover:underline ${isAuthenticating ? "pointer-events-none opacity-50" : ""}`}
                 >
-                  Đăng ký ngay
+                  {t("auth.registerNow")}
                 </Link>
               </div>
             </>

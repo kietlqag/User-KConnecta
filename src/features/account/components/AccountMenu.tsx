@@ -1,6 +1,7 @@
 import { Settings, HelpCircle, LogOut, ChevronRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import avatarImage from 'figma:asset/34ededad5ccd5d51ad30647ea2c59d1a7ff31f90.png';
 
@@ -9,6 +10,7 @@ interface AccountMenuProps {
 }
 
 export function AccountMenu({ onClose }: AccountMenuProps) {
+  const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
@@ -91,7 +93,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
             <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
               <Settings className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </div>
-            <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">Cài đặt và quyền riêng tư</span>
+            <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">{t('account.settings')}</span>
             <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
           </button>
 
@@ -110,7 +112,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
             <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
               <LogOut className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </div>
-            <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">Đăng xuất</span>
+            <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">{t('account.logout')}</span>
           </button>
         </div>
       </div>

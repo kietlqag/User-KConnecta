@@ -1,52 +1,235 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { useTheme } from 'next-themes';
+
 import { toast } from 'sonner';
-import { loadUserSettings, saveUserSettings } from '../services/userSettingsService';
+
+import i18n from '@/i18n';
+
 import type { UserSettings } from '../types/userSettings.types';
 
+import { DEFAULT_USER_SETTINGS } from '../types/userSettings.types';
+
+import { userSettingsApi } from '../services/userSettingsApi';
+
+import { applyAppLanguage } from '@/i18n';
+
+
+
 export function useUserSettings() {
+
   const { setTheme } = useTheme();
-  const [settings, setSettings] = useState<UserSettings>(() => loadUserSettings());
-  const [savedSnapshot, setSavedSnapshot] = useState<UserSettings>(() => loadUserSettings());
+
+  const [settings, setSettings] = useState<UserSettings>(DEFAULT_USER_SETTINGS);
+
+  const [savedSnapshot, setSavedSnapshot] = useState<UserSettings>(DEFAULT_USER_SETTINGS);
+
+  const [loading, setLoading] = useState(true);
+
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const [saving, setSaving] = useState(false);
 
+  const loadingRef = useRef(false);
+
+
+
+  const load = useCallback(async () => {
+
+    if (loadingRef.current) return;
+
+    loadingRef.current = true;
+
+    setLoading(true);
+
+    setLoadError(null);
+
+    try {
+
+      const data = await userSettingsApi.getSettings();
+
+      setSettings(data);
+
+      setSavedSnapshot(data);
+
+      if (data.theme) {
+
+        setTheme(data.theme);
+
+      }
+
+      applyAppLanguage(data.language);
+
+    } catch (error) {
+
+      const message = error instanceof Error ? error.message : i18n.t('settings.loadError');
+
+      setLoadError(message);
+
+      toast.error(message);
+
+    } finally {
+
+      loadingRef.current = false;
+
+      setLoading(false);
+
+    }
+
+  }, [setTheme]);
+
+
+
   useEffect(() => {
-    const next = loadUserSettings();
-    setSettings(next);
-    setSavedSnapshot(next);
-  }, []);
+
+    void load();
+
+  }, [load]);
+
+
 
   const isDirty = JSON.stringify(settings) !== JSON.stringify(savedSnapshot);
 
+
+
   const updateSettings = useCallback((patch: Partial<UserSettings>) => {
+
     setSettings((prev) => ({ ...prev, ...patch }));
+
   }, []);
 
+
+
   const save = useCallback(async () => {
+
     setSaving(true);
+
     try {
-      await new Promise((r) => setTimeout(r, 350));
-      saveUserSettings(settings);
-      setTheme(settings.theme);
-      setSavedSnapshot(settings);
-      toast.success('Đã lưu thay đổi');
-    } catch {
-      toast.error('Không thể lưu cài đặt');
+
+      const data = await userSettingsApi.updateSettings({
+
+        twoFactorEnabled: settings.twoFactorEnabled,
+
+        profileVisibility: settings.profileVisibility,
+
+        postsVisibility: settings.postsVisibility,
+
+        notifyPosts: settings.notifyPosts,
+
+        notifyMessages: settings.notifyMessages,
+
+        notifyEmail: settings.notifyEmail,
+
+        theme: settings.theme,
+
+        language: settings.language,
+
+      });
+
+      setSettings(data);
+
+      setSavedSnapshot(data);
+
+      setTheme(data.theme);
+
+      applyAppLanguage(data.language);
+
+      toast.success(i18n.t('common.saved'));
+
+    } catch (error) {
+
+      toast.error(error instanceof Error ? error.message : i18n.t('settings.saveError'));
+
     } finally {
+
       setSaving(false);
+
     }
+
   }, [settings, setTheme]);
 
+
+
   const discard = useCallback(() => {
+
     setSettings(savedSnapshot);
+
+    applyAppLanguage(savedSnapshot.language);
+
   }, [savedSnapshot]);
 
+
+
+  const unblockUser = useCallback(async (blockedUserId: string) => {
+
+    try {
+
+      const data = await userSettingsApi.unblockUser(blockedUserId);
+
+      setSettings(data);
+
+      setSavedSnapshot(data);
+
+      toast.success(i18n.t('settings.unblockSuccess'));
+
+    } catch (error) {
+
+      toast.error(error instanceof Error ? error.message : i18n.t('settings.unblockError'));
+
+    }
+
+  }, []);
+
+
+
+  const revokeSession = useCallback(async (sessionId: string) => {
+
+    try {
+
+      const data = await userSettingsApi.revokeSession(sessionId);
+
+      setSettings(data);
+
+      setSavedSnapshot(data);
+
+      toast.success(i18n.t('settings.revokeSuccess'));
+
+    } catch (error) {
+
+      toast.error(error instanceof Error ? error.message : i18n.t('settings.revokeError'));
+
+    }
+
+  }, []);
+
+
+
   return {
+
     settings,
+
     updateSettings,
+
     isDirty,
+
     save,
+
     discard,
+
     saving,
+
+    loading,
+
+    loadError,
+
+    reload: load,
+
+    unblockUser,
+
+    revokeSession,
+
   };
+
 }
+
+

@@ -1,13 +1,15 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
-import { SettingsSidebar, SettingsMobileNav, SETTINGS_TAB_LABELS } from '../components/SettingsSidebar';
+import { SettingsSidebar, SettingsMobileNav, useSettingsTabLabel } from '../components/SettingsSidebar';
 import { SecuritySection } from '../components/sections/SecuritySection';
 import { PrivacySection } from '../components/sections/PrivacySection';
 import { NotificationsSection } from '../components/sections/NotificationsSection';
 import { AppearanceSection } from '../components/sections/AppearanceSection';
 import { useUserSettings } from '../hooks/useUserSettings';
 import type { SettingsTab } from '../types/userSettings.types';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 const VALID_TABS: SettingsTab[] = ['security', 'privacy', 'notifications', 'appearance'];
 
@@ -22,7 +24,9 @@ export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => parseTab(searchParams.get('tab')));
 
-  const { settings, updateSettings, isDirty, save, discard, saving } = useUserSettings();
+  const { settings, updateSettings, isDirty, save, discard, saving, loading, loadError, reload, unblockUser, revokeSession } = useUserSettings();
+  const { t } = useTranslation();
+  const tabLabel = useSettingsTabLabel(activeTab);
 
   useEffect(() => {
     const tab = parseTab(searchParams.get('tab'));
@@ -42,8 +46,10 @@ export default function SettingsPage() {
       saving,
       onSave: () => void save(),
       onDiscard: discard,
+      unblockUser,
+      revokeSession,
     }),
-    [settings, updateSettings, isDirty, saving, save, discard],
+    [settings, updateSettings, isDirty, saving, save, discard, unblockUser, revokeSession],
   );
 
   return (
@@ -52,8 +58,8 @@ export default function SettingsPage() {
 
       <div className="mx-auto max-w-6xl px-4 pb-12 pt-[calc(56px+1.5rem)] lg:px-8">
         <div className="mb-6 lg:hidden">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Cài đặt</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Quản lý tài khoản và trải nghiệm KConnecta</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('settings.subtitle')}</p>
         </div>
 
         <SettingsMobileNav active={activeTab} onSelect={handleSelectTab} />
@@ -68,24 +74,30 @@ export default function SettingsPage() {
           <main className="min-w-0 flex-1">
             <header className="mb-8 border-b border-border pb-6">
               <h2 className="text-xl font-bold tracking-tight text-foreground">
-                {SETTINGS_TAB_LABELS[activeTab]}
+                {tabLabel}
               </h2>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {activeTab === 'security' &&
-                  'Bảo vệ tài khoản với mật khẩu mạnh và xác thực hai lớp.'}
-                {activeTab === 'privacy' &&
-                  'Kiểm soát ai có thể xem hồ sơ, bài viết và danh sách chặn.'}
-                {activeTab === 'notifications' &&
-                  'Tùy chỉnh cách bạn nhận thông báo trên KConnecta.'}
-                {activeTab === 'appearance' &&
-                  'Điều chỉnh giao diện và ngôn ngữ hiển thị.'}
+                {t(`settings.tabDesc.${activeTab}`)}
               </p>
             </header>
 
-            {activeTab === 'security' && <SecuritySection {...sectionProps} />}
-            {activeTab === 'privacy' && <PrivacySection {...sectionProps} />}
-            {activeTab === 'notifications' && <NotificationsSection {...sectionProps} />}
-            {activeTab === 'appearance' && <AppearanceSection {...sectionProps} />}
+            {loading ? (
+              <div className="py-16 text-center text-sm text-muted-foreground">{t('common.loadingSettings')}</div>
+            ) : loadError ? (
+              <div className="flex flex-col items-center gap-4 py-16 text-center">
+                <p className="max-w-md text-sm text-muted-foreground">{loadError}</p>
+                <Button type="button" variant="outline" className="rounded-[10px]" onClick={() => void reload()}>
+                  {t('common.retry')}
+                </Button>
+              </div>
+            ) : (
+              <>
+                {activeTab === 'security' && <SecuritySection {...sectionProps} />}
+                {activeTab === 'privacy' && <PrivacySection {...sectionProps} />}
+                {activeTab === 'notifications' && <NotificationsSection {...sectionProps} />}
+                {activeTab === 'appearance' && <AppearanceSection {...sectionProps} />}
+              </>
+            )}
           </main>
         </div>
       </div>
