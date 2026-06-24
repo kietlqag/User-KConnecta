@@ -16,6 +16,8 @@ public class AuthResponse {
     private String username;
     private boolean hasPassword;
     private boolean requiresProfileSetup;
+    private boolean requiresTwoFactor;
+    private String twoFactorToken;
     private String token;
     private AccountStatus accountStatus;
     private String blockedReason;

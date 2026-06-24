@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
+import project.kconnecta.user.backend.feature.settings.service.impl.SettingsServiceImpl;
 import project.kconnecta.user.backend.common.util.JwtUtil;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.user.entity.User;
@@ -34,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
     private final UserRepository userRepository;
+    private final SettingsServiceImpl settingsServiceImpl;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -52,8 +54,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
 
             Claims claims = jwtUtil.extractClaims(token);
-                // JWT subject is the user id (see JwtUtil.generateToken), not the account id.
-                UUID userId = UUID.fromString(claims.getSubject());
+            UUID sessionId = jwtUtil.extractSessionId(token);
+            if (sessionId != null) {
+                var sessionOpt = settingsServiceImpl.findSession(sessionId);
+                if (sessionOpt.isPresent() && !sessionOpt.get().isActive()) {
+                    sendUnauthorizedResponse(response, "Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.");
+                    return;
+                }
+                if (sessionOpt.isPresent()) {
+                    settingsServiceImpl.touchSession(sessionId);
+                }
+            }
+
+            // JWT subject is the user id (see JwtUtil.generateToken), not the account id.
+            UUID userId = UUID.fromString(claims.getSubject());
 
                 Optional<User> userOpt = userRepository.findById(userId);
                 User user = userOpt.orElse(null);

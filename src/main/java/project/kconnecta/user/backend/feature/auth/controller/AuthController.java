@@ -75,7 +75,24 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
         }
-        return ResponseEntity.ok(authService.login(request));
+        return ResponseEntity.ok(authService.login(request, httpRequest));
+    }
+
+    @PostMapping("/verify-2fa-login")
+    public ResponseEntity<?> verifyTwoFactorLogin(
+            @Valid @RequestBody VerifyTwoFactorLoginRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.verifyTwoFactorLogin(request, httpRequest));
+    }
+
+    @PostMapping("/resend-2fa-login")
+    public ResponseEntity<?> resendTwoFactorLogin(@Valid @RequestBody ResendTwoFactorLoginRequest request) {
+        if (rateLimitService.isRateLimited("resend-2fa", request.getTwoFactorToken(), 3, Duration.ofMinutes(5))) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
+        }
+        authService.resendTwoFactorLogin(request);
+        return ResponseEntity.ok(Map.of("message", "OTP da duoc gui lai"));
     }
 
     @PostMapping("/logout")
@@ -87,13 +104,17 @@ public class AuthController {
     }
 
     @PostMapping("/google-login")
-    public ResponseEntity<AuthResponse> googleLogin(@Valid @RequestBody GoogleLoginRequest request) {
-        return ResponseEntity.ok(authService.googleLogin(request.getIdToken()));
+    public ResponseEntity<AuthResponse> googleLogin(
+            @Valid @RequestBody GoogleLoginRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.googleLogin(request.getIdToken(), httpRequest));
     }
 
     @PostMapping("/google-complete-register")
-    public ResponseEntity<AuthResponse> googleCompleteRegister(@Valid @RequestBody GoogleCompleteRegisterRequest request) {
-        return ResponseEntity.ok(authService.googleCompleteRegister(request));
+    public ResponseEntity<AuthResponse> googleCompleteRegister(
+            @Valid @RequestBody GoogleCompleteRegisterRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(authService.googleCompleteRegister(request, httpRequest));
     }
 
     @GetMapping("/check-email")

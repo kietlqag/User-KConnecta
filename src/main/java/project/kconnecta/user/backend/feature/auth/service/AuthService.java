@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.servlet.http.HttpServletRequest;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
+import project.kconnecta.user.backend.common.enums.OtpType;
 import project.kconnecta.user.backend.common.util.JwtUtil;
 import project.kconnecta.user.backend.config.security.TokenBlacklistService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
@@ -19,9 +21,13 @@ import project.kconnecta.user.backend.feature.auth.dto.request.ChangePasswordReq
 import project.kconnecta.user.backend.feature.auth.dto.request.GoogleCompleteRegisterRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.LoginRequest;
 import project.kconnecta.user.backend.feature.auth.dto.request.RegisterRequest;
+import project.kconnecta.user.backend.feature.auth.dto.request.ResendTwoFactorLoginRequest;
 import project.kconnecta.user.backend.feature.auth.dto.response.AuthResponse;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
+import project.kconnecta.user.backend.feature.auth.dto.request.VerifyTwoFactorLoginRequest;
+import project.kconnecta.user.backend.feature.settings.service.SettingsService;
+import project.kconnecta.user.backend.feature.settings.service.impl.SettingsServiceImpl;
 import project.kconnecta.user.backend.feature.user.dto.request.ResetPasswordRequest;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
@@ -56,6 +62,9 @@ public class AuthService {
     private final TokenBlacklistService tokenBlacklistService;
     private final ActivityLogService activityLogService;
     private final AdminReviewNotificationClient adminReviewNotificationClient;
+    private final SettingsService settingsService;
+    private final SettingsServiceImpl settingsServiceImpl;
+    private final TwoFactorPendingService twoFactorPendingService;
 
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
@@ -103,12 +112,13 @@ public class AuthService {
                 .build();
 
         User saved = userRepository.save(user);
+        settingsService.createDefaultSettings(saved.getId());
         otpService.clear(request.getEmail());
         activityLogService.log(saved.getId(), saved.getUsername(), ActivityLogType.REGISTER);
         return toResponse(saved);
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         Account account = accountRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
 
@@ -137,8 +147,59 @@ public class AuthService {
             throw new ValidationException("Tai khoan khong kha dung");
         }
 
+        if (settingsService.isTwoFactorEnabled(user.getId())) {
+            String pendingToken = twoFactorPendingService.createPendingLogin(user.getId());
+            otpService.sendOtp(account.getEmail(), OtpType.TWO_FACTOR_LOGIN);
+            return AuthResponse.builder()
+                    .email(account.getEmail())
+                    .requiresTwoFactor(true)
+                    .twoFactorToken(pendingToken)
+                    .build();
+        }
+
+        return completeLogin(user, httpRequest);
+    }
+
+    public AuthResponse verifyTwoFactorLogin(VerifyTwoFactorLoginRequest request, HttpServletRequest httpRequest) {
+        UUID userId = twoFactorPendingService.consumePendingLogin(request.getTwoFactorToken());
+        if (userId == null) {
+            throw new ValidationException("Phien xac thuc hai lop da het han");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung"));
+        Account account = user.getAccount();
+
+        otpService.verifyOtp(account.getEmail(), request.getOtp(), OtpType.TWO_FACTOR_LOGIN);
+
+        AuthResponse blocked = resolveLockState(account, user,
+                "{\"reason\":\"Tai khoan bi khoa khi dang nhap\"}");
+        if (blocked != null) {
+            return blocked;
+        }
+
+        return completeLogin(user, httpRequest);
+    }
+
+    public void resendTwoFactorLogin(ResendTwoFactorLoginRequest request) {
+        UUID userId = twoFactorPendingService.peekPendingLogin(request.getTwoFactorToken());
+        if (userId == null) {
+            throw new ValidationException("Phien xac thuc hai lop da het han");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung"));
+        Account account = user.getAccount();
+
+        twoFactorPendingService.refreshPendingLogin(request.getTwoFactorToken(), userId);
+        otpService.sendOtp(account.getEmail(), OtpType.TWO_FACTOR_LOGIN);
+    }
+
+    private AuthResponse completeLogin(User user, HttpServletRequest httpRequest) {
+        settingsService.createDefaultSettings(user.getId());
+        UUID sessionId = settingsServiceImpl.createLoginSession(user.getId(), httpRequest);
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.LOGIN);
-        return toResponse(user);
+        return toResponse(user, sessionId);
     }
 
     public void logout(String authHeader) {
@@ -158,7 +219,7 @@ public class AuthService {
         tokenBlacklistService.blacklistToken(token);
     }
 
-    public AuthResponse googleLogin(String idToken) {
+    public AuthResponse googleLogin(String idToken, HttpServletRequest httpRequest) {
         GoogleTokenInfo tokenInfo = verifyGoogleTokenAndAudience(idToken);
 
         User user = userRepository.findByAccountEmail(tokenInfo.email()).orElse(null);
@@ -184,11 +245,21 @@ public class AuthService {
             throw new ValidationException("Tai khoan khong kha dung");
         }
 
+        if (settingsService.isTwoFactorEnabled(user.getId())) {
+            String pendingToken = twoFactorPendingService.createPendingLogin(user.getId());
+            otpService.sendOtp(account.getEmail(), OtpType.TWO_FACTOR_LOGIN);
+            return AuthResponse.builder()
+                    .email(account.getEmail())
+                    .requiresTwoFactor(true)
+                    .twoFactorToken(pendingToken)
+                    .build();
+        }
+
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.GOOGLE_LOGIN);
-        return toResponse(user);
+        return completeLogin(user, httpRequest);
     }
 
-    public AuthResponse googleCompleteRegister(GoogleCompleteRegisterRequest request) {
+    public AuthResponse googleCompleteRegister(GoogleCompleteRegisterRequest request, HttpServletRequest httpRequest) {
         GoogleTokenInfo tokenInfo = verifyGoogleTokenAndAudience(request.getIdToken());
 
         if (userRepository.findByAccountEmail(tokenInfo.email()).isPresent()) {
@@ -212,8 +283,9 @@ public class AuthService {
                 .build();
 
         User saved = userRepository.save(user);
+        settingsService.createDefaultSettings(saved.getId());
         activityLogService.log(saved.getId(), saved.getUsername(), ActivityLogType.GOOGLE_LOGIN);
-        return toResponse(saved);
+        return completeLogin(saved, httpRequest);
     }
 
     private Account ensureGoogleAccountExists(GoogleTokenInfo tokenInfo) {
@@ -324,7 +396,11 @@ public class AuthService {
     }
 
     private AuthResponse toResponse(User user) {
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
+        return toResponse(user, null);
+    }
+
+    private AuthResponse toResponse(User user, UUID sessionId) {
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), sessionId);
         return AuthResponse.builder()
                 .id(user.getId())
                 .email(user.getAccount().getEmail())

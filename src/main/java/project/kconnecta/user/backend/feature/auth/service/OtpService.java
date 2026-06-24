@@ -43,6 +43,10 @@ public class OtpService {
                 ? OtpType.PASSWORD_RESET
                 : OtpType.ACCOUNT_ACTIVATION;
 
+        sendOtp(email, otpType);
+    }
+
+    public void sendOtp(String email, OtpType otpType) {
         String code = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
         String key = buildKey(email, otpType);
         OtpSession session = new OtpSession(code, otpType, false);
@@ -69,6 +73,10 @@ public class OtpService {
                 ? OtpType.PASSWORD_RESET
                 : OtpType.ACCOUNT_ACTIVATION;
 
+        verifyOtp(email, code, otpType);
+    }
+
+    public void verifyOtp(String email, String code, OtpType otpType) {
         String key = buildKey(email, otpType);
         OtpSession otp = getValidOtp(key);
 
@@ -76,8 +84,13 @@ public class OtpService {
             throw new ValidationException("Ma OTP khong dung");
         }
 
-        // Mark verified; account creation/activation happens downstream (register / resetPassword)
         redisTemplate.opsForValue().set(key, otp.markVerified(), Duration.ofMinutes(OTP_EXPIRATION_MINUTES));
+    }
+
+    public boolean isVerified(String email, OtpType otpType) {
+        String key = buildKey(email, otpType);
+        OtpSession otp = (OtpSession) redisTemplate.opsForValue().get(key);
+        return otp != null && otp.verified();
     }
 
     public boolean isActivationVerified(String email) {
@@ -95,6 +108,7 @@ public class OtpService {
     public void clear(String email) {
         redisTemplate.delete(buildKey(email, OtpType.PASSWORD_RESET));
         redisTemplate.delete(buildKey(email, OtpType.ACCOUNT_ACTIVATION));
+        redisTemplate.delete(buildKey(email, OtpType.TWO_FACTOR_LOGIN));
     }
 
     private OtpSession getValidOtp(String key) {

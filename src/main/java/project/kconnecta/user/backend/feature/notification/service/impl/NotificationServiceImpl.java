@@ -10,8 +10,10 @@ import project.kconnecta.user.backend.feature.notification.entity.Notification;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
 import project.kconnecta.user.backend.feature.notification.repository.NotificationRepository;
 import project.kconnecta.user.backend.feature.notification.service.NotificationService;
+import project.kconnecta.user.backend.feature.notification.service.NotificationEmailService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
+import project.kconnecta.user.backend.feature.settings.service.SettingsService;
 
 import java.util.List;
 import java.util.Map;
@@ -25,10 +27,16 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final SettingsService settingsService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationEmailService notificationEmailService;
 
     @Override
     public NotificationResponse createNotification(UUID recipientId, UUID senderId, NotificationType type, String content, UUID relatedId) {
+        if (!settingsService.isNotificationEnabled(recipientId, type)) {
+            return null;
+        }
+
         User recipient = userRepository.findById(recipientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recipient not found: " + recipientId));
 
@@ -56,6 +64,8 @@ public class NotificationServiceImpl implements NotificationService {
 
         notification = notificationRepository.save(notification);
         pushUnreadCountUpdate(recipient, type);
+        String senderName = sender != null ? sender.getFullName() : null;
+        notificationEmailService.sendNotificationEmail(recipientId, type, content, senderName);
         return toResponse(notification);
     }
 

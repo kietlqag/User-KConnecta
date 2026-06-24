@@ -26,13 +26,25 @@ public class JwtUtil {
     }
 
     public String generateToken(UUID userId, String username) {
-        return Jwts.builder()
+        return generateToken(userId, username, null);
+    }
+
+    public String generateToken(UUID userId, String username, UUID sessionId) {
+        var builder = Jwts.builder()
                 .subject(userId.toString())
                 .claim("username", username)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSigningKey())
-                .compact();
+                .expiration(new Date(System.currentTimeMillis() + expiration));
+        if (sessionId != null) {
+            builder.claim("sid", sessionId.toString());
+        }
+        return builder.signWith(getSigningKey()).compact();
+    }
+
+    public UUID extractSessionId(String token) {
+        Claims claims = extractClaims(token);
+        String sid = claims.get("sid", String.class);
+        return sid != null ? UUID.fromString(sid) : null;
     }
 
     public Claims extractClaims(String token) {

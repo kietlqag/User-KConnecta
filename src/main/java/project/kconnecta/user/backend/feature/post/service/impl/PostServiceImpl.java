@@ -50,6 +50,7 @@ import project.kconnecta.user.backend.feature.post.service.PostService;
 import project.kconnecta.user.backend.feature.search.redis.RedisSearchIndexer;
 import project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus;
 import project.kconnecta.user.backend.feature.friend.repository.FriendshipRepository;
+import project.kconnecta.user.backend.feature.settings.service.SettingsService;
 import project.kconnecta.user.backend.feature.album.entity.Album;
 import project.kconnecta.user.backend.feature.album.repository.AlbumMediaRepository;
 import project.kconnecta.user.backend.feature.album.repository.AlbumRepository;
@@ -119,6 +120,7 @@ public class PostServiceImpl implements PostService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final project.kconnecta.user.backend.feature.ai.GeminiModerationService geminiModerationService;
     private final FriendshipRepository friendshipRepository;
+    private final SettingsService settingsService;
     private final AlbumRepository albumRepository;
     private final AlbumMediaRepository albumMediaRepository;
     private final PostPollRepository postPollRepository;
@@ -168,7 +170,9 @@ public class PostServiceImpl implements PostService {
         }
 
         PostStatus status = request.getStatus() == null ? PostStatus.PUBLISHED : request.getStatus();
-        PostPrivacy privacy = request.getPrivacy() == null ? PostPrivacy.PUBLIC : request.getPrivacy();
+        PostPrivacy privacy = request.getPrivacy() == null
+                ? settingsService.getDefaultPostPrivacy(request.getAuthorId())
+                : request.getPrivacy();
 
         if (status == PostStatus.SCHEDULED && request.getScheduledAt() == null) {
             throw new ValidationException("scheduledAt is required when status is SCHEDULED");

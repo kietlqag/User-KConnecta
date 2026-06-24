@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import project.kconnecta.user.backend.feature.settings.service.SettingsService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
+import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
 import project.kconnecta.user.backend.feature.activity.service.ActivityLogService;
@@ -39,6 +41,7 @@ public class FriendServiceImpl implements FriendService {
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final SettingsService settingsService;
 
     @Override
     public List<FriendResponse> getFriends(UUID userId) {
@@ -170,6 +173,10 @@ public class FriendServiceImpl implements FriendService {
     public FriendResponse sendFriendRequest(UUID requesterId, UUID addresseeId) {
         if (requesterId.equals(addresseeId)) {
             throw new IllegalArgumentException("Cannot send friend request to yourself");
+        }
+
+        if (settingsService.isBlockedEitherDirection(requesterId, addresseeId)) {
+            throw new ForbiddenException("Khong the gui loi moi ket ban");
         }
 
         friendshipRepository.findBetweenUsers(requesterId, addresseeId).ifPresent(f -> {

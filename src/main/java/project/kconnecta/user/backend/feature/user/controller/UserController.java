@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.feature.user.dto.request.UpdateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.response.UserResponse;
 import project.kconnecta.user.backend.feature.user.service.UserService;
+import project.kconnecta.user.backend.feature.settings.service.SettingsService;
 
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final SettingsService settingsService;
 
     @PostMapping("/{id}/avatar")
     public ResponseEntity<UserResponse> uploadAvatar(
@@ -67,8 +69,18 @@ public class UserController {
     }
 
     @GetMapping("/{identifier}")
-    public ResponseEntity<UserResponse> getUserByIdOrUsername(@PathVariable String identifier) {
-        return ResponseEntity.ok(userService.getUserByIdOrUsername(identifier));
+    public ResponseEntity<UserResponse> getUserByIdOrUsername(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable String identifier,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        UserResponse user = userService.getUserByIdOrUsername(identifier);
+        UUID viewerId = principal != null ? principal.getUserId() : null;
+        if (viewerId == null || !viewerId.equals(user.getId())) {
+            if (!settingsService.canViewProfile(viewerId, user.getId())) {
+                throw new ForbiddenException("Ban khong co quyen xem ho so nay");
+            }
+        }
+        return ResponseEntity.ok(user);
     }
 
     @GetMapping("/username/{username}")
