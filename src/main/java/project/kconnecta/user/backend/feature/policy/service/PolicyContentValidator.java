@@ -6,15 +6,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import project.kconnecta.user.backend.exception.ChatValidationException;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.feature.post.dto.response.PostRateLimitStatus;
 
 import java.text.Normalizer;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -69,6 +73,52 @@ public class PolicyContentValidator {
         // Watchlist (vùng xám) không chặn cứng — PostServiceImpl chỉ gọi Gemini khi isSuspect.
         checkKeywords(text, config, false, "đăng bài viết");
         checkRateLimit(authorId, postsPerMinute, postTimestamps, "đăng bài");
+    }
+
+    public PostRateLimitStatus getPostRateLimitStatus(UUID userId) {
+        JsonNode postPolicy = policyService.getConfigJson().path("postPolicy");
+        int limit = postPolicy.path("postsPerMinute").asInt(3);
+        if (limit <= 0) {
+            return new PostRateLimitStatus(0, 0, Integer.MAX_VALUE, 0);
+        }
+        if (userId == null) {
+            return new PostRateLimitStatus(limit, 0, limit, 0);
+        }
+
+        Instant now = Instant.now();
+        Instant cutoff = now.minusSeconds(60);
+        Deque<Instant> deque = postTimestamps.get(userId);
+        if (deque == null) {
+            return new PostRateLimitStatus(limit, 0, limit, 0);
+        }
+
+        while (!deque.isEmpty() && deque.peekFirst().isBefore(cutoff)) {
+            deque.pollFirst();
+        }
+
+        int used = deque.size();
+        int remaining = Math.max(0, limit - used);
+        long retryAfter = 0;
+        if (remaining == 0 && !deque.isEmpty()) {
+            Instant oldest = deque.peekFirst();
+            retryAfter = Math.max(0, Duration.between(now, oldest.plusSeconds(60)).getSeconds());
+        }
+        return new PostRateLimitStatus(limit, used, remaining, retryAfter);
+    }
+
+    public void validatePostMediaUpload(String originalFilename, String contentType) {
+        JsonNode postPolicy = policyService.getConfigJson().path("postPolicy");
+        String allowedRaw = postPolicy.path("allowedFileTypes").asText("jpg,jpeg,png,gif,webp,mp4,mov");
+        String ext = resolveMediaExtension(originalFilename, contentType);
+        if (ext.isBlank()) {
+            throw new ValidationException("Không xác định được định dạng file");
+        }
+        if (!isMediaExtensionAllowed(ext, allowedRaw)) {
+            throw new ValidationException(
+                    "Định dạng ." + ext.toUpperCase(Locale.ROOT)
+                            + " không được phép. Chỉ chấp nhận: "
+                            + formatAllowedExtensions(allowedRaw));
+        }
     }
 
     public void validatePostUpdate(UUID authorId, String content, int mediaCount) {
@@ -392,5 +442,83 @@ public class PolicyContentValidator {
             return "";
         }
         return content.trim().replaceAll("\\s+", " ");
+    }
+
+    private static final Map<String, String> MIME_TO_EXT = Map.ofEntries(
+            Map.entry("image/jpeg", "jpeg"),
+            Map.entry("image/jpg", "jpg"),
+            Map.entry("image/png", "png"),
+            Map.entry("image/gif", "gif"),
+            Map.entry("image/webp", "webp"),
+            Map.entry("video/mp4", "mp4"),
+            Map.entry("video/quicktime", "mov"),
+            Map.entry("video/webm", "webm"),
+            Map.entry("application/pdf", "pdf"),
+            Map.entry("application/msword", "doc"),
+            Map.entry("application/vnd.openxmlformats-officedocument.wordprocessingml.document", "docx"),
+            Map.entry("text/plain", "txt")
+    );
+
+    private String resolveMediaExtension(String originalFilename, String contentType) {
+        if (originalFilename != null && originalFilename.contains(".")) {
+            String fromName = normalizeExtension(
+                    originalFilename.substring(originalFilename.lastIndexOf('.') + 1));
+            if (!fromName.isBlank()) {
+                return fromName;
+            }
+        }
+        if (contentType != null && !contentType.isBlank()) {
+            String mime = contentType.toLowerCase(Locale.ROOT).split(";")[0].trim();
+            String mapped = MIME_TO_EXT.get(mime);
+            if (mapped != null) {
+                return mapped;
+            }
+        }
+        return "";
+    }
+
+    private static String normalizeExtension(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String t = raw.trim().toLowerCase(Locale.ROOT);
+        if (t.startsWith(".")) {
+            t = t.substring(1);
+        }
+        return t.replaceAll("[^a-z0-9]", "");
+    }
+
+    private static Set<String> parseAllowedExtensions(String raw) {
+        Set<String> allowed = new HashSet<>();
+        if (raw == null || raw.isBlank()) {
+            return allowed;
+        }
+        for (String part : raw.split("[,;\\s]+")) {
+            String ext = normalizeExtension(part);
+            if (!ext.isBlank()) {
+                allowed.add(ext);
+            }
+        }
+        if (allowed.contains("jpg") || allowed.contains("jpeg")) {
+            allowed.add("jpg");
+            allowed.add("jpeg");
+        }
+        return allowed;
+    }
+
+    private static boolean isMediaExtensionAllowed(String ext, String allowedRaw) {
+        Set<String> allowed = parseAllowedExtensions(allowedRaw);
+        if (allowed.isEmpty()) {
+            return true;
+        }
+        return allowed.contains(normalizeExtension(ext));
+    }
+
+    private static String formatAllowedExtensions(String allowedRaw) {
+        List<String> parts = new ArrayList<>();
+        for (String ext : parseAllowedExtensions(allowedRaw)) {
+            parts.add(ext.toUpperCase(Locale.ROOT));
+        }
+        return String.join(", ", parts);
     }
 }

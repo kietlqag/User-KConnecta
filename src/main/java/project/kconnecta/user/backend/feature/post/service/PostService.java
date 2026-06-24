@@ -16,6 +16,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PendingCommentRe
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostRateLimitStatus;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
@@ -30,6 +31,7 @@ import java.util.UUID;
 
 public interface PostService {
     PostResponse createPost(CreatePostRequest request);
+    PostRateLimitStatus getPostRateLimitStatus(UUID userId);
     PostResponse updatePost(UUID postId, UUID userId, UpdatePostRequest request);
     String uploadPostImage(UUID uploaderId, MultipartFile file);
     void deleteMedia(String url, UUID userId);

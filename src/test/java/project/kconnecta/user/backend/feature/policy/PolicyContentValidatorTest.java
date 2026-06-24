@@ -212,4 +212,49 @@ class PolicyContentValidatorTest {
         assertThatThrownBy(() -> validator.validatePost(userId, "tao se giet may", 0))
             .isInstanceOf(ValidationException.class);
     }
+
+    private JsonNode configWithAllowedTypes(String allowed) throws Exception {
+        String json = """
+                {
+                  "postPolicy": {
+                    "maxPostLength": 5000,
+                    "maxImagesPerPost": 10,
+                    "postsPerMinute": 3,
+                    "allowedFileTypes": "%s"
+                  },
+                  "keywords": []
+                }
+                """.formatted(allowed);
+        return mapper.readTree(json);
+    }
+
+    @Test
+    void validatePostMediaUpload_rejectsJpgWhenOnlyPngAllowed() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("png"));
+        assertThatThrownBy(() -> validator.validatePostMediaUpload("photo.jpg", "image/jpeg"))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("JPG");
+    }
+
+    @Test
+    void validatePostMediaUpload_allowsPngWhenOnlyPngAllowed() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("png"));
+        assertThatNoException().isThrownBy(() ->
+                validator.validatePostMediaUpload("photo.png", "image/png"));
+    }
+
+    @Test
+    void validatePostMediaUpload_allowsPdfWhenListedInAllowedTypes() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("jpg,pdf"));
+        assertThatNoException().isThrownBy(() ->
+                validator.validatePostMediaUpload("doc.pdf", "application/pdf"));
+    }
+
+    @Test
+    void validatePostMediaUpload_rejectsPdfWhenNotInAllowedTypes() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("jpg,png"));
+        assertThatThrownBy(() -> validator.validatePostMediaUpload("doc.pdf", "application/pdf"))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("PDF");
+    }
 }

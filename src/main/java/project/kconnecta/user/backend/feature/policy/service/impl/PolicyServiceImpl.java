@@ -66,6 +66,8 @@ public class PolicyServiceImpl implements PolicyService {
 
     private volatile JsonNode cachedConfig;
 
+    private volatile LocalDateTime cachedConfigUpdatedAt;
+
 
 
     @PostConstruct
@@ -94,6 +96,8 @@ public class PolicyServiceImpl implements PolicyService {
 
             cachedConfig = buildMergedConfig();
 
+            cachedConfigUpdatedAt = getEntity().getUpdatedAt();
+
         } catch (IOException e) {
 
             throw new IllegalStateException("Failed to initialize platform policy", e);
@@ -108,15 +112,23 @@ public class PolicyServiceImpl implements PolicyService {
 
     public JsonNode getConfigJson() {
 
+        PlatformPolicy entity = getEntity();
+
+        LocalDateTime dbUpdatedAt = entity.getUpdatedAt();
+
         JsonNode local = cachedConfig;
 
-        if (local != null) {
+        if (local != null && dbUpdatedAt != null && dbUpdatedAt.equals(cachedConfigUpdatedAt)) {
 
             return local;
 
         }
 
-        return refreshCachedConfig();
+        cachedConfig = buildMergedConfig();
+
+        cachedConfigUpdatedAt = dbUpdatedAt;
+
+        return cachedConfig;
 
     }
 
@@ -270,6 +282,8 @@ public class PolicyServiceImpl implements PolicyService {
 
             cachedConfig = buildMergedConfig();
 
+            cachedConfigUpdatedAt = getEntity().getUpdatedAt();
+
             return cachedConfig;
 
         } catch (Exception e) {
@@ -396,6 +410,8 @@ public class PolicyServiceImpl implements PolicyService {
 
             cachedConfig = buildMergedConfig();
 
+            cachedConfigUpdatedAt = getEntity().getUpdatedAt();
+
             log.info("Reset platform policy to default config");
 
             return cachedConfig;
@@ -429,6 +445,8 @@ public class PolicyServiceImpl implements PolicyService {
             }
 
             cachedConfig = buildMergedConfig();
+
+            cachedConfigUpdatedAt = getEntity().getUpdatedAt();
 
             return result;
 

@@ -26,6 +26,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostCommentRespo
 import project.kconnecta.user.backend.feature.post.dto.response.CheckInSuggestionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionDetailsResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostRateLimitStatus;
 import project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
@@ -102,6 +103,12 @@ public class PostController {
             return ResponseEntity.ok(postService.getGroupFeedPosts(currentUserId, pageable));
         }
         return ResponseEntity.ok(postService.getAllPosts(currentUserId, pageable));
+    }
+
+    @GetMapping("/rate-limit")
+    public ResponseEntity<PostRateLimitStatus> getPostRateLimit(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(postService.getPostRateLimitStatus(principal.getUserId()));
     }
 
     @GetMapping("/{id}")

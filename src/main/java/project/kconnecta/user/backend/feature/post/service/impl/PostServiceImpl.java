@@ -30,6 +30,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostReactionResp
 import project.kconnecta.user.backend.feature.post.dto.response.PostReactionUserResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostPollOptionResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostPollResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.PostRateLimitStatus;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.SharedAlbumResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.SharedGroupResponse;
@@ -126,6 +127,11 @@ public class PostServiceImpl implements PostService {
     private final PostPollRepository postPollRepository;
     private final PostPollOptionRepository postPollOptionRepository;
     private final PostPollVoteRepository postPollVoteRepository;
+
+    @Override
+    public PostRateLimitStatus getPostRateLimitStatus(UUID userId) {
+        return policyContentValidator.getPostRateLimitStatus(userId);
+    }
 
     @Override
     public PostResponse createPost(CreatePostRequest request) {
@@ -569,6 +575,7 @@ public class PostServiceImpl implements PostService {
         if (file == null || file.isEmpty()) {
             throw new ValidationException("Image file is required");
         }
+        policyContentValidator.validatePostMediaUpload(file.getOriginalFilename(), file.getContentType());
         String url = cloudinaryService.uploadPostImage(file);
         try {
             redisTemplate.opsForValue().set(

@@ -82,11 +82,15 @@ public class CloudinaryService {
 
     public String uploadPostImage(MultipartFile file) {
         try {
+            String contentType = file.getContentType();
+            boolean isRaw = contentType != null
+                    && !contentType.startsWith("image/")
+                    && !contentType.startsWith("video/");
             Map<?, ?> result = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", "kconnecta/post-images",
-                            "resource_type", "auto",
+                            "folder", isRaw ? "kconnecta/post-files" : "kconnecta/post-images",
+                            "resource_type", isRaw ? "raw" : "auto",
                             "public_id", "post-media-" + UUID.randomUUID()
                     )
             );
