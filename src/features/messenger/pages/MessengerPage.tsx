@@ -2292,6 +2292,7 @@ export default function MessengerPage() {
   const [isFetchingChatUser, setIsFetchingChatUser] = useState(false);
   const [isMessagingBlocked, setIsMessagingBlocked] = useState(false);
   const [serverGroupConversations, setServerGroupConversations] = useState<Conversation[]>([]);
+  const [groupConversationsReady, setGroupConversationsReady] = useState(false);
   const [groupMembersById, setGroupMembersById] = useState<Record<string, ChatUser[]>>({});
   const [groupCreatorById, setGroupCreatorById] = useState<Record<string, string>>({});
   const [groupMemberApprovalById, setGroupMemberApprovalById] = useState<Record<string, boolean>>({});
@@ -2454,7 +2455,7 @@ export default function MessengerPage() {
   }, [activeChatUserId, currentUser?.id, groupCreatorById, groupMembersById, isActiveGroupChat]);
 
   const activeChatUser = useMemo((): ChatUser | null => {
-    if (!activeChatUserId || isActiveGroupChat) return null;
+    if (!activeChatUserId) return null;
     const conv = conversations.find((c) => c.user.id === activeChatUserId);
     if (conv) {
       return {
@@ -2465,6 +2466,7 @@ export default function MessengerPage() {
         lastActiveAt: conv.user.lastActiveAt,
       };
     }
+    if (isActiveGroupChat) return null;
     return fetchedChatUser;
   }, [activeChatUserId, conversations, fetchedChatUser, isActiveGroupChat]);
 
@@ -2543,9 +2545,7 @@ export default function MessengerPage() {
 
   const effectiveChatUser: ChatUser | null =
     activeChatUser ??
-    (!isActiveGroupChat && lastActiveChatUserRef.current?.id === activeChatUserId
-      ? lastActiveChatUserRef.current
-      : null);
+    (lastActiveChatUserRef.current?.id === activeChatUserId ? lastActiveChatUserRef.current : null);
 
   const isAcceptedFriendChat = Boolean(activePrivateConversation && !activePrivateConversation.isStranger);
   const isStrangerChat = !isActiveGroupChat && Boolean(effectiveChatUser) && !isAcceptedFriendChat;
@@ -2638,6 +2638,8 @@ export default function MessengerPage() {
       setGroupMemberApprovalById((prev) => ({ ...prev, ...approvalMap }));
     } catch {
       // keep current state on failure
+    } finally {
+      setGroupConversationsReady(true);
     }
   }, [currentUser?.id]);
 
@@ -4066,7 +4068,7 @@ export default function MessengerPage() {
                 onToggleChatInfo={handleToggleChatInfoPanel}
               />
             </div>
-          ) : activeChatUserId && (loadingConversations || isFetchingChatUser) ? (
+          ) : activeChatUserId && (loadingConversations || isFetchingChatUser || (isActiveGroupChat && !effectiveChatUser && !groupConversationsReady)) ? (
             <div className="flex-1 flex items-center justify-center text-gray-400 text-sm bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
               Đang tải...
             </div>
