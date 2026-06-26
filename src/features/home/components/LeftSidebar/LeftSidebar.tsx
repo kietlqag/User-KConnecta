@@ -7,7 +7,7 @@ import {
   Users,
   Bookmark,
   Shapes,
-  Video,
+  Clapperboard,
 } from 'lucide-react';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { useTodayBirthdaysSidebar } from '@/features/birthdays/hooks/useBirthdays';
@@ -91,7 +91,7 @@ export const LeftSidebar = () => {
     },
     {
       id: 'video',
-      icon: <Video className="h-9 w-9 rounded-full bg-orange-100 p-2 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />,
+      icon: <Clapperboard className="h-9 w-9 rounded-full bg-orange-100 p-2 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />,
       label: t('nav.video'),
       href: '/watch',
     },
@@ -166,7 +166,10 @@ export const LeftSidebar = () => {
         )}
 
         <div className="mt-auto shrink-0 border-t border-gray-200 px-3 py-3 dark:border-gray-700">
-          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+          <nav
+            className="flex flex-col gap-1.5 text-xs text-gray-500 dark:text-gray-400"
+            aria-label="Liên kết chính sách"
+          >
             <Link to="/privacy" onClick={handlePolicyLinkClick} className="hover:underline hover:text-gray-700 dark:hover:text-gray-300">
               Chính sách bảo mật
             </Link>
@@ -176,8 +179,8 @@ export const LeftSidebar = () => {
             <Link to="/contact" onClick={handlePolicyLinkClick} className="hover:underline hover:text-gray-700 dark:hover:text-gray-300">
               Liên hệ
             </Link>
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          </nav>
+          <p className="mt-2.5 text-xs text-gray-500 dark:text-gray-400">
             {t('nav.copyright', { year: new Date().getFullYear() })}
           </p>
         </div>
