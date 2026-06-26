@@ -25,6 +25,22 @@
     server: {
       port: process.env.PORT ? Number(process.env.PORT) : 3000,
       open: '/',
+      // CSP ở chế độ Report-Only: KHÔNG chặn gì, chỉ ghi vi phạm vào Console (tab DevTools).
+      // Mục đích: quan sát những gì SẼ bị chặn để tinh chỉnh policy, rồi mới bật chặn thật.
+      headers: {
+        'Content-Security-Policy-Report-Only':
+          "default-src 'self'; " +
+          "script-src 'self'; " +
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+          "font-src 'self' https://fonts.gstatic.com; " +
+          // res.cloudinary.com = ảnh thật; còn lại là ảnh SEED/placeholder (chỉ dùng cho demo)
+          "img-src 'self' data: blob: https://res.cloudinary.com https://placehold.co https://images.unsplash.com https://i.pravatar.cc https://ui-avatars.com; " +
+          "media-src 'self' blob: https://res.cloudinary.com; " +   // LiveKit stream tạo blob: URL
+          "connect-src 'self' https://res.cloudinary.com https://accounts.google.com wss: ws:; " +
+          "frame-src https://accounts.google.com; " +
+          "frame-ancestors 'none'; " +
+          "base-uri 'self'",
+      },
       hmr: {
         host: 'localhost',
         protocol: 'ws',

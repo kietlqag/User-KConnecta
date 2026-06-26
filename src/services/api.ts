@@ -132,8 +132,8 @@ export const api = {
   patch: <T>(path: string, body?: unknown) =>
     axiosInstance.patch<T>(path, body).then(r => r.data),
 
-  delete: <T>(path: string) =>
-    axiosInstance.delete<T>(path).then(r => r.data),
+  delete: <T>(path: string, body?: unknown) =>
+    axiosInstance.delete<T>(path, body !== undefined ? { data: body } : undefined).then(r => r.data),
 
   postMultipart: <T>(path: string, formData: FormData, signal?: AbortSignal) =>
     axiosInstance.post<T>(path, formData, { signal, headers: { 'Content-Type': undefined } }).then(r => r.data),

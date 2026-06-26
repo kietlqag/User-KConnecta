@@ -1,10 +1,22 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { CheckCircle2, Eye, EyeOff, Loader2, LogOut, Monitor, Smartphone } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, CheckCircle2, Eye, EyeOff, Loader2, LogOut, Monitor, Smartphone, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { authService } from '@/services/authService';
+import { userSettingsApi } from '@/features/settings/services/userSettingsApi';
 import {
   PasswordRequirementsChecklist,
   validateNewPassword,
@@ -210,6 +222,160 @@ function formatLastActive(iso: string) {
   }).format(date);
 }
 
+function DeleteAccountBlock() {
+  const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+  const requiresPassword = currentUser?.hasPassword !== false;
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmPhrase = 'XOA TAI KHOAN';
+  const canConfirm =
+    confirmText.trim().toUpperCase() === confirmPhrase &&
+    (!requiresPassword || password.length > 0) &&
+    !deleting;
+
+  const resetDialog = () => {
+    setPassword('');
+    setConfirmText('');
+    setShowPassword(false);
+  };
+
+  const handleDelete = async () => {
+    if (!canConfirm) return;
+    setDeleting(true);
+    try {
+      await userSettingsApi.deleteAccount(requiresPassword ? password : undefined);
+      localStorage.removeItem('authUser');
+      sessionStorage.removeItem('authUser');
+      window.google?.accounts?.id?.disableAutoSelect?.();
+      toast.success('Tài khoản đã được xóa vĩnh viễn');
+      navigate('/auth/login', { replace: true });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Không thể xóa tài khoản');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="rounded-[12px] border border-destructive/30 bg-destructive/5 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-destructive/10">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">Xóa tài khoản vĩnh viễn</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              Hành động này không thể hoàn tác. Toàn bộ bài viết, bình luận, tin nhắn và dữ liệu cá nhân
+              của bạn sẽ bị xóa khỏi hệ thống.
+            </p>
+            <Button
+              type="button"
+              variant="destructive"
+              className="mt-4 rounded-[10px]"
+              onClick={() => {
+                resetDialog();
+                setDialogOpen(true);
+              }}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Xóa tài khoản
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <AlertDialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) resetDialog();
+        }}
+      >
+        <AlertDialogContent className="rounded-[12px] sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Xác nhận xóa tài khoản</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4 text-left text-sm text-muted-foreground">
+                <p>
+                  Bạn sắp xóa vĩnh viễn tài khoản
+                  {currentUser?.email ? (
+                    <>
+                      {' '}
+                      <span className="font-medium text-foreground">{currentUser.email}</span>
+                    </>
+                  ) : null}
+                  . Mọi dữ liệu liên quan sẽ bị xóa và không thể khôi phục.
+                </p>
+
+                {requiresPassword ? (
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-foreground">
+                      Nhập mật khẩu để xác nhận
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Mật khẩu hiện tại"
+                        className="w-full rounded-[10px] border border-border bg-card px-4 py-2.5 pr-11 text-sm text-foreground outline-none focus:ring-2 focus:ring-destructive/30"
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Gõ <span className="font-mono text-destructive">{confirmPhrase}</span> để xác nhận
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder={confirmPhrase}
+                    className="w-full rounded-[10px] border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-destructive/30"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting} className="rounded-[10px]">
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!canConfirm}
+              onClick={(e) => {
+                e.preventDefault();
+                void handleDelete();
+              }}
+              className="rounded-[10px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Xóa vĩnh viễn
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 export function SecuritySection({
   settings,
   updateSettings,
@@ -290,6 +456,13 @@ export function SecuritySection({
             </div>
           ))}
         </div>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Xóa tài khoản"
+        description="Xóa vĩnh viễn tài khoản và toàn bộ dữ liệu liên quan khỏi K-Connecta."
+      >
+        <DeleteAccountBlock />
       </SettingsSection>
 
       <SettingsSaveBar isDirty={isDirty} saving={saving} onSave={onSave} onDiscard={onDiscard} />

@@ -98,4 +98,8 @@ export const userSettingsApi = {
     await api.delete(`/users/me/sessions/${sessionId}`);
     return userSettingsApi.getSettings();
   },
+
+  deleteAccount: async (password?: string): Promise<void> => {
+    await api.delete('/users/me', password ? { password } : {});
+  },
 };
