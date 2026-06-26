@@ -18,7 +18,10 @@ export const devSecurityHeaders: Record<string, string> = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Cross-Origin-Opener-Policy': 'same-origin',
+  // Google Identity Services dùng popup + window.opener để trả token.
+  // 'same-origin' sẽ cắt liên kết opener với popup khác origin → đăng nhập Google
+  // không phản hồi. 'same-origin-allow-popups' vẫn cô lập trang nhưng cho phép popup.
+  'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   'Cross-Origin-Resource-Policy': 'same-site',
   'Permissions-Policy':
     'accelerometer=(), camera=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()',

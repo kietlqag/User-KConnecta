@@ -37,6 +37,7 @@ declare global {
               error?: string;
               error_description?: string;
             }) => void;
+            error_callback?: (error: { type?: string; message?: string }) => void;
           }) => {
             requestAccessToken: (overrideConfig?: { prompt?: string }) => void;
           };

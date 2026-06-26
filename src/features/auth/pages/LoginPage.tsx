@@ -460,6 +460,28 @@ export function LoginPage() {
   const handleGoogleAccessTokenRef = useRef(handleGoogleAccessToken);
   handleGoogleAccessTokenRef.current = handleGoogleAccessToken;
 
+  const setupGoogleTokenClient = useCallback(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      setGoogleError("Thiếu VITE_GOOGLE_CLIENT_ID ở frontend");
+      return false;
+    }
+    if (!window.google?.accounts?.oauth2) {
+      return false;
+    }
+
+    window.google.accounts.id?.disableAutoSelect?.();
+    googleTokenClientRef.current = createGoogleTokenClient(
+      clientId,
+      (accessToken) => {
+        void handleGoogleAccessTokenRef.current(accessToken);
+      },
+      (message) => setGoogleError(message),
+    );
+    setIsGoogleReady(true);
+    return true;
+  }, []);
+
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!clientId) {
@@ -473,15 +495,7 @@ export function LoginPage() {
     loadGoogleIdentityScript(googleLocale)
       .then(() => {
         if (cancelled) return;
-        window.google?.accounts.id.disableAutoSelect();
-        googleTokenClientRef.current = createGoogleTokenClient(
-          clientId,
-          (accessToken) => {
-            void handleGoogleAccessTokenRef.current(accessToken);
-          },
-          (message) => setGoogleError(message),
-        );
-        setIsGoogleReady(true);
+        setupGoogleTokenClient();
       })
       .catch((err) => {
         if (!cancelled) {
@@ -494,12 +508,29 @@ export function LoginPage() {
       googleTokenClientRef.current = null;
       setIsGoogleReady(false);
     };
-  }, []);
+  }, [setupGoogleTokenClient]);
 
   const handleGoogleSignIn = () => {
-    if (!googleTokenClientRef.current || authLockRef.current || !isGoogleReady) return;
+    if (authLockRef.current) return;
     setGoogleError(null);
-    requestGoogleAccountPicker(googleTokenClientRef.current);
+
+    if (!googleTokenClientRef.current) {
+      if (!setupGoogleTokenClient()) {
+        setGoogleError("Google đang tải, vui lòng thử lại sau vài giây");
+        void loadGoogleIdentityScript('vi')
+          .then(() => setupGoogleTokenClient())
+          .catch((err) => {
+            setGoogleError(err instanceof Error ? err.message : "Không tải được Google Identity Services");
+          });
+        return;
+      }
+    }
+
+    try {
+      requestGoogleAccountPicker(googleTokenClientRef.current);
+    } catch (err) {
+      setGoogleError(err instanceof Error ? err.message : "Không mở được cửa sổ đăng nhập Google");
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -861,7 +892,7 @@ export function LoginPage() {
                 <button
                   type="button"
                   onClick={handleGoogleSignIn}
-                  disabled={isAuthenticating || !isGoogleReady}
+                  disabled={isAuthenticating}
                   className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-opacity hover:bg-muted disabled:pointer-events-none disabled:opacity-60"
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
