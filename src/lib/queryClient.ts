@@ -12,3 +12,8 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// TEMP (design preview only): expose for seeding mock data in the browser console.
+if (import.meta.env.DEV) {
+  (window as unknown as { __qc?: QueryClient }).__qc = queryClient;
+}

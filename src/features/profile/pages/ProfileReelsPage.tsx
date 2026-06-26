@@ -13,6 +13,7 @@ import {
   fetchAllUserPosts,
   isAbortError,
 } from '../utils/profilePhotoUtils';
+import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogger';
 
 type ReelsTab = 'yours' | 'saved';
 
@@ -82,6 +83,7 @@ export function ProfileReelsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile, resolvedId, isOwnProfile, loading: profileLoading } = useProfileLayoutContext();
+  useProfileTabDebug('watch', resolvedId);
   const [currentUser, setCurrentUser] = React.useState(() => authService.getCurrentUser());
 
   const isOwner = React.useMemo(
@@ -116,7 +118,10 @@ export function ProfileReelsPage() {
       const posts = await fetchAllUserPosts(resolvedId, currentUser?.id, signal);
       setYourReels(mapPostsToReels(posts));
     } catch (error) {
-      if (!isAbortError(error)) setYourReels([]);
+      if (!isAbortError(error)) {
+        logProfileTabError('watch', 'load-your-reels', error, { resolvedId });
+        setYourReels([]);
+      }
     } finally {
       if (!signal?.aborted) setLoadingYours(false);
     }
@@ -128,7 +133,8 @@ export function ProfileReelsPage() {
     try {
       const posts = await postService.getSavedPosts(currentUser.id);
       setSavedReels(mapPostsToReels(posts));
-    } catch {
+    } catch (err) {
+      logProfileTabError('watch', 'load-saved-reels', err, { resolvedId });
       setSavedReels([]);
     } finally {
       setLoadingSaved(false);

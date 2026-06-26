@@ -61,7 +61,11 @@ const POSTS_PAGE_SIZE = 50;
 
 export function isAbortError(error: unknown): boolean {
   if (error instanceof DOMException && error.name === 'AbortError') return true;
-  return typeof error === 'object' && error !== null && (error as { code?: string }).code === 'ERR_CANCELED';
+  if (typeof error !== 'object' || error === null) return false;
+  const err = error as { name?: string; code?: string; message?: string };
+  if (err.name === 'AbortError' || err.name === 'CanceledError') return true;
+  if (err.code === 'ERR_CANCELED') return true;
+  return err.message === 'canceled' || err.message === 'Aborted';
 }
 
 export async function fetchAllUserPosts(

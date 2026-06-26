@@ -5,6 +5,7 @@ import { useMyAlbums, useUserAlbums } from '@/features/albums/hooks/useAlbums';
 import type { Album } from '@/services/albumService';
 import { ProfileAlbumCard } from '../components/ProfileAlbumCard';
 import { useProfileLayoutContext } from './ProfileLayout';
+import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogger';
 
 const PAGE_SIZE = 24;
 
@@ -19,6 +20,7 @@ function filterPersonalAlbums(albums: Album[]) {
 export function ProfileAlbumsPage() {
   const navigate = useNavigate();
   const { resolvedId, isOwnProfile, loading: profileLoading } = useProfileLayoutContext();
+  useProfileTabDebug('albums', resolvedId);
 
   const [page, setPage] = React.useState(0);
   const [items, setItems] = React.useState<Album[]>([]);
@@ -45,6 +47,15 @@ export function ProfileAlbumsPage() {
     setItems((prev) => (page === 0 ? nextItems : [...prev, ...nextItems]));
     setHasMore(data.number + 1 < data.totalPages);
   }, [activeQuery.data, page]);
+
+  React.useEffect(() => {
+    if (!activeQuery.error) return;
+    logProfileTabError('albums', 'load-albums', activeQuery.error, {
+      resolvedId,
+      isOwnProfile,
+      page,
+    });
+  }, [activeQuery.error, resolvedId, isOwnProfile, page]);
 
   const handleLoadMore = async () => {
     if (loadingMore || !hasMore) return;

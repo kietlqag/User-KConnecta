@@ -2,9 +2,9 @@
 const CSP_DEV =
   "default-src 'self'; " +
   "script-src 'self' https://accounts.google.com; " +
-  "style-src 'self' 'unsafe-inline'; " +
+  "style-src 'self' 'unsafe-inline' https://accounts.google.com; " +
   "font-src 'self' data:; " +
-  "img-src 'self' data: blob: https://res.cloudinary.com https://cdn.jsdelivr.net https://i.pravatar.cc https://ui-avatars.com https://images.unsplash.com https://placehold.co; " +
+  "img-src 'self' data: blob: https://res.cloudinary.com https://cdn.jsdelivr.net https://i.pravatar.cc https://ui-avatars.com https://images.unsplash.com https://placehold.co https://lh3.googleusercontent.com https://*.googleusercontent.com; " +
   "media-src 'self' blob: https://res.cloudinary.com; " +
   "connect-src 'self' http://localhost:8080 ws://localhost:3000 ws://localhost:8080 https://res.cloudinary.com https://accounts.google.com https://oauth2.googleapis.com wss: ws:; " +
   "frame-src https://accounts.google.com; " +

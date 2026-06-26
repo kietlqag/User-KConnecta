@@ -5,6 +5,7 @@ import { UserAvatar } from '@/components/shared/UserAvatar';
 import { authService } from '@/services/authService';
 import { friendService } from '@/services/friendService';
 import { useProfileLayoutContext } from './ProfileLayout';
+import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogger';
 
 interface FriendItem {
   friendshipId: string | null;
@@ -30,6 +31,7 @@ function FriendSkeleton() {
 
 export function ProfileFriendsPage() {
   const { resolvedId, loading: profileLoading } = useProfileLayoutContext();
+  useProfileTabDebug('friends', resolvedId);
   const navigate = useNavigate();
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
 
@@ -45,7 +47,9 @@ export function ProfileFriendsPage() {
     friendService.getFriends(resolvedId).then(res => {
       if (cancelled) return;
       setFriends(res);
-    }).catch(() => {}).finally(() => { if (!cancelled) setLoading(false); });
+    }).catch((err) => {
+      logProfileTabError('friends', 'load-friends', err, { resolvedId });
+    }).finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
   }, [resolvedId]);

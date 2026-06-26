@@ -9,6 +9,7 @@ import {
   isAbortError,
   type ProfilePhoto,
 } from '../utils/profilePhotoUtils';
+import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogger';
 
 function PhotoSkeleton() {
   return <div className="aspect-square rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />;
@@ -16,6 +17,7 @@ function PhotoSkeleton() {
 
 export function ProfilePhotosPage() {
   const { resolvedId, loading: profileLoading } = useProfileLayoutContext();
+  useProfileTabDebug('photos', resolvedId);
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
 
   const [photos, setPhotos] = React.useState<ProfilePhoto[]>([]);
@@ -32,7 +34,10 @@ export function ProfilePhotosPage() {
         setPhotos(extractPhotosFromPosts(posts));
       })
       .catch((error) => {
-        if (!isAbortError(error)) setPhotos([]);
+        if (!isAbortError(error)) {
+          logProfileTabError('photos', 'load-posts', error, { resolvedId });
+          setPhotos([]);
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);

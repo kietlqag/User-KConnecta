@@ -7,6 +7,7 @@ import { GuestRoute, ProtectedRoute } from './RouteGuards';
 import { RealtimeCallProvider } from '../contexts/RealtimeCallContext';
 import { MessageNotificationsListener } from '../features/messenger/components/MessageNotificationsListener';
 import { lazyDefault, lazyNamed } from './lazyRoutes';
+import { RouteHydrateFallback } from './RouteHydrateFallback';
 
 function RealtimeLayout() {
   return (
@@ -45,24 +46,33 @@ export const router = createBrowserRouter([
             Component: HomePage,
           },
           {
-            path: '/profile/:userId?',
-            lazy: async () => {
-              const { ProfileLayout, ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage, ProfileReelsPage, ProfileAlbumsPage, ProfileLikesPage, ProfileScheduledPage } =
-                await import('../features/profile/pages');
-              return {
-                Component: ProfileLayout,
+            path: '/profile',
+            children: [
+              {
+                index: true,
+                lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileIndexRedirect'),
+              },
+              {
+                path: ':userId',
+                lazy: async () => {
+                  const { ProfileLayout } = await import('../features/profile/pages');
+                  return {
+                    Component: ProfileLayout,
+                    HydrateFallback: RouteHydrateFallback,
+                  };
+                },
                 children: [
-                  { index: true, Component: ProfilePage },
-                  { path: 'friends', Component: ProfileFriendsPage },
-                  { path: 'photos', Component: ProfilePhotosPage },
-                  { path: 'albums', Component: ProfileAlbumsPage },
-                  { path: 'about', Component: ProfileAboutPage },
-                  { path: 'reels', Component: ProfileReelsPage },
-                  { path: 'likes', Component: ProfileLikesPage },
-                  { path: 'scheduled', Component: ProfileScheduledPage },
+                  { index: true, lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfilePage') },
+                  { path: 'friends', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileFriendsPage') },
+                  { path: 'photos', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfilePhotosPage') },
+                  { path: 'albums', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileAlbumsPage') },
+                  { path: 'about', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileAboutPage') },
+                  { path: 'reels', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileReelsPage') },
+                  { path: 'likes', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileLikesPage') },
+                  { path: 'scheduled', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileScheduledPage') },
                 ],
-              };
-            },
+              },
+            ],
           },
           {
             path: '/friends',
@@ -193,9 +203,6 @@ export const router = createBrowserRouter([
   },
   {
     path: '*',
-    async lazy() {
-      const { NotFoundPage } = await import('@/components/ui/404-page-not-found');
-      return { Component: NotFoundPage };
-    },
+    lazy: () => lazyNamed(() => import('@/components/ui/404-page-not-found'), 'NotFoundPage'),
   },
 ]);

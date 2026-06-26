@@ -17,10 +17,12 @@ import {
   isAbortError,
 } from '../utils/profilePhotoUtils';
 import { useProfileLayoutContext } from './ProfileLayout';
+import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogger';
 
 export function ProfilePage() {
   const { profile, resolvedId, isOwnProfile, friendsCount, loading: profileLoading } =
     useProfileLayoutContext();
+  useProfileTabDebug('all', resolvedId);
   const [searchParams] = useSearchParams();
   const highlightPostId = searchParams.get('post');
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
@@ -41,6 +43,7 @@ export function ProfilePage() {
       setProfilePhotos(extractPhotosFromPosts(allPosts).map(({ id, url }) => ({ id, url })));
     } catch (error) {
       if (isAbortError(error)) return;
+      logProfileTabError('all', 'load-photos', error, { resolvedId: authorId });
       setProfilePhotos([]);
     }
   }, [currentUser?.id]);
@@ -62,7 +65,8 @@ export function ProfilePage() {
         setPosts(mapped);
         setPostsPage(0);
         setHasMorePosts(res.number + 1 < res.totalPages);
-      } catch {
+      } catch (err) {
+        logProfileTabError('all', 'load-posts', err, { resolvedId: authorId, page });
         setPosts([]);
       } finally {
         setPostsLoading(false);
@@ -87,7 +91,10 @@ export function ProfilePage() {
           })),
         ),
       )
-      .catch(() => setFriends([]));
+      .catch((err) => {
+        logProfileTabError('all', 'load-friends-preview', err, { resolvedId });
+        setFriends([]);
+      });
     return () => controller.abort();
   }, [resolvedId, fetchPosts, refreshProfilePhotos]);
 

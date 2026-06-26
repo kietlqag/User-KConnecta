@@ -6,6 +6,7 @@ import {
 import { authService } from '@/services/authService';
 import { buildProfileDisplay, hasProfileText } from '../utils/profileDisplayUtils';
 import { useProfileLayoutContext } from './ProfileLayout';
+import { useProfileTabDebug } from '../utils/profileTabLogger';
 
 const ABOUT_TABS = [
   { id: 'overview', label: 'Tổng quan' },
@@ -53,6 +54,7 @@ function InfoRow({ icon, label, sub }: InfoRowProps) {
 
 export function ProfileAboutPage() {
   const { profile, isOwnProfile, onEditClick } = useProfileLayoutContext();
+  useProfileTabDebug('about', profile?.id);
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
   const [activeTab, setActiveTab] = React.useState<AboutTabId>('overview');
 

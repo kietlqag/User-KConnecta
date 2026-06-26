@@ -9,10 +9,16 @@ import { friendService, FRIENDSHIP_CHANGED_EVENT, type FriendshipStatusResponse 
 import {
   buildEditProfileInitialData,
   buildProfileDisplay,
+  extractProfileSubPath,
   getProfileHeaderName,
   isOwnProfileUser,
   resolveRouteProfileUserId,
 } from '../utils/profileDisplayUtils';
+import {
+  logProfileTabError,
+  logProfileTabRedirect,
+  logProfileTabRouteChange,
+} from '../utils/profileTabLogger';
 
 export interface ProfileLayoutContext {
   profile: AuthUser | null;
@@ -59,6 +65,9 @@ export function ProfileLayout() {
   const [accessDenied, setAccessDenied] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
   const { t } = useTranslation();
+  const locationRef = React.useRef(location);
+  locationRef.current = location;
+  const loadedProfileRef = React.useRef<{ id: string; username?: string } | null>(null);
 
   const isOwnProfile = isOwnProfileUser(currentUser, {
     resolvedProfileId: resolvedId,
@@ -66,7 +75,22 @@ export function ProfileLayout() {
   });
 
   React.useEffect(() => {
+    logProfileTabRouteChange(location.pathname, {
+      resolvedId: resolvedId || undefined,
+      accessDenied,
+      profileKey: profile?.username || userId || undefined,
+    });
+  }, [location.pathname, resolvedId, accessDenied, profile?.username, userId]);
+
+  React.useEffect(() => {
     if (!userId || userId === 'undefined') { setLoading(false); return; }
+
+    const loaded = loadedProfileRef.current;
+    if (loaded && (userId === loaded.id || userId === loaded.username)) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
     setAccessDenied(false);
@@ -96,29 +120,53 @@ export function ProfileLayout() {
         setResolvedId(id);
         setFriendsCount(friendsRes.length);
         setFriendshipStatus(statusRes);
+        loadedProfileRef.current = { id, username: profileData.username };
 
         const contentRestricted = Boolean(profileData.profileContentRestricted);
+        if (contentRestricted) {
+          logProfileTabRouteChange(location.pathname, {
+            resolvedId: id,
+            accessDenied: true,
+            profileKey: profileData.username || id,
+          });
+        }
         setAccessDenied(contentRestricted);
 
         const profileKey = profileData.username || id;
         const basePath = `/profile/${profileKey}`;
+        const currentPath = locationRef.current.pathname;
 
-        // Redirect /profile/UUID → /profile/username; strip sub-routes when content is restricted
+        // Redirect /profile/UUID → /profile/username; giữ tab con (/about, /photos…)
         if (profileData.username && userId !== profileData.username) {
-          const subPath = contentRestricted ? '' : location.pathname.replace(`/profile/${userId}`, '');
-          navigate(
-            { pathname: `${basePath}${subPath}`, search: location.search },
-            { replace: true },
-          );
-        } else if (contentRestricted && location.pathname !== basePath) {
-          navigate({ pathname: basePath, search: location.search }, { replace: true });
+          const subPath = contentRestricted
+            ? ''
+            : extractProfileSubPath(currentPath, userId, profileKey, id);
+          const target = `${basePath}${subPath}`;
+          if (currentPath !== target) {
+            logProfileTabRedirect('canonical-username', currentPath, target);
+            navigate(
+              { pathname: target, search: locationRef.current.search },
+              { replace: true },
+            );
+          }
+        } else if (contentRestricted && currentPath !== basePath) {
+          logProfileTabRedirect('profile-content-restricted', currentPath, basePath);
+          navigate({ pathname: basePath, search: locationRef.current.search }, { replace: true });
         }
       } catch (err) {
-        console.error('Error loading profile:', err);
+        logProfileTabError('layout', 'load-profile', err, {
+          userId,
+          pathname: location.pathname,
+          hasToken: Boolean(currentUser?.token),
+        });
         if (cancelled) return;
 
         const status = (err as Error & { status?: number })?.status;
         if (status === 403) {
+          logProfileTabError('layout', 'http-403', err, {
+            userId,
+            hint: '403 có thể do thiếu JWT hoặc bị chặn quyền — không nhầm với profileContentRestricted',
+          });
           setAccessDenied(true);
           return;
         }
@@ -147,8 +195,8 @@ export function ProfileLayout() {
         ]);
         setFriendshipStatus(statusRes);
         setFriendsCount(friendsRes.length);
-      } catch {
-        // ignore — stale UI is better than crashing
+      } catch (err) {
+        logProfileTabError('layout', 'refetch-friendship', err, { resolvedId });
       }
     };
     window.addEventListener(FRIENDSHIP_CHANGED_EVENT, refetch);
@@ -201,7 +249,7 @@ export function ProfileLayout() {
           friendsCount={friendsCount}
           isOwnProfile={isOwnProfile}
           loading={loading}
-          profileUserId={userProfile.id}
+          profileUserId={resolvedId || profile?.id || undefined}
           friendshipStatus={friendshipStatus}
           onFriendshipStatusChange={setFriendshipStatus}
           onEditClick={isOwnProfile ? () => setIsEditOpen(true) : undefined}

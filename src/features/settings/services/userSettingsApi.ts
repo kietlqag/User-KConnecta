@@ -1,4 +1,5 @@
 import { api } from '@/services/api';
+import { isUserUuid } from '@/features/profile/utils/profileDisplayUtils';
 import type {
   BlockedUser,
   LoginDevice,
@@ -87,7 +88,12 @@ export const userSettingsApi = {
   },
 
   getBlockStatus: async (blockedUserId: string): Promise<{ blockedByMe: boolean }> => {
-    return api.get<{ blockedByMe: boolean }>(`/users/me/blocks/${blockedUserId}/status`);
+    if (!blockedUserId?.trim()) {
+      return { blockedByMe: false };
+    }
+    // Backend hỗ trợ username; vẫn ưu tiên UUID khi có để tránh lookup thừa
+    const id = isUserUuid(blockedUserId) ? blockedUserId : encodeURIComponent(blockedUserId);
+    return api.get<{ blockedByMe: boolean }>(`/users/me/blocks/${id}/status`);
   },
 
   revokeSession: async (sessionId: string): Promise<UserSettings> => {

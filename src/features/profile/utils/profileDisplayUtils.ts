@@ -35,6 +35,29 @@ export function resolveRouteProfileUserId(
   return routeUserId;
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isUserUuid(value?: string | null): value is string {
+  return Boolean(value && UUID_RE.test(value));
+}
+
+/** Giữ /about, /photos… khi đổi /profile/uuid → /profile/username */
+export function extractProfileSubPath(
+  pathname: string,
+  ...profileKeys: Array<string | undefined | null>
+): string {
+  for (const key of profileKeys) {
+    if (!key) continue;
+    const prefix = `/profile/${key}`;
+    if (pathname === prefix) return '';
+    if (pathname.startsWith(`${prefix}/`)) {
+      return pathname.slice(prefix.length);
+    }
+  }
+  return '';
+}
+
 export function isOwnProfileUser(
   currentUser: AuthUser | null | undefined,
   options: {
