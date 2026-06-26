@@ -1,18 +1,28 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Globe, Users, UserMinus, UserCheck, Search, Check } from 'lucide-react';
+import { ArrowLeft, Globe, Users, UserMinus, UserCheck, Search, Check, Lock } from 'lucide-react';
+import { toast } from 'sonner';
 import { friendService, type FriendApiResponse } from '@/services/friendService';
 import { authService } from '@/services/authService';
+import {
+  type AudienceId,
+  getAudienceDescription,
+} from './postAudienceUtils';
 
 interface ProfilePostAudienceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedAudience: string;
+  selectedAudience: AudienceId;
   excludedUserIds: string[];
   allowedUserIds: string[];
-  onSelect: (audience: string, excludedUserIds: string[], allowedUserIds: string[]) => void;
+  onSelect: (audience: AudienceId, excludedUserIds: string[], allowedUserIds: string[]) => void;
 }
 
-const audienceOptions = [
+const audienceOptions: {
+  id: AudienceId;
+  icon: typeof Globe;
+  title: string;
+  description: string;
+}[] = [
   {
     id: 'public',
     icon: Globe,
@@ -37,6 +47,12 @@ const audienceOptions = [
     title: 'Bạn bè ngoại trừ...',
     description: 'Bạn bè của bạn, ngoại trừ những người bạn chọn',
   },
+  {
+    id: 'private',
+    icon: Lock,
+    title: 'Chỉ mình tôi',
+    description: 'Chỉ bạn mới có thể xem bài viết này',
+  },
 ];
 
 export function ProfilePostAudienceModal({
@@ -48,7 +64,7 @@ export function ProfilePostAudienceModal({
   onSelect,
 }: ProfilePostAudienceModalProps) {
   const [step, setStep] = useState<1 | 2>(1);
-  const [tempSelected, setTempSelected] = useState(selectedAudience);
+  const [tempSelected, setTempSelected] = useState<AudienceId>(selectedAudience);
   const [tempExcluded, setTempExcluded] = useState<string[]>(excludedUserIds);
   const [tempAllowed, setTempAllowed] = useState<string[]>(allowedUserIds);
   const [friends, setFriends] = useState<FriendApiResponse[]>([]);
@@ -71,20 +87,24 @@ export function ProfilePostAudienceModal({
         friendService.getFriends(currentUser.id).then(setFriends).catch(() => {});
       }
     }
-  }, [step]);
+  }, [step, friends.length]);
 
   if (!isOpen) return null;
 
   const handleStep1Done = () => {
     if (tempSelected === 'friends-except' || tempSelected === 'specific-friends') {
       setStep(2);
-    } else {
-      onSelect(tempSelected, [], []);
-      onClose();
+      return;
     }
+    onSelect(tempSelected, [], []);
+    onClose();
   };
 
   const handleStep2Done = () => {
+    if (tempSelected === 'specific-friends' && tempAllowed.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một bạn bè');
+      return;
+    }
     if (tempSelected === 'specific-friends') {
       onSelect('specific-friends', [], tempAllowed);
     } else {
@@ -213,8 +233,8 @@ export function ProfilePostAudienceModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
-      <div className="max-h-[90vh] w-full max-w-[500px] overflow-y-auto rounded-lg bg-white shadow-xl dark:bg-gray-800">
-        <div className="sticky top-0 relative flex items-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
+        <div className="relative flex shrink-0 items-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <button
             onClick={onClose}
             className="rounded-full p-2 transition-colors hover:bg-muted"
@@ -226,13 +246,13 @@ export function ProfilePostAudienceModal({
           </h2>
         </div>
 
-        <div className="p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
           <div className="mb-4">
             <h3 className="mb-2 font-semibold text-gray-900 dark:text-white">
               Ai có thể xem bài viết của bạn?
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Bài viết của bạn sẽ hiển thị trên Bảng feed, trang cá nhân và trong kết quả tìm kiếm.
+              {getAudienceDescription(tempSelected)}
             </p>
           </div>
 
@@ -277,7 +297,7 @@ export function ProfilePostAudienceModal({
           </div>
         </div>
 
-        <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
           <button
             onClick={onClose}
             className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:text-emerald-400 dark:hover:bg-gray-700"

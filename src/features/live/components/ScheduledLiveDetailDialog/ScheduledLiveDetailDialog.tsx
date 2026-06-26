@@ -63,6 +63,8 @@ interface ScheduledLiveDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   onUpdated: (session: LiveSessionResponse) => void;
   onDeleted: (sessionId: string) => void;
+  /** Hide subscribe CTA when interest is shown on the parent surface (e.g. group event card). */
+  hideSubscribeButton?: boolean;
 }
 
 export function ScheduledLiveDetailDialog({
@@ -71,6 +73,7 @@ export function ScheduledLiveDetailDialog({
   onOpenChange,
   onUpdated,
   onDeleted,
+  hideSubscribeButton = false,
 }: ScheduledLiveDetailDialogProps) {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
@@ -209,12 +212,15 @@ export function ScheduledLiveDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+        <DialogContent className="flex max-h-[90vh] max-w-xl flex-col overflow-hidden p-0">
+          <div className="shrink-0 border-b border-gray-100 px-6 py-4 dark:border-gray-800">
           <DialogHeader>
             <DialogTitle>{mode === 'edit' ? 'Chỉnh sửa sự kiện live' : 'Chi tiết sự kiện live'}</DialogTitle>
             <DialogDescription className="sr-only">Thông tin buổi phát trực tiếp theo lịch</DialogDescription>
           </DialogHeader>
+          </div>
 
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4 sidebar-scrollbar">
           <section className="space-y-4">
               {mode === 'view' ? (
                 <>
@@ -294,7 +300,7 @@ export function ScheduledLiveDetailDialog({
               ) : subscribers.length === 0 ? (
                 <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">Chưa có ai quan tâm sự kiện này.</p>
               ) : (
-                <div className="max-h-40 overflow-y-auto overscroll-contain rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 pr-1">
+                <div className="max-h-52 overflow-y-auto overscroll-contain rounded-lg border border-gray-100 bg-gray-50 pr-1 dark:border-gray-800 dark:bg-gray-900/60 sidebar-scrollbar">
                   <div className="space-y-1 p-1">
                     {subscribers.map((subscriber) => (
                       <button
@@ -325,7 +331,9 @@ export function ScheduledLiveDetailDialog({
             </section>
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
+          </div>
+
+          <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
             <div className="flex flex-wrap gap-2">
               {isOwner ? (
                 mode === 'view' ? (
@@ -366,7 +374,7 @@ export function ScheduledLiveDetailDialog({
                     </button>
                   </>
                 )
-              ) : (
+              ) : !hideSubscribeButton ? (
                 <button
                   type="button"
                   disabled={isSubscribeLoading}
@@ -380,7 +388,7 @@ export function ScheduledLiveDetailDialog({
                   <Bell className="h-4 w-4" />
                   {isSubscribeLoading ? 'Đang lưu...' : isSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
                 </button>
-              )}
+              ) : null}
             </div>
 
             {isOwner && mode === 'view' && (

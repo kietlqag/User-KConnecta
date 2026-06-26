@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   birthdayService,
   type BirthdayFriendApi,
@@ -166,13 +166,9 @@ export function useBirthdayWishes(direction: 'all' | 'sent' | 'received' = 'rece
 }
 
 export function useSendBirthdayWish() {
-  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ recipientId, message }: { recipientId: string; message: string }) =>
       birthdayService.sendWish(recipientId, message),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['birthdays', 'wishes'] });
-    },
   });
 }
 

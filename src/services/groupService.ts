@@ -76,6 +76,9 @@ export const groupService = {
   updateMemberApproval: (groupId: string, memberApprovalRequired: boolean) =>
     api.put<GroupApiResponse>(`/groups/${groupId}/member-approval`, { memberApprovalRequired }),
 
+  updatePrivacy: (groupId: string, privacy: 'PUBLIC' | 'PRIVATE') =>
+    api.put<GroupApiResponse>(`/groups/${groupId}/privacy`, { privacy }),
+
   removeMember: (groupId: string, userId: string, requesterId: string) =>
     api.delete<void>(`/groups/${groupId}/members/${userId}?requesterId=${requesterId}`),
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Link2, MessageCircle, ArrowLeft, Search, Globe, Lock, Smile, ChevronDown, Newspaper, Users } from 'lucide-react';
@@ -29,6 +29,27 @@ import {
   getSharePlaceholder,
   getStoryNavigateState,
 } from './shareHelpers';
+import { computeEmojiPickerPosition, type EmojiPickerPosition } from '@/utils/emojiPickerPosition';
+
+function isEventInsideRef(event: MouseEvent, ref: RefObject<HTMLElement | null>) {
+  const node = ref.current;
+  if (!node) return false;
+  return event.composedPath().includes(node);
+}
+
+function isEmojiPickerInteract(event: { detail: { originalEvent: Event } }) {
+  return event.detail.originalEvent.composedPath().some(
+    (node) =>
+      node instanceof HTMLElement &&
+      (node.dataset.shareEmojiPicker !== undefined || node.tagName === 'EM-EMOJI-PICKER'),
+  );
+}
+
+function keepShareModalOpenOnEmojiPicker(event: { preventDefault: () => void; detail: { originalEvent: Event } }) {
+  if (isEmojiPickerInteract(event)) {
+    event.preventDefault();
+  }
+}
 
 const PRIVACY_OPTIONS: { value: SharePrivacy; label: string; icon: React.ReactNode }[] = [
   { value: 'PUBLIC', label: 'Công khai', icon: <Globe className="w-4 h-4" /> },
@@ -54,7 +75,11 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
   const [privacy, setPrivacy] = useState<SharePrivacy>('PUBLIC');
   const [showPrivacyMenu, setShowPrivacyMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [emojiPickerPos, setEmojiPickerPos] = useState({ top: 0, right: 0 });
+  const [emojiPickerPos, setEmojiPickerPos] = useState<EmojiPickerPosition>({
+    top: 0,
+    right: 0,
+    maxHeight: 435,
+  });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const privacyRef = useRef<HTMLDivElement>(null);
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
@@ -90,15 +115,23 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
   useEffect(() => {
     if (!showEmojiPicker) return;
     const handleClickOutside = (e: MouseEvent) => {
-      const node = e.target as Node;
-      const insidePicker = emojiPickerRef.current?.contains(node);
-      const insideButton = emojiButtonRef.current?.contains(node);
-      if (!insidePicker && !insideButton) {
+      if (!isEventInsideRef(e, emojiPickerRef) && !isEventInsideRef(e, emojiButtonRef)) {
         setShowEmojiPicker(false);
       }
     };
+    const handleReposition = () => {
+      if (emojiButtonRef.current) {
+        setEmojiPickerPos(
+          computeEmojiPickerPosition(emojiButtonRef.current.getBoundingClientRect()),
+        );
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleReposition);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleReposition);
+    };
   }, [showEmojiPicker]);
 
   const handleClose = () => {
@@ -219,6 +252,8 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
         data-share-modal
         className="!flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[500px] rounded-2xl border-none bg-white shadow-2xl dark:bg-gray-800"
         onWheel={stopWheelBubble}
+        onPointerDownOutside={keepShareModalOpenOnEmojiPicker}
+        onInteractOutside={keepShareModalOpenOnEmojiPicker}
       >
         {showFriendPicker ? (
           <>
@@ -374,11 +409,9 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                       type="button"
                       onClick={() => {
                         if (!showEmojiPicker && emojiButtonRef.current) {
-                          const rect = emojiButtonRef.current.getBoundingClientRect();
-                          setEmojiPickerPos({
-                            top: rect.top - 8,
-                            right: window.innerWidth - rect.right,
-                          });
+                          setEmojiPickerPos(
+                            computeEmojiPickerPosition(emojiButtonRef.current.getBoundingClientRect()),
+                          );
                         }
                         setShowEmojiPicker((v) => !v);
                       }}
@@ -513,10 +546,12 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
         createPortal(
           <div
             ref={emojiPickerRef}
-            className="fixed z-[200]"
+            data-share-emoji-picker
+            className="fixed z-[200] pointer-events-auto overflow-y-auto rounded-lg shadow-xl sidebar-scrollbar"
             style={{
-              bottom: window.innerHeight - emojiPickerPos.top,
+              top: emojiPickerPos.top,
               right: emojiPickerPos.right,
+              maxHeight: emojiPickerPos.maxHeight,
             }}
           >
             <Picker

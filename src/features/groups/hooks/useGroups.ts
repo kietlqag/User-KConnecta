@@ -169,6 +169,20 @@ export function useUpdateMemberApproval() {
   });
 }
 
+export function useUpdateGroupPrivacy() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, privacy }: { groupId: string; privacy: 'PUBLIC' | 'PRIVATE' }) =>
+      groupService.updatePrivacy(groupId, privacy),
+    onSuccess: (_, { groupId }) => {
+      queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'discover'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'joined'] });
+      queryClient.invalidateQueries({ queryKey: ['groups', 'managed'] });
+    },
+  });
+}
+
 export function useGroupJoinRequests(groupId: string | undefined) {
   return useQuery({
     queryKey: ['groups', 'requests', groupId],

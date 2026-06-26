@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Loader2, MessageCircle, UserMinus, UserPlus, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Friend } from '../../types/friends.types';
 import { UserAvatar } from '@/components/shared';
 
@@ -25,6 +26,7 @@ export const FriendCard = ({
   onRemoveSuggestion,
   showRemove = false,
 }: FriendCardProps) => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState<'add' | 'cancel' | 'unfriend' | 'remove' | null>(null);
 
   const handleAdd = async () => {
@@ -89,8 +91,8 @@ export const FriendCard = ({
           </Link>
           <p className="mt-1 h-5 truncate text-sm text-gray-500 dark:text-gray-400">
             {friend.mutualFriends > 0
-              ? `${friend.mutualFriends} bạn chung`
-              : 'Chưa có bạn chung'}
+              ? t('friendCard.mutualFriends', { count: friend.mutualFriends })
+              : t('friendCard.noMutualFriends')}
           </p>
         </div>
 
@@ -103,7 +105,7 @@ export const FriendCard = ({
                   className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-100 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  <span>Nhắn tin</span>
+                  <span>{t('friendCard.message')}</span>
                 </button>
               )}
               {onUnfriend && (
@@ -117,7 +119,7 @@ export const FriendCard = ({
                   ) : (
                     <UserMinus className="h-4 w-4" />
                   )}
-                  Hủy kết bạn
+                  {t('friendCard.unfriend')}
                 </button>
               )}
             </>
@@ -132,7 +134,7 @@ export const FriendCard = ({
               ) : (
                 <X className="h-4 w-4" />
               )}
-              Hủy lời mời
+              {t('friendCard.cancelRequest')}
             </button>
           ) : (
             <div className="flex gap-2">
@@ -147,7 +149,7 @@ export const FriendCard = ({
                   ) : (
                     <UserPlus className="h-4 w-4 shrink-0" />
                   )}
-                  <span className="truncate">Thêm bạn bè</span>
+                  <span className="truncate">{t('friendCard.addFriend')}</span>
                 </button>
               )}
               {isSuggestion && (
@@ -161,7 +163,7 @@ export const FriendCard = ({
                   ) : (
                     <X className="h-4 w-4" />
                   )}
-                  Xóa
+                  {t('friendCard.remove')}
                 </button>
               )}
             </div>

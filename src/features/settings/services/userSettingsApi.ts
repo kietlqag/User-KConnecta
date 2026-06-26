@@ -1,7 +1,6 @@
 import { api } from '@/services/api';
 import type {
   BlockedUser,
-  LanguageOption,
   LoginDevice,
   ThemeOption,
   UserSettings,
@@ -15,7 +14,6 @@ export interface UserSettingsApiResponse {
   notifyPosts: boolean;
   notifyMessages: boolean;
   theme: ThemeOption;
-  language: LanguageOption;
   blockedUsers: {
     id: string;
     name: string;
@@ -38,7 +36,6 @@ export interface UpdateUserSettingsPayload {
   notifyPosts?: boolean;
   notifyMessages?: boolean;
   theme?: ThemeOption;
-  language?: LanguageOption;
 }
 
 function mapApiToUserSettings(data: UserSettingsApiResponse): UserSettings {
@@ -56,7 +53,6 @@ function mapApiToUserSettings(data: UserSettingsApiResponse): UserSettings {
     notifyPosts: data.notifyPosts,
     notifyMessages: data.notifyMessages,
     theme: data.theme,
-    language: data.language,
     devices: data.devices.map(
       (device): LoginDevice => ({
         id: device.id,

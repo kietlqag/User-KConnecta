@@ -11,8 +11,6 @@ import type { UserSettings } from '../types/userSettings.types';
 import { DEFAULT_USER_SETTINGS } from '../types/userSettings.types';
 
 import { userSettingsApi } from '../services/userSettingsApi';
-
-import { applyAppLanguage } from '@/i18n';
 import { setNotifyMessagesEnabled } from '@/features/messenger/utils/messageNotificationPrefs';
 
 
@@ -59,7 +57,6 @@ export function useUserSettings() {
 
       }
 
-      applyAppLanguage(data.language);
       setNotifyMessagesEnabled(data.notifyMessages);
 
     } catch (error) {
@@ -120,8 +117,6 @@ export function useUserSettings() {
 
         theme: settings.theme,
 
-        language: settings.language,
-
       });
 
       setSettings(data);
@@ -130,7 +125,6 @@ export function useUserSettings() {
 
       setTheme(data.theme);
 
-      applyAppLanguage(data.language);
       setNotifyMessagesEnabled(data.notifyMessages);
 
       toast.success(i18n.t('common.saved'));
@@ -152,8 +146,6 @@ export function useUserSettings() {
   const discard = useCallback(() => {
 
     setSettings(savedSnapshot);
-
-    applyAppLanguage(savedSnapshot.language);
 
   }, [savedSnapshot]);
 

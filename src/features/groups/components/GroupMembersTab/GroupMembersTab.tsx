@@ -1,17 +1,8 @@
-import { Search, Shield, MoreHorizontal, UserMinus, Sparkles } from 'lucide-react';
+import { Search, Shield, UserMinus } from 'lucide-react';
 import { UserAvatar } from '@/components/shared';
 import type { GroupMember } from '../../types/groups.types';
 
-const NEW_MEMBER_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-
-function isNewMember(joinedAt: string): boolean {
-  const ts = new Date(joinedAt).getTime();
-  if (Number.isNaN(ts)) return false;
-  return Date.now() - ts < NEW_MEMBER_WINDOW_MS;
-}
-
-function formatJoinedAt(joinedAt: string): string {
-  const date = new Date(joinedAt);
+function formatJoinedAt(joinedAt: string): string {  const date = new Date(joinedAt);
   if (Number.isNaN(date.getTime())) return '';
   const days = Math.floor((Date.now() - date.getTime()) / (24 * 60 * 60 * 1000));
   if (days < 0) return 'Tham gia hôm nay';
@@ -78,7 +69,7 @@ export function GroupMembersTab({
           </h3>
           <div className="space-y-1">
             {adminMembers.map(member => (
-              <div key={member.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
+              <div key={member.id} className="flex items-center p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group">
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => onMemberClick(member.userId)}>
                   <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} userId={member.userId} rounded="full" className="w-12 h-12 shrink-0" initialsClassName="text-sm font-semibold" />
                   <div>
@@ -89,9 +80,6 @@ export function GroupMembersTab({
                     <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatJoinedAt(member.joinedAt)}</div>
                   </div>
                 </div>
-                <button type="button" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-                  <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                </button>
               </div>
             ))}
           </div>
@@ -113,32 +101,19 @@ export function GroupMembersTab({
                 <div className="flex items-center gap-3 cursor-pointer" onClick={() => onMemberClick(member.userId)}>
                   <UserAvatar avatarUrl={member.avatarUrl} name={member.fullName} userId={member.userId} rounded="full" className="w-12 h-12 shrink-0" initialsClassName="text-sm font-semibold" />
                   <div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] group-hover:underline">{member.fullName}</div>
-                      {isNewMember(member.joinedAt) && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[11px] font-semibold whitespace-nowrap">
-                          <Sparkles className="w-3 h-3" /> Thành viên mới
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">Thành viên · {formatJoinedAt(member.joinedAt)}</div>
-                  </div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px] group-hover:underline">{member.fullName}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Thành viên · {formatJoinedAt(member.joinedAt)}</div>                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  {isAdmin && onRemoveMember && (
-                    <button
-                      type="button"
-                      onClick={() => onRemoveMember({ userId: member.userId, fullName: member.fullName })}
-                      className="p-2 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                      title="Xóa khỏi nhóm"
-                    >
-                      <UserMinus className="w-5 h-5" />
-                    </button>
-                  )}
-                  <button type="button" className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 opacity-0 group-hover:opacity-100 transition-all cursor-pointer">
-                    <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                {isAdmin && onRemoveMember && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveMember({ userId: member.userId, fullName: member.fullName })}
+                    className="p-2 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                    title="Xóa khỏi nhóm"
+                  >
+                    <UserMinus className="w-5 h-5" />
                   </button>
-                </div>
+                )}
               </div>
             ))}
           </div>

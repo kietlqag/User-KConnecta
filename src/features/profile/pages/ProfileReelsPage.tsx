@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Play, Clapperboard, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService, AUTH_USER_CHANGED_EVENT } from '@/services/authService';
@@ -30,6 +31,8 @@ function ReelsGrid({
   onUnsave?: (postId: string) => void;
   onOpen: (postId: string) => void;
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {reels.map((reel) => (
@@ -47,7 +50,7 @@ function ReelsGrid({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent">
             <div className="absolute bottom-2 left-2 right-2">
               <p className="line-clamp-2 text-xs font-semibold leading-tight text-white">
-                {reel.caption || 'Thước phim'}
+                {reel.caption || t('profileReels.defaultCaption')}
               </p>
             </div>
           </div>
@@ -59,7 +62,7 @@ function ReelsGrid({
                 onUnsave(reel.id);
               }}
               className="absolute right-2 top-2 rounded-full bg-black/50 p-2 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
-              title="Bỏ lưu"
+              title={t('profileReels.unsave')}
             >
               <Bookmark className="h-4 w-4 fill-white" />
             </button>
@@ -76,6 +79,7 @@ function ReelsGrid({
 }
 
 export function ProfileReelsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile, resolvedId, isOwnProfile, loading: profileLoading } = useProfileLayoutContext();
   const [currentUser, setCurrentUser] = React.useState(() => authService.getCurrentUser());
@@ -172,15 +176,15 @@ export function ProfileReelsPage() {
       window.dispatchEvent(
         new CustomEvent(SAVED_POSTS_CHANGED_EVENT, { detail: { postId, saved: false } }),
       );
-      toast.success('Đã bỏ lưu thước phim');
+      toast.success(t('profileReels.unsaveSuccess'));
     } catch {
-      toast.error('Không thể bỏ lưu thước phim');
+      toast.error(t('profileReels.unsaveError'));
     }
   };
 
-  const ownerTabs: { key: ReelsTab; label: string }[] = [
-    { key: 'yours', label: 'Thước phim của bạn' },
-    { key: 'saved', label: 'Thước phim đã lưu' },
+  const ownerTabs: { key: ReelsTab; labelKey: 'yours' | 'saved' }[] = [
+    { key: 'yours', labelKey: 'yours' },
+    { key: 'saved', labelKey: 'saved' },
   ];
 
   const reels = isOwner && activeTab === 'saved' ? savedReels : yourReels;
@@ -193,7 +197,7 @@ export function ProfileReelsPage() {
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <Clapperboard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Watch</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('watch.title')}</h2>
           </div>
         </div>
 
@@ -210,7 +214,7 @@ export function ProfileReelsPage() {
                     : 'border-transparent text-gray-600 hover:bg-muted dark:text-gray-400'
                 }`}
               >
-                {tab.label}
+                {t(`profileReels.${tab.labelKey}`)}
               </button>
             ))}
           </div>
@@ -236,12 +240,12 @@ export function ProfileReelsPage() {
                 </div>
               </div>
               <h3 className="mb-1 text-lg font-semibold text-gray-800 dark:text-gray-200">
-                {isOwner && activeTab === 'saved' ? 'Chưa có thước phim đã lưu' : 'Chưa có thước phim nào'}
+                {isOwner && activeTab === 'saved' ? t('profileReels.emptySaved') : t('profileReels.empty')}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {isOwner && activeTab === 'saved'
-                  ? 'Khi bạn lưu video trên Watch, chúng sẽ xuất hiện ở đây.'
-                  : 'Các video từ bài viết sẽ xuất hiện ở đây.'}
+                  ? t('profileReels.emptySavedHint')
+                  : t('profileReels.emptyHint')}
               </p>
               {isOwner && activeTab === 'saved' && (
                 <button
@@ -249,7 +253,7 @@ export function ProfileReelsPage() {
                   onClick={() => navigate('/watch')}
                   className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                 >
-                  Khám phá Watch
+                  {t('profileReels.exploreWatch')}
                 </button>
               )}
             </div>

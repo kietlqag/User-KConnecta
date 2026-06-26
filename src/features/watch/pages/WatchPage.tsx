@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Search, Star, Bookmark } from 'lucide-react';
 import { Header } from '../../home/components/Header';
@@ -38,27 +39,30 @@ const WatchSidebar = ({
   onTabChange: (tab: WatchTab) => void;
   searchQuery?: string | null;
   showSavedTab: boolean;
-}) => (
+}) => {
+  const { t } = useTranslation();
+
+  return (
   <aside className="hidden lg:flex fixed top-14 left-0 z-40 h-[calc(100vh-56px)] w-[320px] flex-col gap-1 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-4">
-    <h1 className="px-3 pb-3 text-2xl font-bold text-gray-900 dark:text-white">Watch</h1>
+    <h1 className="px-3 pb-3 text-2xl font-bold text-gray-900 dark:text-white">{t('watch.title')}</h1>
 
     {searchQuery ? (
       <div className="flex items-center gap-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 px-3 py-2.5 text-gray-900 dark:text-white">
         <Search className="h-6 w-6 shrink-0 text-emerald-600 dark:text-emerald-400" />
         <div className="min-w-0">
-          <span className="block text-[15px] font-semibold">Kết quả tìm kiếm</span>
+          <span className="block text-[15px] font-semibold">{t('watch.searchResults')}</span>
           <span className="block truncate text-xs text-gray-500 dark:text-gray-400">&quot;{searchQuery}&quot;</span>
         </div>
       </div>
     ) : (
-      <nav className="flex flex-col gap-1" aria-label="Watch navigation">
+      <nav className="flex flex-col gap-1" aria-label={t('watch.navAria')}>
         <button
           type="button"
           onClick={() => onTabChange('forYou')}
           className={sidebarTabClass(activeTab === 'forYou')}
         >
           <Star className="h-6 w-6 shrink-0" />
-          <span className="text-[15px] font-semibold">Dành cho bạn</span>
+          <span className="text-[15px] font-semibold">{t('watch.forYou')}</span>
         </button>
         {showSavedTab && (
           <button
@@ -67,15 +71,17 @@ const WatchSidebar = ({
             className={sidebarTabClass(activeTab === 'saved')}
           >
             <Bookmark className="h-6 w-6 shrink-0" />
-            <span className="text-[15px] font-semibold">Thước phim đã lưu</span>
+            <span className="text-[15px] font-semibold">{t('watch.saved')}</span>
           </button>
         )}
       </nav>
     )}
   </aside>
-);
+  );
+};
 
 export const WatchPage = () => {
+  const { t } = useTranslation();
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
   const [watchTab, setWatchTab] = useState<WatchTab>('forYou');
   const viewportRef = useRef<ReelSlideViewportHandle>(null);
@@ -220,11 +226,11 @@ export const WatchPage = () => {
   }, []);
 
   const loadingMessage = useMemo(() => {
-    if (!currentUser?.id) return 'Vui lòng đăng nhập để xem video.';
-    if (isLoading) return 'Đang tải video...';
-    if (isFetchingNextPage && reels.length === 0) return 'Đang tải video...';
+    if (!currentUser?.id) return t('watch.loginRequired');
+    if (isLoading) return t('watch.loading');
+    if (isFetchingNextPage && reels.length === 0) return t('watch.loading');
     return null;
-  }, [currentUser?.id, isLoading, isFetchingNextPage, reels.length]);
+  }, [currentUser?.id, isLoading, isFetchingNextPage, reels.length, t]);
 
   return (
     <div className="h-screen bg-white dark:bg-gray-800 overflow-hidden">
@@ -239,7 +245,7 @@ export const WatchPage = () => {
       {!isSearchWatchMode && showSavedTab && (
         <nav
           className="lg:hidden fixed top-14 left-0 right-0 z-40 flex border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
-          aria-label="Watch navigation"
+          aria-label={t('watch.navAria')}
         >
           <button
             type="button"
@@ -251,7 +257,7 @@ export const WatchPage = () => {
             }`}
           >
             <Star className="h-4 w-4" />
-            Dành cho bạn
+            {t('watch.forYou')}
           </button>
           <button
             type="button"
@@ -263,7 +269,7 @@ export const WatchPage = () => {
             }`}
           >
             <Bookmark className="h-4 w-4" />
-            Thước phim đã lưu
+            {t('watch.saved')}
           </button>
         </nav>
       )}
@@ -273,15 +279,15 @@ export const WatchPage = () => {
           <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">{loadingMessage}</div>
         ) : isError ? (
           <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">
-            Không thể tải video. Vui lòng thử lại sau.
+            {t('watch.loadError')}
           </div>
         ) : reels.length === 0 ? (
           <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">
             {isSearchWatchMode
-              ? 'Không có thước phim nào trong kết quả tìm kiếm.'
+              ? t('watch.emptySearch')
               : isSavedWatchMode
-                ? 'Chưa có thước phim đã lưu.'
-                : 'Chưa có video nào.'}
+                ? t('watch.emptySaved')
+                : t('watch.empty')}
           </div>
         ) : currentReel ? (
           <ReelSlideViewport

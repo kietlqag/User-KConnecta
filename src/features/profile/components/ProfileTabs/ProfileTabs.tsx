@@ -1,5 +1,6 @@
 ﻿import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface ProfileTabsProps {
   userId?: string;
@@ -7,18 +8,19 @@ interface ProfileTabsProps {
 }
 
 export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {
+  const { t } = useTranslation();
   const location = useLocation();
   const currentPath = location.pathname;
   const resolvedProfileKey = profileKey || userId || '';
 
   const tabs = [
-    { label: 'Tất cả', path: `/profile/${resolvedProfileKey}` },
-    { label: 'Giới thiệu', path: `/profile/${resolvedProfileKey}/about` },
-    { label: 'Bạn bè', path: `/profile/${resolvedProfileKey}/friends` },
-    { label: 'Ảnh', path: `/profile/${resolvedProfileKey}/photos` },
-    { label: 'Watch', path: `/profile/${resolvedProfileKey}/reels` },
-    { label: 'Album', path: `/profile/${resolvedProfileKey}/albums` },
-  ];
+    { labelKey: 'all', path: `/profile/${resolvedProfileKey}` },
+    { labelKey: 'about', path: `/profile/${resolvedProfileKey}/about` },
+    { labelKey: 'friends', path: `/profile/${resolvedProfileKey}/friends` },
+    { labelKey: 'photos', path: `/profile/${resolvedProfileKey}/photos` },
+    { labelKey: 'watch', path: `/profile/${resolvedProfileKey}/reels` },
+    { labelKey: 'albums', path: `/profile/${resolvedProfileKey}/albums` },
+  ] as const;
 
   const isActive = (path: string) => {
     if (path === `/profile/${resolvedProfileKey}`) {
@@ -42,7 +44,7 @@ export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {
                     : 'rounded-t-lg text-gray-600 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-700'
                 }`}
               >
-                {tab.label}
+                {t(`profileTabs.${tab.labelKey}`)}
               </Link>
             ))}
 
@@ -54,4 +56,3 @@ export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {
     </div>
   );
 }
-

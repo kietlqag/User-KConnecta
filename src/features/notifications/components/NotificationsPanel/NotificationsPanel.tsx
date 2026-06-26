@@ -19,10 +19,14 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
 
   const handleAcceptInvite = async (notificationId: string, relatedId: string) => {
     try {
-      await notificationService.acceptGroupInvite(relatedId, notificationId, currentUser?.id as string);
+      const result = await notificationService.acceptGroupInvite(relatedId, notificationId, currentUser?.id as string);
       updateNotificationsByRelatedId(relatedId, { isActioned: true, isUnread: false });
       window.dispatchEvent(new Event('notification:refresh'));
-      toast.success('Đã tham gia nhóm');
+      toast.success(
+        result?.status === 'PENDING'
+          ? 'Đã gửi yêu cầu tham gia nhóm. Vui lòng chờ quản trị viên phê duyệt!'
+          : 'Đã tham gia nhóm',
+      );
     } catch (error: any) {
       toast.error(error?.message || 'Không thể chấp nhận lời mời vào nhóm');
     }

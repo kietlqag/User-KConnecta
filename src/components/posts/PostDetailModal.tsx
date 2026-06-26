@@ -9,25 +9,18 @@ import {
   type ReactionOption,
 } from '@/components/reactions';
 import { CommentSection } from './CommentSection';
-import { PostMoreMenu } from '../shared/PostMoreMenu';
+import { PostMoreMenu, type Privacy } from '../shared/PostMoreMenu';
 import { PostMediaGallery } from '../shared/PostMediaGallery';
 import { UserAvatar } from '../shared/UserAvatar';
 import type { PostGalleryItem } from '../shared/PostMediaGallery';
-
-type Privacy = 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
+import { getAudienceLabel, apiPrivacyToAudience } from '@/features/profile/components/ProfileCreatePost/postAudienceUtils';
 
 const PRIVACY_ICON: Record<Privacy, React.ReactNode> = {
   PUBLIC:         <Globe className="w-3.5 h-3.5" />,
   FRIENDS:        <Users className="w-3.5 h-3.5" />,
   FRIENDS_EXCEPT: <Users className="w-3.5 h-3.5" />,
+  SPECIFIC_FRIENDS: <Users className="w-3.5 h-3.5" />,
   PRIVATE:        <Lock className="w-3.5 h-3.5" />,
-};
-
-const PRIVACY_LABEL: Record<Privacy, string> = {
-  PUBLIC:         'Công khai',
-  FRIENDS:        'Bạn bè',
-  FRIENDS_EXCEPT: 'Bạn bè trừ...',
-  PRIVATE:        'Chỉ mình tôi',
 };
 
 interface Post {
@@ -48,6 +41,9 @@ interface Post {
   mediaList?: PostGalleryItem[];
   reactionCounts?: ReactionCountMap;
   privacy?: Privacy;
+  excludedUserIds?: string[];
+  allowedUserIds?: string[];
+  groupId?: string;
   isOwner?: boolean;
   currentUserId?: string;
 }
@@ -62,7 +58,7 @@ interface PostDetailModalProps {
   selectedReaction?: ReactionOption | null;
   onReactionChange?: (reaction: ReactionOption | null) => void;
   isReacting?: boolean;
-  onPrivacyChange?: (privacy: Privacy) => void;
+  onPrivacyChange?: (privacy: Privacy, excludedUserIds: string[], allowedUserIds: string[]) => void;
   onEdit?: () => void;
   onDelete?: () => void;
   livePreview?: React.ReactNode;
@@ -91,6 +87,8 @@ export function PostDetailModal({
   const [shareCount, setShareCount] = useState(post.shares || 0);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [privacy, setPrivacy] = useState<Privacy>(post.privacy ?? 'PUBLIC');
+  const [excludedUserIds, setExcludedUserIds] = useState<string[]>(post.excludedUserIds ?? []);
+  const [allowedUserIds, setAllowedUserIds] = useState<string[]>(post.allowedUserIds ?? []);
 
   const reactionCounts = post.reactionCounts || {
     LIKE: post.likes || 0,
@@ -107,7 +105,9 @@ export function PostDetailModal({
     setCommentCount(post.comments || 0);
     setShareCount(post.shares || 0);
     setPrivacy(post.privacy ?? 'PUBLIC');
-  }, [post.comments, post.shares, post.id, post.privacy]);
+    setExcludedUserIds(post.excludedUserIds ?? []);
+    setAllowedUserIds(post.allowedUserIds ?? []);
+  }, [post.comments, post.shares, post.id, post.privacy, post.excludedUserIds, post.allowedUserIds]);
 
   const handleCommentAdded = useCallback(() => {
     setCommentCount((prev) => {
@@ -167,7 +167,7 @@ export function PostDetailModal({
                   <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                     <span>{post.timestamp}</span>
                     <span>·</span>
-                    <span className="flex items-center gap-0.5" title={PRIVACY_LABEL[privacy]}>
+                    <span className="flex items-center gap-0.5" title={getAudienceLabel(apiPrivacyToAudience(privacy), excludedUserIds.length, allowedUserIds.length)}>
                       {PRIVACY_ICON[privacy]}
                     </span>
                   </div>
@@ -177,12 +177,17 @@ export function PostDetailModal({
                 postId={post.id}
                 isOwner={post.isOwner}
                 privacy={privacy}
+                excludedUserIds={excludedUserIds}
+                allowedUserIds={allowedUserIds}
+                isGroupPost={!!post.groupId}
                 currentUserId={post.currentUserId}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                onPrivacyChange={(p) => {
-                  setPrivacy(p);
-                  onPrivacyChange?.(p);
+                onPrivacyChange={(nextPrivacy, nextExcluded, nextAllowed) => {
+                  setPrivacy(nextPrivacy);
+                  setExcludedUserIds(nextExcluded);
+                  setAllowedUserIds(nextAllowed);
+                  onPrivacyChange?.(nextPrivacy, nextExcluded, nextAllowed);
                 }}
               />
             </div>

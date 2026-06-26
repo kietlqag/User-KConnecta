@@ -4,8 +4,6 @@ export type VisibilityOption = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
 
 export type ThemeOption = 'light' | 'dark' | 'system';
 
-export type LanguageOption = 'vi' | 'en';
-
 export interface LoginDevice {
   id: string;
   deviceName: string;
@@ -30,7 +28,6 @@ export interface UserSettings {
   notifyPosts: boolean;
   notifyMessages: boolean;
   theme: ThemeOption;
-  language: LanguageOption;
 }
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
@@ -41,5 +38,4 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   notifyPosts: true,
   notifyMessages: true,
   theme: 'system',
-  language: 'vi',
 };

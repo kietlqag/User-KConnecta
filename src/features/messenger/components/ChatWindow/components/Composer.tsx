@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Mic, ImageIcon, Camera, FileUp, Smile, Send, Trash2, X } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
+import { computeEmojiPickerPosition, type EmojiPickerPosition } from '@/utils/emojiPickerPosition';
 import { Message } from '../../../types/message.types';
 import { VoiceWaveform } from '../../VoiceWaveform/VoiceWaveform';
 
@@ -71,8 +73,14 @@ export const Composer: React.FC<ComposerProps> = ({
   isDuplicateBlocked = false,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiPickerPos, setEmojiPickerPos] = useState<EmojiPickerPosition>({
+    top: 0,
+    right: 0,
+    maxHeight: 435,
+  });
 
   const canSend =
     connected &&
@@ -97,13 +105,26 @@ export const Composer: React.FC<ComposerProps> = ({
     if (!showEmojiPicker) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (!emojiPickerRef.current) return;
-      if (emojiPickerRef.current.contains(event.target as Node)) return;
-      setShowEmojiPicker(false);
+      const target = event.target as Node;
+      const insidePicker = emojiPickerRef.current?.contains(target);
+      const insideButton = emojiButtonRef.current?.contains(target);
+      if (!insidePicker && !insideButton) setShowEmojiPicker(false);
+    };
+
+    const handleReposition = () => {
+      if (emojiButtonRef.current) {
+        setEmojiPickerPos(
+          computeEmojiPickerPosition(emojiButtonRef.current.getBoundingClientRect()),
+        );
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('resize', handleReposition);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleReposition);
+    };
   }, [showEmojiPicker]);
 
   const handleEmojiSelect = (emoji: { native?: string }) => {
@@ -261,21 +282,16 @@ export const Composer: React.FC<ComposerProps> = ({
                 className="w-full pl-3 pr-11 py-2 bg-transparent outline-none transition-all text-sm disabled:opacity-50 resize-none min-h-[36px] max-h-[120px] leading-relaxed block"
                 style={{ height: 'auto' }}
               />
-              <div ref={emojiPickerRef} className="absolute right-2 bottom-1.5">
-                {showEmojiPicker && (
-                  <div className="absolute bottom-10 right-0 z-50 shadow-xl rounded-lg overflow-hidden">
-                    <Picker
-                      data={data}
-                      onEmojiSelect={handleEmojiSelect}
-                      theme="light"
-                      locale="vi"
-                      previewPosition="none"
-                    />
-                  </div>
-                )}
+              <div className="absolute right-2 bottom-1.5">
                 <button
+                  ref={emojiButtonRef}
                   type="button"
                   onClick={() => {
+                    if (!showEmojiPicker && emojiButtonRef.current) {
+                      setEmojiPickerPos(
+                        computeEmojiPickerPosition(emojiButtonRef.current.getBoundingClientRect()),
+                      );
+                    }
                     onEmojiClick();
                     setShowEmojiPicker((prev) => !prev);
                   }}
@@ -299,6 +315,28 @@ export const Composer: React.FC<ComposerProps> = ({
           </>
         )}
       </div>
+
+      {showEmojiPicker &&
+        createPortal(
+          <div
+            ref={emojiPickerRef}
+            className="fixed z-[200] overflow-y-auto rounded-lg shadow-xl sidebar-scrollbar"
+            style={{
+              top: emojiPickerPos.top,
+              right: emojiPickerPos.right,
+              maxHeight: emojiPickerPos.maxHeight,
+            }}
+          >
+            <Picker
+              data={data}
+              onEmojiSelect={handleEmojiSelect}
+              theme="light"
+              locale="vi"
+              previewPosition="none"
+            />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bookmark, Plus, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { CollectionResponse } from '@/services/collectionService';
 
 interface SavedSidebarProps {
@@ -15,10 +16,12 @@ export const SavedSidebar = ({
   onSelectCollection,
   onCreateCollection,
 }: SavedSidebarProps) => {
+  const { t } = useTranslation();
+
   return (
     <aside className="w-[360px] h-[calc(100vh-56px)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col fixed left-0 top-14 z-20">
       <div className="p-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Đã lưu</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('saved.title')}</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2">
@@ -33,13 +36,13 @@ export const SavedSidebar = ({
           }`}>
             <Bookmark className="w-5 h-5" />
           </div>
-          <span className="font-semibold text-[15px]">Mục đã lưu</span>
+          <span className="font-semibold text-[15px]">{t('saved.allItems')}</span>
         </button>
 
         {collections.length > 0 && (
           <>
             <div className="mt-4 px-3 mb-2">
-              <h3 className="text-[17px] font-bold text-gray-900 dark:text-gray-100">Bộ sưu tập của tôi</h3>
+              <h3 className="text-[17px] font-bold text-gray-900 dark:text-gray-100">{t('saved.myCollections')}</h3>
             </div>
 
             <div className="space-y-1">
@@ -62,7 +65,7 @@ export const SavedSidebar = ({
                     <span className="font-semibold text-[15px] text-gray-900 dark:text-gray-100 truncate">{col.name}</span>
                     <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                       <Lock className="w-3 h-3" />
-                      <span>Chỉ mình tôi</span>
+                      <span>{t('saved.onlyMe')}</span>
                     </div>
                   </div>
                 </button>
@@ -78,7 +81,7 @@ export const SavedSidebar = ({
           <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center">
             <Plus className="w-5 h-5" />
           </div>
-          <span className="font-semibold text-[15px]">Tạo bộ sưu tập mới</span>
+          <span className="font-semibold text-[15px]">{t('saved.createCollection')}</span>
         </button>
       </div>
     </aside>

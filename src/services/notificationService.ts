@@ -54,8 +54,8 @@ export const notificationService = {
   markAllAsRead: (userId: string): Promise<void> =>
     api.put<void>(`${API_URL}/read-all?userId=${userId}`, {}),
 
-  acceptGroupInvite: (groupId: string, notificationId: string, userId: string): Promise<void> =>
-    api.post<void>(`${GROUP_API_URL}/${groupId}/invites/${notificationId}/accept?userId=${userId}`, {}),
+  acceptGroupInvite: (groupId: string, notificationId: string, userId: string): Promise<{ status?: string }> =>
+    api.post<{ status?: string }>(`${GROUP_API_URL}/${groupId}/invites/${notificationId}/accept?userId=${userId}`, {}),
 
   rejectGroupInvite: (groupId: string, notificationId: string): Promise<void> =>
     api.post<void>(`${GROUP_API_URL}/${groupId}/invites/${notificationId}/reject`, {}),

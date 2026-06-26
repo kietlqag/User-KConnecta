@@ -4,9 +4,6 @@ import {
   Bookmark,
   Trash2,
   Shield,
-  Globe,
-  Users,
-  Lock,
   Check,
   AlertTriangle,
   Pencil,
@@ -16,9 +13,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -33,6 +27,14 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 import { postService, type ReportCategory } from '@/services/postService';
+import { ProfilePostAudienceModal } from '@/features/profile/components/ProfileCreatePost/ProfilePostAudienceModal';
+import {
+  apiPrivacyToAudience,
+  audienceToApiPrivacy,
+  getAudienceLabel,
+  type AudienceId,
+  type PostPrivacy,
+} from '@/features/profile/components/ProfileCreatePost/postAudienceUtils';
 
 const REPORT_CATEGORIES: { value: ReportCategory; label: string }[] = [
   { value: 'SPAM',           label: 'Spam / Quảng cáo' },
@@ -43,25 +45,25 @@ const REPORT_CATEGORIES: { value: ReportCategory; label: string }[] = [
   { value: 'OTHER',          label: 'Lý do khác' },
 ];
 
-export type Privacy = 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
-
-const PRIVACY_OPTIONS: { value: Privacy; label: string; desc: string; icon: React.ReactNode }[] = [
-  { value: 'PUBLIC',  label: 'Công khai',    desc: 'Mọi người đều thấy',   icon: <Globe className="w-5 h-5" /> },
-  { value: 'FRIENDS', label: 'Bạn bè',       desc: 'Chỉ bạn bè của bạn',   icon: <Users className="w-5 h-5" /> },
-  { value: 'PRIVATE', label: 'Chỉ mình tôi', desc: 'Chỉ bạn mới thấy',     icon: <Lock className="w-5 h-5" /> },
-];
+export type { PostPrivacy as Privacy };
 
 interface PostMoreMenuProps {
   postId: string;
   isSaved?: boolean;
   isOwner?: boolean;
-  privacy?: Privacy;
+  privacy?: PostPrivacy;
+  excludedUserIds?: string[];
+  allowedUserIds?: string[];
+  isGroupPost?: boolean;
   currentUserId?: string;
   onToggleSave?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
-  onPrivacyChange?: (privacy: Privacy) => void;
-  /** Group context: admin can pin/unpin this post to the group's featured area. */
+  onPrivacyChange?: (
+    privacy: PostPrivacy,
+    excludedUserIds: string[],
+    allowedUserIds: string[],
+  ) => void;
   canPin?: boolean;
   isPinned?: boolean;
   onPin?: () => void;
@@ -74,6 +76,9 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   isSaved = false,
   isOwner = false,
   privacy = 'PUBLIC',
+  excludedUserIds = [],
+  allowedUserIds = [],
+  isGroupPost = false,
   currentUserId,
   onToggleSave,
   onEdit,
@@ -90,19 +95,58 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | null>(null);
   const [reportReason, setReportReason] = useState('');
+  const [showAudienceModal, setShowAudienceModal] = useState(false);
   const queryClient = useQueryClient();
 
-  const handlePrivacySelect = async (newPrivacy: Privacy) => {
-    if (newPrivacy === privacy || updating || !currentUserId) return;
+  const audience = apiPrivacyToAudience(privacy);
+  const privacyLabel = getAudienceLabel(audience, excludedUserIds.length, allowedUserIds.length);
+
+  const handleAudienceSelect = async (
+    nextAudience: AudienceId,
+    nextExcluded: string[],
+    nextAllowed: string[],
+  ) => {
+    if (!currentUserId || updating) return;
+
+    const nextPrivacy = audienceToApiPrivacy(nextAudience);
+    const samePrivacy = nextPrivacy === privacy;
+    const sameExcluded =
+      nextPrivacy === 'FRIENDS_EXCEPT' &&
+      nextExcluded.length === excludedUserIds.length &&
+      nextExcluded.every((id) => excludedUserIds.includes(id));
+    const sameAllowed =
+      nextPrivacy === 'SPECIFIC_FRIENDS' &&
+      nextAllowed.length === allowedUserIds.length &&
+      nextAllowed.every((id) => allowedUserIds.includes(id));
+
+    if (samePrivacy && (nextPrivacy === 'PUBLIC' || nextPrivacy === 'FRIENDS' || nextPrivacy === 'PRIVATE' || sameExcluded || sameAllowed)) {
+      if (
+        (nextPrivacy === 'PUBLIC' || nextPrivacy === 'FRIENDS' || nextPrivacy === 'PRIVATE') &&
+        samePrivacy
+      ) {
+        return;
+      }
+      if (nextPrivacy === 'FRIENDS_EXCEPT' && sameExcluded) return;
+      if (nextPrivacy === 'SPECIFIC_FRIENDS' && sameAllowed) return;
+    }
+
     setUpdating(true);
     try {
-      await postService.updatePrivacy(postId, currentUserId, newPrivacy);
-      onPrivacyChange?.(newPrivacy);
+      await postService.updatePrivacy(postId, {
+        privacy: nextPrivacy,
+        ...(nextPrivacy === 'FRIENDS_EXCEPT' ? { excludedUserIds: nextExcluded } : {}),
+        ...(nextPrivacy === 'SPECIFIC_FRIENDS' ? { allowedUserIds: nextAllowed } : {}),
+      });
+      onPrivacyChange?.(nextPrivacy, nextExcluded, nextAllowed);
       void queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
-      const label = PRIVACY_OPTIONS.find((o) => o.value === newPrivacy)?.label ?? newPrivacy;
-      toast.success(`Đã đổi quyền riêng tư thành "${label}"`);
-    } catch {
-      toast.error('Không thể cập nhật quyền riêng tư. Vui lòng thử lại.');
+      toast.success(`Đã đổi quyền riêng tư thành "${getAudienceLabel(nextAudience, nextExcluded.length, nextAllowed.length)}"`);
+      setShowAudienceModal(false);
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Không thể cập nhật quyền riêng tư. Vui lòng thử lại.';
+      toast.error(message);
     } finally {
       setUpdating(false);
     }
@@ -219,43 +263,33 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
 
             <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
 
-            {/* Privacy submenu */}
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="flex items-start gap-3 p-3 cursor-pointer rounded-md hover:bg-muted w-full">
+            {isGroupPost ? (
+              <div className="flex items-start gap-3 p-3 opacity-80">
                 <div className="mt-1">
                   <Shield className="w-6 h-6 text-gray-900 dark:text-gray-100" />
                 </div>
                 <div className="flex flex-col text-left">
                   <span className="font-semibold text-[15px]">Quyền riêng tư</span>
                   <span className="text-[13px] text-gray-500 dark:text-gray-400">
-                    {PRIVACY_OPTIONS.find((o) => o.value === privacy)?.label ?? 'Công khai'}
+                    Bài viết trong nhóm theo quyền riêng tư của nhóm, không thể thay đổi riêng.
                   </span>
                 </div>
-              </DropdownMenuSubTrigger>
-
-              <DropdownMenuSubContent className="w-64 p-1">
-                <p className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                  Ai có thể xem bài viết này?
-                </p>
-                {PRIVACY_OPTIONS.map((opt) => (
-                  <DropdownMenuItem
-                    key={opt.value}
-                    className="flex items-center gap-3 p-3 cursor-pointer"
-                    disabled={updating}
-                    onClick={() => handlePrivacySelect(opt.value)}
-                  >
-                    <span className="text-gray-700 dark:text-gray-300">{opt.icon}</span>
-                    <div className="flex-1">
-                      <p className="font-semibold text-[14px]">{opt.label}</p>
-                      <p className="text-[12px] text-gray-500 dark:text-gray-400">{opt.desc}</p>
-                    </div>
-                    {privacy === opt.value && (
-                      <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
+              </div>
+            ) : (
+              <DropdownMenuItem
+                className="flex items-start gap-3 p-3 cursor-pointer"
+                disabled={updating}
+                onClick={() => setShowAudienceModal(true)}
+              >
+                <div className="mt-1">
+                  <Shield className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="font-semibold text-[15px]">Quyền riêng tư</span>
+                  <span className="text-[13px] text-gray-500 dark:text-gray-400">{privacyLabel}</span>
+                </div>
+              </DropdownMenuItem>
+            )}
 
             <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
 
@@ -275,6 +309,19 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
+
+    {!isGroupPost && (
+      <ProfilePostAudienceModal
+        isOpen={showAudienceModal}
+        onClose={() => setShowAudienceModal(false)}
+        selectedAudience={audience}
+        excludedUserIds={excludedUserIds}
+        allowedUserIds={allowedUserIds}
+        onSelect={(nextAudience, nextExcluded, nextAllowed) => {
+          void handleAudienceSelect(nextAudience, nextExcluded, nextAllowed);
+        }}
+      />
+    )}
 
     <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
       <DialogContent className="sm:max-w-md">

@@ -7,9 +7,7 @@ import {
   X,
   Globe,
   Image,
-  Video,
   Users,
-  UsersRound,
   Smile,
   UserMinus,
   UserCheck,
@@ -22,6 +20,11 @@ import {
 } from 'lucide-react';
 import { useGroupById } from '@/features/groups/hooks/useGroups';
 import { getGroupPrivacyShortLabel } from './postPublishContext';
+import {
+  type AudienceId,
+  audienceToApiPrivacy,
+  getAudienceLabel,
+} from './postAudienceUtils';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, type CreatePostMediaRequest, type PostResponse } from '@/services/postService';
@@ -67,7 +70,7 @@ export function ProfileCreatePostModal({
   initialShowPoll = false,
 }: ProfileCreatePostModalProps) {
   const [postContent, setPostContent] = useState('');
-  const [privacy, setPrivacy] = useState('public');
+  const [privacy, setPrivacy] = useState<AudienceId>('public');
   const [excludedUserIds, setExcludedUserIds] = useState<string[]>([]);
   const [allowedUserIds, setAllowedUserIds] = useState<string[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
@@ -297,20 +300,7 @@ export function ProfileCreatePostModal({
     onClose();
   };
 
-  const mapPrivacyToApi = () => {
-    switch (privacy) {
-      case 'friends':
-        return 'FRIENDS' as const;
-      case 'friends-except':
-        return 'FRIENDS_EXCEPT' as const;
-      case 'specific-friends':
-        return 'SPECIFIC_FRIENDS' as const;
-      case 'private':
-        return 'PRIVATE' as const;
-      default:
-        return 'PUBLIC' as const;
-    }
-  };
+  const mapPrivacyToApi = () => audienceToApiPrivacy(privacy);
 
   const scheduleSubtitle =
     scheduleMode === 'scheduled' && scheduledAtLocal
@@ -337,6 +327,11 @@ export function ProfileCreatePostModal({
     }
 
     if (!postContent.trim() && selectedImages.length === 0 && !showPoll) return;
+
+    if (privacy === 'specific-friends' && allowedUserIds.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một bạn bè cho Bạn bè cụ thể');
+      return;
+    }
 
     if (scheduleMode === 'scheduled') {
       if (!scheduledAtLocal.trim()) {
@@ -462,27 +457,18 @@ export function ProfileCreatePostModal({
   };
 
   const getPrivacyInfo = () => {
+    const label = getAudienceLabel(privacy, excludedUserIds.length, allowedUserIds.length);
     switch (privacy) {
-      case 'public':
-        return { icon: Globe, label: 'Công khai' };
       case 'friends':
-        return { icon: Users, label: 'Bạn bè' };
+        return { icon: Users, label };
       case 'friends-except':
-        return {
-          icon: UserMinus,
-          label: excludedUserIds.length > 0
-            ? `Bạn bè ngoại trừ (${excludedUserIds.length})`
-            : 'Bạn bè ngoại trừ...',
-        };
+        return { icon: UserMinus, label };
       case 'specific-friends':
-        return {
-          icon: UserCheck,
-          label: allowedUserIds.length > 0
-            ? `Bạn bè cụ thể (${allowedUserIds.length})`
-            : 'Bạn bè cụ thể...',
-        };
+        return { icon: UserCheck, label };
+      case 'private':
+        return { icon: Lock, label };
       default:
-        return { icon: Globe, label: 'Công khai' };
+        return { icon: Globe, label };
     }
   };
 
@@ -535,46 +521,6 @@ export function ProfileCreatePostModal({
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
-                    </button>
-                  )}
-
-                  {!isGroupPost && privacy === 'public' && (
-                    <button
-                      type="button"
-                      onClick={() => setShowGroupModal(true)}
-                      className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
-                        selectedGroupId
-                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <UsersRound className="h-3 w-3" />
-                      <span>{selectedGroupName ?? 'Chọn nhóm'}</span>
-                      {selectedGroupId ? (
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedGroupId(null);
-                            setSelectedGroupName(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.stopPropagation();
-                              setSelectedGroupId(null);
-                              setSelectedGroupName(null);
-                            }
-                          }}
-                          className="ml-0.5 rounded-full hover:text-red-500"
-                        >
-                          <X className="h-3 w-3" />
-                        </span>
-                      ) : (
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      )}
                     </button>
                   )}
                 </div>
@@ -785,12 +731,6 @@ export function ProfileCreatePostModal({
                     className="rounded-full p-2 transition-colors hover:bg-muted"
                   >
                     <Image className="h-6 w-6 text-green-500" />
-                  </button>
-                  <button
-                    onClick={() => setShowImagePicker(true)}
-                    className="rounded-full p-2 transition-colors hover:bg-muted"
-                  >
-                    <Video className="h-6 w-6 text-red-500" />
                   </button>
                   {isGroupPost && !showPoll && (
                     <button

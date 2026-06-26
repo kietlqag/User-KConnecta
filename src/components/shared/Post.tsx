@@ -115,6 +115,8 @@ export interface PostProps {
   mediaList?: { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string }[];
   isLivePost?: boolean;
   privacy?: Privacy;
+  excludedUserIds?: string[];
+  allowedUserIds?: string[];
   onDelete?: (postId: string) => void;
   onReactionChange?: (postId: string, reactionType: ReactionType | null) => void;
   // Group context: admin can pin/unpin this post to the group's featured area.
@@ -145,6 +147,8 @@ export function Post({
   mediaList = [],
   isLivePost = false,
   privacy: initialPrivacy = 'PUBLIC',
+  excludedUserIds: initialExcludedUserIds = [],
+  allowedUserIds: initialAllowedUserIds = [],
   onDelete,
   onReactionChange,
   canPin = false,
@@ -188,6 +192,8 @@ export function Post({
   const [displayContent, setDisplayContent] = useState(content);
   const [displayMediaList, setDisplayMediaList] = useState(mediaList);
   const [currentPrivacy, setCurrentPrivacy] = useState<Privacy>(initialPrivacy);
+  const [excludedUserIds, setExcludedUserIds] = useState<string[]>(initialExcludedUserIds);
+  const [allowedUserIds, setAllowedUserIds] = useState<string[]>(initialAllowedUserIds);
   const currentUser = authService.getCurrentUser();
 
   useEffect(() => {
@@ -197,7 +203,9 @@ export function Post({
 
   useEffect(() => {
     setCurrentPrivacy(initialPrivacy);
-  }, [initialPrivacy, id]);
+    setExcludedUserIds(initialExcludedUserIds);
+    setAllowedUserIds(initialAllowedUserIds);
+  }, [initialPrivacy, initialExcludedUserIds, initialAllowedUserIds, id]);
   // Share wrappers don't support edit/delete via the post menu
   const isOwner = !sharedPost && !!currentUser && currentUser.id === author.id;
   const [reactionCounts, setReactionCounts] = useState<ReactionCountMap>(() =>
@@ -318,6 +326,9 @@ export function Post({
       mediaList: galleryItems.length > 1 ? galleryItems : undefined,
       reactionCounts,
       privacy: currentPrivacy,
+      excludedUserIds,
+      allowedUserIds,
+      groupId: group?.id,
       isOwner,
       currentUserId: currentUser?.id,
     }),
@@ -327,6 +338,8 @@ export function Post({
       commentCount,
       displayContent,
       currentPrivacy,
+      excludedUserIds,
+      allowedUserIds,
       currentUser?.id,
       galleryItems,
       id,
@@ -337,6 +350,7 @@ export function Post({
       reactionCounts,
       shareCount,
       timestamp,
+      group?.id,
     ],
   );
 
@@ -543,11 +557,18 @@ export function Post({
               isSaved={isSaved}
               isOwner={isOwner}
               privacy={currentPrivacy}
+              excludedUserIds={excludedUserIds}
+              allowedUserIds={allowedUserIds}
+              isGroupPost={!!group}
               currentUserId={currentUser?.id}
               onToggleSave={handleToggleSave}
               onEdit={isOwner && !hasLivePreview ? () => setEditModalOpen(true) : undefined}
               onDelete={() => setDeleteDialogOpen(true)}
-              onPrivacyChange={setCurrentPrivacy}
+              onPrivacyChange={(nextPrivacy, nextExcluded, nextAllowed) => {
+                setCurrentPrivacy(nextPrivacy);
+                setExcludedUserIds(nextExcluded);
+                setAllowedUserIds(nextAllowed);
+              }}
               canPin={canPin}
               isPinned={isPinned}
               onPin={onPin ? () => onPin(id) : undefined}
@@ -838,7 +859,11 @@ export function Post({
         selectedReaction={selectedReaction}
         onReactionChange={handleReactionChange}
         isReacting={isReacting}
-        onPrivacyChange={setCurrentPrivacy}
+        onPrivacyChange={(nextPrivacy, nextExcluded, nextAllowed) => {
+          setCurrentPrivacy(nextPrivacy);
+          setExcludedUserIds(nextExcluded);
+          setAllowedUserIds(nextAllowed);
+        }}
         onEdit={
           isOwner && !hasLivePreview
             ? () => {

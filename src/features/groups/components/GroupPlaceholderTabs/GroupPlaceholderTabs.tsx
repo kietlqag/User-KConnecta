@@ -10,7 +10,7 @@ export function GroupPlaceholderTab({
   isApprovedMember = false,
   onPostWithMedia,
 }: GroupPlaceholderTabsProps) {
-  const comingSoon = 'Tính năng đang được phát triển. Bạn vẫn có thể xem nội dung trong từng bài viết ở Thảo luận.';
+  const comingSoon = 'Tính năng đang được phát triển. Bạn vẫn có thể xem nội dung trong từng bài viết trong mục Bài viết.';
 
   return (
     <GroupTabEmptyState

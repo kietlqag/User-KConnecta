@@ -2,6 +2,46 @@ import { Outlet, createBrowserRouter } from 'react-router-dom';
 import { AuthLayout } from '../layouts';
 import { WelcomePage } from '../pages';
 import { HomePage } from '../features/home/pages';
+<<<<<<< Updated upstream
+=======
+import {
+  ProfilePage,
+  ProfileFriendsPage,
+  ProfilePhotosPage,
+  ProfileAboutPage,
+  ProfileReelsPage,
+  ProfileAlbumsPage,
+  ProfileLikesPage,
+  ProfileScheduledPage,
+  ProfileLayout,
+} from '../features/profile/pages';
+import { FriendsPage } from '../features/friends/pages';
+import {
+  GroupsPage,
+  CreateGroupPage,
+  GroupDetailPage,
+  JoinedGroupsPage,
+  ManagedGroupsPage,
+  DiscoverGroupsPage,
+  GroupSearchPage,
+} from '../features/groups/pages';
+import { WatchPage } from '../features/watch/pages';
+import { MarketplacePage } from '../features/marketplace/pages';
+import LiveVideoPage from '../features/live/pages/LiveVideoPage';
+import LiveSetupPage from '../features/live/pages/LiveSetupPage';
+import LiveEventPage from '../features/live/pages/LiveEventPage';
+import LiveProducerPage from '../features/live/pages/LiveProducerPage';
+import LiveViewerPage from '../features/live/pages/LiveViewerPage';
+import SearchResultsPage from '../features/search/pages/SearchResultsPage';
+import MessengerPage from '../features/messenger/pages/MessengerPage';
+import { SavedPage } from '../features/saved/pages/SavedPage';
+import { AlbumListPage, AlbumDetailPage, CreateAlbumPage } from '../features/albums/pages';
+import SettingsPage from '../features/settings/pages/SettingsPage';
+import MyReportsPage from '../features/reports/pages/MyReportsPage';
+import PrivacyPolicyPage from '../features/policies/pages/PrivacyPolicyPage';
+import TermsOfServicePage from '../features/policies/pages/TermsOfServicePage';
+import ContactPage from '../features/policies/pages/ContactPage';
+>>>>>>> Stashed changes
 import { GuestRoute, ProtectedRoute } from './RouteGuards';
 import { RealtimeCallProvider } from '../contexts/RealtimeCallContext';
 import { MessageNotificationsListener } from '../features/messenger/components/MessageNotificationsListener';
@@ -78,6 +118,10 @@ export const router = createBrowserRouter([
           {
             path: '/groups/joined',
             lazy: () => lazyNamed(() => import('../features/groups/pages'), 'JoinedGroupsPage'),
+          },
+          {
+            path: '/groups/managed',
+            Component: ManagedGroupsPage,
           },
           {
             path: '/groups/discover',

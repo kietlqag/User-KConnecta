@@ -6,7 +6,7 @@ export { GroupsHeader } from './GroupsHeader';
 export { GroupFeed } from './GroupFeed/GroupFeed';
 export { InviteFriendsModal } from './InviteFriendsModal/InviteFriendsModal';
 export { GroupPostCard } from './GroupPostCard/GroupPostCard';
-export { GroupDetailSidebar, GroupActivationMobileBar } from './GroupDetailSidebar';
+export { GroupActivationMobileBar, GroupSetupChecklist } from './GroupDetailSidebar';
 export { EditGroupDescriptionModal } from './EditGroupDescriptionModal/EditGroupDescriptionModal';
 export { EditGroupNameModal } from './EditGroupNameModal/EditGroupNameModal';
 export { GroupTabBar } from './GroupTabBar/GroupTabBar';

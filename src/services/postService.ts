@@ -150,7 +150,7 @@ export interface PostResponse {
   authorAvatarUrl?: string | null;
   content?: string | null;
   imageUrl?: string | null;
-  privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
+  privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'SPECIFIC_FRIENDS' | 'PRIVATE';
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT' | 'HIDDEN' | 'DELETED';
   scheduledAt?: string | null;
   publishedAt?: string | null;
@@ -165,6 +165,7 @@ export interface PostResponse {
   shareCount: number;
   media: PostMediaResponse[];
   excludedUserIds: string[];
+  allowedUserIds?: string[];
   taggedUserIds: string[];
   createdAt: string;
   updatedAt: string;
@@ -398,10 +399,14 @@ export const postService = {
     api.delete<void>(`/posts/saved?postId=${encodeURIComponent(postId)}`),
   deletePost: (postId: string, userId: string) =>
     api.delete<void>(`/posts/${postId}?userId=${encodeURIComponent(userId)}`),
-  updatePrivacy: (postId: string, userId: string, privacy: PostResponse['privacy']) => {
-    const params = new URLSearchParams({ userId, privacy });
-    return api.patch<PostResponse>(`/posts/${postId}/privacy?${params.toString()}`);
-  },
+  updatePrivacy: (
+    postId: string,
+    payload: {
+      privacy: PostResponse['privacy'];
+      excludedUserIds?: string[];
+      allowedUserIds?: string[];
+    },
+  ) => api.patch<PostResponse>(`/posts/${postId}/privacy`, payload),
   reportPost: (postId: string, reporterId: string, category?: ReportCategory, reason?: string) =>
     api.post<void>(`/posts/${postId}/reports`, {
       reporterId,

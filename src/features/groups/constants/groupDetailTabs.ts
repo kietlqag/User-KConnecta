@@ -4,8 +4,8 @@ import { MessageSquare, Users, Calendar, Images, UserCheck, Album } from 'lucide
 export const GROUP_DETAIL_TABS = [
   {
     id: 'discussion',
-    label: 'Thảo luận',
-    shortLabel: 'Thảo luận',
+    label: 'Bài viết',
+    shortLabel: 'Bài viết',
     icon: MessageSquare,
     ready: true,
   },

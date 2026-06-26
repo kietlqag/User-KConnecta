@@ -37,7 +37,7 @@ export function PrivacySection({
   onDiscard,
   unblockUser,
 }: PrivacySectionProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   return (
     <div className="space-y-8">
@@ -85,7 +85,7 @@ export function PrivacySection({
                   <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {t('settings.privacy.blockedAt', {
-                      date: formatBlockedDate(user.blockedAt, i18n.language),
+                      date: formatBlockedDate(user.blockedAt, 'vi'),
                     })}
                   </p>
                 </div>

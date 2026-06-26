@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import {
@@ -13,6 +14,7 @@ import { useTodayBirthdaysSidebar } from '@/features/birthdays/hooks/useBirthday
 import { UserAvatar } from '@/components/shared/UserAvatar';
 
 export const LeftSidebar = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isLeftSidebarOpen, setLeftSidebarOpen } = useSidebar();
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
@@ -49,7 +51,7 @@ export const LeftSidebar = () => {
     };
   }, []);
 
-  const fullName = currentUser?.fullName || 'Người dùng';
+  const fullName = currentUser?.fullName || t('messenger.unknownSender');
   const userId = currentUser?.id;
   const userUsername = currentUser?.username;
   const avatarUrl = currentUser?.avatarUrl;
@@ -72,25 +74,25 @@ export const LeftSidebar = () => {
     {
       id: 'friends',
       icon: <Users className="h-9 w-9 rounded-full bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" />,
-      label: 'Bạn bè',
+      label: t('nav.friends'),
       href: '/friends',
     },
     {
       id: 'saved',
       icon: <Bookmark className="h-9 w-9 rounded-full bg-violet-100 p-2 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400" />,
-      label: 'Đã lưu',
+      label: t('nav.saved'),
       href: '/saved',
     },
     {
       id: 'groups',
       icon: <Shapes className="h-9 w-9 rounded-full bg-sky-100 p-2 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400" />,
-      label: 'Nhóm',
+      label: t('nav.groups'),
       href: '/groups',
     },
     {
       id: 'video',
       icon: <Video className="h-9 w-9 rounded-full bg-orange-100 p-2 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />,
-      label: 'Video',
+      label: t('nav.video'),
       href: '/watch',
     },
   ];
@@ -102,7 +104,7 @@ export const LeftSidebar = () => {
           type="button"
           className="fixed inset-0 top-14 z-20 cursor-default bg-black/40"
           onClick={() => setLeftSidebarOpen(false)}
-          aria-label="Đóng menu điều hướng"
+          aria-label={t('nav.closeNav')}
         />
       )}
 
@@ -114,7 +116,7 @@ export const LeftSidebar = () => {
         inert={!isLargeScreen && !isLeftSidebarOpen ? true : undefined}
       >
         <div className="shrink-0 p-2">
-          <nav className="space-y-1" role="navigation" aria-label="Main navigation">
+          <nav className="space-y-1" role="navigation" aria-label={t('nav.mainNav')}>
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -133,7 +135,7 @@ export const LeftSidebar = () => {
         {todayBirthdays.length > 0 && (
           <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
             <div className="my-2 shrink-0 border-t border-gray-300 dark:border-gray-700" />
-            <h3 className="mb-2 shrink-0 px-1 text-sm font-semibold text-gray-600 dark:text-gray-400">Sinh nhật</h3>
+            <h3 className="mb-2 shrink-0 px-1 text-sm font-semibold text-gray-600 dark:text-gray-400">{t('sidebar.birthdays')}</h3>
             <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-0.5 sidebar-scrollbar">
               {todayBirthdays.map((person) => (
                 <button
@@ -150,8 +152,12 @@ export const LeftSidebar = () => {
                     className="h-9 w-9 shrink-0"
                   />
                   <p className="text-sm text-gray-900 dark:text-gray-100">
-                    Hôm nay là sinh nhật của <span className="font-semibold">{person.name}</span>
-                    {person.age > 0 ? ` (${person.age} tuổi)` : ''}
+                    <span
+                      dangerouslySetInnerHTML={{
+                        __html: t('sidebar.birthdayToday', { name: person.name }),
+                      }}
+                    />
+                    {person.age > 0 ? t('sidebar.birthdayAge', { age: person.age }) : ''}
                   </p>
                 </button>
               ))}
@@ -172,7 +178,7 @@ export const LeftSidebar = () => {
             </Link>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            KConnecta © {new Date().getFullYear()}
+            {t('nav.copyright', { year: new Date().getFullYear() })}
           </p>
         </div>
       </aside>

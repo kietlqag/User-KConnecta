@@ -21,6 +21,8 @@ export interface FeedPost {
   mediaList?: { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string }[];
   isLivePost?: boolean;
   privacy: PostResponse['privacy'];
+  excludedUserIds?: string[];
+  allowedUserIds?: string[];
   poll?: PostPollResponse | null;
   // Share-wrapper fields
   sharedPost?: boolean;
@@ -126,6 +128,8 @@ export function mapApiPost(item: PostResponse): FeedPost {
     })),
     isLivePost,
     privacy: item.privacy ?? 'PUBLIC',
+    excludedUserIds: item.excludedUserIds ?? [],
+    allowedUserIds: item.allowedUserIds ?? [],
     poll: item.poll ?? undefined,
     sharedPost: item.sharedPost ?? false,
     originalPost: item.originalPost ? mapApiPost(item.originalPost) : undefined,

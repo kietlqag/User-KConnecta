@@ -6,7 +6,6 @@ import { queryClient } from './lib/queryClient';
 import { MenuProvider } from './contexts/MenuContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { Toaster } from '@/components/ui/sonner';
-import { I18nLanguageSync } from '@/i18n/I18nLanguageSync';
 
 function App() {
   return (
@@ -14,7 +13,6 @@ function App() {
       <ThemeProvider attribute="class" defaultTheme="light" storageKey="kconnecta-theme">
         <MenuProvider>
           <SidebarProvider>
-            <I18nLanguageSync />
             <RouterProvider router={router} />
             <Toaster position="top-right" richColors />
           </SidebarProvider>

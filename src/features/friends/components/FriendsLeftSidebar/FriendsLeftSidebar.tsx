@@ -1,10 +1,11 @@
 import { Users, UserPlus, Cake, Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export type FriendsTab = 'home' | 'requests' | 'all-friends' | 'birthdays';
 
 interface SidebarItem {
   id: FriendsTab;
-  label: string;
+  labelKey: 'home' | 'requests' | 'allFriends' | 'birthdays';
   icon: React.ReactNode;
   count?: number;
 }
@@ -16,17 +17,19 @@ interface FriendsLeftSidebarProps {
 }
 
 export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: FriendsLeftSidebarProps) => {
+  const { t } = useTranslation();
+
   const sidebarItems: SidebarItem[] = [
-    { id: 'home', label: 'Trang chủ', icon: <Home className="w-5 h-5" /> },
-    { id: 'requests', label: 'Lời mời kết bạn', icon: <UserPlus className="w-5 h-5" />, count: requestCount },
-    { id: 'all-friends', label: 'Tất cả bạn bè', icon: <Users className="w-5 h-5" /> },
-    { id: 'birthdays', label: 'Sinh nhật', icon: <Cake className="w-5 h-5" /> },
+    { id: 'home', labelKey: 'home', icon: <Home className="w-5 h-5" /> },
+    { id: 'requests', labelKey: 'requests', icon: <UserPlus className="w-5 h-5" />, count: requestCount },
+    { id: 'all-friends', labelKey: 'allFriends', icon: <Users className="w-5 h-5" /> },
+    { id: 'birthdays', labelKey: 'birthdays', icon: <Cake className="w-5 h-5" /> },
   ];
 
   return (
     <div className="hidden h-full w-[clamp(280px,23vw,360px)] shrink-0 overflow-hidden border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 md:block">
       <div className="p-4">
-        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">Bạn bè</h1>
+        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('friendsPage.title')}</h1>
 
         <div className="space-y-1">
           {sidebarItems.map((item) => (
@@ -44,7 +47,7 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
                   {item.icon}
                 </div>
                 <span className={`font-medium ${activeTab === item.id ? 'text-emerald-600' : 'text-gray-900 dark:text-gray-100'}`}>
-                  {item.label}
+                  {t(`friendsPage.${item.labelKey}`)}
                 </span>
               </div>
               {item.count != null && item.count > 0 && (

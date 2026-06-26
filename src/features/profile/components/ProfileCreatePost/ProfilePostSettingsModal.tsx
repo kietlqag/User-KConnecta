@@ -4,6 +4,7 @@ import {
   type GroupPrivacyDisplay,
   getGroupPrivacySummary,
 } from './postPublishContext';
+import { type AudienceId, getAudienceLabel } from './postAudienceUtils';
 
 interface ProfilePostSettingsModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface ProfilePostSettingsModalProps {
   onPost: () => void | Promise<void>;
   postContent: string;
   postContext: PostPublishContext;
-  privacy: string;
+  privacy: AudienceId;
   excludedCount?: number;
   allowedCount?: number;
   isPosting?: boolean;
@@ -52,20 +53,7 @@ export function ProfilePostSettingsModal({
 
   const isGroupContext = postContext === 'GROUP';
 
-  const getPrivacyLabel = () => {
-    switch (privacy) {
-      case 'public':
-        return 'Công khai';
-      case 'friends':
-        return 'Chọn bạn bè để xem';
-      case 'friends-except':
-        return excludedCount > 0 ? `Bạn bè ngoại trừ (${excludedCount} người)` : 'Bạn bè ngoại trừ...';
-      case 'specific-friends':
-        return allowedCount > 0 ? `Bạn bè cụ thể (${allowedCount} người)` : 'Bạn bè cụ thể...';
-      default:
-        return 'Chỉ mình tôi';
-    }
-  };
+  const privacyLabel = getAudienceLabel(privacy, excludedCount, allowedCount);
 
   const groupPrivacyCopy = getGroupPrivacySummary(groupPrivacy);
   const canCrossPostToGroup = !isGroupContext && privacy === 'public';
@@ -131,7 +119,7 @@ export function ProfilePostSettingsModal({
                 </div>
                 <div className="flex-1 text-left">
                   <h4 className="font-semibold text-gray-900 dark:text-white">Đối tượng của bài viết</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{getPrivacyLabel()}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{privacyLabel}</p>
                 </div>
                 <svg className="h-5 w-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />

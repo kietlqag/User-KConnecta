@@ -5,6 +5,7 @@ interface GroupsListsPanelProps {
   joinedGroups: Group[];
   managedGroups?: Group[];
   joinedLimit?: number;
+  managedLimit?: number;
   className?: string;
 }
 
@@ -12,6 +13,7 @@ export function GroupsListsPanel({
   joinedGroups,
   managedGroups = [],
   joinedLimit = 8,
+  managedLimit = 5,
   className = '',
 }: GroupsListsPanelProps) {
   const navigate = useNavigate();
@@ -20,11 +22,20 @@ export function GroupsListsPanel({
     <div className={className}>
       {managedGroups.length > 0 && (
         <div className="mb-5">
-          <h3 className="mb-2 px-1 text-[15px] font-semibold text-gray-600 dark:text-gray-400">
-            Nhóm do bạn quản lý
-          </h3>
+          <div className="mb-2 flex items-center justify-between px-1">
+            <h3 className="text-[15px] font-semibold text-gray-600 dark:text-gray-400">
+              Nhóm do bạn quản lý
+            </h3>
+            <button
+              type="button"
+              onClick={() => navigate('/groups/managed')}
+              className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+            >
+              Xem tất cả
+            </button>
+          </div>
           <div className="space-y-1 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
-            {managedGroups.map((group) => (
+            {managedGroups.slice(0, managedLimit).map((group) => (
               <button
                 key={group.id}
                 type="button"

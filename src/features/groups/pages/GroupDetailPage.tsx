@@ -6,8 +6,8 @@ import {
   GroupsLeftSidebar,
   GroupFeed,
   InviteFriendsModal,
-  GroupDetailSidebar,
   GroupActivationMobileBar,
+  GroupSetupChecklist,
   EditGroupDescriptionModal,
   EditGroupNameModal,
   GroupTabBar,
@@ -24,7 +24,7 @@ import {
   isGroupDetailTabId,
   type GroupDetailTabId,
 } from '../constants/groupDetailTabs';
-import { Edit3, MoreHorizontal, Lock, Users, Image as ImageIcon, AlertTriangle, Loader2, X, Settings } from 'lucide-react';
+import { Edit3, MoreHorizontal, Lock, Users, Globe2, Image as ImageIcon, AlertTriangle, Loader2, X, Settings } from 'lucide-react';
 import { useGroupSetupProgress, type SetupStepId } from '../hooks/useGroupSetupProgress';
 import {
   dismissSetup,
@@ -34,7 +34,7 @@ import {
   isInviteSent,
   markInviteSent,
 } from '../utils/groupSetupStorage';
-import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember, useLeaveGroup, useGroupJoinRequests, useUpdateMemberApproval, useDisbandGroup } from '../hooks/useGroups';
+import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroupMembers, useRemoveMember, useLeaveGroup, useGroupJoinRequests, useUpdateMemberApproval, useUpdateGroupPrivacy, useDisbandGroup } from '../hooks/useGroups';
 import { useGroupSocket } from '../hooks/useGroupSocket';
 import { groupService, GROUP_MEMBERSHIP_CHANGED_EVENT } from '@/services/groupService';
 import { authService } from '@/services/authService';
@@ -88,6 +88,7 @@ export const GroupDetailPage = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showDisbandConfirm, setShowDisbandConfirm] = useState(false);
   const updateMemberApprovalMutation = useUpdateMemberApproval();
+  const updateGroupPrivacyMutation = useUpdateGroupPrivacy();
   const disbandGroupMutation = useDisbandGroup();
   const [setupDismissed, setSetupDismissed] = useState(() => (groupId ? isSetupDismissed(groupId) : false));
   const [postCount, setPostCount] = useState(0);
@@ -493,28 +494,30 @@ export const GroupDetailPage = () => {
           </div>
           
           {/* Main Layout Area */}
-          <div className="max-w-[940px] mx-auto px-4 sm:px-6 py-4 lg:py-6">
+          <div className="mx-auto max-w-[940px] px-4 sm:px-6 py-4 lg:py-6">
             {group && (
               <div
-                className={
-                  activeTab === 'discussion' || activeTab === 'events'
-                    ? 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 lg:gap-6 items-start'
-                    : undefined
-                }
+                role="tabpanel"
+                id={`group-tabpanel-${activeTab}`}
+                aria-labelledby={`group-tab-${activeTab}`}
+                className="min-w-0"
               >
-                <div
-                  className="min-w-0 order-2 lg:order-1"
-                  role="tabpanel"
-                  id={`group-tabpanel-${activeTab}`}
-                  aria-labelledby={`group-tab-${activeTab}`}
-                >
-                  {isAdmin && showSetupChecklist && activeTab === 'discussion' && (
-                    <GroupActivationMobileBar
+                {isAdmin && showSetupChecklist && activeTab === 'discussion' && (
+                  <GroupActivationMobileBar
+                    progress={setupProgress}
+                    onContinue={() => setupProgress.nextStep && handleSetupStep(setupProgress.nextStep.id)}
+                  />
+                )}
+                {isAdmin && showSetupChecklist && activeTab === 'discussion' && !setupProgress.isComplete && (
+                  <div className="mb-4 hidden lg:block">
+                    <GroupSetupChecklist
                       progress={setupProgress}
-                      onContinue={() => setupProgress.nextStep && handleSetupStep(setupProgress.nextStep.id)}
+                      onDismiss={handleDismissSetup}
+                      onStepAction={handleSetupStep}
                     />
-                  )}
-                  {activeTab === 'members' && (
+                  </div>
+                )}
+                {activeTab === 'members' && (
                     <GroupMembersTab
                       members={members}
                       adminMembers={adminMembers}
@@ -567,39 +570,8 @@ export const GroupDetailPage = () => {
                     )
                   )}
 
-                  {activeTab === 'events' && groupId && (
-                    isPrivateLocked ? privateLockScreen : <GroupEventsTab groupId={groupId} />
-                  )}
-                </div>
-
-                {(activeTab === 'discussion' || activeTab === 'events') && (
-                <aside className="order-1 lg:order-2 lg:sticky lg:top-14 lg:max-h-[calc(100vh-56px)] lg:overflow-y-auto lg:pb-4 sidebar-scrollbar">
-                  <GroupDetailSidebar
-                    group={group}
-                    members={members}
-                    isAdmin={isAdmin}
-                    setupProgress={setupProgress}
-                    showSetupChecklist={activeTab === 'discussion' && showSetupChecklist}
-                    onDismissSetup={handleDismissSetup}
-                    onStepAction={handleSetupStep}
-                    onInvite={() => setIsInviteModalOpen(true)}
-                    onCreatePost={() => {
-                      if (activeTab !== 'discussion') {
-                        setActiveTab('discussion');
-                        setTimeout(() => {
-                          scrollToComposer();
-                          setComposerOpen(true);
-                        }, 0);
-                      } else {
-                        scrollToComposer();
-                        setComposerOpen(true);
-                      }
-                    }}
-                    onCover={() => fileInputRef.current?.click()}
-                    onEditDescription={() => setDescriptionModalOpen(true)}
-                    onViewMembers={() => setActiveTab('members')}
-                  />
-                </aside>
+                {activeTab === 'events' && groupId && (
+                  isPrivateLocked ? privateLockScreen : <GroupEventsTab groupId={groupId} />
                 )}
               </div>
             )}
@@ -654,9 +626,9 @@ export const GroupDetailPage = () => {
 
       {/* Group Settings Modal */}
       {showSettings && group && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="flex w-full max-w-md max-h-[min(90vh,100%)] flex-col bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <Settings className="w-5 h-5" />
                 Cài đặt nhóm
@@ -668,7 +640,7 @@ export const GroupDetailPage = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 space-y-5">
+            <div className="overflow-y-auto p-6 space-y-5">
               {isAdmin && (
                 <div>
                   <p className="font-semibold text-gray-900 dark:text-gray-100">Tên nhóm</p>
@@ -682,6 +654,76 @@ export const GroupDetailPage = () => {
                   >
                     Đổi tên nhóm
                   </button>
+                </div>
+              )}
+
+              {isAdmin && (
+                <div className="pt-5 border-t border-gray-200 dark:border-gray-700">
+                  <p className="font-semibold text-gray-900 dark:text-gray-100">Quyền riêng tư</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3">
+                    Chọn ai có thể tìm thấy nhóm và xem nội dung.
+                  </p>
+                  <div className="space-y-2">
+                    {([
+                      {
+                        value: 'public' as const,
+                        label: 'Công khai',
+                        description: 'Mọi người có thể tìm thấy nhóm và xem nội dung công khai.',
+                        icon: Globe2,
+                      },
+                      {
+                        value: 'private' as const,
+                        label: 'Riêng tư',
+                        description: 'Chỉ thành viên mới xem được danh sách thành viên và bài đăng.',
+                        icon: Lock,
+                      },
+                    ]).map((option) => {
+                      const selected = group.privacy === option.value;
+                      const Icon = option.icon;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          disabled={updateGroupPrivacyMutation.isPending || selected}
+                          onClick={() => {
+                            if (selected || !groupId) return;
+                            updateGroupPrivacyMutation.mutate(
+                              {
+                                groupId,
+                                privacy: option.value === 'public' ? 'PUBLIC' : 'PRIVATE',
+                              },
+                              {
+                                onSuccess: () =>
+                                  toast.success(
+                                    option.value === 'public'
+                                      ? 'Đã chuyển nhóm sang Công khai.'
+                                      : 'Đã chuyển nhóm sang Riêng tư.',
+                                  ),
+                                onError: (err: any) =>
+                                  toast.error(err?.response?.data?.message || err?.message || 'Không thể cập nhật quyền riêng tư.'),
+                              },
+                            );
+                          }}
+                          className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors disabled:cursor-default ${
+                            selected
+                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
+                              : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/50'
+                          }`}
+                        >
+                          <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${selected ? 'text-emerald-600' : 'text-gray-500'}`} />
+                          <div className="min-w-0">
+                            <p className={`text-sm font-semibold ${selected ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                              {option.label}
+                            </p>
+                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{option.description}</p>
+                          </div>
+                          <div className={`ml-auto mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center ${selected ? 'border-emerald-600' : 'border-gray-300 dark:border-gray-600'}`}>
+                            {selected && <div className="h-2.5 w-2.5 rounded-full bg-emerald-600" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search, Rss, Compass, Users, Plus, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Group, GroupsSidebarSection } from '../../types/groups.types';
 import { GroupSearchDropdown } from '../GroupSearchDropdown/GroupSearchDropdown';
 import { GroupsListsPanel } from '../GroupsListsPanel';
@@ -9,12 +10,6 @@ import {
   useMergedLocalGroups,
 } from '../../hooks/useGroupSearch';
 import { searchHistoryService } from '@/services/searchHistoryService';
-
-const sidebarSections: GroupsSidebarSection[] = [
-  { id: 'feed', label: 'Bảng feed của bạn', icon: <Rss className="w-5 h-5" /> },
-  { id: 'discover', label: 'Khám phá', icon: <Compass className="w-5 h-5" /> },
-  { id: 'your-groups', label: 'Nhóm của bạn', icon: <Users className="w-5 h-5" /> },
-];
 
 interface GroupsLeftSidebarProps {
   joinedGroups: Group[];
@@ -32,6 +27,7 @@ export const GroupsLeftSidebar = ({
   initialSearchQuery = '',
   showGroupLists = true,
 }: GroupsLeftSidebarProps) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showSearchPanel, setShowSearchPanel] = useState(false);
@@ -75,10 +71,16 @@ export const GroupsLeftSidebar = ({
     }
   };
 
+  const sidebarSections: GroupsSidebarSection[] = [
+    { id: 'feed', label: t('groups.feed'), icon: <Rss className="w-5 h-5" /> },
+    { id: 'discover', label: t('groups.discover'), icon: <Compass className="w-5 h-5" /> },
+    { id: 'your-groups', label: t('groups.yourGroups'), icon: <Users className="w-5 h-5" /> },
+  ];
+
   return (
     <div className="sidebar-scrollbar sticky top-14 z-10 hidden h-[calc(100vh-56px)] w-[300px] shrink-0 self-start overflow-y-auto border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 md:block">
       <div className="p-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Nhóm</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">{t('groups.title')}</h1>
 
         <div className="relative mb-4" ref={searchWrapRef}>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
@@ -91,9 +93,9 @@ export const GroupsLeftSidebar = ({
             }}
             onFocus={() => setShowSearchPanel(true)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Tìm kiếm nhóm"
+            placeholder={t('groups.searchPlaceholder')}
             className="w-full pl-10 pr-9 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-gray-200 dark:focus:bg-gray-700 focus:ring-2 focus:ring-emerald-500/30 transition-colors text-[15px]"
-            aria-label="Tìm kiếm nhóm"
+            aria-label={t('groups.searchPlaceholder')}
             aria-expanded={showSearchPanel}
             autoComplete="off"
           />
@@ -105,7 +107,7 @@ export const GroupsLeftSidebar = ({
                 setShowSearchPanel(false);
               }}
               className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-              aria-label="Xóa tìm kiếm"
+              aria-label={t('groups.clearSearch')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -161,7 +163,7 @@ export const GroupsLeftSidebar = ({
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600">
             <Plus className="h-5 w-5 text-gray-700 dark:text-gray-300" />
           </div>
-          <span className="font-semibold text-gray-900 dark:text-gray-100">Tạo nhóm mới</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{t('groups.createGroup')}</span>
         </button>
 
         {showGroupLists && (

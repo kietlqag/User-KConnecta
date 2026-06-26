@@ -2,18 +2,9 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { SettingsSection } from '../SettingsSection';
-import { SettingRow } from '../SettingRow';
 import { SettingsSaveBar } from '../SettingsSaveBar';
-import type { LanguageOption, ThemeOption, UserSettings } from '../../types/userSettings.types';
-import { applyAppLanguage } from '@/i18n';
+import type { ThemeOption, UserSettings } from '../../types/userSettings.types';
 
 interface AppearanceSectionProps {
   settings: UserSettings;
@@ -90,30 +81,6 @@ export function AppearanceSection({
             );
           })}
         </RadioGroup>
-      </SettingsSection>
-
-      <SettingsSection
-        title={t('settings.appearance.languageTitle')}
-        description={t('settings.appearance.languageDesc')}
-      >
-        <SettingRow label={t('settings.appearance.languageLabel')}>
-          <Select
-            value={settings.language}
-            onValueChange={(value) => {
-              const language = value as LanguageOption;
-              updateSettings({ language });
-              applyAppLanguage(language);
-            }}
-          >
-            <SelectTrigger className="w-full rounded-[10px] border-border bg-card sm:min-w-[220px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-[10px]">
-              <SelectItem value="vi">{t('settings.appearance.langVi')}</SelectItem>
-              <SelectItem value="en">{t('settings.appearance.langEn')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </SettingRow>
       </SettingsSection>
 
       <SettingsSaveBar isDirty={isDirty} saving={saving} onSave={onSave} onDiscard={onDiscard} />

@@ -77,6 +77,8 @@ export type LiveRecordingStatus = 'NONE' | 'RECORDING' | 'PROCESSING' | 'READY' 
 export interface LiveSessionResponse {
   id: string;
   hostUserId: string;
+  hostName?: string | null;
+  hostAvatarUrl?: string | null;
   groupId?: string | null;
   pageId?: string | null;
   postId?: string | null;
