@@ -949,13 +949,29 @@ public class PostServiceImpl implements PostService {
                 .replyCount(postCommentRepository.countByParentCommentId(comment.getId()))
                 .likeCount(masked ? 0 : postCommentLikeRepository.countByCommentId(comment.getId()))
                 .isLikedByCurrentUser(!masked && currentUserId != null && postCommentLikeRepository.existsByCommentIdAndUserId(comment.getId(), currentUserId))
+                .myReaction(masked || currentUserId == null ? null
+                        : postCommentLikeRepository.findByCommentIdAndUserId(comment.getId(), currentUserId)
+                                .map(l -> l.getReactionType().name()).orElse(null))
+                .reactionCounts(masked ? null : commentReactionCounts(comment.getId()))
                 .content(masked ? null : comment.getContent())
+                .imageUrl(masked ? null : comment.getImageUrl())
                 // Trạng thái kiểm duyệt chỉ lộ cho chính tác giả (để hiện nhãn "đang chờ duyệt" / lý do từ chối).
                 .moderationStatus(isAuthor ? comment.getStatus().name() : null)
                 .moderationFailReason(isAuthor ? comment.getModerationFailReason() : null)
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .build();
+    }
+
+    /** Đếm reaction theo loại cho 1 bình luận → map {"LIKE":3,"LOVE":1}. */
+    private Map<String, Long> commentReactionCounts(UUID commentId) {
+        Map<String, Long> counts = new HashMap<>();
+        for (Object[] row : postCommentLikeRepository.countGroupedByReactionType(commentId)) {
+            if (row[0] != null) {
+                counts.put(((ReactionType) row[0]).name(), (Long) row[1]);
+            }
+        }
+        return counts;
     }
 
     /** Push COMMENT event → Queue → Listener creates notification FIFO. */
@@ -1023,18 +1039,29 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        try {
-            policyContentValidator.validateComment(request.getContent());
-        } catch (ValidationException e) {
-            // Ghi nhận vi phạm khi nội dung chứa từ cấm/link bị chặn (bỏ qua lỗi độ dài).
-            policyContentValidator.findCommentViolationKeyword(request.getContent())
-                    .ifPresent(mk -> commentViolationService.recordBlacklistViolation(
-                            user.getId(), request.getContent(), mk.id(), mk.value()));
-            throw e;
+        String content = request.getContent() == null ? "" : request.getContent().trim();
+        String imageUrl = trimToNull(request.getImageUrl());
+        // Bình luận phải có nội dung HOẶC ảnh.
+        if (content.isBlank() && imageUrl == null) {
+            throw new ValidationException("Bình luận phải có nội dung hoặc ảnh.");
+        }
+
+        // Chỉ kiểm duyệt phần text (ảnh không qua bộ lọc keyword/AI — xem ghi chú).
+        if (!content.isBlank()) {
+            try {
+                policyContentValidator.validateComment(content);
+            } catch (ValidationException e) {
+                // Ghi nhận vi phạm khi nội dung chứa từ cấm/link bị chặn (bỏ qua lỗi độ dài).
+                policyContentValidator.findCommentViolationKeyword(content)
+                        .ifPresent(mk -> commentViolationService.recordBlacklistViolation(
+                                user.getId(), content, mk.id(), mk.value()));
+                throw e;
+            }
         }
 
         CommentStatus status = aiModerationPolicyReader.isEnabled()
-                && policyContentValidator.isSuspect(request.getContent())
+                && !content.isBlank()
+                && policyContentValidator.isSuspect(content)
                 ? CommentStatus.PENDING : CommentStatus.APPROVED;
 
         PostComment saved = postCommentRepository.save(PostComment.builder()
@@ -1042,7 +1069,8 @@ public class PostServiceImpl implements PostService {
                 .share(target.share())
                 .user(user)
                 .parentComment(parentComment)
-                .content(request.getContent().trim())
+                .content(content)
+                .imageUrl(imageUrl)
                 .status(status)
                 .build());
 
@@ -1133,14 +1161,23 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public void likeComment(UUID commentId, UUID userId) {
-        if (postCommentLikeRepository.existsByCommentIdAndUserId(commentId, userId)) return;
+    @Transactional
+    public void likeComment(UUID commentId, UUID userId, ReactionType reactionType) {
+        ReactionType type = reactionType == null ? ReactionType.LIKE : reactionType;
+        // Upsert: nếu đã thả reaction thì đổi loại, chưa thì tạo mới.
+        var existing = postCommentLikeRepository.findByCommentIdAndUserId(commentId, userId);
+        if (existing.isPresent()) {
+            existing.get().setReactionType(type);
+            postCommentLikeRepository.save(existing.get());
+            return;
+        }
         PostComment comment = postCommentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
         User user = getUser(userId, "User not found");
         postCommentLikeRepository.save(PostCommentLike.builder()
                 .comment(comment)
                 .user(user)
+                .reactionType(type)
                 .build());
     }
 

@@ -49,7 +49,7 @@ public interface PostService {
     PostCommentResponse addComment(UUID postId, CreateCommentRequest request);
     PostCommentResponse updateComment(UUID commentId, UUID userId, UpdateCommentRequest request);
     boolean deleteComment(UUID commentId, UUID userId);
-    void likeComment(UUID commentId, UUID userId);
+    void likeComment(UUID commentId, UUID userId, project.kconnecta.user.backend.feature.post.entity.enums.ReactionType reactionType);
     void unlikeComment(UUID commentId, UUID userId);
     PostShareResponse sharePost(UUID postId, SharePostRequest request);
     void deletePost(UUID postId, UUID userId);

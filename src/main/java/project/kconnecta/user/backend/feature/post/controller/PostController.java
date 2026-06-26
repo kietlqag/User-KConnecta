@@ -168,8 +168,10 @@ public class PostController {
     public ResponseEntity<Void> likeComment(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID id,
-            @PathVariable UUID commentId) {
-        postService.likeComment(commentId, principal.getUserId());
+            @PathVariable UUID commentId,
+            @RequestParam(name = "reactionType", required = false, defaultValue = "LIKE")
+            project.kconnecta.user.backend.feature.post.entity.enums.ReactionType reactionType) {
+        postService.likeComment(commentId, principal.getUserId(), reactionType);
         return ResponseEntity.noContent().build();
     }
 

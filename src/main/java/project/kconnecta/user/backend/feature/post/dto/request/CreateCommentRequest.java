@@ -1,6 +1,5 @@
 package project.kconnecta.user.backend.feature.post.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -14,8 +13,10 @@ public class CreateCommentRequest {
     @NotNull
     private UUID userId;
 
-    @NotBlank
+    // Cho phép rỗng nếu bình luận chỉ có ảnh — service kiểm tra "content HOẶC imageUrl".
     private String content;
+
+    private String imageUrl;
 
     private UUID parentCommentId;
 }

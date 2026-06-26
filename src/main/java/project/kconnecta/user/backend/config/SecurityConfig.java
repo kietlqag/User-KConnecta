@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import project.kconnecta.user.backend.config.security.JwtAuthenticationFilter;
 
@@ -42,6 +43,12 @@ public class SecurityConfig {
                                 "frame-ancestors 'none'; " +   // không cho nhúng vào iframe (chống clickjacking)
                                 "base-uri 'none'; " +          // chặn <base> bị tiêm để đổi gốc URL
                                 "form-action 'none'"))         // không cho submit form đi đâu
+                        // Tắt mặc định các API nhạy cảm của trình duyệt (camera/mic/định vị/thanh toán).
+                        .permissionsPolicyHeader(permissions -> permissions
+                                .policy("camera=(), microphone=(), geolocation=(), payment=()"))
+                        // Cô lập ngữ cảnh duyệt → giảm rủi ro tấn công xuyên cửa sổ (XS-Leaks).
+                        .crossOriginOpenerPolicy(coop -> coop
+                                .policy(CrossOriginOpenerPolicyHeaderWriter.CrossOriginOpenerPolicy.SAME_ORIGIN))
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
