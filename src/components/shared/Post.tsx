@@ -722,6 +722,7 @@ export function Post({
           <PostMediaGallery
             items={galleryItems}
             className={compact ? 'max-h-[min(280px,70vw)]' : undefined}
+            altText={`Ảnh trong bài viết của ${author.name}`}
             onMediaClick={(itemIndex) => {
               const item = galleryItems[itemIndex];
               if (item.type !== 'IMAGE') return;
@@ -740,7 +741,8 @@ export function Post({
             {mediaType === 'image' ? (
               <ImageWithFallback
                 src={mediaUrl}
-                alt="Post content"
+                alt={`Ảnh trong bài viết của ${author.name}`}
+                loading="lazy"
                 className={`${mediaMaxClass} w-full object-contain`}
               />
             ) : mediaType === 'document' ? (
@@ -756,6 +758,7 @@ export function Post({
               <video
                 src={mediaUrl}
                 controls
+                aria-label={`Video trong bài viết của ${author.name}`}
                 className={`${mediaMaxClass} w-full object-contain`}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -769,6 +772,7 @@ export function Post({
               <button
                 type="button"
                 onClick={() => setIsReactionSummaryOpen(true)}
+                aria-label={`${totalReactionCount} cảm xúc, xem chi tiết`}
                 className="flex cursor-pointer items-center gap-2 hover:opacity-85"
               >
                 <div className="flex items-center -space-x-1">
@@ -877,6 +881,7 @@ export function Post({
             type="button"
             className="absolute right-4 top-4 z-[1001] cursor-pointer rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
             onClick={closeLightbox}
+            aria-label="Đóng xem ảnh"
           >
             <X size={32} />
           </button>
@@ -886,6 +891,7 @@ export function Post({
               <button
                 type="button"
                 className="absolute left-4 top-1/2 z-[1001] -translate-y-1/2 cursor-pointer rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
+                aria-label="Ảnh trước"
                 onClick={(e) => {
                   e.stopPropagation();
                   prevImage();
@@ -896,6 +902,7 @@ export function Post({
               <button
                 type="button"
                 className="absolute right-4 top-1/2 z-[1001] -translate-y-1/2 cursor-pointer rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
+                aria-label="Ảnh tiếp theo"
                 onClick={(e) => {
                   e.stopPropagation();
                   nextImage();

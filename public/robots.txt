@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /auth/
+Disallow: /messages
+Disallow: /settings
+Disallow: /my-reports
+
+Sitemap: /sitemap.xml

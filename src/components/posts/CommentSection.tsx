@@ -40,6 +40,9 @@ function mapToComment(r: PostCommentResponse): Comment {
       avatar: r.userAvatarUrl || '',
     },
     content: r.content ?? '',
+    imageUrl: r.imageUrl ?? null,
+    myReaction: r.myReaction ?? null,
+    reactionCounts: r.reactionCounts ?? null,
     timestamp: formatCommentTime(r.createdAt),
     likeCount: r.likeCount,
     isLikedByCurrentUser: r.isLikedByCurrentUser,
@@ -107,7 +110,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
     void fetchPage(nextPage, true);
   };
 
-  const handleAddComment = async (content: string) => {
+  const handleAddComment = async (content: string, imageUrl?: string) => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để bình luận');
@@ -116,7 +119,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
 
     try {
       setIsSubmitting(true);
-      const response = await postService.addComment(postId, { userId: currentUser.id, content });
+      const response = await postService.addComment(postId, { userId: currentUser.id, content, imageUrl });
 
       const newComment: Comment = {
         id: response.id,
@@ -127,6 +130,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
           avatar: response.userAvatarUrl || currentUser.avatarUrl || '',
         },
         content: response.content,
+        imageUrl: response.imageUrl ?? null,
         timestamp: 'Vừa xong',
         likeCount: 0,
         isLikedByCurrentUser: false,
@@ -254,9 +258,14 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
         </div>
       )}
 
-      <div className={isSubmitting ? 'pointer-events-none opacity-70' : ''}>
+      <div
+        className={`sticky bottom-0 -mx-4 -mb-3 rounded-b-lg border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 ${
+          isSubmitting ? 'pointer-events-none opacity-70' : ''
+        }`}
+      >
         <CommentInput
           onSubmit={handleAddComment}
+          enableImage
           userName={authService.getCurrentUser()?.fullName}
           userId={authService.getCurrentUser()?.id}
           userAvatar={authService.getCurrentUser()?.avatarUrl}

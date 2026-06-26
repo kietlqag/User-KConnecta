@@ -111,7 +111,7 @@ export const LeftSidebar = () => {
           'fixed left-0 top-14 z-30 flex h-[calc(100vh-56px)] w-72 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-transform duration-300 ease-in-out lg:translate-x-0',
           isLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full',
         )}
-        aria-hidden={!isLargeScreen && !isLeftSidebarOpen}
+        inert={!isLargeScreen && !isLeftSidebarOpen ? true : undefined}
       >
         <div className="shrink-0 p-2">
           <nav className="space-y-1" role="navigation" aria-label="Main navigation">

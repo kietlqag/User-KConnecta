@@ -4,5 +4,44 @@
       "source": "/(.*)",
       "destination": "/index.html"
     }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-site"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "accelerometer=(), camera=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://res.cloudinary.com https://cdn.jsdelivr.net https://i.pravatar.cc https://ui-avatars.com https://images.unsplash.com https://placehold.co https://storage.googleapis.com https://firebasestorage.googleapis.com; media-src 'self' blob: https://res.cloudinary.com; connect-src 'self' https://user-kconnecta.onrender.com wss://user-kconnecta.onrender.com https://res.cloudinary.com https://accounts.google.com https://oauth2.googleapis.com https://*.livekit.cloud wss://*.livekit.cloud; frame-src https://accounts.google.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+        }
+      ]
+    }
   ]
 }

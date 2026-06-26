@@ -8,16 +8,19 @@ interface PostMediaGalleryProps {
   /** Called with index into original `items` when user activates a tile. */
   onMediaClick?: (itemIndex: number) => void;
   className?: string;
+  altText?: string;
 }
 
 function MediaTile({
   item,
   overlay,
   onActivate,
+  altText = 'Ảnh trong bài viết',
 }: {
   item: PostGalleryItem;
   overlay?: string | null;
   onActivate?: () => void;
+  altText?: string;
 }) {
   const clickable = Boolean(onActivate);
   return (
@@ -40,7 +43,7 @@ function MediaTile({
       }
     >
       {item.type === 'IMAGE' ? (
-        <ImageWithFallback src={item.url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <ImageWithFallback src={item.url} alt={altText} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
       ) : item.type === 'DOCUMENT' ? (
         <a
           href={item.url}
@@ -59,6 +62,7 @@ function MediaTile({
           muted
           playsInline
           preload="metadata"
+          aria-label="Video trong bài viết"
         />
       )}
       {overlay ? (
@@ -76,7 +80,7 @@ const gap = 'gap-px';
  * Facebook-style multi-media layout for feed posts.
  * — 2: half + half · 3: wide left + two stacked right · 4: 2×2 · 5+: 2 tall left + 3 right, +N on last if more.
  */
-export function PostMediaGallery({ items, onMediaClick, className = '' }: PostMediaGalleryProps) {
+export function PostMediaGallery({ items, onMediaClick, className = '', altText }: PostMediaGalleryProps) {
   const resolved = items
     .map((it, index) => ({ ...it, index, url: (it.url || '').trim() }))
     .filter((it) => Boolean(it.url));
@@ -92,7 +96,7 @@ export function PostMediaGallery({ items, onMediaClick, className = '' }: PostMe
       <div className={`flex aspect-[5/3] w-full min-h-[140px] ${gap} ${shell}`}>
         {resolved.map((item) => (
           <div key={`${item.url}-${item.index}`} className="relative min-h-0 min-w-0 flex-1 self-stretch">
-            <MediaTile item={item} onActivate={go(item.index)} />
+            <MediaTile item={item} onActivate={go(item.index)} altText={altText} />
           </div>
         ))}
       </div>
@@ -103,14 +107,14 @@ export function PostMediaGallery({ items, onMediaClick, className = '' }: PostMe
     return (
       <div className={`flex aspect-[4/3] w-full min-h-[160px] ${gap} ${shell}`}>
         <div className="relative min-h-0 min-w-0 flex-[2] self-stretch">
-          <MediaTile item={resolved[0]} onActivate={go(resolved[0].index)} />
+          <MediaTile item={resolved[0]} onActivate={go(resolved[0].index)} altText={altText} />
         </div>
         <div className={`flex min-h-0 min-w-0 flex-1 flex-col self-stretch ${gap}`}>
           <div className="relative min-h-0 flex-1 basis-0">
-            <MediaTile item={resolved[1]} onActivate={go(resolved[1].index)} />
+            <MediaTile item={resolved[1]} onActivate={go(resolved[1].index)} altText={altText} />
           </div>
           <div className="relative min-h-0 flex-1 basis-0">
-            <MediaTile item={resolved[2]} onActivate={go(resolved[2].index)} />
+            <MediaTile item={resolved[2]} onActivate={go(resolved[2].index)} altText={altText} />
           </div>
         </div>
       </div>
@@ -122,7 +126,7 @@ export function PostMediaGallery({ items, onMediaClick, className = '' }: PostMe
       <div className={`grid aspect-square w-full min-h-[160px] grid-cols-2 grid-rows-2 ${gap} ${shell}`}>
         {resolved.map((item) => (
           <div key={`${item.url}-${item.index}`} className="relative min-h-0 min-w-0">
-            <MediaTile item={item} onActivate={go(item.index)} />
+            <MediaTile item={item} onActivate={go(item.index)} altText={altText} />
           </div>
         ))}
       </div>
@@ -136,7 +140,7 @@ export function PostMediaGallery({ items, onMediaClick, className = '' }: PostMe
     <div className={`flex aspect-square w-full min-h-[180px] ${gap} ${shell}`}>
       <div className={`flex min-h-0 min-w-0 flex-[3] flex-col self-stretch ${gap}`}>
         <div className="relative min-h-0 flex-1 basis-0">
-          <MediaTile item={resolved[0]} onActivate={go(resolved[0].index)} />
+          <MediaTile item={resolved[0]} onActivate={go(resolved[0].index)} altText={altText} />
         </div>
         <div className="relative min-h-0 flex-1 basis-0">
           <MediaTile item={resolved[1]} onActivate={go(resolved[1].index)} />
@@ -147,10 +151,10 @@ export function PostMediaGallery({ items, onMediaClick, className = '' }: PostMe
           <MediaTile item={resolved[2]} onActivate={go(resolved[2].index)} />
         </div>
         <div className="relative min-h-0 flex-1 basis-0">
-          <MediaTile item={resolved[3]} onActivate={go(resolved[3].index)} />
+          <MediaTile item={resolved[3]} onActivate={go(resolved[3].index)} altText={altText} />
         </div>
         <div className="relative min-h-0 flex-1 basis-0">
-          <MediaTile item={resolved[4]} overlay={overlay} onActivate={go(resolved[4].index)} />
+          <MediaTile item={resolved[4]} overlay={overlay} onActivate={go(resolved[4].index)} altText={altText} />
         </div>
       </div>
     </div>

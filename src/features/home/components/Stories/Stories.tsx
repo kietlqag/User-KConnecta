@@ -100,6 +100,7 @@ export function Stories() {
       {canScrollLeft && (
         <button
           onClick={handlePrevious}
+          aria-label="Xem tin trước đó"
           className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
         >
           <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
@@ -109,6 +110,7 @@ export function Stories() {
       {canScrollRight && (
         <button
           onClick={handleNext}
+          aria-label="Xem tin tiếp theo"
           className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
         >
           <ChevronRight className="w-6 h-6 text-gray-700 dark:text-gray-300" />
@@ -121,15 +123,20 @@ export function Stories() {
         onScroll={handleScroll}
       >
         {/* Create Story card */}
-        <div
-          className="flex-shrink-0 w-[112px] cursor-pointer group"
+        <button
+          type="button"
+          className="flex-shrink-0 w-[112px] cursor-pointer group text-left"
           onClick={() => navigate('/stories/create')}
+          aria-label="Tạo tin của bạn"
         >
           <div className="relative w-[112px] h-[160px] bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 flex flex-col">
             <div className="h-[105px] w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
               <img
                 src={currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14'}
-                alt="Avatar"
+                alt={currentUser?.fullName ? `Ảnh đại diện của ${currentUser.fullName}` : 'Ảnh đại diện của bạn'}
+                width={112}
+                height={105}
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -142,20 +149,26 @@ export function Stories() {
           <div className="mt-2">
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100 text-center line-clamp-2">Tạo tin</p>
           </div>
-        </div>
+        </button>
 
         {/* Story group cards */}
         {storyGroups.map((group) => (
-          <div
+          <button
+            type="button"
             key={group.userId}
-            className="flex-shrink-0 w-[112px] cursor-pointer group"
+            className="flex-shrink-0 w-[112px] cursor-pointer group text-left"
             onClick={() => !group.isPending && navigate(`/stories/${group.userId}`)}
+            aria-label={`Xem tin của ${group.userFullName}`}
+            disabled={group.isPending}
           >
             <div className={`relative w-[112px] h-[160px] rounded-xl overflow-hidden border-[3px] border-emerald-500 group-hover:border-emerald-600 transition-colors ${group.isPending ? 'opacity-60' : ''}`}>
               {group.thumbnail ? (
                 <img
                   src={group.thumbnail}
-                  alt={group.userFullName}
+                  alt={`Ảnh bìa tin của ${group.userFullName}`}
+                  width={112}
+                  height={160}
+                  loading="lazy"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -172,7 +185,10 @@ export function Stories() {
               <div className="absolute top-2 left-2 w-10 h-10 rounded-full border-[3px] border-emerald-500 bg-white dark:bg-gray-800 overflow-hidden">
                 <img
                   src={group.userAvatarUrl}
-                  alt={group.userFullName}
+                  alt={`Ảnh đại diện của ${group.userFullName}`}
+                  width={40}
+                  height={40}
+                  loading="lazy"
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -182,7 +198,7 @@ export function Stories() {
                 {group.userFullName}
               </p>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>

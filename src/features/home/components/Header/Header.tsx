@@ -155,13 +155,18 @@ export function Header() {
               to="/home"
               onClick={handleHomeClick}
               className="flex items-center gap-2 hover:bg-muted rounded-full p-2 transition-colors"
-            >              <img src={logoV2} alt="KConnecta Logo V2" className="w-10 h-10 object-contain dark:drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]" />
+            >              <img src={logoV2} alt="KConnecta" width={40} height={40} className="w-10 h-10 object-contain dark:drop-shadow-[0_0_12px_rgba(16,185,129,0.3)]" />
             </Link>
             
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <label htmlFor="header-search" className="sr-only">
+                Tìm kiếm trên KConnecta
+              </label>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden />
               <input
-                type="text"
+                id="header-search"
+                type="search"
+                name="q"
                 placeholder="Tìm kiếm trên KConnecta"
                 className="w-full pl-10 pr-4 py-2 bg-muted text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-muted/70 transition-colors"
                 value={searchQuery}
@@ -239,6 +244,8 @@ export function Header() {
                 }}
                 className="h-9 w-9 shrink-0 overflow-hidden rounded-full transition-opacity hover:opacity-90 cursor-pointer"
                 data-account-toggle
+                aria-label="Menu tài khoản"
+                aria-expanded={showAccountMenu}
               >
                 <UserAvatar
                   name={currentUser?.fullName || 'Bạn'}

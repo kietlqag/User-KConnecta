@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { ThumbsUp, MoreHorizontal, Trash2, Pencil, Flag, Clock } from 'lucide-react';
+import { MoreHorizontal, Trash2, Pencil, Flag, Clock, X } from 'lucide-react';
 import { CommentInput } from './CommentInput';
 import { authService } from '@/services/authService';
-import { postService } from '@/services/postService';
+import { postService, type ReactionType } from '@/services/postService';
+import {
+  ReactionButton,
+  reactions,
+  getActiveReactions,
+  getTotalReactionCount,
+  type ReactionOption,
+  type ReactionCountMap,
+} from '@/components/reactions';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/shared/UserAvatar';
 
@@ -15,9 +23,12 @@ export interface Comment {
     avatar: string;
   };
   content: string;
+  imageUrl?: string | null;
   timestamp: string;
   likeCount: number;
   isLikedByCurrentUser: boolean;
+  myReaction?: ReactionType | null;
+  reactionCounts?: Record<string, number> | null;
   isDeleted: boolean;
   replyCount: number;
   replies?: Comment[];
@@ -36,6 +47,16 @@ interface CommentItemProps {
 
 const UNDO_DELAY_MS = 5000;
 
+function recordToCountMap(rec?: Record<string, number> | null): ReactionCountMap {
+  const map: ReactionCountMap = { LIKE: 0, LOVE: 0, HAHA: 0, WOW: 0, SAD: 0, ANGRY: 0 };
+  if (rec) {
+    (Object.keys(map) as ReactionType[]).forEach((k) => {
+      if (typeof rec[k] === 'number') map[k] = rec[k];
+    });
+  }
+  return map;
+}
+
 function formatCommentTime(createdAt: string) {
   return new Intl.DateTimeFormat('vi-VN', {
     hour: '2-digit',
@@ -50,9 +71,11 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
   const [replies, setReplies] = useState<Comment[]>(comment.replies ?? []);
   const [repliesLoaded, setRepliesLoaded] = useState(false);
   const [isLoadingReplies, setIsLoadingReplies] = useState(false);
-  const [isLiked, setIsLiked] = useState(comment.isLikedByCurrentUser);
-  const [likeCount, setLikeCount] = useState(comment.likeCount);
-  const [isLiking, setIsLiking] = useState(false);
+  const [myReaction, setMyReaction] = useState<ReactionOption | null>(
+    comment.myReaction ? reactions.find((r) => r.type === comment.myReaction) ?? null : null,
+  );
+  const [reactionCounts, setReactionCounts] = useState<ReactionCountMap>(recordToCountMap(comment.reactionCounts));
+  const [showImageViewer, setShowImageViewer] = useState(false);
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -72,6 +95,8 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
   const isOwner = currentUser?.id === comment.userId;
   const totalReplies = Math.max(comment.replyCount, replies.length);
   const isDeletedState = comment.isDeleted || isSoftDeleted;
+  const totalReactions = getTotalReactionCount(reactionCounts);
+  const activeReactions = getActiveReactions(reactionCounts);
 
   useEffect(() => {
     return () => {
@@ -91,6 +116,9 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
         avatar: r.userAvatarUrl || '',
       },
       content: r.content ?? '',
+      imageUrl: r.imageUrl ?? null,
+      myReaction: r.myReaction ?? null,
+      reactionCounts: r.reactionCounts ?? null,
       timestamp: formatCommentTime(r.createdAt),
       likeCount: r.likeCount,
       isLikedByCurrentUser: r.isLikedByCurrentUser,
@@ -134,21 +162,23 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
     }
   };
 
-  const handleLike = async () => {
-    if (!currentUser || isLiking || isDeletedState) return;
-    const next = !isLiked;
-    setIsLiked(next);
-    setLikeCount((n) => n + (next ? 1 : -1));
+  const handleReact = async (reaction: ReactionOption | null) => {
+    if (!currentUser || isDeletedState) return;
+    const prevReaction = myReaction;
+    const prevCounts = reactionCounts;
+    // Cập nhật lạc quan: gỡ reaction cũ, cộng reaction mới.
+    const nextCounts = { ...reactionCounts };
+    if (prevReaction) nextCounts[prevReaction.type] = Math.max(0, nextCounts[prevReaction.type] - 1);
+    if (reaction) nextCounts[reaction.type] = nextCounts[reaction.type] + 1;
+    setReactionCounts(nextCounts);
+    setMyReaction(reaction);
     try {
-      setIsLiking(true);
-      if (next) await postService.likeComment(comment.postId, comment.id, currentUser.id);
+      if (reaction) await postService.likeComment(comment.postId, comment.id, currentUser.id, reaction.type);
       else await postService.unlikeComment(comment.postId, comment.id, currentUser.id);
     } catch {
-      setIsLiked(!next);
-      setLikeCount((n) => n + (next ? -1 : 1));
+      setReactionCounts(prevCounts);
+      setMyReaction(prevReaction);
       toast.error('Không thể thực hiện thao tác');
-    } finally {
-      setIsLiking(false);
     }
   };
 
@@ -338,21 +368,32 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
               </div>
             </div>
           ) : (
-            <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl px-3 py-2 inline-block max-w-full">
-              <p className="font-semibold text-[13px] mb-0.5">{comment.author.name}</p>
-              <p className="text-[15px] break-words">{comment.content}</p>
+            <div className="inline-block max-w-full">
+              {/* Bong bóng chỉ bọc tên + chữ; ảnh tách riêng bên dưới (giống Facebook) */}
+              <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl px-3 py-2 inline-block max-w-full">
+                <p className="font-semibold text-[13px] mb-0.5">{comment.author.name}</p>
+                {comment.content && <p className="text-[15px] break-words">{comment.content}</p>}
+              </div>
+              {comment.imageUrl && (
+                <button type="button" onClick={() => setShowImageViewer(true)} className="mt-1.5 block w-fit cursor-pointer">
+                  <img
+                    src={comment.imageUrl}
+                    alt="Ảnh bình luận"
+                    className="max-h-72 max-w-[260px] rounded-xl border border-gray-200 dark:border-gray-700 object-contain"
+                  />
+                </button>
+              )}
             </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-3 mt-1 px-3">
-            <button
-              onClick={() => void handleLike()}
-              disabled={isLiking}
-              className={`text-xs font-semibold hover:underline cursor-pointer disabled:opacity-60 ${isLiked ? 'text-emerald-600' : 'text-gray-600 dark:text-gray-400'}`}
-            >
-              Thích
-            </button>
+          <div className="flex items-center gap-3 mt-1 px-1">
+            <ReactionButton
+              compact
+              initialReaction={myReaction}
+              onReactionChange={(r) => void handleReact(r)}
+              buttonClassName="!gap-1 !px-0 !py-0 !text-xs !font-semibold !rounded-none [&>svg]:hidden [&_img]:w-4 [&_img]:h-4 hover:!bg-transparent"
+            />
             <button
               onClick={() => setShowReplyInput((v) => !v)}
               className="text-xs font-semibold text-gray-600 dark:text-gray-400 hover:underline cursor-pointer"
@@ -366,12 +407,14 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
               </span>
             )}
             <span className="text-xs text-gray-500 dark:text-gray-400">{comment.timestamp}</span>
-            {likeCount > 0 && (
+            {totalReactions > 0 && (
               <div className="flex items-center gap-1">
-                <div className="w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center">
-                  <ThumbsUp className="w-2.5 h-2.5 text-white fill-white" />
+                <div className="flex items-center -space-x-1">
+                  {activeReactions.slice(0, 3).map((r) => (
+                    <img key={r.type} src={r.emoji} alt={r.label} width={14} height={14} className="rounded-full" draggable={false} />
+                  ))}
                 </div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">{likeCount}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-400">{totalReactions}</span>
               </div>
             )}
           </div>
@@ -470,6 +513,29 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
           </div>
         )}
       </div>
+
+      {/* Lightbox: xem ảnh bình luận ngay trong app */}
+      {showImageViewer && comment.imageUrl && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setShowImageViewer(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setShowImageViewer(false)}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 cursor-pointer"
+            title="Đóng"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <img
+            src={comment.imageUrl}
+            alt="Ảnh bình luận"
+            className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }

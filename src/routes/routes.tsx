@@ -1,48 +1,11 @@
 import { Outlet, createBrowserRouter } from 'react-router-dom';
 import { AuthLayout } from '../layouts';
-import { LoginPage, RegisterPage, ForgotPasswordPage } from '../features/auth/pages';
 import { WelcomePage } from '../pages';
-import { CreateStoryPage, StoryViewerPage } from '../features/stories/pages';
 import { HomePage } from '../features/home/pages';
-import {
-  ProfilePage,
-  ProfileFriendsPage,
-  ProfilePhotosPage,
-  ProfileAboutPage,
-  ProfileReelsPage,
-  ProfileAlbumsPage,
-  ProfileLikesPage,
-  ProfileScheduledPage,
-  ProfileLayout,
-} from '../features/profile/pages';
-import { FriendsPage } from '../features/friends/pages';
-import {
-  GroupsPage,
-  CreateGroupPage,
-  GroupDetailPage,
-  JoinedGroupsPage,
-  DiscoverGroupsPage,
-  GroupSearchPage,
-} from '../features/groups/pages';
-import { WatchPage } from '../features/watch/pages';
-import { MarketplacePage } from '../features/marketplace/pages';
-import LiveVideoPage from '../features/live/pages/LiveVideoPage';
-import LiveSetupPage from '../features/live/pages/LiveSetupPage';
-import LiveEventPage from '../features/live/pages/LiveEventPage';
-import LiveProducerPage from '../features/live/pages/LiveProducerPage';
-import LiveViewerPage from '../features/live/pages/LiveViewerPage';
-import SearchResultsPage from '../features/search/pages/SearchResultsPage';
-import MessengerPage from '../features/messenger/pages/MessengerPage';
-import { SavedPage } from '../features/saved/pages/SavedPage';
-import { AlbumListPage, AlbumDetailPage, CreateAlbumPage } from '../features/albums/pages';
-import SettingsPage from '../features/settings/pages/SettingsPage';
-import MyReportsPage from '../features/reports/pages/MyReportsPage';
-import PrivacyPolicyPage from '../features/policies/pages/PrivacyPolicyPage';
-import TermsOfServicePage from '../features/policies/pages/TermsOfServicePage';
-import ContactPage from '../features/policies/pages/ContactPage';
 import { GuestRoute, ProtectedRoute } from './RouteGuards';
 import { RealtimeCallProvider } from '../contexts/RealtimeCallContext';
 import { MessageNotificationsListener } from '../features/messenger/components/MessageNotificationsListener';
+import { lazyDefault, lazyNamed } from './lazyRoutes';
 
 function RealtimeLayout() {
   return (
@@ -63,15 +26,15 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/privacy',
-        Component: PrivacyPolicyPage,
+        lazy: () => lazyDefault(() => import('../features/policies/pages/PrivacyPolicyPage')),
       },
       {
         path: '/terms',
-        Component: TermsOfServicePage,
+        lazy: () => lazyDefault(() => import('../features/policies/pages/TermsOfServicePage')),
       },
       {
         path: '/contact',
-        Component: ContactPage,
+        lazy: () => lazyDefault(() => import('../features/policies/pages/ContactPage')),
       },
       {
         Component: ProtectedRoute,
@@ -82,113 +45,119 @@ export const router = createBrowserRouter([
           },
           {
             path: '/profile/:userId?',
-            Component: ProfileLayout,
-            children: [
-              { index: true, Component: ProfilePage },
-              { path: 'friends', Component: ProfileFriendsPage },
-              { path: 'photos', Component: ProfilePhotosPage },
-              { path: 'albums', Component: ProfileAlbumsPage },
-              { path: 'about', Component: ProfileAboutPage },
-              { path: 'reels', Component: ProfileReelsPage },
-              { path: 'likes', Component: ProfileLikesPage },
-              { path: 'scheduled', Component: ProfileScheduledPage },
-            ],
+            lazy: async () => {
+              const { ProfileLayout, ProfilePage, ProfileFriendsPage, ProfilePhotosPage, ProfileAboutPage, ProfileReelsPage, ProfileAlbumsPage, ProfileLikesPage, ProfileScheduledPage } =
+                await import('../features/profile/pages');
+              return {
+                Component: ProfileLayout,
+                children: [
+                  { index: true, Component: ProfilePage },
+                  { path: 'friends', Component: ProfileFriendsPage },
+                  { path: 'photos', Component: ProfilePhotosPage },
+                  { path: 'albums', Component: ProfileAlbumsPage },
+                  { path: 'about', Component: ProfileAboutPage },
+                  { path: 'reels', Component: ProfileReelsPage },
+                  { path: 'likes', Component: ProfileLikesPage },
+                  { path: 'scheduled', Component: ProfileScheduledPage },
+                ],
+              };
+            },
           },
           {
             path: '/friends',
-            Component: FriendsPage,
+            lazy: () => lazyNamed(() => import('../features/friends/pages'), 'FriendsPage'),
           },
           {
             path: '/groups',
-            Component: GroupsPage,
+            lazy: () => lazyNamed(() => import('../features/groups/pages'), 'GroupsPage'),
           },
           {
             path: '/groups/create',
-            Component: CreateGroupPage,
+            lazy: () => lazyNamed(() => import('../features/groups/pages'), 'CreateGroupPage'),
           },
           {
             path: '/groups/joined',
-            Component: JoinedGroupsPage,
+            lazy: () => lazyNamed(() => import('../features/groups/pages'), 'JoinedGroupsPage'),
           },
           {
             path: '/groups/discover',
-            Component: DiscoverGroupsPage,
+            lazy: () => lazyNamed(() => import('../features/groups/pages'), 'DiscoverGroupsPage'),
           },
           {
             path: '/groups/search',
-            Component: GroupSearchPage,
+            lazy: () => lazyNamed(() => import('../features/groups/pages'), 'GroupSearchPage'),
           },
           {
             path: '/groups/:groupId',
-            Component: GroupDetailPage,
+            lazy: () => lazyNamed(() => import('../features/groups/pages'), 'GroupDetailPage'),
           },
           {
             path: '/watch',
-            Component: WatchPage,
+            lazy: () => lazyNamed(() => import('../features/watch/pages'), 'WatchPage'),
           },
           {
             path: '/marketplace',
-            Component: MarketplacePage,
+            lazy: () => lazyNamed(() => import('../features/marketplace/pages'), 'MarketplacePage'),
           },
           {
             path: '/live',
-            Component: LiveVideoPage,
+            lazy: () => lazyDefault(() => import('../features/live/pages/LiveVideoPage')),
           },
           {
             path: '/live/setup',
-            Component: LiveSetupPage,
+            lazy: () => lazyDefault(() => import('../features/live/pages/LiveSetupPage')),
           },
           {
             path: '/live/event',
-            Component: LiveEventPage,
+            lazy: () => lazyDefault(() => import('../features/live/pages/LiveEventPage')),
           },
           {
             path: '/live/producer',
-            Component: LiveProducerPage,
+            lazy: () => lazyDefault(() => import('../features/live/pages/LiveProducerPage')),
           },
           {
             path: '/live/viewer',
-            Component: LiveViewerPage,
+            lazy: () => lazyDefault(() => import('../features/live/pages/LiveViewerPage')),
           },
           {
             path: '/search',
-            Component: SearchResultsPage,
+            lazy: () => lazyDefault(() => import('../features/search/pages/SearchResultsPage')),
           },
           {
             path: '/messages',
-            Component: MessengerPage,
+            lazy: () => lazyNamed(() => import('../features/messenger/pages'), 'MessengerPage'),
           },
           {
             path: '/saved',
-            Component: SavedPage,
+            lazy: () => lazyNamed(() => import('../features/saved/pages/SavedPage'), 'SavedPage'),
           },
           {
             path: '/albums/create',
-            Component: CreateAlbumPage,
+            lazy: () => lazyNamed(() => import('../features/albums/pages'), 'CreateAlbumPage'),
           },
           {
             path: '/albums',
-            Component: AlbumListPage,
+            lazy: () => lazyNamed(() => import('../features/albums/pages'), 'AlbumListPage'),
           },
           {
             path: '/albums/:albumId',
-            Component: AlbumDetailPage,
+            lazy: () => lazyNamed(() => import('../features/albums/pages'), 'AlbumDetailPage'),
           },
           {
             path: '/settings',
-            Component: SettingsPage,
+            lazy: () => lazyDefault(() => import('../features/settings/pages/SettingsPage')),
           },
           {
             path: '/my-reports',
-            Component: MyReportsPage,
+            lazy: () => lazyDefault(() => import('../features/reports/pages/MyReportsPage')),
           },
           {
             path: '/stories/create',
-            Component: CreateStoryPage,
+            lazy: () => lazyNamed(() => import('../features/stories/pages'), 'CreateStoryPage'),
           },
           {
             path: '/stories/:authorId?',
-            Component: StoryViewerPage,
+            lazy: () => lazyNamed(() => import('../features/stories/pages'), 'StoryViewerPage'),
           },
         ],
       },
@@ -203,15 +172,15 @@ export const router = createBrowserRouter([
         children: [
           {
             path: 'login',
-            Component: LoginPage,
+            lazy: () => lazyNamed(() => import('../features/auth/pages'), 'LoginPage'),
           },
           {
             path: 'register',
-            Component: RegisterPage,
+            lazy: () => lazyNamed(() => import('../features/auth/pages'), 'RegisterPage'),
           },
           {
             path: 'forgot-password',
-            Component: ForgotPasswordPage,
+            lazy: () => lazyNamed(() => import('../features/auth/pages'), 'ForgotPasswordPage'),
           },
         ],
       },

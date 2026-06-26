@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
-import { Image, Smile } from 'lucide-react';
+import { Image } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ProfileCreatePostModal } from '../../../profile/components/ProfileCreatePost/ProfileCreatePostModal';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { CurrentUserAvatar, LiveFeatureIcon, LIVE_NAV_LABEL } from '@/components/shared';
 import { prependPostToHomeFeed } from '../../hooks/usePosts';
 
+const ProfileCreatePostModal = lazy(() =>
+  import('../../../profile/components/ProfileCreatePost/ProfileCreatePostModal').then((m) => ({
+    default: m.ProfileCreatePostModal,
+  })),
+);
 export function CreatePost() {
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -74,17 +78,21 @@ export function CreatePost() {
         </div>
       </div>
 
-      <ProfileCreatePostModal
-        isOpen={isModalOpen}
-        onClose={closeCreateModal}
-        username={currentUser?.fullName || 'Người dùng'}
-        initialShowImagePicker={openWithImagePicker}
-        onPostCreated={(post) => {
-          if (!post.groupId) {
-            prependPostToHomeFeed(queryClient, currentUser?.id, post);
-          }
-        }}
-      />
+      {isModalOpen ? (
+        <Suspense fallback={null}>
+          <ProfileCreatePostModal
+            isOpen={isModalOpen}
+            onClose={closeCreateModal}
+            username={currentUser?.fullName || 'Người dùng'}
+            initialShowImagePicker={openWithImagePicker}
+            onPostCreated={(post) => {
+              if (!post.groupId) {
+                prependPostToHomeFeed(queryClient, currentUser?.id, post);
+              }
+            }}
+          />
+        </Suspense>
+      ) : null}
     </>
   );
 }

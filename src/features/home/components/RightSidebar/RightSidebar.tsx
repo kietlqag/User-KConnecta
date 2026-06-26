@@ -73,12 +73,15 @@ export function RightSidebar() {
             <h3 className="text-gray-600 dark:text-gray-400 font-semibold">Người liên hệ</h3>
             <div className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => {
                   setSearchOpen(v => {
                     if (v) setQuery('');
                     return !v;
                   });
                 }}
+                aria-label={searchOpen ? 'Đóng tìm kiếm người liên hệ' : 'Tìm kiếm người liên hệ'}
+                aria-expanded={searchOpen}
                 className={`p-2 rounded-full transition-colors ${
                   searchOpen
                     ? 'bg-gray-200 dark:bg-gray-700'
@@ -92,10 +95,15 @@ export function RightSidebar() {
 
           {searchOpen && (
             <div className="relative mb-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <label htmlFor="contact-search" className="sr-only">
+                Tìm người liên hệ
+              </label>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" aria-hidden />
               <input
+                id="contact-search"
                 ref={searchInputRef}
-                type="text"
+                type="search"
+                name="contact"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Tìm người liên hệ"
@@ -103,7 +111,9 @@ export function RightSidebar() {
               />
               {query && (
                 <button
+                  type="button"
                   onClick={() => setQuery('')}
+                  aria-label="Xóa tìm kiếm"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
                 >
                   <X className="w-4 h-4" />
@@ -118,10 +128,11 @@ export function RightSidebar() {
             <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</div>
           ) : filteredContacts.length > 0 ? (
             filteredContacts.map((contact) => (
-              <div
+              <button
+                type="button"
                 key={contact.id}
                 onClick={() => navigate(`/messages?with=${contact.id}`)}
-                className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors cursor-pointer group"
+                className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors cursor-pointer group text-left"
               >
                 <div className="relative">
                   <UserAvatar
@@ -138,7 +149,7 @@ export function RightSidebar() {
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:underline">
                   {contact.name}
                 </span>
-              </div>
+              </button>
             ))
           ) : query.trim() ? (
             <div className="p-2 text-sm text-gray-500 dark:text-gray-400">Không tìm thấy người liên hệ</div>

@@ -77,6 +77,7 @@ export interface UpdatePostPayload {
 export interface CreateCommentPayload {
   userId: string;
   content: string;
+  imageUrl?: string;
   parentCommentId?: string;
 }
 
@@ -248,6 +249,9 @@ export interface PostCommentResponse {
   isLikedByCurrentUser: boolean;
   isDeleted: boolean;
   content: string | null;
+  imageUrl?: string | null;
+  myReaction?: ReactionType | null;
+  reactionCounts?: Record<string, number> | null;
   moderationStatus?: string | null;
   moderationFailReason?: string | null;
   createdAt: string;
@@ -366,8 +370,8 @@ export const postService = {
     api.post<PostCommentResponse>(`/posts/${postId}/comments`, data),
   updateComment: (postId: string, commentId: string, data: { userId: string; content: string }) =>
     api.put<PostCommentResponse>(`/posts/${postId}/comments/${commentId}`, data),
-  likeComment: (postId: string, commentId: string, userId: string) =>
-    api.post<void>(`/posts/${postId}/comments/${commentId}/likes?userId=${encodeURIComponent(userId)}`, {}),
+  likeComment: (postId: string, commentId: string, userId: string, reactionType: ReactionType = 'LIKE') =>
+    api.post<void>(`/posts/${postId}/comments/${commentId}/likes?userId=${encodeURIComponent(userId)}&reactionType=${reactionType}`, {}),
   unlikeComment: (postId: string, commentId: string, userId: string) =>
     api.delete<void>(`/posts/${postId}/comments/${commentId}/likes?userId=${encodeURIComponent(userId)}`),
   deleteComment: (postId: string, commentId: string, userId: string) =>

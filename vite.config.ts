@@ -3,7 +3,7 @@
   import react from '@vitejs/plugin-react';
   import tailwindcss from '@tailwindcss/vite';
   import path from 'path';
-
+  import { devSecurityHeaders, previewSecurityHeaders } from './security-headers';
   export default defineConfig({
     plugins: [react(), tailwindcss()],
     resolve: {
@@ -21,26 +21,29 @@
     build: {
       target: 'esnext',
       outDir: 'build',
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return;
+            if (id.includes('livekit-client')) return 'livekit';
+            if (id.includes('@emoji-mart')) return 'emoji-mart';
+            if (id.includes('recharts') || id.includes('echarts')) return 'charts';
+            if (id.includes('@tiptap') || id.includes('prosemirror')) return 'editor';
+            if (id.includes('@radix-ui')) return 'radix';
+            if (id.includes('@tanstack/react-query')) return 'query';
+            if (id.includes('react-router')) return 'router';
+            if (id.includes('i18next') || id.includes('react-i18next')) return 'i18n';
+            if (id.includes('hls.js')) return 'hls';
+            if (id.includes('animejs')) return 'anime';
+            return 'vendor';
+          },
+        },
+      },
     },
     server: {
       port: process.env.PORT ? Number(process.env.PORT) : 3000,
       open: '/',
-      // CSP ở chế độ Report-Only: KHÔNG chặn gì, chỉ ghi vi phạm vào Console (tab DevTools).
-      // Mục đích: quan sát những gì SẼ bị chặn để tinh chỉnh policy, rồi mới bật chặn thật.
-      headers: {
-        'Content-Security-Policy-Report-Only':
-          "default-src 'self'; " +
-          "script-src 'self'; " +
-          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-          "font-src 'self' https://fonts.gstatic.com; " +
-          // res.cloudinary.com = ảnh thật; còn lại là ảnh SEED/placeholder (chỉ dùng cho demo)
-          "img-src 'self' data: blob: https://res.cloudinary.com https://placehold.co https://images.unsplash.com https://i.pravatar.cc https://ui-avatars.com; " +
-          "media-src 'self' blob: https://res.cloudinary.com; " +   // LiveKit stream tạo blob: URL
-          "connect-src 'self' https://res.cloudinary.com https://accounts.google.com wss: ws:; " +
-          "frame-src https://accounts.google.com; " +
-          "frame-ancestors 'none'; " +
-          "base-uri 'self'",
-      },
+      headers: devSecurityHeaders,
       hmr: {
         host: 'localhost',
         protocol: 'ws',
@@ -56,5 +59,9 @@
           changeOrigin: true,
         },
       },
+    },
+    preview: {
+      port: process.env.PORT ? Number(process.env.PORT) : 3000,
+      headers: previewSecurityHeaders,
     },
   });

@@ -131,7 +131,7 @@ export function PostDetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white dark:bg-gray-800 shadow-2xl">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow-2xl">
         <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-3">
           <h2 className="text-lg font-semibold">Bài viết của {post.author.name}</h2>
           <button
