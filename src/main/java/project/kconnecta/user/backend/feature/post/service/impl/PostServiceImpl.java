@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequ
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostMediaRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreatePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostPrivacyRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
@@ -188,7 +189,9 @@ public class PostServiceImpl implements PostService {
             if (!request.getScheduledAt().isAfter(LocalDateTime.now())) {
                 throw new ValidationException("scheduledAt must be in the future");
             }
-        } else if (request.getScheduledAt() != null && request.getScheduledAt().isAfter(LocalDateTime.now())) {
+        } else if (request.getScheduledAt() != null
+                && request.getScheduledAt().isAfter(LocalDateTime.now())
+                && status != PostStatus.PUBLISHED) {
             status = PostStatus.SCHEDULED;
         }
 
@@ -205,6 +208,13 @@ public class PostServiceImpl implements PostService {
 
         if (privacy != PostPrivacy.SPECIFIC_FRIENDS && request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
             throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
+        }
+
+        if (privacy == PostPrivacy.SPECIFIC_FRIENDS) {
+            List<UUID> allowed = request.getAllowedUserIds() == null ? List.of() : request.getAllowedUserIds();
+            if (allowed.isEmpty()) {
+                throw new ValidationException("Bạn bè cụ thể cần chọn ít nhất một người");
+            }
         }
 
         Group group = null;
@@ -370,6 +380,11 @@ public class PostServiceImpl implements PostService {
                 && request.getAllowedUserIds() != null
                 && !request.getAllowedUserIds().isEmpty()) {
             throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
+        }
+        if (privacy == PostPrivacy.SPECIFIC_FRIENDS
+                && request.getAllowedUserIds() != null
+                && request.getAllowedUserIds().isEmpty()) {
+            throw new ValidationException("Bạn bè cụ thể cần chọn ít nhất một người");
         }
         if (post.getGroup() != null) {
             if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
@@ -1302,13 +1317,46 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public PostResponse updatePrivacy(UUID postId, UUID userId, PostPrivacy privacy) {
+    public PostResponse updatePrivacy(UUID postId, UUID userId, UpdatePostPrivacyRequest request) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
         if (!post.getAuthor().getId().equals(userId)) {
             throw new ValidationException("Bạn không có quyền chỉnh sửa bài viết này");
         }
+        if (post.getGroup() != null) {
+            throw new ValidationException("Không thể thay đổi quyền riêng tư bài viết trong nhóm");
+        }
+        if (post.getPage() != null) {
+            throw new ValidationException("Không thể thay đổi quyền riêng tư bài viết trên trang");
+        }
+
+        PostPrivacy privacy = request.getPrivacy();
+        if (privacy != PostPrivacy.FRIENDS_EXCEPT
+                && request.getExcludedUserIds() != null
+                && !request.getExcludedUserIds().isEmpty()) {
+            throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
+        }
+        if (privacy != PostPrivacy.SPECIFIC_FRIENDS
+                && request.getAllowedUserIds() != null
+                && !request.getAllowedUserIds().isEmpty()) {
+            throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
+        }
+        if (privacy == PostPrivacy.SPECIFIC_FRIENDS) {
+            List<UUID> allowed = request.getAllowedUserIds() == null ? List.of() : request.getAllowedUserIds();
+            if (allowed.isEmpty()) {
+                throw new ValidationException("Bạn bè cụ thể cần chọn ít nhất một người");
+            }
+        }
+
         post.setPrivacy(privacy);
+        post.getAudienceExclusions().clear();
+        post.getAudienceAllowances().clear();
+        if (privacy == PostPrivacy.FRIENDS_EXCEPT) {
+            attachExcludedUsers(post, request.getExcludedUserIds());
+        } else if (privacy == PostPrivacy.SPECIFIC_FRIENDS) {
+            attachAllowedUsers(post, request.getAllowedUserIds());
+        }
+
         return mapToResponse(postRepository.save(post), userId);
     }
 
@@ -1592,6 +1640,11 @@ public class PostServiceImpl implements PostService {
                 .map(item -> item.getExcludedUser().getId())
                 .toList();
 
+        List<UUID> allowedUserIds = post.getAudienceAllowances()
+                .stream()
+                .map(item -> item.getAllowedUser().getId())
+                .toList();
+
         List<UUID> taggedUserIds = post.getMentions()
                 .stream()
                 .map(item -> item.getTaggedUser().getId())
@@ -1637,6 +1690,7 @@ public class PostServiceImpl implements PostService {
                 .shareCount(shareCount)
                 .media(media)
                 .excludedUserIds(excludedUserIds)
+                .allowedUserIds(allowedUserIds)
                 .taggedUserIds(taggedUserIds)
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())

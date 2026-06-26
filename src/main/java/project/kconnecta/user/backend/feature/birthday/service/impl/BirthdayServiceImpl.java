@@ -18,6 +18,8 @@ import project.kconnecta.user.backend.feature.birthday.repository.BirthdayNotifi
 import project.kconnecta.user.backend.feature.birthday.repository.BirthdayWishRepository;
 import project.kconnecta.user.backend.feature.birthday.service.BirthdayService;
 import project.kconnecta.user.backend.feature.birthday.util.BirthdayDateUtils;
+import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
+import project.kconnecta.user.backend.feature.chat.service.ChatService;
 import project.kconnecta.user.backend.feature.friend.entity.Friendship;
 import project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus;
 import project.kconnecta.user.backend.feature.friend.repository.FriendshipRepository;
@@ -28,6 +30,7 @@ import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.text.Normalizer;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -51,6 +54,7 @@ public class BirthdayServiceImpl implements BirthdayService {
     private final BirthdayWishRepository birthdayWishRepository;
     private final BirthdayNotificationLogRepository birthdayNotificationLogRepository;
     private final NotificationEventPublisher notificationEventPublisher;
+    private final ChatService chatService;
 
     @Override
     @Transactional(readOnly = true)
@@ -149,22 +153,23 @@ public class BirthdayServiceImpl implements BirthdayService {
         User recipient = userRepository.findById(request.getRecipientId())
                 .orElseThrow(() -> new ResourceNotFoundException("Recipient not found"));
 
-        BirthdayWish wish = BirthdayWish.builder()
-                .sender(sender)
-                .recipient(recipient)
+        PrivateMessageRequest chatRequest = new PrivateMessageRequest();
+        chatRequest.setReceiverId(request.getRecipientId());
+        chatRequest.setContent(message);
+        chatService.sendPrivateMessage(sender.getUsername(), chatRequest);
+
+        LocalDateTime sentAt = LocalDateTime.now();
+        return BirthdayWishResponse.builder()
+                .id(UUID.randomUUID())
+                .senderId(sender.getId())
+                .senderName(sender.getFullName())
+                .senderAvatarUrl(sender.getAvatarUrl())
+                .recipientId(recipient.getId())
+                .recipientName(recipient.getFullName())
+                .recipientAvatarUrl(recipient.getAvatarUrl())
                 .message(message)
+                .createdAt(sentAt)
                 .build();
-        wish = birthdayWishRepository.save(wish);
-
-        notificationEventPublisher.publish(
-                senderId,
-                recipient.getId(),
-                NotificationType.BIRTHDAY_WISH,
-                message,
-                wish.getId()
-        );
-
-        return toWishResponse(wish);
     }
 
     @Override

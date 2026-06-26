@@ -331,7 +331,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "  SELECT 1 FROM posts p " +
         "  LEFT JOIN user_groups g ON p.group_id = g.id " +
         "  WHERE p.id = CAST(:postId AS uuid) " +
-        "    AND p.status = 'PUBLISHED' " +
+        "    AND (p.status = 'PUBLISHED' OR (p.status = 'SCHEDULED' AND p.group_id IS NOT NULL)) " +
         "    AND (p.group_id IS NULL OR g.privacy = 'PUBLIC' OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) OR (:currentUserId IS NOT NULL AND p.group_id IN (SELECT gm.group_id FROM group_members gm WHERE gm.user_id = CAST(:currentUserId AS uuid)))) " +
         "    AND (" +
         "      p.privacy = 'PUBLIC' " +

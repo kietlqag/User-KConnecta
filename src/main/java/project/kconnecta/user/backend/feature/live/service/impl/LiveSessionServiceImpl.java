@@ -19,6 +19,11 @@ import project.kconnecta.user.backend.feature.live.dto.response.session.GoLiveRe
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionReactionResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionResponse;
 import project.kconnecta.user.backend.feature.live.dto.response.session.LiveSessionStatsResponse;
+import project.kconnecta.user.backend.feature.group.entity.Group;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
+import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
+import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.live.entity.LiveSession;
 import project.kconnecta.user.backend.feature.live.entity.LiveSessionReaction;
 import project.kconnecta.user.backend.feature.live.entity.LiveSessionViewer;
@@ -69,6 +74,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     private final LiveKitTokenService liveKitTokenService;
     private final LiveKitEgressService liveKitEgressService;
     private final LiveEventSubscriptionService liveEventSubscriptionService;
+    private final GroupRepository groupRepository;
+    private final GroupMemberRepository groupMemberRepository;
 
     @Override
     public LiveSessionResponse createSession(CreateLiveSessionRequest request, UUID hostUserId) {
@@ -430,16 +437,44 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     @Override
     @Transactional(readOnly = true)
     public List<LiveSessionResponse> listByGroup(UUID groupId, UUID viewerUserId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        if (!canAccessGroupContent(group, viewerUserId)) {
+            return List.of();
+        }
+
+        boolean isApprovedMember = isApprovedGroupMember(groupId, viewerUserId);
         LocalDateTime staleScheduledCutoff = LocalDateTime.now().minusDays(7);
-        return liveSessionRepository.findAllByGroupIdOrderByCreatedAtDesc(groupId)
+
+        return liveSessionRepository.findAllForGroupEvents(groupId)
                 .stream()
                 .filter(session -> session.getStatus() != LiveSessionStatus.CANCELED
                         && session.getStatus() != LiveSessionStatus.DRAFT)
                 .filter(session -> !isStaleScheduledSession(session, staleScheduledCutoff))
-                .filter(session -> liveAccessService.canView(session, viewerUserId))
+                .filter(session -> isApprovedMember || liveAccessService.canView(session, viewerUserId))
                 .sorted((left, right) -> compareGroupEvents(left, right))
                 .map(session -> toResponse(session, viewerUserId))
                 .toList();
+    }
+
+    private boolean canAccessGroupContent(Group group, UUID viewerUserId) {
+        if (group.getPrivacy() != GroupPrivacy.PRIVATE) {
+            return true;
+        }
+        if (viewerUserId == null) {
+            return false;
+        }
+        return isApprovedGroupMember(group.getId(), viewerUserId);
+    }
+
+    private boolean isApprovedGroupMember(UUID groupId, UUID userId) {
+        if (userId == null) {
+            return false;
+        }
+        return groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .map(member -> member.getStatus() == GroupMemberStatus.APPROVED)
+                .orElse(false);
     }
 
     private boolean isStaleScheduledSession(LiveSession session, LocalDateTime staleScheduledCutoff) {
@@ -609,6 +644,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         LiveSessionResponse.LiveSessionResponseBuilder builder = LiveSessionResponse.builder()
                 .id(session.getId())
                 .hostUserId(session.getHost().getId())
+                .hostName(resolveHostDisplayName(session.getHost()))
+                .hostAvatarUrl(session.getHost().getAvatarUrl())
                 .groupId(session.getGroupId())
                 .pageId(session.getPageId())
                 .postId(session.getPostId())
@@ -644,6 +681,13 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }
 
         return builder.build();
+    }
+
+    private String resolveHostDisplayName(User host) {
+        if (host.getFullName() != null && !host.getFullName().isBlank()) {
+            return host.getFullName().trim();
+        }
+        return host.getUsername();
     }
 
     private String buildLiveContent(String title, String description) {

@@ -9,7 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
-import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostPrivacyRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.CreateCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.UpdateCommentRequest;
@@ -224,8 +224,8 @@ public class PostController {
     public ResponseEntity<PostResponse> updatePrivacy(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID id,
-            @RequestParam PostPrivacy privacy) {
-        return ResponseEntity.ok(postService.updatePrivacy(id, principal.getUserId(), privacy));
+            @Valid @RequestBody UpdatePostPrivacyRequest request) {
+        return ResponseEntity.ok(postService.updatePrivacy(id, principal.getUserId(), request));
     }
 
     @PostMapping("/{id}/reports")

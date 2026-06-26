@@ -41,6 +41,7 @@ public class PostResponse {
     private long shareCount;
     private List<PostMediaResponse> media;
     private List<UUID> excludedUserIds;
+    private List<UUID> allowedUserIds;
     private List<UUID> taggedUserIds;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

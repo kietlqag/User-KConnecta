@@ -9,6 +9,7 @@ import project.kconnecta.user.backend.feature.post.dto.request.SavePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.SharePostRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportCommentRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.ReportPostRequest;
+import project.kconnecta.user.backend.feature.post.dto.request.UpdatePostPrivacyRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.AddPostPollOptionRequest;
 import project.kconnecta.user.backend.feature.post.dto.request.VotePostPollRequest;
 import project.kconnecta.user.backend.feature.post.dto.response.PostCommentResponse;
@@ -57,7 +58,7 @@ public interface PostService {
     List<PostResponse> getSavedPosts(UUID userId);
     void unsavePost(UUID userId, UUID postId);
     List<CheckInSuggestionResponse> getCheckInSuggestions(UUID currentUserId, String province, String ward);
-    PostResponse updatePrivacy(UUID postId, UUID userId, PostPrivacy privacy);
+    PostResponse updatePrivacy(UUID postId, UUID userId, UpdatePostPrivacyRequest request);
     void reportPost(UUID postId, ReportPostRequest request);
     void reportComment(UUID commentId, ReportCommentRequest request);
     List<PostReportResponse> getMyReports(UUID userId);

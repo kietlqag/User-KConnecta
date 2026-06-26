@@ -52,9 +52,9 @@ public class LiveStartServiceImpl implements LiveStartService {
         createPostRequest.setPageId(request.getPageId());
         createPostRequest.setContent(buildContent(request.getTitle(), request.getDescription()));
         createPostRequest.setPrivacy(request.getPrivacy());
-        // Scheduled live: publish announcement post immediately; only the stream session waits.
+        // Announcement post is visible immediately; only the live session waits for scheduledAt.
         createPostRequest.setStatus(PostStatus.PUBLISHED);
-        createPostRequest.setScheduledAt(request.getStartMode() == LiveStartMode.SCHEDULED ? request.getScheduledAt() : null);
+        createPostRequest.setScheduledAt(null);
         createPostRequest.setLocationText(request.getLocationText());
         createPostRequest.setBackgroundStyle("LIVE_POST");
         createPostRequest.setExcludedUserIds(request.getExcludedUserIds());
@@ -142,6 +142,10 @@ public class LiveStartServiceImpl implements LiveStartService {
         return LiveSessionResponse.builder()
                 .id(session.getId())
                 .hostUserId(session.getHost().getId())
+                .hostName(session.getHost().getFullName() != null && !session.getHost().getFullName().isBlank()
+                        ? session.getHost().getFullName().trim()
+                        : session.getHost().getUsername())
+                .hostAvatarUrl(session.getHost().getAvatarUrl())
                 .groupId(session.getGroupId())
                 .pageId(session.getPageId())
                 .postId(session.getPostId())

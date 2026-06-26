@@ -14,11 +14,14 @@ import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.entity.GroupMember;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
-import project.kconnecta.user.backend.feature.notification.service.NotificationService;
+import project.kconnecta.user.backend.feature.notification.entity.Notification;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
+import project.kconnecta.user.backend.feature.notification.repository.NotificationRepository;
+import project.kconnecta.user.backend.feature.notification.service.NotificationService;
 import project.kconnecta.user.backend.feature.post.repository.PostRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
@@ -36,6 +39,7 @@ public class GroupServiceImpl implements GroupService {
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
     private final NotificationService notificationService;
+    private final NotificationRepository notificationRepository;
     private final PostRepository postRepository;
     private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
@@ -120,22 +124,43 @@ public class GroupServiceImpl implements GroupService {
 
         // Only notify admins to review when approval is required.
         if (joinStatus == GroupMemberStatus.PENDING) {
-            List<GroupMember> admins = groupMemberRepository.findAllByGroupId(groupId).stream()
-                    .filter(gm -> gm.getRole() == GroupMemberRole.ADMIN)
-                    .toList();
-
-            for (GroupMember admin : admins) {
-                notificationService.createNotification(
-                        admin.getUser().getId(),
-                        userId,
-                        NotificationType.GROUP_JOIN_REQUEST,
-                        user.getFullName() + " đã yêu cầu tham gia nhóm " + group.getName() + ".",
-                        groupId
-                );
-            }
+            notifyAdminsOfJoinRequest(group, user);
         }
 
         return toResponse(group, GroupMemberRole.MEMBER, joinStatus);
+    }
+
+    private void notifyAdminsOfJoinRequest(Group group, User requester) {
+        List<GroupMember> admins = groupMemberRepository.findAllByGroupId(group.getId()).stream()
+                .filter(gm -> gm.getRole() == GroupMemberRole.ADMIN)
+                .toList();
+
+        for (GroupMember admin : admins) {
+            notificationService.createNotification(
+                    admin.getUser().getId(),
+                    requester.getId(),
+                    NotificationType.GROUP_JOIN_REQUEST,
+                    requester.getFullName() + " đã yêu cầu tham gia nhóm " + group.getName() + ".",
+                    group.getId()
+            );
+        }
+    }
+
+    private GroupMemberStatus resolveJoinStatus(Group group, UUID inviterId) {
+        if (!group.isMemberApprovalRequired()) {
+            return GroupMemberStatus.APPROVED;
+        }
+        if (inviterId != null && isApprovedAdmin(group.getId(), inviterId)) {
+            return GroupMemberStatus.APPROVED;
+        }
+        return GroupMemberStatus.PENDING;
+    }
+
+    private boolean isApprovedAdmin(UUID groupId, UUID userId) {
+        return groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+                .filter(gm -> gm.getRole() == GroupMemberRole.ADMIN
+                        && gm.getStatus() == GroupMemberStatus.APPROVED)
+                .isPresent();
     }
 
     @Override
@@ -148,11 +173,9 @@ public class GroupServiceImpl implements GroupService {
                 .orElseThrow(() -> new ResourceNotFoundException("Sender not found"));
 
         for (UUID userId : userIds) {
-            // Check if already a member
-            boolean alreadyMember = groupMemberRepository.findAllByGroupId(groupId).stream()
-                    .anyMatch(gm -> gm.getUser().getId().equals(userId));
+            boolean alreadyMemberOrPending = groupMemberRepository.findByGroupIdAndUserId(groupId, userId).isPresent();
 
-            if (!alreadyMember) {
+            if (!alreadyMemberOrPending) {
                 String content = sender.getFullName() + " đã mời bạn tham gia nhóm " + group.getName();
                 notificationService.createNotification(
                         userId, 
@@ -167,26 +190,51 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     @Transactional
-    public void acceptInvite(UUID groupId, UUID notificationId, UUID userId) {
+    public GroupResponse acceptInvite(UUID groupId, UUID notificationId, UUID userId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
-        boolean alreadyMember = groupMemberRepository.findAllByGroupId(groupId).stream()
-                .anyMatch(gm -> gm.getUser().getId().equals(userId));
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + notificationId));
+        if (notification.getType() != NotificationType.GROUP_INVITE) {
+            throw new ValidationException("Thông báo không phải lời mời tham gia nhóm");
+        }
+        if (!groupId.equals(notification.getRelatedId())) {
+            throw new ValidationException("Lời mời không khớp với nhóm này");
+        }
+        if (!notification.getRecipient().getId().equals(userId)) {
+            throw new ValidationException("Chỉ người nhận lời mời mới có thể chấp nhận");
+        }
 
-        if (!alreadyMember) {
-            GroupMember member = GroupMember.builder()
-                    .group(group)
-                    .user(user)
-                    .role(GroupMemberRole.MEMBER)
-                    .status(GroupMemberStatus.APPROVED)
-                    .build();
-            groupMemberRepository.save(member);
+        UUID inviterId = notification.getSender() != null ? notification.getSender().getId() : null;
+
+        var existingMember = groupMemberRepository.findByGroupIdAndUserId(groupId, userId);
+        if (existingMember.isPresent()) {
+            GroupMember member = existingMember.get();
+            notificationService.markAsActioned(notificationId);
+            return toResponse(group, member.getRole(), member.getStatus());
+        }
+
+        GroupMemberStatus joinStatus = resolveJoinStatus(group, inviterId);
+
+        GroupMember member = GroupMember.builder()
+                .group(group)
+                .user(user)
+                .role(GroupMemberRole.MEMBER)
+                .status(joinStatus)
+                .build();
+        groupMemberRepository.save(member);
+
+        if (joinStatus == GroupMemberStatus.PENDING) {
+            notifyAdminsOfJoinRequest(group, user);
+        } else {
+            broadcastMembershipChanged(groupId);
         }
 
         notificationService.markAsActioned(notificationId);
+        return toResponse(group, GroupMemberRole.MEMBER, joinStatus);
     }
 
     @Override
@@ -294,6 +342,26 @@ public class GroupServiceImpl implements GroupService {
         }
 
         group.setMemberApprovalRequired(memberApprovalRequired);
+        Group saved = groupRepository.save(group);
+        return toResponse(saved, GroupMemberRole.ADMIN, GroupMemberStatus.APPROVED);
+    }
+
+    @Override
+    public GroupResponse updatePrivacy(UUID groupId, UUID requesterId, GroupPrivacy privacy) {
+        if (privacy == null) {
+            throw new ValidationException("Quyền riêng tư nhóm không được để trống");
+        }
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found: " + groupId));
+
+        GroupMember requester = groupMemberRepository.findByGroupIdAndUserId(groupId, requesterId)
+                .orElseThrow(() -> new ValidationException("Requester is not a member of this group"));
+        if (requester.getRole() != GroupMemberRole.ADMIN) {
+            throw new ValidationException("Only admins can update group settings");
+        }
+
+        group.setPrivacy(privacy);
         Group saved = groupRepository.save(group);
         return toResponse(saved, GroupMemberRole.ADMIN, GroupMemberStatus.APPROVED);
     }

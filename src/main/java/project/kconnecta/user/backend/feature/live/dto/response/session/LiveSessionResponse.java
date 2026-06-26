@@ -15,6 +15,8 @@ import java.util.UUID;
 public class LiveSessionResponse {
     private UUID id;
     private UUID hostUserId;
+    private String hostName;
+    private String hostAvatarUrl;
     private UUID groupId;
     private UUID pageId;
     private UUID postId;

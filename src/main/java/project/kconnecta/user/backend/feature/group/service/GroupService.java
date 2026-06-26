@@ -3,6 +3,7 @@ package project.kconnecta.user.backend.feature.group.service;
 import project.kconnecta.user.backend.feature.group.dto.request.CreateGroupRequest;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupMemberResponse;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
 
 import java.util.List;
 import java.util.UUID;
@@ -15,7 +16,7 @@ public interface GroupService {
     List<GroupResponse> getDiscoverGroups(UUID userId);
     GroupResponse joinGroup(UUID groupId, UUID userId);
     void inviteFriends(UUID groupId, UUID senderId, List<UUID> userIds);
-    void acceptInvite(UUID groupId, UUID notificationId, UUID userId);
+    GroupResponse acceptInvite(UUID groupId, UUID notificationId, UUID userId);
     void rejectInvite(UUID groupId, UUID notificationId);
     GroupResponse createGroup(CreateGroupRequest request);
     GroupResponse updateCoverPhoto(UUID groupId, org.springframework.web.multipart.MultipartFile file);
@@ -23,6 +24,7 @@ public interface GroupService {
     GroupResponse updateDescription(UUID groupId, UUID requesterId, String description);
     GroupResponse updateName(UUID groupId, UUID requesterId, String name);
     GroupResponse updateMemberApproval(UUID groupId, UUID requesterId, boolean memberApprovalRequired);
+    GroupResponse updatePrivacy(UUID groupId, UUID requesterId, GroupPrivacy privacy);
     void removeMember(UUID groupId, UUID userId, UUID requesterId);
     void leaveGroup(UUID groupId, UUID userId);
     void disbandGroup(UUID groupId, UUID requesterId);

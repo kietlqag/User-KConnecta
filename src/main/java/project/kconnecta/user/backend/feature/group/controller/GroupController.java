@@ -12,6 +12,7 @@ import project.kconnecta.user.backend.feature.group.dto.request.CreateGroupReque
 import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupDescriptionRequest;
 import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupNameRequest;
 import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupMemberApprovalRequest;
+import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupPrivacyRequest;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupMemberResponse;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
@@ -104,6 +105,16 @@ public class GroupController {
         );
     }
 
+    @PutMapping("/{id}/privacy")
+    public ResponseEntity<GroupResponse> updatePrivacy(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateGroupPrivacyRequest request) {
+        return ResponseEntity.ok(
+                groupService.updatePrivacy(id, principal.getUserId(), request.getPrivacy())
+        );
+    }
+
     @GetMapping("/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}")
     public ResponseEntity<GroupResponse> getGroupById(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -126,12 +137,11 @@ public class GroupController {
     }
 
     @PostMapping("/{id}/invites/{notificationId}/accept")
-    public ResponseEntity<Void> acceptInvite(
+    public ResponseEntity<GroupResponse> acceptInvite(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable UUID id,
             @PathVariable UUID notificationId) {
-        groupService.acceptInvite(id, notificationId, principal.getUserId());
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(groupService.acceptInvite(id, notificationId, principal.getUserId()));
     }
 
     @PostMapping("/{id}/invites/{notificationId}/reject")
