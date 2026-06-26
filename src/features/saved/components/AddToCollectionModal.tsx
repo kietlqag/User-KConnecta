@@ -37,6 +37,7 @@ export function AddToCollectionModal({
   const [localCollections, setLocalCollections] = useState<Collection[]>(collections);
   const searchRef = useRef<HTMLInputElement>(null);
   const newNameRef = useRef<HTMLInputElement>(null);
+  const creatingRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -95,22 +96,30 @@ export function AddToCollectionModal({
   };
 
   const handleCreateAndAdd = async () => {
+    if (creatingRef.current || isCreatingLoading) return;
+
     const error = validateNewName(newName);
     if (error) {
       setNameError(error);
       return;
     }
+
+    creatingRef.current = true;
     setIsCreatingLoading(true);
     try {
       const created = await onCreateAndAdd(newName.trim());
-      setLocalCollections((prev) => [created, ...prev]);
-      setLocalSelected((prev) => [...prev, created.id]);
+      setLocalCollections((prev) => {
+        if (prev.some((c) => c.id === created.id)) return prev;
+        return [created, ...prev];
+      });
+      setLocalSelected((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
       toast.success('Tạo bộ sưu tập thành công.');
       setIsCreating(false);
       setNewName('');
     } catch {
       toast.error('Không thể tạo bộ sưu tập. Vui lòng thử lại.');
     } finally {
+      creatingRef.current = false;
       setIsCreatingLoading(false);
     }
   };
@@ -167,7 +176,12 @@ export function AddToCollectionModal({
                     ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
                     : 'border-gray-300 dark:border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
                 }`}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCreateAndAdd(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void handleCreateAndAdd();
+                  }
+                }}
               />
               <div className="flex items-start justify-between mt-1">
                 {nameError ? (

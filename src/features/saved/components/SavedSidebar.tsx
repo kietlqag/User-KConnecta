@@ -75,6 +75,7 @@ export const SavedSidebar = ({
         )}
 
         <button
+          type="button"
           className="mt-4 w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors text-left"
           onClick={onCreateCollection}
         >

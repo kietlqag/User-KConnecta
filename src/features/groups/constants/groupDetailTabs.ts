@@ -1,7 +1,14 @@
 import type { LucideIcon } from 'lucide-react';
-import { MessageSquare, Users, Calendar, Images, UserCheck, Album } from 'lucide-react';
+import { FileText, MessageSquare, Users, Calendar, Images, UserCheck, Album } from 'lucide-react';
 
 export const GROUP_DETAIL_TABS = [
+  {
+    id: 'description',
+    label: 'Mô tả',
+    shortLabel: 'Mô tả',
+    icon: FileText,
+    ready: true,
+  },
   {
     id: 'discussion',
     label: 'Bài viết',

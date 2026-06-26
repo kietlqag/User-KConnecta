@@ -413,6 +413,8 @@ export const postService = {
       category: category ?? null,
       reason: reason?.trim() || null,
     }),
+  getPostReportStatus: (postId: string) =>
+    api.get<{ reported: boolean }>(`/posts/${postId}/reports/status`),
   reportComment: (commentId: string, reporterId: string, category?: ReportCategory, reason?: string) =>
     api.post<void>(`/posts/comments/${commentId}/reports`, {
       reporterId,

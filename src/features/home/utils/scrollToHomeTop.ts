@@ -1,20 +1,30 @@
-/** Đầu nhanh, gần đầu trang chậm dần (ease-out mạnh). */
-const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - 2 ** (-12 * t));
-
 function getScrollElement(): HTMLElement {
   return (document.scrollingElement as HTMLElement | null) ?? document.documentElement;
 }
 
-function getScrollTop(): number {
+export function getScrollTop(): number {
   const el = getScrollElement();
   return el.scrollTop || window.scrollY || 0;
 }
 
-function setScrollTop(y: number) {
+export function setScrollTop(y: number) {
   const el = getScrollElement();
   el.scrollTop = y;
   window.scrollTo(0, y);
 }
+
+/** Giữ vị trí cuộn khi DOM thay đổi (ví dụ gỡ bài khỏi feed). */
+export function runWithPreservedScroll(action: () => void) {
+  const scrollY = getScrollTop();
+  action();
+  requestAnimationFrame(() => {
+    setScrollTop(scrollY);
+    requestAnimationFrame(() => setScrollTop(scrollY));
+  });
+}
+
+/** Đầu nhanh, gần đầu trang chậm dần (ease-out mạnh). */
+const easeOutExpo = (t: number) => (t >= 1 ? 1 : 1 - 2 ** (-12 * t));
 
 /** Cuộn mượt lên đầu trang bằng rAF (ổn định hơn native smooth khi React re-render). */
 export function scrollToHomeTop(durationMs = 720): Promise<void> {

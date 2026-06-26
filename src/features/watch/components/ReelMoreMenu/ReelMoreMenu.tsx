@@ -11,6 +11,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -36,6 +37,8 @@ interface ReelMoreMenuProps {
 
 export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = false }: ReelMoreMenuProps) {
   const [isSaved, setIsSaved] = useState(initialSaved);
+  const [hasReported, setHasReported] = useState(false);
+  const [reportStatusLoading, setReportStatusLoading] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -45,6 +48,32 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
   useEffect(() => {
     setIsSaved(initialSaved);
   }, [initialSaved, postId]);
+
+  useEffect(() => {
+    const currentUser = authService.getCurrentUser();
+    if (!postId || isOwner || !currentUser) {
+      setHasReported(false);
+      return;
+    }
+
+    let cancelled = false;
+    setReportStatusLoading(true);
+    void postService
+      .getPostReportStatus(postId)
+      .then((status) => {
+        if (!cancelled) setHasReported(Boolean(status.reported));
+      })
+      .catch(() => {
+        if (!cancelled) setHasReported(false);
+      })
+      .finally(() => {
+        if (!cancelled) setReportStatusLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [postId, isOwner]);
 
   const handleCopyLink = async () => {
     const link = `${window.location.origin}/watch?id=${postId}`;
@@ -92,6 +121,10 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
       toast.error('Vui lòng đăng nhập để báo cáo video');
       return;
     }
+    if (hasReported) {
+      toast.info('Bạn đã báo cáo video này rồi');
+      return;
+    }
     setSelectedCategory(null);
     setReportReason('');
     setReportDialogOpen(true);
@@ -99,11 +132,12 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
 
   const handleReportVideo = async () => {
     const currentUser = authService.getCurrentUser();
-    if (!currentUser || reporting || !selectedCategory) return;
+    if (!currentUser || reporting || !selectedCategory || hasReported) return;
 
     setReporting(true);
     try {
       await postService.reportPost(postId, currentUser.id, selectedCategory, reportReason);
+      setHasReported(true);
       setReportDialogOpen(false);
       toast.success('Đã gửi báo cáo video tới quản trị viên');
     } catch (error) {
@@ -111,6 +145,10 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
         error instanceof Error && error.message
           ? error.message
           : 'Không thể báo cáo video. Vui lòng thử lại.';
+      if (message.includes('đã báo cáo')) {
+        setHasReported(true);
+        setReportDialogOpen(false);
+      }
       toast.error(message);
     } finally {
       setReporting(false);
@@ -157,12 +195,24 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
 
           {!isOwner && (
             <DropdownMenuItem
-              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-red-400 focus:bg-red-950/50 focus:text-red-300"
-              disabled={reporting}
-              onClick={handleOpenReportDialog}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 ${
+                hasReported
+                  ? 'cursor-default text-gray-500 focus:bg-transparent focus:text-gray-500'
+                  : 'cursor-pointer text-red-400 focus:bg-red-950/50 focus:text-red-300'
+              }`}
+              disabled={reporting || reportStatusLoading || hasReported}
+              onClick={() => {
+                if (hasReported) {
+                  toast.info('Bạn đã báo cáo video này rồi');
+                  return;
+                }
+                handleOpenReportDialog();
+              }}
             >
               <AlertTriangle className="h-5 w-5 shrink-0" />
-              <span className="font-medium">Báo cáo video</span>
+              <span className="font-medium">
+                {hasReported ? 'Đã báo cáo video' : 'Báo cáo video'}
+              </span>
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -175,10 +225,10 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
               <AlertTriangle className="w-5 h-5" />
               Báo cáo video
             </DialogTitle>
+            <DialogDescription>Chọn lý do báo cáo video này</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Chọn lý do báo cáo video này:</p>
             <div className="space-y-2">
               {REPORT_CATEGORIES.map((cat) => (
                 <label

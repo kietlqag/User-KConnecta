@@ -10,6 +10,7 @@ import {
   ProfilePosts,
 } from '../components';
 import { mapApiPost, type FeedPost } from '@/utils/postUtils';
+import { POST_DELETED_EVENT } from '@/features/home/hooks/usePosts';
 import { buildProfileDisplay, getProfileHeaderName } from '../utils/profileDisplayUtils';
 import {
   extractPhotosFromPosts,
@@ -122,21 +123,41 @@ export function ProfilePage() {
     }
   }, [resolvedId, loadingMorePosts, postsPage, currentUser?.id]);
 
+  const handleDeletePost = React.useCallback((postId: string) => {
+    setPosts((prev) => prev.filter((p) => p.id !== postId));
+  }, []);
+
   React.useEffect(() => {
-    if (highlightPostId && posts.length > 0) {
-      const timer = setTimeout(() => {
-        const element = document.getElementById(`post-${highlightPostId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          element.classList.add('ring-2', 'ring-emerald-500', 'ring-offset-2', 'rounded-lg');
-          setTimeout(() => {
-            element.classList.remove('ring-2', 'ring-emerald-500', 'ring-offset-2');
-          }, 3000);
-        }
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [highlightPostId, posts]);
+    const onPostDeleted = (event: Event) => {
+      const postId = (event as CustomEvent<{ postId: string }>).detail?.postId;
+      if (postId) handleDeletePost(postId);
+    };
+    window.addEventListener(POST_DELETED_EVENT, onPostDeleted);
+    return () => window.removeEventListener(POST_DELETED_EVENT, onPostDeleted);
+  }, [handleDeletePost]);
+
+  const scrolledHighlightRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    scrolledHighlightRef.current = null;
+  }, [highlightPostId]);
+
+  React.useEffect(() => {
+    if (!highlightPostId || posts.length === 0) return;
+    if (scrolledHighlightRef.current === highlightPostId) return;
+
+    const timer = setTimeout(() => {
+      const element = document.getElementById(`post-${highlightPostId}`);
+      if (!element) return;
+      scrolledHighlightRef.current = highlightPostId;
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('ring-2', 'ring-emerald-500', 'ring-offset-2', 'rounded-lg');
+      setTimeout(() => {
+        element.classList.remove('ring-2', 'ring-emerald-500', 'ring-offset-2');
+      }, 3000);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [highlightPostId, posts.length]);
 
   const userProfile = buildProfileDisplay(profile, {
     currentUser,
@@ -172,6 +193,7 @@ export function ProfilePage() {
             hasMore={hasMorePosts}
             loadingMore={loadingMorePosts}
             onLoadMore={handleLoadMorePosts}
+            onDeletePost={handleDeletePost}
           />
         </div>
       </div>

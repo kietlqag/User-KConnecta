@@ -12,6 +12,7 @@ import {
   EditGroupNameModal,
   GroupTabBar,
   GroupMembersTab,
+  GroupDescriptionTab,
   GroupMediaTab,
   GroupEventsTab,
   GroupAlbumsTab,
@@ -180,11 +181,12 @@ export const GroupDetailPage = () => {
           fileInputRef.current?.click();
           break;
         case 'description':
+          setActiveTab('description');
           setDescriptionModalOpen(true);
           break;
       }
     },
-    [scrollToComposer],
+    [scrollToComposer, setActiveTab],
   );
 
   const handleDismissSetup = useCallback(() => {
@@ -517,6 +519,20 @@ export const GroupDetailPage = () => {
                     />
                   </div>
                 )}
+                {activeTab === 'description' && group && (
+                  isPrivateLocked ? (
+                    privateLockScreen
+                  ) : (
+                    <GroupDescriptionTab
+                      description={group.description}
+                      privacy={group.privacy}
+                      memberCount={members.length}
+                      isAdmin={isAdmin}
+                      onEditDescription={() => setDescriptionModalOpen(true)}
+                    />
+                  )
+                )}
+
                 {activeTab === 'members' && (
                     <GroupMembersTab
                       members={members}

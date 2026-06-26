@@ -1,29 +1,109 @@
-import React, { useState } from 'react';
-import { X, Globe2, Lock, Image as ImageIcon, Users, Smile, Monitor, Smartphone, ChevronDown } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  X,
+  Globe2,
+  Lock,
+  Image as ImageIcon,
+  Users,
+  Smile,
+  Monitor,
+  Smartphone,
+  ChevronDown,
+  UserPlus,
+  Settings,
+  Share2,
+  Briefcase,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { groupService } from '@/services/groupService';
-import { authService } from '@/services/authService';
+import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
+import { CurrentUserAvatar } from '@/components/shared/CurrentUserAvatar';
+import { UserAvatar } from '@/components/shared/UserAvatar';
+import { useFriends } from '@/features/friends/hooks/useFriends';
+import { FriendPickerModal } from '@/features/groups/components/FriendPickerModal/FriendPickerModal';
+import { GroupTabBar } from '@/features/groups/components/GroupTabBar/GroupTabBar';
+import { GroupDescriptionTab } from '@/features/groups/components/GroupDescriptionTab/GroupDescriptionTab';
+import type { GroupDetailTabId } from '@/features/groups/constants/groupDetailTabs';
+import { toast } from 'sonner';
 
 export const CreateGroupPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const currentUser = authService.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
   const [groupName, setGroupName] = useState('');
   const [privacy, setPrivacy] = useState('public');
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [previewTab, setPreviewTab] = useState<GroupDetailTabId>('discussion');
+  const [selectedInviteIds, setSelectedInviteIds] = useState<string[]>([]);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+
+  const { data: friends = [] } = useFriends(currentUser?.id);
+
+  useEffect(() => {
+    const syncUser = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncUser);
+    return () => window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncUser);
+  }, []);
+
+  const selectedFriends = useMemo(
+    () => friends.filter((friend) => selectedInviteIds.includes(friend.userId)),
+    [friends, selectedInviteIds],
+  );
+
+  const removeInviteFriend = (userId: string) => {
+    setSelectedInviteIds((prev) => prev.filter((id) => id !== userId));
+  };
+
+  const memberPreviewCount = 1 + selectedInviteIds.length;
+
+  const previewMembers = useMemo(() => {
+    const members: { userId: string; name: string; avatarUrl?: string | null }[] = [];
+    if (currentUser) {
+      members.push({
+        userId: currentUser.id,
+        name: currentUser.fullName || 'Bạn',
+        avatarUrl: currentUser.avatarUrl,
+      });
+    }
+    for (const friend of selectedFriends) {
+      if (members.some((m) => m.userId === friend.userId)) continue;
+      members.push({
+        userId: friend.userId,
+        name: friend.name,
+        avatarUrl: friend.avatar,
+      });
+    }
+    return members;
+  }, [currentUser, selectedFriends]);
+
+  const isPrivatePreview = privacy === 'private';
 
   const createGroupMutation = useMutation({
-    mutationFn: () =>
-      groupService.createGroup({
+    mutationFn: async () => {
+      const newGroup = await groupService.createGroup({
         creatorId: currentUser!.id,
         name: groupName.trim(),
         privacy: privacy === 'public' ? 'PUBLIC' : 'PRIVATE',
-      }),
+      });
+      if (selectedInviteIds.length > 0) {
+        await groupService.inviteFriends(newGroup.id, currentUser!.id, selectedInviteIds);
+      }
+      return newGroup;
+    },
     onSuccess: (newGroup) => {
       queryClient.invalidateQueries({ queryKey: ['groups', 'managed'] });
+      if (selectedInviteIds.length > 0) {
+        toast.success(`Đã tạo nhóm và gửi lời mời đến ${selectedInviteIds.length} người bạn`);
+      }
       navigate(`/groups/${newGroup.id}`);
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Không thể tạo nhóm. Vui lòng thử lại.';
+      toast.error(message);
     },
   });
 
@@ -48,11 +128,11 @@ export const CreateGroupPage = () => {
 
           {/* User Info */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-emerald-100 overflow-hidden shrink-0">
-              <img src="https://i.pravatar.cc/150?u=1" alt="User Avatar" className="w-full h-full object-cover" />
-            </div>
+            <CurrentUserAvatar className="w-10 h-10 shrink-0" />
             <div>
-              <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px]">Khang Nguyen</div>
+              <div className="font-semibold text-gray-900 dark:text-gray-100 text-[15px]">
+                {currentUser?.fullName || 'Bạn'}
+              </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 font-medium tracking-wide">Quản trị viên</div>
             </div>
           </div>
@@ -122,8 +202,7 @@ export const CreateGroupPage = () => {
                         <div className="text-[14px] text-gray-700 dark:text-gray-300 mb-1 leading-snug">
                           Bất kỳ ai cũng có thể nhìn thấy mọi người trong nhóm và những gì họ đăng.
                         </div>
-                        <div className="text-[13px] te
-                        xt-gray-500 leading-snug">
+                        <div className="text-[13px] text-gray-500 leading-snug">
                           Tùy theo quy mô và độ tuổi của nhóm, bạn có thể chuyển sang chế độ riêng tư vào lúc khác.
                         </div>
                       </div>
@@ -163,14 +242,46 @@ export const CreateGroupPage = () => {
             </div>
 
             <div>
-              <input
-                type="text"
-                placeholder="Mời bạn bè (không bắt buộc)"
-                className="w-full px-3 py-3.5 border border-gray-300 dark:border-gray-700 rounded-md outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors text-[15px]"
-              />
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Gợi ý: <span className="text-emerald-600 cursor-pointer">Hoàng Ngọc Lam</span>, <span className="text-emerald-600 cursor-pointer">Hán Dì Diệu</span>, <span className="text-emerald-600 cursor-pointer">Cự Depression</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setInviteModalOpen(true)}
+                className="w-full flex items-center gap-3 px-3 py-3.5 border border-gray-300 dark:border-gray-700 rounded-md hover:border-gray-400 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition-colors text-left"
+              >
+                <UserPlus className="w-5 h-5 text-gray-500 dark:text-gray-400 shrink-0" />
+                <span className="text-[15px] text-gray-500 dark:text-gray-400">
+                  {selectedInviteIds.length === 0
+                    ? 'Mời bạn bè (không bắt buộc)'
+                    : `Đã chọn ${selectedInviteIds.length} người bạn`}
+                </span>
+              </button>
+
+              {selectedFriends.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedFriends.map((friend) => (
+                    <span
+                      key={friend.userId}
+                      className="inline-flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 rounded-full pl-1 pr-2 py-0.5 text-[13px] font-medium max-w-full"
+                    >
+                      <UserAvatar
+                        name={friend.name}
+                        avatarUrl={friend.avatar}
+                        userId={friend.userId}
+                        rounded="full"
+                        className="w-5 h-5 shrink-0"
+                      />
+                      <span className="truncate max-w-[120px]">{friend.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeInviteFriend(friend.userId)}
+                        className="p-0.5 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                        aria-label={`Bỏ ${friend.name}`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -184,28 +295,42 @@ export const CreateGroupPage = () => {
                 ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
             }`}
-            disabled={!groupName.trim() || createGroupMutation.isPending}
+            disabled={!groupName.trim() || !currentUser || createGroupMutation.isPending}
           >
             {createGroupMutation.isPending ? 'Đang tạo...' : 'Tạo'}
           </button>
         </div>
       </div>
 
+      <FriendPickerModal
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        selectedUserIds={selectedInviteIds}
+        onConfirm={setSelectedInviteIds}
+        title="Mời bạn bè"
+        description="Tìm và chọn bạn bè bạn muốn mời vào nhóm mới."
+      />
+
       {/* Main Preview Area */}
       <div className="flex-1 overflow-y-auto bg-gray-100 dark:bg-background flex flex-col items-center py-6 px-4">
-        <div className={`w-full transition-all duration-300 ${previewMode === 'desktop' ? 'max-w-[1020px]' : 'max-w-[400px]'}`}>
+        <div
+          className={`w-full transition-all duration-300 ${previewMode === 'desktop' ? 'max-w-[1020px]' : 'max-w-[400px]'}`}
+        >
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {/* Preview Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <span className="font-semibold text-gray-900 dark:text-gray-100 text-[15px]">Xem trước trên {previewMode === 'desktop' ? 'máy tính' : 'điện thoại'}</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100 text-[15px]">
+                Xem trước trên {previewMode === 'desktop' ? 'máy tính' : 'điện thoại'}
+              </span>
               <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-900 rounded-lg p-1">
                 <button
+                  type="button"
                   onClick={() => setPreviewMode('desktop')}
                   className={`p-1.5 rounded-md transition-colors ${previewMode === 'desktop' ? 'bg-white dark:bg-gray-800 shadow-sm dark:shadow-none text-emerald-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300'}`}
                 >
                   <Monitor className="w-5 h-5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setPreviewMode('mobile')}
                   className={`p-1.5 rounded-md transition-colors ${previewMode === 'mobile' ? 'bg-white dark:bg-gray-800 shadow-sm dark:shadow-none text-emerald-600' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300'}`}
                 >
@@ -214,95 +339,175 @@ export const CreateGroupPage = () => {
               </div>
             </div>
 
-            {/* Preview Content */}
-            <div className="bg-white dark:bg-gray-800 rounded-b-lg overflow-hidden border border-gray-300 dark:border-gray-700 m-4">
-              {/* Cover Photo */}
-              <div className="h-[350px] bg-gray-200 dark:bg-gray-700 relative overflow-hidden flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/10" />
-                {/* SVG Illustration Placeholder instead of image to make it fast and reliable */}
-                <svg className="w-full h-full text-gray-300" viewBox="0 0 800 400" fill="currentColor">
-                  <rect width="800" height="400" fill="#E5E7EB"/>
-                  <path d="M0,400 L800,400 L800,300 C700,280 600,320 500,280 C400,240 300,300 200,260 C100,220 50,280 0,300 Z" fill="#D1D5DB"/>
-                  <circle cx="650" cy="150" r="40" fill="#D1D5DB"/>
-                  <path d="M200,350 L300,100 L400,350 Z" fill="#9CA3AF" opacity="0.5"/>
-                  <path d="M350,350 L450,150 L550,350 Z" fill="#9CA3AF" opacity="0.3"/>
-                </svg>
-              </div>
+            <div className="bg-gray-100 dark:bg-background">
+              <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-none border-b border-gray-200 dark:border-gray-700">
+                <div className="max-w-[940px] mx-auto px-4 sm:px-6">
+                  <div className="relative w-full h-[160px] sm:h-[220px] md:h-[280px] rounded-b-xl overflow-hidden bg-[#fdf0e6]">
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-700 via-orange-500 to-red-500 opacity-90" />
+                    <svg
+                      className="absolute inset-0 w-full h-full opacity-80"
+                      viewBox="0 0 1200 400"
+                      preserveAspectRatio="none"
+                      aria-hidden
+                    >
+                      <rect width="1200" height="400" fill="url(#createGroupGrad)" />
+                      <defs>
+                        <linearGradient id="createGroupGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#FF6B6B" stopOpacity={1} />
+                          <stop offset="50%" stopColor="#4ECDC4" stopOpacity={1} />
+                          <stop offset="100%" stopColor="#45B7D1" stopOpacity={1} />
+                        </linearGradient>
+                      </defs>
+                      <path d="M0,400 C300,300 600,500 1200,300 L1200,0 L0,0 Z" fill="#ffffff" opacity="0.1" />
+                      <circle cx="200" cy="150" r="40" fill="#fff" opacity="0.2" />
+                      <circle cx="900" cy="250" r="70" fill="#fff" opacity="0.15" />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-8 p-6 opacity-60">
+                      <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-white/20 backdrop-blur" />
+                      <div className="w-20 h-20 sm:w-32 sm:h-32 bg-yellow-400/30 rotate-12" />
+                      <div className="w-24 h-24 sm:w-40 sm:h-40 rounded-full bg-emerald-500/20 backdrop-blur" />
+                    </div>
+                  </div>
 
-              {/* Group Info */}
-              <div className="px-8 pb-4 pt-6">
-                <h2 className="text-[28px] font-bold text-gray-900 dark:text-gray-100 mb-1">
-                  {groupName || 'Tên nhóm'}
-                </h2>
-                <div className="flex items-center text-[15px] text-gray-500 dark:text-gray-400 gap-1.5 font-medium">
-                  {privacy === 'public' ? <Globe2 className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                  <span>Nhóm {privacy === 'public' ? 'Công khai' : 'Riêng tư'}</span>
-                  <span>·</span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">1 thành viên</span>
+                  <div className="pt-4 pb-2 sm:pt-6">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                      {groupName || 'Tên nhóm'}
+                    </h1>
+                    <div className="flex items-center text-[15px] text-gray-500 dark:text-gray-400 gap-1.5 font-medium mb-4">
+                      {isPrivatePreview ? <Lock className="w-4 h-4" /> : <Users className="w-4 h-4" />}
+                      <span>Nhóm {isPrivatePreview ? 'Riêng tư' : 'Công khai'}</span>
+                      <span>·</span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        {memberPreviewCount} thành viên
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between border-b border-gray-300 dark:border-gray-700 pb-4 gap-3">
+                      <div className="flex -space-x-2 overflow-hidden">
+                        {previewMembers.slice(0, 8).map((member) => (
+                          <UserAvatar
+                            key={member.userId}
+                            avatarUrl={member.avatarUrl}
+                            name={member.name}
+                            userId={member.userId}
+                            rounded="full"
+                            className="w-10 h-10 border-2 border-white ring-2 ring-white dark:ring-gray-800"
+                            initialsClassName="text-sm font-semibold"
+                          />
+                        ))}
+                        {previewMembers.length > 8 && (
+                          <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-900 border-2 border-white dark:border-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs font-semibold ring-2 ring-white dark:ring-gray-800">
+                            +{previewMembers.length - 8}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled
+                          className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 opacity-90 cursor-default"
+                        >
+                          <span className="text-xl leading-none -mt-0.5">+</span> Mời
+                        </button>
+                        <button
+                          type="button"
+                          disabled
+                          className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-default"
+                        >
+                          <Settings className="w-5 h-5" />
+                          {previewMode === 'mobile' ? '' : 'Cài đặt'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled
+                          className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 cursor-default"
+                        >
+                          <Share2 className="w-5 h-5" />
+                          {previewMode === 'mobile' ? '' : 'Chia sẻ'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <GroupTabBar
+                      activeTab={previewTab}
+                      onTabChange={setPreviewTab}
+                      memberCount={memberPreviewCount}
+                      isAdmin
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="px-8">
-                <div className="border-t border-gray-300 dark:border-gray-700 my-1" />
-              </div>
+              <div className="mx-auto max-w-[940px] px-4 sm:px-6 py-4 lg:py-6">
+                {previewTab === 'description' && (
+                  <GroupDescriptionTab
+                    description={null}
+                    privacy={isPrivatePreview ? 'private' : 'public'}
+                    memberCount={memberPreviewCount}
+                    isAdmin
+                    onEditDescription={() => {}}
+                  />
+                )}
 
-              {/* Tabs */}
-              <div className="flex items-center px-8 gap-1 pb-1">
-                {['Giới thiệu', 'Bài viết', 'Thành viên', 'Sự kiện'].map((tab, idx) => (
-                  <div key={idx} className={`px-4 py-3.5 font-medium text-[15px] cursor-not-allowed ${idx === 0 ? 'text-emerald-600 border-b-[3px] border-emerald-600 rounded-t' : 'text-gray-500 dark:text-gray-400'}`}>
-                    {tab}
+                {previewTab === 'discussion' && (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none p-4 border border-gray-200 dark:border-gray-700">
+                    <div className="flex gap-2 items-center mb-3">
+                      <CurrentUserAvatar className="w-10 h-10 shrink-0" />
+                      <div className="flex-1 bg-gray-100 dark:bg-gray-900 rounded-full py-2.5 px-4 text-gray-500 dark:text-gray-400 text-[15px] cursor-default">
+                        Bạn đang nghĩ gì?
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex flex-wrap">
+                      <div className="flex-1 min-w-[100px] flex justify-center items-center gap-2 py-2 text-gray-600 dark:text-gray-400 font-semibold text-[15px]">
+                        <ImageIcon className="w-6 h-6 text-green-500" />
+                        {previewMode === 'desktop' && 'Ảnh/video'}
+                      </div>
+                      <div className="flex-1 min-w-[100px] flex justify-center items-center gap-2 py-2 text-gray-600 dark:text-gray-400 font-semibold text-[15px]">
+                        <Smile className="w-6 h-6 text-yellow-500" />
+                        {previewMode === 'desktop' && 'Cảm xúc'}
+                      </div>
+                      <div className="flex-1 min-w-[100px] flex justify-center items-center gap-2 py-2 text-gray-600 dark:text-gray-400 font-semibold text-[15px]">
+                        <Briefcase className="w-6 h-6 text-orange-500" />
+                        {previewMode === 'desktop' && 'Thăm dò ý kiến'}
+                      </div>
+                    </div>
                   </div>
-                ))}
+                )}
+
+                {previewTab === 'members' && (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none p-4 border border-gray-200 dark:border-gray-700">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                      Thành viên · {memberPreviewCount}
+                    </h3>
+                    <div className="space-y-3">
+                      {previewMembers.map((member) => (
+                        <div key={member.userId} className="flex items-center gap-3">
+                          <UserAvatar
+                            name={member.name}
+                            avatarUrl={member.avatarUrl}
+                            userId={member.userId}
+                            rounded="full"
+                            className="w-10 h-10"
+                          />
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{member.name}</span>
+                          {member.userId === currentUser?.id && (
+                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+                              Quản trị viên
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {previewTab !== 'discussion' && previewTab !== 'members' && previewTab !== 'description' && (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none p-8 border border-gray-200 dark:border-gray-700 text-center text-gray-500 dark:text-gray-400 text-sm">
+                    Nội dung tab sẽ hiển thị sau khi tạo nhóm.
+                  </div>
+                )}
               </div>
-            </div>
-
-            {/* Bottom Content Area - Gray background */}
-            <div className="bg-gray-100 dark:bg-gray-900 p-4">
-               <div className="flex gap-4">
-                 {/* Main Column */}
-                 <div className="flex-1">
-                   {/* Create Post Card */}
-                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none p-4 mb-4">
-                     <div className="flex gap-2 items-center mb-3">
-                       <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0 border border-gray-100 dark:border-gray-800" />
-                       <div className="flex-1 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-not-allowed rounded-full py-2.5 px-4 text-gray-500 dark:text-gray-400 text-[15px]">
-                         Bạn đang nghĩ gì?
-                       </div>
-                     </div>
-                     <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex">
-                       <div className="flex-1 flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg cursor-not-allowed text-gray-500 dark:text-gray-400 font-semibold text-[15px]">
-                         <ImageIcon className="w-6 h-6 text-green-500" />
-                         Ảnh/video
-                       </div>
-                       <div className="flex-1 flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg cursor-not-allowed text-gray-500 dark:text-gray-400 font-semibold text-[15px]">
-                         <Users className="w-6 h-6 text-emerald-500" />
-                         Gắn thẻ người khác
-                       </div>
-                       <div className="flex-1 flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg cursor-not-allowed text-gray-500 dark:text-gray-400 font-semibold text-[15px]">
-                         <Smile className="w-6 h-6 text-yellow-500" />
-                         Cảm xúc/Hoạt động
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-
-                 {/* Right Column (Sidebar) - Hidden on mobile preview */}
-                 {previewMode === 'desktop' && (
-                   <div className="w-[360px] shrink-0">
-                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none p-4">
-                       <h3 className="font-semibold text-[17px] text-gray-900 dark:text-gray-100 mb-2">Giới thiệu</h3>
-                       <p className="text-[15px] text-gray-500 dark:text-gray-400">Người lạ có thể thấy nội dung nhóm của bạn.</p>
-                       <div className="flex items-center gap-2 mt-4 text-[15px]">
-                         {privacy === 'public' ? <Globe2 className="w-5 h-5 text-gray-400" /> : <Lock className="w-5 h-5 text-gray-400" />}
-                         <div>
-                           <div className="font-semibold text-gray-900 dark:text-gray-100">{privacy === 'public' ? 'Công khai' : 'Riêng tư'}</div>
-                           <div className="text-gray-500 dark:text-gray-400">{privacy === 'public' ? 'Bất kỳ ai cũng có thể nhìn thấy mọi người trong nhóm và những gì họ đăng.' : 'Chỉ thành viên mới có thể nhìn thấy mọi người trong nhóm và những gì họ đăng.'}</div>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 )}
-               </div>
             </div>
           </div>
         </div>

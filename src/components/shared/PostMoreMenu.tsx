@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   MoreHorizontal,
   Bookmark,
@@ -35,6 +35,7 @@ import {
   type AudienceId,
   type PostPrivacy,
 } from '@/features/profile/components/ProfileCreatePost/postAudienceUtils';
+import { getScrollTop, runWithPreservedScroll, setScrollTop } from '@/features/home/utils/scrollToHomeTop';
 
 const REPORT_CATEGORIES: { value: ReportCategory; label: string }[] = [
   { value: 'SPAM',           label: 'Spam / Quảng cáo' },
@@ -96,7 +97,19 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | null>(null);
   const [reportReason, setReportReason] = useState('');
   const [showAudienceModal, setShowAudienceModal] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
+
+  const runAfterMenuClose = (action?: () => void) => {
+    if (!action) return;
+    const scrollY = getScrollTop();
+    setMenuOpen(false);
+    window.setTimeout(() => {
+      setScrollTop(scrollY);
+      runWithPreservedScroll(action);
+    }, 0);
+  };
 
   const audience = apiPrivacyToAudience(privacy);
   const privacyLabel = getAudienceLabel(audience, excludedUserIds.length, allowedUserIds.length);
@@ -159,7 +172,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
     }
     setSelectedCategory(null);
     setReportReason('');
-    setReportDialogOpen(true);
+    runAfterMenuClose(() => setReportDialogOpen(true));
   };
 
   const handleReportPost = async () => {
@@ -183,13 +196,26 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
 
   return (
     <>
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
       <DropdownMenuTrigger asChild>
-        <button className={`p-2 hover:bg-muted rounded-full transition-colors cursor-pointer ${className}`}>
+        <button
+          ref={menuTriggerRef}
+          type="button"
+          className={`p-2 hover:bg-muted rounded-full transition-colors cursor-pointer ${className}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 p-2">
+      <DropdownMenuContent
+        align="end"
+        className="w-80 p-2"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          menuTriggerRef.current?.focus({ preventScroll: true });
+        }}
+      >
         {canPin && (
           <>
             <DropdownMenuItem
@@ -214,7 +240,10 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
             <DropdownMenuItem
               className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
               disabled={reporting}
-              onClick={handleOpenReportDialog}
+              onSelect={(e) => {
+                e.preventDefault();
+                handleOpenReportDialog();
+              }}
             >
               <div className="mt-1">
                 <AlertTriangle className="w-6 h-6" />
@@ -248,20 +277,27 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
           <>
             <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
 
-            <DropdownMenuItem
-              className="flex items-start gap-3 p-3 cursor-pointer"
-              onClick={onEdit}
-            >
-              <div className="mt-1">
-                <Pencil className="w-6 h-6 text-gray-900 dark:text-gray-100" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-semibold text-[15px]">Chỉnh sửa bài viết</span>
-                <span className="text-[13px] text-gray-500 dark:text-gray-400">Thay đổi nội dung hoặc ảnh/video.</span>
-              </div>
-            </DropdownMenuItem>
+            {onEdit && (
+              <>
+                <DropdownMenuItem
+                  className="flex items-start gap-3 p-3 cursor-pointer"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    runAfterMenuClose(onEdit);
+                  }}
+                >
+                  <div className="mt-1">
+                    <Pencil className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-[15px]">Chỉnh sửa bài viết</span>
+                    <span className="text-[13px] text-gray-500 dark:text-gray-400">Thay đổi nội dung hoặc ảnh/video.</span>
+                  </div>
+                </DropdownMenuItem>
 
-            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+                <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+              </>
+            )}
 
             {isGroupPost ? (
               <div className="flex items-start gap-3 p-3 opacity-80">
@@ -279,7 +315,10 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               <DropdownMenuItem
                 className="flex items-start gap-3 p-3 cursor-pointer"
                 disabled={updating}
-                onClick={() => setShowAudienceModal(true)}
+                onSelect={(e) => {
+                  e.preventDefault();
+                  runAfterMenuClose(() => setShowAudienceModal(true));
+                }}
               >
                 <div className="mt-1">
                   <Shield className="w-6 h-6 text-gray-900 dark:text-gray-100" />
@@ -295,7 +334,10 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
 
             <DropdownMenuItem
               className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-              onClick={onDelete}
+              onSelect={(e) => {
+                e.preventDefault();
+                runAfterMenuClose(onDelete);
+              }}
             >
               <div className="mt-1">
                 <Trash2 className="w-6 h-6" />

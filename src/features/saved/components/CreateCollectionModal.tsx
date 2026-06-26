@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,11 +18,14 @@ export function CreateCollectionModal({
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
       setName('');
       setNameError('');
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   }, [isOpen]);
 
@@ -40,12 +43,15 @@ export function CreateCollectionModal({
   };
 
   const handleSubmit = async () => {
+    if (submittingRef.current || isSubmitting) return;
+
     const error = validateName(name);
     if (error) {
       setNameError(error);
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       await onSubmit(name.trim());
@@ -54,6 +60,7 @@ export function CreateCollectionModal({
     } catch {
       toast.error('Không thể tạo bộ sưu tập. Vui lòng thử lại.');
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -86,6 +93,12 @@ export function CreateCollectionModal({
               type="text"
               value={name}
               onChange={(e) => handleNameChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void handleSubmit();
+                }
+              }}
               placeholder="Nhập tên bộ sưu tập"
               maxLength={60}
               className={`w-full px-3 py-2.5 border rounded-lg text-[15px] text-gray-900 dark:text-gray-100 outline-none transition-colors ${

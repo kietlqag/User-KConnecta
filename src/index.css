@@ -4,10 +4,20 @@
 @source './**/*.{js,ts,jsx,tsx}';
 
 @layer base {
-  html, body, #root { min-height: 100vh; height: 100%; margin: 0; }
+  html, body, #root {
+    min-height: 100vh;
+    margin: 0;
+  }
   html {
-    overflow-y: scroll;
     scrollbar-gutter: stable;
+  }
+  body {
+    overflow-y: auto;
+  }
+  /* Radix scroll-lock: chỉ bỏ padding bù scrollbar, giữ nguyên top offset */
+  body[data-scroll-locked] {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

@@ -30,6 +30,7 @@ interface ProfilePostsProps {
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  onDeletePost?: (postId: string) => void;
 }
 
 function PostSkeleton() {
@@ -57,7 +58,7 @@ function PostSkeleton() {
   );
 }
 
-export function ProfilePosts({ posts, loading = false, hasMore = false, loadingMore = false, onLoadMore }: ProfilePostsProps) {
+export function ProfilePosts({ posts, loading = false, hasMore = false, loadingMore = false, onLoadMore, onDeletePost }: ProfilePostsProps) {
   const [activeTab, setActiveTab] = useState<PostSourceTab>('feed');
   const sentinelRef = useRef<HTMLDivElement>(null);
   const hasMoreRef = useRef(hasMore);
@@ -167,7 +168,7 @@ export function ProfilePosts({ posts, loading = false, hasMore = false, loadingM
       ) : (
         <div className="space-y-4">
           {filteredPosts.map((post) => (
-            <Post key={post.id} {...post} />
+            <Post key={post.id} {...post} onDelete={onDeletePost} />
           ))}
 
           {hasMore && <div ref={sentinelRef} className="h-1" aria-hidden />}

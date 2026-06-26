@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -37,7 +37,8 @@ import {
   type ReactionOption,
   updateReactionCounts,
 } from '../reactions';
-import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
+import { POSTS_FEED_KEY, removePostFromClientCaches } from '@/features/home/hooks/usePosts';
+import { getScrollTop, setScrollTop } from '@/features/home/utils/scrollToHomeTop';
 import { PostMoreMenu, type Privacy } from './PostMoreMenu';
 import { PostPollCard } from '../posts/PostPollCard';
 import type { PostPollResponse } from '@/services/postService';
@@ -52,6 +53,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+function PostPrivacyIcon({ privacy, className = 'w-3 h-3' }: { privacy: Privacy; className?: string }) {
+  if (privacy === 'PRIVATE') {
+    return <Lock className={className} aria-label="Chỉ mình tôi" />;
+  }
+  if (privacy === 'PUBLIC') {
+    return <Globe className={className} aria-label="Công khai" />;
+  }
+  return <Users className={className} aria-label="Bạn bè" />;
+}
 
 interface Author {
   id: string;
@@ -188,6 +199,7 @@ export function Post({
   const [isReacting, setIsReacting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteScrollYRef = useRef(0);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [displayContent, setDisplayContent] = useState(content);
   const [displayMediaList, setDisplayMediaList] = useState(mediaList);
@@ -206,8 +218,25 @@ export function Post({
     setExcludedUserIds(initialExcludedUserIds);
     setAllowedUserIds(initialAllowedUserIds);
   }, [initialPrivacy, initialExcludedUserIds, initialAllowedUserIds, id]);
-  // Share wrappers don't support edit/delete via the post menu
-  const isOwner = !sharedPost && !!currentUser && currentUser.id === author.id;
+  const isOwner = !!currentUser && currentUser.id === author.id;
+  const canEditPost = isOwner && !sharedPost && !hasLivePreview;
+
+  const openDeleteDialog = useCallback(() => {
+    deleteScrollYRef.current = getScrollTop();
+    setDeleteDialogOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!deleteDialogOpen) return;
+    const restore = () => setScrollTop(deleteScrollYRef.current);
+    restore();
+    const raf = requestAnimationFrame(restore);
+    const timers = [0, 16, 50, 100].map((ms) => window.setTimeout(restore, ms));
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach((id) => window.clearTimeout(id));
+    };
+  }, [deleteDialogOpen]);
   const [reactionCounts, setReactionCounts] = useState<ReactionCountMap>(() =>
     mapReactionCounts(
       serverReactionCounts,
@@ -429,9 +458,12 @@ export function Post({
     try {
       setIsDeleting(true);
       await postService.deletePost(id, user.id);
-      toast.success('Đã xóa bài viết');
-      onDelete?.(id);
       setDeleteDialogOpen(false);
+      toast.success(sharedPost ? 'Đã gỡ bài chia sẻ' : 'Đã xóa bài viết');
+      window.setTimeout(() => {
+        removePostFromClientCaches(queryClient, user.id, id);
+        onDelete?.(id);
+      }, 150);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể xóa bài viết');
     } finally {
@@ -537,43 +569,35 @@ export function Post({
                     </>
                   ) : null}
                   <span>{timestamp}</span>
-                  {!sharedPost && (
-                    <>
-                      <span>·</span>
-                      {currentPrivacy === 'PRIVATE' ? (
-                        <Lock className="w-3 h-3" />
-                      ) : currentPrivacy === 'PUBLIC' ? (
-                        <Globe className="w-3 h-3" />
-                      ) : (
-                        <Users className="w-3 h-3" />
-                      )}
-                    </>
-                  )}
+                  <span>·</span>
+                  <PostPrivacyIcon privacy={currentPrivacy} />
                 </div>
               </div>
             </div>
-            <PostMoreMenu
-              postId={id}
-              isSaved={isSaved}
-              isOwner={isOwner}
-              privacy={currentPrivacy}
-              excludedUserIds={excludedUserIds}
-              allowedUserIds={allowedUserIds}
-              isGroupPost={!!group}
-              currentUserId={currentUser?.id}
-              onToggleSave={handleToggleSave}
-              onEdit={isOwner && !hasLivePreview ? () => setEditModalOpen(true) : undefined}
-              onDelete={() => setDeleteDialogOpen(true)}
-              onPrivacyChange={(nextPrivacy, nextExcluded, nextAllowed) => {
-                setCurrentPrivacy(nextPrivacy);
-                setExcludedUserIds(nextExcluded);
-                setAllowedUserIds(nextAllowed);
-              }}
-              canPin={canPin}
-              isPinned={isPinned}
-              onPin={onPin ? () => onPin(id) : undefined}
-              onUnpin={onUnpin ? () => onUnpin(id) : undefined}
-            />
+            <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+              <PostMoreMenu
+                postId={id}
+                isSaved={isSaved}
+                isOwner={isOwner}
+                privacy={currentPrivacy}
+                excludedUserIds={excludedUserIds}
+                allowedUserIds={allowedUserIds}
+                isGroupPost={!!group}
+                currentUserId={currentUser?.id}
+                onToggleSave={handleToggleSave}
+                onEdit={canEditPost ? () => setEditModalOpen(true) : undefined}
+                onDelete={openDeleteDialog}
+                onPrivacyChange={(nextPrivacy, nextExcluded, nextAllowed) => {
+                  setCurrentPrivacy(nextPrivacy);
+                  setExcludedUserIds(nextExcluded);
+                  setAllowedUserIds(nextAllowed);
+                }}
+                canPin={canPin}
+                isPinned={isPinned}
+                onPin={onPin ? () => onPin(id) : undefined}
+                onUnpin={onUnpin ? () => onUnpin(id) : undefined}
+              />
+            </div>
           </div>
 
           {(displayContent && !hasLivePreview) || (sharedPost && displayContent) ? (
@@ -620,7 +644,11 @@ export function Post({
                       >
                         {originalPost.author.name}
                       </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">{originalPost.timestamp}</span>
+                      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 leading-tight">
+                        <span>{originalPost.timestamp}</span>
+                        <span>·</span>
+                        <PostPrivacyIcon privacy={originalPost.privacy ?? 'PUBLIC'} />
+                      </div>
                     </div>
                   </div>
                   {originalPost.isLivePost ? (
@@ -865,7 +893,7 @@ export function Post({
           setAllowedUserIds(nextAllowed);
         }}
         onEdit={
-          isOwner && !hasLivePreview
+          canEditPost
             ? () => {
                 setIsModalOpen(false);
                 setEditModalOpen(true);
@@ -874,7 +902,7 @@ export function Post({
         }
         onDelete={() => {
           setIsModalOpen(false);
-          setDeleteDialogOpen(true);
+          openDeleteDialog();
         }}
         livePreview={
           liveSource ? (
@@ -1075,12 +1103,20 @@ export function Post({
         }}
       />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800">
+      <AlertDialog modal={false} open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent
+          className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-white">Xóa bài viết</AlertDialogTitle>
+            <AlertDialogTitle className="text-gray-900 dark:text-white">
+              {sharedPost ? 'Xóa bài chia sẻ' : 'Xóa bài viết'}
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
-              Bạn có chắc muốn xóa bài viết không?
+              {sharedPost
+                ? 'Bạn có chắc muốn gỡ bài chia sẻ này khỏi bảng tin? Bài viết gốc sẽ không bị xóa.'
+                : 'Bạn có chắc muốn xóa bài viết không?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

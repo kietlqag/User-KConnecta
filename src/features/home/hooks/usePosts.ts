@@ -1,10 +1,36 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type { InfiniteData, QueryClient } from '@tanstack/react-query';
 import { postService, type PaginatedResponse, type PostResponse } from '@/services/postService';
-import { scrollToHomeTop } from '../utils/scrollToHomeTop';
+import { scrollToHomeTop, runWithPreservedScroll } from '../utils/scrollToHomeTop';
 
 export const POSTS_FEED_KEY = ['posts', 'feed'] as const;
 export const HOME_FEED_REFRESH_EVENT = 'home:feed-refresh';
+export const POST_DELETED_EVENT = 'posts:deleted';
+
+/** Gỡ bài khỏi cache bảng tin + highlight ngay sau khi xóa (không cần F5). */
+export function removePostFromClientCaches(
+  queryClient: QueryClient,
+  userId: string | undefined,
+  postId: string,
+) {
+  runWithPreservedScroll(() => {
+    queryClient.setQueryData<InfiniteData<PaginatedResponse<PostResponse>>>(
+      [...POSTS_FEED_KEY, userId],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            content: page.content.filter((p) => p.id !== postId),
+          })),
+        };
+      },
+    );
+    queryClient.removeQueries({ queryKey: ['posts', 'detail', postId] });
+    window.dispatchEvent(new CustomEvent(POST_DELETED_EVENT, { detail: { postId } }));
+  });
+}
 
 /** Reset bảng tin về trang đầu và cuộn lên đầu (dùng khi bấm nút Home). */
 export async function refreshHomeFeed(queryClient: QueryClient) {

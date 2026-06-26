@@ -176,41 +176,29 @@ export function NewsFeed() {
     return () => observer.disconnect();
   }, [isLoading, hasNextPage, posts.length]);
 
-  // Scroll to and highlight the target post after the feed finishes loading
+  const scrolledHighlightRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    scrolledHighlightRef.current = null;
+  }, [highlightedPostId]);
+
+  // Scroll to and highlight the target post once after the feed finishes loading
   useEffect(() => {
     if (isLoading || !highlightedPostId || posts.length === 0) return;
+    if (scrolledHighlightRef.current === highlightedPostId) return;
+
     const timer = setTimeout(() => {
       const element = document.getElementById(`post-${highlightedPostId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'transition-all', 'duration-1000');
-        setTimeout(() => {
-          element.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50');
-        }, 3000);
-      }
+      if (!element) return;
+      scrolledHighlightRef.current = highlightedPostId;
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.classList.add('ring-4', 'ring-emerald-500', 'ring-opacity-50', 'transition-all', 'duration-1000');
+      setTimeout(() => {
+        element.classList.remove('ring-4', 'ring-emerald-500', 'ring-opacity-50');
+      }, 3000);
     }, 500);
     return () => clearTimeout(timer);
-  }, [isLoading, highlightedPostId, posts]);
-
-  // Remove a post from the cache without triggering a refetch
-  const handleDelete = useCallback(
-    (postId: string) => {
-      queryClient.setQueryData<InfiniteData<PaginatedResponse<PostResponse>>>(
-        [...POSTS_FEED_KEY, currentUser?.id],
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              content: page.content.filter((p) => p.id !== postId),
-            })),
-          };
-        }
-      );
-    },
-    [queryClient, currentUser?.id]
-  );
+  }, [isLoading, highlightedPostId, posts.length]);
 
   return (
     <div className="space-y-0">
@@ -244,7 +232,7 @@ export function NewsFeed() {
       >
       {posts.map((post, index) => (
         <React.Fragment key={post.id}>
-          <Post {...post} onDelete={handleDelete} />
+          <Post {...post} />
           {index === 2 && <FriendSuggestions />}
         </React.Fragment>
       ))}

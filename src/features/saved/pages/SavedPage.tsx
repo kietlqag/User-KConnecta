@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Header } from '../../home/components/Header';
@@ -18,6 +18,7 @@ export const SavedPage = () => {
   const [collectionPostIds, setCollectionPostIds] = useState<Set<string> | null>(null);
   const [collectionLoading, setCollectionLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const creatingCollectionRef = useRef(false);
 
   const currentUser = authService.getCurrentUser();
 
@@ -93,8 +94,14 @@ export const SavedPage = () => {
 
   const handleCreateCollection = async (name: string) => {
     if (!currentUser) throw new Error('Unauthenticated');
-    const created = await collectionService.createCollection({ userId: currentUser.id, name });
-    setCollections((prev) => [created, ...prev]);
+    if (creatingCollectionRef.current) throw new Error('Đang tạo bộ sưu tập');
+    creatingCollectionRef.current = true;
+    try {
+      await collectionService.createCollection({ userId: currentUser.id, name });
+      await fetchCollections();
+    } finally {
+      creatingCollectionRef.current = false;
+    }
   };
 
   const handleAddToCollection = async (postId: string, collectionId: string) => {
@@ -122,11 +129,16 @@ export const SavedPage = () => {
   };
 
   const handleCreateAndAddToCollection = async (postId: string, name: string): Promise<Collection> => {
-    if (!currentUser) throw new Error('Unauthenticated');
-    const created = await collectionService.createCollection({ userId: currentUser.id, name });
-    setCollections((prev) => [created, ...prev]);
-    await collectionService.addItem(created.id, currentUser.id, postId);
-    return { id: created.id, name: created.name, thumbnail: created.thumbnail ?? undefined };
+    if (!currentUser || creatingCollectionRef.current) throw new Error('Unauthenticated');
+    creatingCollectionRef.current = true;
+    try {
+      const created = await collectionService.createCollection({ userId: currentUser.id, name });
+      await collectionService.addItem(created.id, currentUser.id, postId);
+      await fetchCollections();
+      return { id: created.id, name: created.name, thumbnail: created.thumbnail ?? undefined };
+    } finally {
+      creatingCollectionRef.current = false;
+    }
   };
 
   const toAddToCollectionFormat = (col: CollectionResponse): Collection => ({
