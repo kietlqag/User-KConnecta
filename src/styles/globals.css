@@ -314,6 +314,7 @@ html:has(.welcome-page) body {
   overflow: hidden;
   height: 100%;
   overscroll-behavior: none;
+  scrollbar-gutter: auto;
 }
 
 /* WelcomePage animations */
