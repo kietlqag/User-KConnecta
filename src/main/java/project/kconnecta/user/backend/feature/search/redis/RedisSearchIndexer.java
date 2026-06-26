@@ -2,6 +2,7 @@ package project.kconnecta.user.backend.feature.search.redis;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -51,13 +52,32 @@ public class RedisSearchIndexer {
     private final GroupRepository groupRepository;
     private final PostRepository postRepository;
 
+    @Value("${app.search.reindex-on-startup:true}")
+    private boolean reindexOnStartup;
+
     // ── Startup ───────────────────────────────────────────────────────────────
 
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
         try {
             createIndexes();
-            reindexAllWithRetry(3, 3_000);
+            if (!reindexOnStartup) {
+                log.info("[RedisSearch] Skipping startup reindex (app.search.reindex-on-startup=false)");
+                return;
+            }
+            Thread reindexThread = new Thread(() -> {
+                try {
+                    reindexAllWithRetry(3, 3_000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.warn("[RedisSearch] Startup reindex interrupted");
+                } catch (Exception e) {
+                    log.error("[RedisSearch] Background reindex failed: {}", e.getMessage());
+                }
+            }, "redis-search-reindex");
+            reindexThread.setDaemon(true);
+            reindexThread.start();
+            log.info("[RedisSearch] Startup reindex scheduled in background");
         } catch (Exception e) {
             log.error("[RedisSearch] Startup indexing failed — search will fall back gracefully: {}", e.getMessage());
         }

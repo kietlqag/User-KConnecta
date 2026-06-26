@@ -1,6 +1,8 @@
 ﻿app:
   cors:
     allowed-origins: http://localhost:*,http://127.0.0.1:*,https://user-k-connecta.vercel.app
+  search:
+    reindex-on-startup: false  # Dev: skip full Redis reindex; use POST /api/search/reindex when needed
 
 spring:
   jpa:
@@ -9,8 +11,7 @@ spring:
       ddl-auto: update  # temporary: adds missing columns (privacy in post_shares); revert to validate after first run
   sql:
     init:
-      mode: always
-      schema-locations: classpath:db/story-privacy-schema.sql
+      mode: never  # StoryPrivacySchemaBootstrap + ddl-auto handle schema; skip redundant init on every boot
 
   datasource:
     hikari:

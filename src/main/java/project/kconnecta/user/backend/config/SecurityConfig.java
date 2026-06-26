@@ -35,6 +35,13 @@ public class SecurityConfig {
                         .contentTypeOptions(ct -> {})
                         .referrerPolicy(ref -> ref
                                 .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        // CSP cho API: API chỉ trả JSON, không cần tải tài nguyên ngoài nào.
+                        // Khóa chặt theo khuyến nghị OWASP cho REST API → defense-in-depth.
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'none'; " +      // mặc định: không cho tải gì
+                                "frame-ancestors 'none'; " +   // không cho nhúng vào iframe (chống clickjacking)
+                                "base-uri 'none'; " +          // chặn <base> bị tiêm để đổi gốc URL
+                                "form-action 'none'"))         // không cho submit form đi đâu
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

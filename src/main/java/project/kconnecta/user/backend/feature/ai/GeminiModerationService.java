@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -22,6 +23,8 @@ public class GeminiModerationService {
     private static final String GEMINI_BASE_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/";
 
+    // Free-tier quota priority (high → low): only models with non-zero limits on AI Studio.
+    // 3.1-flash-lite: 500 RPD / 15 RPM | 2.5-flash-lite: 20 / 10 | rest: 20 / 5
     private static final List<String> DEFAULT_MODELS = List.of(
             "gemini-3.1-flash-lite",
             "gemini-2.5-flash-lite",
@@ -93,15 +96,15 @@ public class GeminiModerationService {
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
-    private final String apiKey;
+    private final String apiKeysConfig;
     private final String modelsConfig;
 
     public GeminiModerationService(
             ObjectMapper objectMapper,
-            @Value("${gemini.api-key:}") String apiKey,
+            @Value("${gemini.api-keys:}") String apiKeysConfig,
             @Value("${gemini.models:}") String modelsConfig) {
         this.objectMapper = objectMapper;
-        this.apiKey = apiKey;
+        this.apiKeysConfig = apiKeysConfig;
         this.modelsConfig = modelsConfig;
 
         // A hung Gemini call would otherwise block the synchronous post-create
@@ -117,7 +120,7 @@ public class GeminiModerationService {
      * Empty when API key is missing, content is blank, or all models fail.
      */
     public Optional<ModerationResult> moderate(String content) {
-        if (apiKey == null || apiKey.isBlank()) {
+        if (resolveApiKeys().isEmpty()) {
             log.warn("Gemini API key not configured — skipping AI moderation");
             return Optional.empty();
         }
@@ -130,7 +133,7 @@ public class GeminiModerationService {
     }
 
     public Optional<ReportAnalysisResult> analyzeReport(String postContent, String category, String reason) {
-        if (apiKey == null || apiKey.isBlank()) {
+        if (resolveApiKeys().isEmpty()) {
             return Optional.empty();
         }
         if (postContent == null || postContent.isBlank()) {
@@ -146,18 +149,32 @@ public class GeminiModerationService {
         return callGemini(prompt).flatMap(this::parseReportAnalysis);
     }
 
+    private List<String> resolveApiKeys() {
+        return splitCsv(apiKeysConfig);
+    }
+
     private List<String> resolveModels() {
         if (modelsConfig == null || modelsConfig.isBlank()) {
             return DEFAULT_MODELS;
         }
-        List<String> configured = Arrays.stream(modelsConfig.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
+        List<String> configured = splitCsv(modelsConfig);
         return configured.isEmpty() ? DEFAULT_MODELS : configured;
     }
 
-    /** Calls models in order, returning the parsed root of the first usable response. */
+    private static List<String> splitCsv(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+    }
+
+    /**
+     * Tries each model (quota high → low), then each API key per model.
+     * Moves to the next key on quota exhaustion, then to the next model.
+     */
     private Optional<JsonNode> callGemini(String prompt) {
         Map<String, Object> body = Map.of(
                 "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
@@ -165,28 +182,77 @@ public class GeminiModerationService {
                 "safetySettings", SAFETY_SETTINGS
         );
 
+        List<String> apiKeys = resolveApiKeys();
         for (String model : resolveModels()) {
-            try {
-                String response = restClient.post()
-                        .uri(GEMINI_BASE_URL + model + ":generateContent")
-                        .header("x-goog-api-key", apiKey)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(body)
-                        .retrieve()
-                        .body(String.class);
+            for (int keyIndex = 0; keyIndex < apiKeys.size(); keyIndex++) {
+                String apiKey = apiKeys.get(keyIndex);
+                try {
+                    String response = restClient.post()
+                            .uri(GEMINI_BASE_URL + model + ":generateContent")
+                            .header("x-goog-api-key", apiKey)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .body(body)
+                            .retrieve()
+                            .body(String.class);
 
-                Optional<JsonNode> usable = validateResponse(model, response);
-                if (usable.isPresent()) {
-                    log.info("Gemini call succeeded with model {}", model);
-                    return usable;
+                    Optional<JsonNode> usable = validateResponse(model, response);
+                    if (usable.isPresent()) {
+                        log.info("Gemini call succeeded with model {} (key #{})", model, keyIndex + 1);
+                        return usable;
+                    }
+                    if (isQuotaExhaustedResponse(response)) {
+                        log.warn("Gemini model {} quota exhausted for key #{} — trying next key", model, keyIndex + 1);
+                        continue;
+                    }
+                } catch (RestClientResponseException e) {
+                    if (isQuotaExhaustedStatus(e.getStatusCode().value(), e.getResponseBodyAsString())) {
+                        log.warn(
+                                "Gemini model {} quota exhausted for key #{} (HTTP {}) — trying next key",
+                                model,
+                                keyIndex + 1,
+                                e.getStatusCode().value()
+                        );
+                        continue;
+                    }
+                    log.warn("Gemini model {} request failed for key #{}: {}", model, keyIndex + 1, e.getMessage());
+                } catch (Exception e) {
+                    log.warn("Gemini model {} request failed for key #{}: {}", model, keyIndex + 1, e.getMessage());
                 }
-            } catch (Exception e) {
-                log.warn("Gemini model {} request failed: {}", model, e.getMessage());
             }
         }
 
-        log.warn("All Gemini models failed — no AI moderation result");
+        log.warn("All Gemini models and API keys failed — no AI moderation result");
         return Optional.empty();
+    }
+
+    private boolean isQuotaExhaustedResponse(String response) {
+        if (response == null || response.isBlank()) {
+            return false;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            if (!root.has("error")) {
+                return false;
+            }
+            JsonNode error = root.path("error");
+            return isQuotaExhaustedStatus(
+                    error.path("code").asInt(0),
+                    error.path("status").asText("") + " " + error.path("message").asText("")
+            );
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean isQuotaExhaustedStatus(int httpOrApiCode, String detail) {
+        if (httpOrApiCode == 429) {
+            return true;
+        }
+        String normalized = detail == null ? "" : detail.toUpperCase();
+        return normalized.contains("RESOURCE_EXHAUSTED")
+                || normalized.contains("QUOTA")
+                || normalized.contains("RATE LIMIT")
+                || normalized.contains("RATE_LIMIT");
     }
 
     /** Returns the parsed root only if it carries a usable text candidate. */

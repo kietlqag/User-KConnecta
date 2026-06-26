@@ -15,8 +15,10 @@ import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
+import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
+import project.kconnecta.user.backend.feature.auth.service.RefreshTokenService;
 import project.kconnecta.user.backend.feature.user.dto.request.UpdateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.response.UserResponse;
 import project.kconnecta.user.backend.feature.user.entity.User;
@@ -55,6 +57,7 @@ public class UserServiceImpl implements UserService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
     private final CacheManager cacheManager;
+    private final RefreshTokenService refreshTokenService;
 
     // -------------------------------------------------------------------------
     // READ
@@ -167,6 +170,26 @@ public class UserServiceImpl implements UserService {
      * username is not a method parameter. We fetch the entity first, then delete,
      * then evict both keys programmatically.
      */
+    @Override
+    @Transactional
+    public void deleteAccount(UUID id, String password) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        Account account = user.getAccount();
+        if (account.getPasswordHash() != null && !account.getPasswordHash().isBlank()) {
+            if (password == null || password.isBlank()) {
+                throw new ValidationException("Vui lòng nhập mật khẩu để xác nhận xóa tài khoản");
+            }
+            if (!passwordEncoder.matches(password, account.getPasswordHash())) {
+                throw new ValidationException("Mật khẩu không đúng");
+            }
+        }
+
+        refreshTokenService.revokeAllForUser(id);
+        deleteUser(id);
+    }
+
     @Override
     @Transactional
     public void deleteUser(UUID id) {

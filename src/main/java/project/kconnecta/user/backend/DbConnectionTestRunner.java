@@ -1,12 +1,14 @@
 package project.kconnecta.user.backend;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 
 @Component
+@Profile("!local")
 public class DbConnectionTestRunner implements CommandLineRunner {
 
     private final DataSource dataSource;

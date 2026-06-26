@@ -88,11 +88,14 @@ public class SettingsServiceImpl implements SettingsService {
     @Override
     @Transactional(readOnly = true)
     public boolean isNotificationEnabled(UUID userId, NotificationType type) {
+        if (type == NotificationType.SYSTEM) {
+            return true;
+        }
         UserSettings settings = getOrCreate(userId);
         return switch (type) {
             case LIKE, COMMENT, SHARE, MENTION, FRIEND_REQUEST, FRIEND_ACCEPTED,
                  GROUP_ACTIVITY, GROUP_INVITE, GROUP_JOIN_REQUEST, GROUP_POST_PINNED,
-                 BIRTHDAY, BIRTHDAY_WISH, EVENT, MEMORY, SYSTEM -> settings.isNotifyPosts();
+                 BIRTHDAY, BIRTHDAY_WISH, EVENT, MEMORY -> settings.isNotifyPosts();
             default -> true;
         };
     }

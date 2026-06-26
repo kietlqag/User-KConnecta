@@ -15,6 +15,7 @@ public interface UserService {
     UserResponse getUserByIdOrUsername(String identifier);
     UserResponse updateUser(UUID id, UpdateUserRequest request);
     void deleteUser(UUID id);
+    void deleteAccount(UUID id, String password);
     UserResponse uploadAvatar(UUID id, MultipartFile file);
     UserResponse uploadCoverPhoto(UUID id, MultipartFile file);
 }
