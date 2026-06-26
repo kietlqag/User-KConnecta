@@ -77,7 +77,7 @@ function WelcomePreview() {
 export function WelcomePage() {
   return (
     <div
-      className="welcome-page relative min-h-[100dvh] overflow-x-hidden overflow-y-auto"
+      className="welcome-page relative h-[100dvh] overflow-hidden"
       style={{ background: '#111126' }}
     >
       <div
