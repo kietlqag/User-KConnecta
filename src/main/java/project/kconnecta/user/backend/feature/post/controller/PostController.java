@@ -238,6 +238,14 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @GetMapping("/{id}/reports/status")
+    public ResponseEntity<java.util.Map<String, Boolean>> getReportStatus(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id) {
+        boolean reported = postService.hasUserReportedPost(id, principal.getUserId());
+        return ResponseEntity.ok(java.util.Map.of("reported", reported));
+    }
+
     @PostMapping("/comments/{commentId}/reports")
     public ResponseEntity<Void> reportComment(
             @AuthenticationPrincipal UserPrincipal principal,

@@ -37,14 +37,18 @@ public class CollectionService {
 
     @Transactional
     public CollectionResponse createCollection(CreateCollectionRequest request) {
-        if (collectionRepository.existsByUserIdAndName(request.getUserId(), request.getName())) {
+        String normalizedName = request.getName() == null ? "" : request.getName().trim();
+        if (normalizedName.isEmpty()) {
+            throw new DuplicateResourceException("Tên bộ sưu tập không được để trống.");
+        }
+        if (collectionRepository.existsByUserIdAndNameIgnoreCase(request.getUserId(), normalizedName)) {
             throw new DuplicateResourceException("Tên bộ sưu tập đã tồn tại.");
         }
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         SavedCollection collection = SavedCollection.builder()
                 .user(user)
-                .name(request.getName())
+                .name(normalizedName)
                 .build();
         collectionRepository.save(collection);
         return CollectionResponse.from(collection, 0);

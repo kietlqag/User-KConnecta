@@ -39,6 +39,10 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, UUID
     @Query("select r from PostReaction r where r.post.id = :postId and r.share is null order by r.createdAt desc")
     List<PostReaction> findAllByPostIdOrderByCreatedAtDesc(@Param("postId") UUID postId);
 
+    @Modifying
+    @Query("delete from PostReaction r where r.share.id = :shareId")
+    void deleteAllByShareId(@Param("shareId") UUID shareId);
+
     @Query("select r from PostReaction r where r.share.id = :shareId order by r.createdAt desc")
     List<PostReaction> findAllByShareIdOrderByCreatedAtDesc(@Param("shareId") UUID shareId);
 

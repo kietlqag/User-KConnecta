@@ -70,6 +70,9 @@ public interface PostCommentRepository extends JpaRepository<PostComment, UUID> 
            "group by c.share.id")
     List<ShareCountProjection> countByShareIdIn(@Param("shareIds") List<UUID> shareIds);
 
+    @Query("SELECT c FROM PostComment c WHERE c.share.id = :shareId")
+    List<PostComment> findAllByShareId(@Param("shareId") UUID shareId);
+
     interface CountProjection {
         UUID getPostId();
         long getCount();

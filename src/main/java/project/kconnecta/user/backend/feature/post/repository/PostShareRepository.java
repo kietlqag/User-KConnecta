@@ -15,6 +15,8 @@ public interface PostShareRepository extends JpaRepository<PostShare, UUID> {
 
     long countByParentShareId(UUID parentShareId);
 
+    List<PostShare> findByParentShare_Id(UUID parentShareId);
+
     @org.springframework.data.jpa.repository.Query("select s.parentShare.id as parentShareId, count(s) as count from PostShare s where s.parentShare.id in :parentShareIds group by s.parentShare.id")
     List<ParentShareCountProjection> countByParentShareIdIn(@org.springframework.data.repository.query.Param("parentShareIds") java.util.List<UUID> parentShareIds);
 

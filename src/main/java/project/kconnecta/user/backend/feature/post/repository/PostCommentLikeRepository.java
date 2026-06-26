@@ -25,6 +25,11 @@ public interface PostCommentLikeRepository extends JpaRepository<PostCommentLike
     @Query("DELETE FROM PostCommentLike l WHERE l.comment.id = :commentId AND l.user.id = :userId")
     void deleteByCommentIdAndUserId(@Param("commentId") UUID commentId, @Param("userId") UUID userId);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM PostCommentLike l WHERE l.comment.id IN :commentIds")
+    void deleteByCommentIdIn(@Param("commentIds") List<UUID> commentIds);
+
     @Query("SELECT COUNT(l) FROM PostCommentLike l WHERE l.comment.id = :commentId")
     long countByCommentId(@Param("commentId") UUID commentId);
 

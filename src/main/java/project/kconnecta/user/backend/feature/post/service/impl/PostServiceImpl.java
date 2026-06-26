@@ -79,6 +79,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -1399,6 +1400,15 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean hasUserReportedPost(UUID postId, UUID userId) {
+        if (postId == null || userId == null) {
+            return false;
+        }
+        return postReportRepository.existsByPostIdAndReporterId(postId, userId);
+    }
+
+    @Override
     public void reportComment(UUID commentId, project.kconnecta.user.backend.feature.post.dto.request.ReportCommentRequest request) {
         if (request == null || request.getReporterId() == null) {
             throw new ValidationException("Reporter is required");
@@ -1514,7 +1524,14 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional
     public void deletePost(UUID postId, UUID userId) {
+        Optional<PostShare> shareOptional = postShareRepository.findById(postId);
+        if (shareOptional.isPresent()) {
+            deleteShare(shareOptional.get(), userId);
+            return;
+        }
+
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
         if (!post.getAuthor().getId().equals(userId)) {
@@ -1524,6 +1541,44 @@ public class PostServiceImpl implements PostService {
         postRepository.delete(post);
         activityLogService.log(userId, username, ActivityLogType.POST_DELETED,
                 "{\"postId\":\"" + postId + "\"}");
+    }
+
+    private void deleteShare(PostShare share, UUID userId) {
+        if (!share.getUser().getId().equals(userId)) {
+            throw new ValidationException("Bạn không có quyền xóa bài viết này");
+        }
+
+        UUID shareId = share.getId();
+        List<PostShare> childShares = postShareRepository.findByParentShare_Id(shareId);
+        if (!childShares.isEmpty()) {
+            PostShare newParent = share.getParentShare();
+            childShares.forEach(child -> child.setParentShare(newParent));
+            postShareRepository.saveAll(childShares);
+        }
+
+        List<PostComment> shareComments = postCommentRepository.findAllByShareId(shareId);
+        if (!shareComments.isEmpty()) {
+            List<UUID> commentIds = shareComments.stream().map(PostComment::getId).toList();
+            postCommentLikeRepository.deleteByCommentIdIn(commentIds);
+            List<PostComment> replies = shareComments.stream()
+                    .filter(comment -> comment.getParentComment() != null)
+                    .toList();
+            List<PostComment> roots = shareComments.stream()
+                    .filter(comment -> comment.getParentComment() == null)
+                    .toList();
+            postCommentRepository.deleteAll(replies);
+            postCommentRepository.deleteAll(roots);
+        }
+
+        postReactionRepository.deleteAllByShareId(shareId);
+        postShareRepository.delete(share);
+
+        activityLogService.log(
+                userId,
+                share.getUser().getUsername(),
+                ActivityLogType.POST_DELETED,
+                "{\"shareId\":\"" + shareId + "\",\"postId\":\"" + share.getPost().getId() + "\"}"
+        );
     }
 
     private void attachMedia(Post post, List<CreatePostMediaRequest> mediaRequests) {

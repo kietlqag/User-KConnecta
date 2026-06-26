@@ -60,6 +60,7 @@ public interface PostService {
     List<CheckInSuggestionResponse> getCheckInSuggestions(UUID currentUserId, String province, String ward);
     PostResponse updatePrivacy(UUID postId, UUID userId, UpdatePostPrivacyRequest request);
     void reportPost(UUID postId, ReportPostRequest request);
+    boolean hasUserReportedPost(UUID postId, UUID userId);
     void reportComment(UUID commentId, ReportCommentRequest request);
     List<PostReportResponse> getMyReports(UUID userId);
 
