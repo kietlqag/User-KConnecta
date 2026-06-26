@@ -46,24 +46,25 @@ public class UserSettingsController {
     @PostMapping("/blocks/{blockedUserId}")
     public ResponseEntity<Map<String, Boolean>> blockUser(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID blockedUserId) {
-        settingsService.blockUser(principal.getUserId(), blockedUserId);
+            @PathVariable String blockedUserId) {
+        settingsService.blockUser(principal.getUserId(), resolveBlockedUserId(blockedUserId));
         return ResponseEntity.ok(Map.of("blocked", true));
     }
 
     @GetMapping("/blocks/{blockedUserId}/status")
     public ResponseEntity<Map<String, Boolean>> getBlockStatus(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID blockedUserId) {
-        boolean blockedByMe = settingsService.isBlockedByMe(principal.getUserId(), blockedUserId);
+            @PathVariable String blockedUserId) {
+        boolean blockedByMe = settingsService.isBlockedByMe(
+                principal.getUserId(), resolveBlockedUserId(blockedUserId));
         return ResponseEntity.ok(Map.of("blockedByMe", blockedByMe));
     }
 
     @DeleteMapping("/blocks/{blockedUserId}")
     public ResponseEntity<Void> unblockUser(
             @AuthenticationPrincipal UserPrincipal principal,
-            @PathVariable UUID blockedUserId) {
-        settingsService.unblockUser(principal.getUserId(), blockedUserId);
+            @PathVariable String blockedUserId) {
+        settingsService.unblockUser(principal.getUserId(), resolveBlockedUserId(blockedUserId));
         return ResponseEntity.noContent().build();
     }
 
@@ -106,5 +107,10 @@ public class UserSettingsController {
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    /** Cho phép UUID hoặc username trong path — tránh 400 khi frontend gửi username. */
+    private UUID resolveBlockedUserId(String identifier) {
+        return userService.getUserByIdOrUsername(identifier).getId();
     }
 }
