@@ -1,7 +1,5 @@
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Group } from '../../types/groups.types';
-import { sortGroups } from '../../utils/groupSort';
 
 interface GroupsListsPanelProps {
   joinedGroups: Group[];
@@ -20,15 +18,8 @@ export function GroupsListsPanel({
 }: GroupsListsPanelProps) {
   const navigate = useNavigate();
 
-  const recentManaged = useMemo(
-    () => sortGroups(managedGroups, 'recent').slice(0, managedLimit),
-    [managedGroups, managedLimit],
-  );
-
-  const recentJoined = useMemo(
-    () => sortGroups(joinedGroups, 'recent').slice(0, joinedLimit),
-    [joinedGroups, joinedLimit],
-  );
+  const recentManaged = managedGroups.slice(0, managedLimit);
+  const recentJoined = joinedGroups.slice(0, joinedLimit);
 
   return (
     <div className={className}>

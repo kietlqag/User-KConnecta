@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/authService';
 import { groupService, type GroupApiResponse } from '@/services/groupService';
 import { Group, GroupMember } from '../types/groups.types';
+import { DEFAULT_GROUP_SORT, type GroupSortKey } from '../utils/groupSort';
 export type { GroupApiResponse };
 
 function formatLastActivity(updatedAt: string): string {
@@ -31,12 +32,12 @@ export function mapApiGroup(g: GroupApiResponse): Group {
   };
 }
 
-export function useJoinedGroups() {
+export function useJoinedGroups(sort: GroupSortKey = DEFAULT_GROUP_SORT) {
   const currentUser = authService.getCurrentUser();
   return useQuery<Group[]>({
-    queryKey: ['groups', 'joined', currentUser?.id],
+    queryKey: ['groups', 'joined', currentUser?.id, sort],
     queryFn: async () => {
-      const data = await groupService.getJoinedGroups(currentUser!.id);
+      const data = await groupService.getJoinedGroups(currentUser!.id, sort);
       return data.map(mapApiGroup);
     },
     enabled: !!currentUser?.id,
@@ -44,12 +45,12 @@ export function useJoinedGroups() {
   });
 }
 
-export function useManagedGroups() {
+export function useManagedGroups(sort: GroupSortKey = DEFAULT_GROUP_SORT) {
   const currentUser = authService.getCurrentUser();
   return useQuery<Group[]>({
-    queryKey: ['groups', 'managed', currentUser?.id],
+    queryKey: ['groups', 'managed', currentUser?.id, sort],
     queryFn: async () => {
-      const data = await groupService.getManagedGroups(currentUser!.id);
+      const data = await groupService.getManagedGroups(currentUser!.id, sort);
       return data.map(mapApiGroup);
     },
     enabled: !!currentUser?.id,
@@ -70,12 +71,12 @@ export function useGroupById(groupId: string | undefined) {
   });
 }
 
-export function useDiscoverGroups() {
+export function useDiscoverGroups(sort: GroupSortKey = DEFAULT_GROUP_SORT) {
   const currentUser = authService.getCurrentUser();
   return useQuery<Group[]>({
-    queryKey: ['groups', 'discover', currentUser?.id],
+    queryKey: ['groups', 'discover', currentUser?.id, sort],
     queryFn: async () => {
-      const data = await groupService.getDiscoverGroups(currentUser!.id);
+      const data = await groupService.getDiscoverGroups(currentUser!.id, sort);
       return data.map(mapApiGroup);
     },
     enabled: !!currentUser?.id,

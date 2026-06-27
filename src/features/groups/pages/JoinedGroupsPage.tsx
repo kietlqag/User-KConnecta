@@ -1,18 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { GroupsHubLayout, GroupListCard, GroupsSortDropdown } from '../components';
 import { useJoinedGroups, useManagedGroups } from '../hooks/useGroups';
-import { DEFAULT_GROUP_SORT, sortGroups, type GroupSortKey } from '../utils/groupSort';
+import { DEFAULT_GROUP_SORT, type GroupSortKey } from '../utils/groupSort';
 
 export const JoinedGroupsPage = () => {
-  const { data: joinedGroups = [], isLoading: loadingJoined } = useJoinedGroups();
-  const { data: managedGroups = [] } = useManagedGroups();
   const [sortKey, setSortKey] = useState<GroupSortKey>(DEFAULT_GROUP_SORT);
-
-  const sortedGroups = useMemo(() => sortGroups(joinedGroups, sortKey), [joinedGroups, sortKey]);
+  const { data: joinedGroups = [], isLoading: loadingJoined } = useJoinedGroups(sortKey);
+  const { data: sidebarJoinedGroups = [] } = useJoinedGroups();
+  const { data: managedGroups = [] } = useManagedGroups();
 
   return (
     <GroupsHubLayout
-      joinedGroups={joinedGroups}
+      joinedGroups={sidebarJoinedGroups}
       managedGroups={managedGroups}
       activeSectionId="your-groups"
       contentMaxWidthClass="max-w-[920px]"
@@ -38,7 +37,7 @@ export const JoinedGroupsPage = () => {
             <p className="text-[15px] text-gray-500 dark:text-gray-400">Bạn chưa tham gia nhóm nào.</p>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {sortedGroups.map((group) => (
+              {joinedGroups.map((group) => (
                 <GroupListCard key={group.id} group={group} />
               ))}
             </div>

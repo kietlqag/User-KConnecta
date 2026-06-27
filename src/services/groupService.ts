@@ -1,4 +1,5 @@
 import { api } from './api';
+import type { GroupSortKey } from '@/features/groups/utils/groupSort';
 
 // Dispatched on the window when a realtime group-membership notification arrives
 // (join request, approval/rejection, invite) so open group views can refetch without a reload.
@@ -28,14 +29,14 @@ export interface GroupMemberApiResponse {
 }
 
 export const groupService = {
-  getJoinedGroups: (userId: string) =>
-    api.get<GroupApiResponse[]>(`/groups/joined?userId=${userId}`),
+  getJoinedGroups: (userId: string, sort: GroupSortKey = 'recent') =>
+    api.get<GroupApiResponse[]>(`/groups/joined?userId=${userId}&sort=${sort}`),
 
-  getManagedGroups: (userId: string) =>
-    api.get<GroupApiResponse[]>(`/groups/managed?userId=${userId}`),
+  getManagedGroups: (userId: string, sort: GroupSortKey = 'recent') =>
+    api.get<GroupApiResponse[]>(`/groups/managed?userId=${userId}&sort=${sort}`),
 
-  getDiscoverGroups: (userId: string) =>
-    api.get<GroupApiResponse[]>(`/groups/discover?userId=${userId}`),
+  getDiscoverGroups: (userId: string, sort: GroupSortKey = 'recent') =>
+    api.get<GroupApiResponse[]>(`/groups/discover?userId=${userId}&sort=${sort}`),
 
   joinGroup: (groupId: string, userId: string) =>
     api.post<GroupApiResponse>(`/groups/${groupId}/join?userId=${userId}`, {}),

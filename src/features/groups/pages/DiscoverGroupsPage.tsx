@@ -1,20 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GroupsHubLayout, GroupsSortDropdown } from '../components';
 import { Compass } from 'lucide-react';
 import { useDiscoverGroups, useJoinedGroups, useManagedGroups, useJoinGroup } from '../hooks/useGroups';
-import { DEFAULT_GROUP_SORT, sortGroups, type GroupSortKey } from '../utils/groupSort';
+import { DEFAULT_GROUP_SORT, type GroupSortKey } from '../utils/groupSort';
 import { toast } from 'sonner';
 
 export const DiscoverGroupsPage = () => {
   const navigate = useNavigate();
-  const { data: discoverGroups = [], isLoading: loadingDiscover } = useDiscoverGroups();
+  const [sortKey, setSortKey] = useState<GroupSortKey>(DEFAULT_GROUP_SORT);
+  const { data: discoverGroups = [], isLoading: loadingDiscover } = useDiscoverGroups(sortKey);
   const { data: joinedGroups = [] } = useJoinedGroups();
   const { data: managedGroups = [] } = useManagedGroups();
   const joinGroupMutation = useJoinGroup();
-  const [sortKey, setSortKey] = useState<GroupSortKey>(DEFAULT_GROUP_SORT);
-
-  const sortedGroups = useMemo(() => sortGroups(discoverGroups, sortKey), [discoverGroups, sortKey]);
 
   const handleJoinGroup = (groupId: string) => {
     joinGroupMutation.mutate(groupId, {
@@ -62,7 +60,7 @@ export const DiscoverGroupsPage = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {sortedGroups.map((group) => (
+              {discoverGroups.map((group) => (
                 <div
                   key={group.id}
                   className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:shadow-none"

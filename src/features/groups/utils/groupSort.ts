@@ -13,9 +13,8 @@ export interface GroupSortOption {
 }
 
 /**
- * Frontend-only sorting options. The backend has no dedicated sort API yet,
- * so we sort the already-fetched list client-side using fields we have:
- * `updatedAt` (last activity), `name`, and `members` (member count).
+ * Sort keys shared with the groups list API (`?sort=`).
+ * `sortGroups` remains available for local reordering when needed.
  */
 export const GROUP_SORT_OPTIONS: GroupSortOption[] = [
   { key: 'recent', label: 'Hoạt động gần đây nhất' },
