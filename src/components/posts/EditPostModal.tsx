@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Image, Loader2, AlertCircle, FileText } from 'lucide-react';
+import { X, Image, Loader2, AlertCircle, FileText, Globe, Users, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/authService';
@@ -12,6 +12,14 @@ import { PostAllowedFormatsHint } from '@/features/profile/components/ProfileCre
 import { validatePostAgainstPolicy, checkKeywords, validatePostMediaFiles } from '@/utils/policyValidation';
 import { buildPostMediaAcceptAttribute, getPostMediaKind, toApiMediaType, type PostMediaKind } from '@/utils/allowedFileTypes';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
+import { ProfilePostAudienceModal } from '@/features/profile/components/ProfileCreatePost/ProfilePostAudienceModal';
+import {
+  apiPrivacyToAudience,
+  audienceToApiPrivacy,
+  getAudienceLabel,
+  type AudienceId,
+  type PostPrivacy,
+} from '@/features/profile/components/ProfileCreatePost/postAudienceUtils';
 
 type MediaItem = {
   id: string;
@@ -31,9 +39,17 @@ export interface EditPostModalProps {
   postId: string;
   initialContent: string;
   initialMedia: { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string }[];
+  initialPrivacy?: PostPrivacy;
+  initialExcludedUserIds?: string[];
+  initialAllowedUserIds?: string[];
+  isGroupPost?: boolean;
+  isShareWrapper?: boolean;
   onPostUpdated?: (data: {
     content: string;
     mediaList: { type: 'IMAGE' | 'VIDEO' | 'DOCUMENT'; url: string }[];
+    privacy?: PostPrivacy;
+    excludedUserIds?: string[];
+    allowedUserIds?: string[];
   }) => void;
 }
 
@@ -43,10 +59,17 @@ export function EditPostModal({
   postId,
   initialContent,
   initialMedia,
+  initialPrivacy = 'PUBLIC',
+  initialExcludedUserIds = [],
+  initialAllowedUserIds = [],
+  isGroupPost = false,
+  isShareWrapper = false,
   onPostUpdated,
 }: EditPostModalProps) {
   const [content, setContent] = useState(initialContent);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [privacy, setPrivacy] = useState<AudienceId>('public');
+  const [showAudienceModal, setShowAudienceModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadPromisesRef = useRef<Map<string, Promise<string>>>(new Map());
@@ -59,6 +82,7 @@ export function EditPostModal({
   useEffect(() => {
     if (!isOpen) return;
     setContent(initialContent);
+    setPrivacy(apiPrivacyToAudience(initialPrivacy));
     setMediaItems(
       initialMedia.map((m, i) => ({
         id: `existing-${i}-${m.url}`,
@@ -68,7 +92,7 @@ export function EditPostModal({
         isExisting: true,
       })),
     );
-  }, [isOpen, initialContent, initialMedia]);
+  }, [isOpen, initialContent, initialMedia, initialPrivacy]);
 
   useEffect(() => {
     if (isOpen) {
@@ -196,7 +220,7 @@ export function EditPostModal({
       toast.error('Bạn cần đăng nhập để chỉnh sửa bài viết');
       return;
     }
-    if (!content.trim() && mediaItems.length === 0) {
+    if (!isShareWrapper && !content.trim() && mediaItems.length === 0) {
       toast.error('Bài viết phải có nội dung hoặc ảnh/video');
       return;
     }
@@ -226,16 +250,24 @@ export function EditPostModal({
 
     setIsSaving(true);
     try {
-      const media: CreatePostMediaRequest[] = mediaItems.map((m, i) => ({
-        mediaType: toApiMediaType(m.type),
-        fileUrl: m.url,
-        sortOrder: i,
-      }));
-
-      const updated = await postService.updatePost(postId, {
+      const apiPrivacy = audienceToApiPrivacy(privacy);
+      const payload: Parameters<typeof postService.updatePost>[1] = {
         content: content.trim(),
-        media,
-      });
+      };
+
+      if (!isShareWrapper) {
+        payload.media = mediaItems.map((m, i) => ({
+          mediaType: toApiMediaType(m.type),
+          fileUrl: m.url,
+          sortOrder: i,
+        }));
+      }
+
+      if (!isGroupPost) {
+        payload.privacy = apiPrivacy;
+      }
+
+      const updated = await postService.updatePost(postId, payload);
 
       const updatedMediaList = (updated.media ?? []).map((m) => ({
         type: m.mediaType,
@@ -245,6 +277,9 @@ export function EditPostModal({
       onPostUpdated?.({
         content: updated.content || '',
         mediaList: updatedMediaList,
+        privacy: updated.privacy,
+        excludedUserIds: updated.excludedUserIds ?? [],
+        allowedUserIds: updated.allowedUserIds ?? [],
       });
 
       void queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
@@ -259,6 +294,22 @@ export function EditPostModal({
       setIsSaving(false);
     }
   };
+
+  const getPrivacyInfo = () => {
+    const label = getAudienceLabel(privacy);
+    switch (privacy) {
+      case 'friends':
+        return { icon: Users, label };
+      case 'private':
+        return { icon: Lock, label };
+      default:
+        return { icon: Globe, label };
+    }
+  };
+
+  const privacyInfo = getPrivacyInfo();
+  const PrivacyIcon = privacyInfo.icon;
+  const canSave = isShareWrapper || content.trim().length > 0 || mediaItems.length > 0;
 
   if (!isOpen) return null;
 
@@ -287,15 +338,31 @@ export function EditPostModal({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
           <div className="mb-4 flex items-center gap-3">
             <CurrentUserAvatar />
-            <h3 className="font-semibold text-gray-900 dark:text-white">
-              {currentUser?.fullName || currentUser?.username || 'Bạn'}
-            </h3>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                {currentUser?.fullName || currentUser?.username || 'Bạn'}
+              </h3>
+              {!isGroupPost && (
+                <button
+                  type="button"
+                  onClick={() => setShowAudienceModal(true)}
+                  disabled={isSaving}
+                  className="mt-1 flex items-center gap-1 rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                >
+                  <PrivacyIcon className="h-3 w-3" />
+                  <span>{privacyInfo.label}</span>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Bạn đang nghĩ gì?"
+            placeholder={isShareWrapper ? 'Thêm ghi chú khi chia sẻ...' : 'Bạn đang nghĩ gì?'}
             disabled={isSaving}
             className="min-h-[120px] w-full resize-none border-none bg-transparent text-xl text-gray-900 outline-none placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white dark:placeholder:text-gray-500"
             autoFocus
@@ -324,7 +391,7 @@ export function EditPostModal({
             ) : null;
           })()}
 
-          {mediaItems.length > 0 && (
+          {!isShareWrapper && mediaItems.length > 0 && (
             <div className="mt-4 grid grid-cols-2 gap-2">
               {mediaItems.map((item) => (
                 <div
@@ -375,40 +442,44 @@ export function EditPostModal({
             </div>
           )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={
-              publicPolicy
-                ? buildPostMediaAcceptAttribute(publicPolicy.postPolicy.allowedFileTypes)
-                : 'image/*,video/*'
-            }
-            multiple
-            className="hidden"
-            onChange={handleFileSelect}
-          />
+          {!isShareWrapper && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={
+                  publicPolicy
+                    ? buildPostMediaAcceptAttribute(publicPolicy.postPolicy.allowedFileTypes)
+                    : 'image/*,video/*'
+                }
+                multiple
+                className="hidden"
+                onChange={handleFileSelect}
+              />
 
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isSaving || policyLoading}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-          >
-            <Image className="h-4 w-4" />
-            Thêm file đính kèm
-          </button>
-          {publicPolicy && (
-            <PostAllowedFormatsHint
-              allowedFileTypes={publicPolicy.postPolicy.allowedFileTypes}
-              className="mt-2"
-            />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSaving || policyLoading}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <Image className="h-4 w-4" />
+                Thêm file đính kèm
+              </button>
+              {publicPolicy && (
+                <PostAllowedFormatsHint
+                  allowedFileTypes={publicPolicy.postPolicy.allowedFileTypes}
+                  className="mt-2"
+                />
+              )}
+            </>
           )}
         </div>
 
         <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-700">
           <button
             type="button"
-            disabled={isSaving || (!content.trim() && mediaItems.length === 0)}
+            disabled={isSaving || !canSave}
             onClick={() => void handleSave()}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -423,6 +494,18 @@ export function EditPostModal({
           </button>
         </div>
       </div>
+
+      {!isGroupPost && (
+        <ProfilePostAudienceModal
+          isOpen={showAudienceModal}
+          onClose={() => setShowAudienceModal(false)}
+          selectedAudience={privacy}
+          onSelect={(nextAudience) => {
+            setPrivacy(nextAudience);
+            setShowAudienceModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

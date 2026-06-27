@@ -9,7 +9,7 @@ export const ALBUM_PRIVACY_OPTIONS: {
 }[] = [
   { value: 'PUBLIC', label: 'Công khai', hint: 'Mọi người có thể xem', icon: Globe },
   { value: 'FRIENDS', label: 'Bạn bè', hint: 'Chỉ bạn bè được xem', icon: UserCheck },
-  { value: 'ONLY_ME', label: 'Riêng tư', hint: 'Chỉ mình bạn', icon: Lock },
+  { value: 'ONLY_ME', label: 'Chỉ mình tôi', hint: 'Chỉ mình bạn', icon: Lock },
 ];
 
 export function getAlbumPrivacyMeta(privacy: AlbumPrivacy) {

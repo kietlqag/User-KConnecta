@@ -693,20 +693,6 @@ export default function LiveProducerPage() {
     return () => window.clearInterval(interval);
   }, []);
 
-  const handleCopyViewerUrl = useCallback(async () => {
-    if (!viewerUrl) return;
-    try {
-      await navigator.clipboard.writeText(viewerUrl);
-    } catch {
-      const input = document.createElement('input');
-      input.value = viewerUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-    }
-  }, [viewerUrl]);
-
   const showToolMessage = (message: string) => {
     setToolError('');
     setToolMessage(message);
@@ -1027,18 +1013,6 @@ export default function LiveProducerPage() {
                     </div>
                   </div>
                 </section>
-
-                <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-bold">Quản lý trên thiết bị thứ hai</h3>
-                    <MoreHorizontal className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                  </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">Chia sẻ liên kết video trực tiếp với người kiểm duyệt.</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 rounded-full bg-gray-100 dark:bg-gray-900 px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem live'}</div>
-                    <button onClick={() => void handleCopyViewerUrl()} disabled={!viewerUrl} className="rounded-xl bg-emerald-50 text-emerald-700 font-semibold px-4 py-2 disabled:text-gray-400 disabled:cursor-not-allowed">Sao chép</button>
-                  </div>
-                </section>
               </div>
 
               <div className="min-w-0 space-y-4">
@@ -1071,7 +1045,7 @@ export default function LiveProducerPage() {
                         <div className="mt-1 flex items-center gap-2">
                           <div className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
                             <Globe className="mr-1.5 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-                            {sessionPrivacy === 'PRIVATE' ? 'Chỉ mình tôi' : sessionPrivacy === 'FRIENDS' ? 'Bạn bè' : sessionPrivacy === 'FRIENDS_EXCEPT' ? 'Bạn bè trừ...' : 'Công khai'}
+                            {sessionPrivacy === 'PRIVATE' ? 'Chỉ mình tôi' : sessionPrivacy === 'FRIENDS' ? 'Bạn bè' : 'Công khai'}
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400">Đang phát trực tiếp</p>
                         </div>

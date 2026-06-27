@@ -62,9 +62,9 @@ export const formatScheduledDisplay = (value: string) => {
   }).format(parsed);
 };
 
-export type LivePostPrivacy = 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE';
+export type LivePostPrivacy = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
 
-export const mapPrivacyToPostApi = (privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'ONLY_ME'): LivePostPrivacy => {
+export const mapPrivacyToPostApi = (privacy: 'PUBLIC' | 'FRIENDS' | 'ONLY_ME'): LivePostPrivacy => {
   if (privacy === 'ONLY_ME') return 'PRIVATE';
   return privacy;
 };

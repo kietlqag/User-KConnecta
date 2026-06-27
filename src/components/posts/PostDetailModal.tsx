@@ -176,19 +176,10 @@ export function PostDetailModal({
               <PostMoreMenu
                 postId={post.id}
                 isOwner={post.isOwner}
-                privacy={privacy}
-                excludedUserIds={excludedUserIds}
-                allowedUserIds={allowedUserIds}
                 isGroupPost={!!post.groupId}
                 currentUserId={post.currentUserId}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                onPrivacyChange={(nextPrivacy, nextExcluded, nextAllowed) => {
-                  setPrivacy(nextPrivacy);
-                  setExcludedUserIds(nextExcluded);
-                  setAllowedUserIds(nextAllowed);
-                  onPrivacyChange?.(nextPrivacy, nextExcluded, nextAllowed);
-                }}
               />
             </div>
           </div>

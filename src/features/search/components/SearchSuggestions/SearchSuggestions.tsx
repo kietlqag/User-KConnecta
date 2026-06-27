@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { RecentSearchItem } from '../../types/search.types';
 import { searchService, SearchSuggestionDto } from '@/services/searchService';
 import { searchHistoryService } from '@/services/searchHistoryService';
+import { getRelatedBlockedUserIds, USER_BLOCK_CHANGED_EVENT } from '@/services/blockedUsersService';
 
 interface SearchSuggestionsProps {
   query: string;
@@ -15,16 +16,35 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
   const [suggestions, setSuggestions] = useState<SearchSuggestionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<RecentSearchItem[]>([]);
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const trimmedQuery = query.trim();
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadBlocked = () => {
+      void getRelatedBlockedUserIds(true).then((ids) => {
+        if (!cancelled) setBlockedIds(ids);
+      });
+    };
+    loadBlocked();
+    window.addEventListener(USER_BLOCK_CHANGED_EVENT, loadBlocked);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(USER_BLOCK_CHANGED_EVENT, loadBlocked);
+    };
+  }, []);
+
   // Load history from localStorage whenever we switch to the "recent" view
   useEffect(() => {
     if (!trimmedQuery) {
-      setHistory(searchHistoryService.getAll());
+      const items = searchHistoryService.getAll().filter(
+        (item) => item.type !== 'person' || !item.targetId || !blockedIds.has(item.targetId),
+      );
+      setHistory(items);
     }
-  }, [trimmedQuery]);
+  }, [trimmedQuery, blockedIds]);
 
   // Fetch API suggestions when query changes
   useEffect(() => {

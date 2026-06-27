@@ -25,6 +25,8 @@ export function mapApiGroup(g: GroupApiResponse): Group {
     privacy: g.privacy === 'PUBLIC' ? 'public' : 'private',
     memberApprovalRequired: g.memberApprovalRequired,
     lastActivity: formatLastActivity(g.updatedAt),
+    updatedAt: g.updatedAt,
+    createdAt: g.createdAt,
     role: g.status === 'PENDING' ? 'PENDING' : g.role,
   };
 }

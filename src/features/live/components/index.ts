@@ -1,5 +1,6 @@
 export { LiveOptionCard } from './LiveOptionCard';
 export { LiveSidebar } from './LiveSidebar';
+export { ScheduledLiveEventCard } from './ScheduledLiveEventCard';
 export { ScheduledLiveDetailDialog } from './ScheduledLiveDetailDialog';
 export { LiveCommentItem } from './LiveCommentItem';
 export { LiveCommentPanel } from './LiveCommentPanel';

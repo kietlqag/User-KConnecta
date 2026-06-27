@@ -1,4 +1,5 @@
 import { api } from '@/services/api';
+import { notifyUserBlockChanged } from '@/services/blockedUsersService';
 import { isUserUuid } from '@/features/profile/utils/profileDisplayUtils';
 import type {
   BlockedUser,
@@ -80,11 +81,13 @@ export const userSettingsApi = {
 
   unblockUser: async (blockedUserId: string): Promise<UserSettings> => {
     await api.delete(`/users/me/blocks/${blockedUserId}`);
+    notifyUserBlockChanged();
     return userSettingsApi.getSettings();
   },
 
   blockUser: async (blockedUserId: string): Promise<void> => {
     await api.post(`/users/me/blocks/${blockedUserId}`);
+    notifyUserBlockChanged();
   },
 
   getBlockStatus: async (blockedUserId: string): Promise<{ blockedByMe: boolean }> => {

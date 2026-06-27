@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
 import { liveService, type LiveDestinationItem } from '@/services/liveService';
+import { LiveGroupDestinationAvatar } from '../components/LiveGroupDestinationAvatar';
 import {
   formatScheduledDisplay,
   isScheduledAtInFuture,
@@ -304,11 +305,12 @@ export default function LiveEventPage() {
                         key={item.id}
                         type="button"
                         onClick={() => setSelectedGroupId(item.id)}
-                        className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
+                        className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
                           isSelected ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
                         }`}
                       >
-                        <span className="truncate">{item.name}</span>
+                        <LiveGroupDestinationAvatar name={item.name} coverPhotoUrl={item.coverPhotoUrl} />
+                        <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
                         <span
                           className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
                             isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'

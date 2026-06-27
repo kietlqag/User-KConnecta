@@ -1,5 +1,5 @@
 import { MessageCircle, Pin, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { liveService, type LivePinnedCommentResponse, type LiveSessionToolStateResponse } from '@/services/liveService';
@@ -100,6 +100,14 @@ export function LiveCommentPanel({
   const [defaultPinnedComment, setDefaultPinnedComment] = useState<LivePinnedCommentResponse | null>(null);
   const [repliesByParent, setRepliesByParent] = useState<Record<string, PostCommentResponse[]>>({});
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const prevCommentCountRef = useRef(0);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior });
+  }, []);
 
   const pinnedCommentId = toolState?.pinnedCommentId ?? null;
 
@@ -156,6 +164,18 @@ export function LiveCommentPanel({
     [comments, pinnedCommentId],
   );
 
+  useEffect(() => {
+    const count = sortedComments.length;
+    if (count === 0) {
+      prevCommentCountRef.current = 0;
+      return;
+    }
+    if (count >= prevCommentCountRef.current) {
+      scrollToBottom(prevCommentCountRef.current === 0 ? 'auto' : 'smooth');
+    }
+    prevCommentCountRef.current = count;
+  }, [scrollToBottom, sortedComments]);
+
   const pinnedComment = useMemo(
     () => (pinnedCommentId ? comments.find((comment) => comment.id === pinnedCommentId) ?? null : null),
     [comments, pinnedCommentId],
@@ -176,6 +196,7 @@ export function LiveCommentPanel({
       setCommentText('');
       if (replyTarget?.id) {
         await loadReplies(replyTarget.id);
+        requestAnimationFrame(() => scrollToBottom('smooth'));
       }
       setReplyTarget(null);
     } catch (err) {
@@ -216,7 +237,10 @@ export function LiveCommentPanel({
 
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${className}`}>
-      <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-gray-100 dark:bg-gray-900 p-3 text-gray-700 dark:text-gray-300">
+      <div
+        ref={scrollContainerRef}
+        className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-gray-100 dark:bg-gray-900 p-3 text-gray-700 dark:text-gray-300"
+      >
         {showDefaultPinned && (
           <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
             <div className="mb-1 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">

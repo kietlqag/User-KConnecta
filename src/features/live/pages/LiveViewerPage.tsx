@@ -62,6 +62,7 @@ export default function LiveViewerPage() {
   const videoTrackRef = useRef<RemoteTrack | null>(null);
   const audioTrackRef = useRef<RemoteTrack | null>(null);
   const dvrVideoRef = useRef<HTMLVideoElement | null>(null);
+  const dvrDurationFixedRef = useRef<string | null>(null);
   const useHlsPlaybackRef = useRef(false);
 
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
@@ -369,19 +370,60 @@ export default function LiveViewerPage() {
 
     let cancelled = false;
 
-    const seekAndPlay = () => {
+    const playAt = (seconds: number) => {
       if (cancelled) return;
-      if (Math.abs(video.currentTime - playbackSeconds) > 0.25) {
-        video.currentTime = playbackSeconds;
+      if (Math.abs(video.currentTime - seconds) > 0.25) {
+        try {
+          video.currentTime = seconds;
+        } catch {
+          /* seeking may throw if not seekable yet; ignored */
+        }
       }
       void video.play().catch(() => undefined);
     };
 
+    // MediaRecorder blobs from an in-progress live have `duration === Infinity`,
+    // which makes Chrome refuse to seek (the frame shows but playback freezes and
+    // the reported time snaps back). Force the browser to compute a finite
+    // duration by seeking far past the end once, then seek to the real position.
+    const seekAndPlay = () => {
+      if (cancelled) return;
+
+      if (dvrDurationFixedRef.current === dvrUrl && Number.isFinite(video.duration)) {
+        playAt(playbackSeconds);
+        return;
+      }
+
+      if (!Number.isFinite(video.duration) || video.duration === 0) {
+        // Suppress timeupdate syncing while we jump to the end to fix duration.
+        setScrubbing(true);
+        const onFixed = () => {
+          video.removeEventListener('timeupdate', onFixed);
+          video.removeEventListener('durationchange', onFixed);
+          if (cancelled) return;
+          dvrDurationFixedRef.current = dvrUrl;
+          setScrubbing(false);
+          playAt(playbackSeconds);
+        };
+        video.addEventListener('timeupdate', onFixed, { once: true });
+        video.addEventListener('durationchange', onFixed, { once: true });
+        try {
+          video.currentTime = 1e101;
+        } catch {
+          /* ignored */
+        }
+        return;
+      }
+
+      dvrDurationFixedRef.current = dvrUrl;
+      playAt(playbackSeconds);
+    };
+
     if (video.src !== dvrUrl) {
+      dvrDurationFixedRef.current = null;
       video.src = dvrUrl;
       video.load();
       video.addEventListener('loadedmetadata', seekAndPlay, { once: true });
-      video.addEventListener('canplay', seekAndPlay, { once: true });
     } else {
       seekAndPlay();
     }
@@ -389,7 +431,7 @@ export default function LiveViewerPage() {
     return () => {
       cancelled = true;
     };
-  }, [dvrUrl, isAtLiveEdge, playbackSeconds, useHlsPlayback]);
+  }, [dvrUrl, isAtLiveEdge, playbackSeconds, setScrubbing, useHlsPlayback]);
 
   useEffect(() => {
     if (useHlsPlayback || isAtLiveEdge) return;

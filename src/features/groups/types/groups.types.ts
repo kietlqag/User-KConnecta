@@ -7,6 +7,10 @@ export interface Group {
   privacy: 'public' | 'private';
   memberApprovalRequired: boolean;
   lastActivity?: string;
+  /** Raw ISO timestamp of last activity, used for sorting. */
+  updatedAt?: string;
+  /** Raw ISO timestamp of group creation. */
+  createdAt?: string;
   role?: 'ADMIN' | 'MEMBER' | 'PENDING' | null;
 }
 

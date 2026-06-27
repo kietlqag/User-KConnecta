@@ -29,7 +29,9 @@ export function ProfilePage() {
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
 
   const [posts, setPosts] = React.useState<FeedPost[]>([]);
-  const [friends, setFriends] = React.useState<{ id: string; name: string; avatar: string }[]>([]);
+  const [friends, setFriends] = React.useState<
+    { id: string; username?: string; name: string; avatarUrl?: string | null }[]
+  >([]);
   const [postsLoading, setPostsLoading] = React.useState(false);
   const [hasMorePosts, setHasMorePosts] = React.useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = React.useState(false);
@@ -77,7 +79,22 @@ export function ProfilePage() {
   );
 
   React.useEffect(() => {
-    if (!resolvedId) return;
+    if (!resolvedId) {
+      setPosts([]);
+      setFriends([]);
+      setProfilePhotos([]);
+      setPostsLoading(false);
+      setHasMorePosts(false);
+      setPostsPage(0);
+      return;
+    }
+
+    setPosts([]);
+    setFriends([]);
+    setProfilePhotos([]);
+    setPostsPage(0);
+    setHasMorePosts(false);
+
     const controller = new AbortController();
     void fetchPosts(resolvedId);
     void refreshProfilePhotos(resolvedId, controller.signal);
@@ -87,8 +104,9 @@ export function ProfilePage() {
         setFriends(
           res.map((f: any) => ({
             id: f.userId,
+            username: f.username,
             name: f.fullName,
-            avatar: f.avatarUrl?.trim() || '',
+            avatarUrl: f.avatarUrl,
           })),
         ),
       )

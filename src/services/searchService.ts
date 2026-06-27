@@ -1,4 +1,6 @@
 import { api } from './api';
+import { getRelatedBlockedUserIds } from './blockedUsersService';
+import { filterSearchResults, filterSearchSuggestions } from './searchBlockFilter';
 
 // ── Suggestion (autocomplete) ─────────────────────────────────────────────────
 
@@ -66,9 +68,19 @@ export interface SearchApiResponse {
 // ── Service ───────────────────────────────────────────────────────────────────
 
 export const searchService = {
-  getSuggestions: (q: string) =>
-    api.get<SearchSuggestionDto[]>(`/search/suggest?q=${encodeURIComponent(q)}`),
+  getSuggestions: async (q: string) => {
+    const [suggestions, blockedIds] = await Promise.all([
+      api.get<SearchSuggestionDto[]>(`/search/suggest?q=${encodeURIComponent(q)}`),
+      getRelatedBlockedUserIds(),
+    ]);
+    return filterSearchSuggestions(suggestions, blockedIds);
+  },
 
-  search: (q: string) =>
-    api.get<SearchApiResponse>(`/search?q=${encodeURIComponent(q)}&limit=20`),
+  search: async (q: string) => {
+    const [data, blockedIds] = await Promise.all([
+      api.get<SearchApiResponse>(`/search?q=${encodeURIComponent(q)}&limit=20`),
+      getRelatedBlockedUserIds(),
+    ]);
+    return filterSearchResults(data, blockedIds);
+  },
 };

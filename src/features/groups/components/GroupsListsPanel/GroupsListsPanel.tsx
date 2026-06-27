@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Group } from '../../types/groups.types';
+import { sortGroups } from '../../utils/groupSort';
 
 interface GroupsListsPanelProps {
   joinedGroups: Group[];
@@ -12,11 +14,21 @@ interface GroupsListsPanelProps {
 export function GroupsListsPanel({
   joinedGroups,
   managedGroups = [],
-  joinedLimit = 8,
+  joinedLimit = 5,
   managedLimit = 5,
   className = '',
 }: GroupsListsPanelProps) {
   const navigate = useNavigate();
+
+  const recentManaged = useMemo(
+    () => sortGroups(managedGroups, 'recent').slice(0, managedLimit),
+    [managedGroups, managedLimit],
+  );
+
+  const recentJoined = useMemo(
+    () => sortGroups(joinedGroups, 'recent').slice(0, joinedLimit),
+    [joinedGroups, joinedLimit],
+  );
 
   return (
     <div className={className}>
@@ -35,7 +47,7 @@ export function GroupsListsPanel({
             </button>
           </div>
           <div className="space-y-1 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
-            {managedGroups.slice(0, managedLimit).map((group) => (
+            {recentManaged.map((group) => (
               <button
                 key={group.id}
                 type="button"
@@ -76,10 +88,10 @@ export function GroupsListsPanel({
         </div>
 
         <div className="space-y-1">
-          {joinedGroups.length === 0 ? (
+          {recentJoined.length === 0 ? (
             <p className="px-1 py-2 text-sm text-gray-400">Chưa tham gia nhóm nào.</p>
           ) : (
-            joinedGroups.slice(0, joinedLimit).map((group) => (
+            recentJoined.map((group) => (
               <button
                 key={group.id}
                 type="button"

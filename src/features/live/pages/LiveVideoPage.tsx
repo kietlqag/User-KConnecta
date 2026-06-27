@@ -2,11 +2,10 @@ import { Calendar, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../../home/components';
-import { LiveSidebar, LiveOptionCard, ScheduledLiveDetailDialog } from '../components';
+import { LiveSidebar, LiveOptionCard, ScheduledLiveDetailDialog, ScheduledLiveEventCard } from '../components';
 import { liveService, type LiveSessionResponse } from '@/services/liveService';
 import { authService } from '@/services/authService';
 import { navigateToLiveSession } from '../utils/navigateToLiveSession';
-import { formatScheduledDisplayFromIso } from '../utils/liveFormUtils';
 import { toast } from 'sonner';
 
 type LiveListTab = 'live' | 'scheduled';
@@ -20,6 +19,8 @@ export default function LiveVideoPage() {
   const [isLoadingScheduled, setIsLoadingScheduled] = useState(false);
   const [selectedSession, setSelectedSession] = useState<LiveSessionResponse | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [subscribingId, setSubscribingId] = useState<string | null>(null);
+  const currentUserId = authService.getCurrentUser()?.id;
 
   const handleGoLive = () => {
     navigate('/live/setup');
@@ -108,6 +109,36 @@ export default function LiveVideoPage() {
     setSelectedSession(null);
   };
 
+  const updateScheduledSession = (sessionId: string, patch: Partial<LiveSessionResponse>) => {
+    setScheduledSessions((prev) => prev.map((item) => (item.id === sessionId ? { ...item, ...patch } : item)));
+    setSelectedSession((prev) => (prev?.id === sessionId ? { ...prev, ...patch } : prev));
+  };
+
+  const handleToggleInterest = async (session: LiveSessionResponse) => {
+    if (!currentUserId) {
+      toast.error('Bạn cần đăng nhập để quan tâm sự kiện');
+      return;
+    }
+    if (session.hostUserId === currentUserId) return;
+
+    setSubscribingId(session.id);
+    try {
+      const isSubscribed = Boolean(session.subscribedByCurrentUser);
+      const result = isSubscribed
+        ? await liveService.unsubscribeFromEvent(session.id)
+        : await liveService.subscribeToEvent(session.id);
+      updateScheduledSession(session.id, {
+        subscribedByCurrentUser: result.subscribed,
+        subscriptionCount: result.subscriptionCount,
+      });
+      toast.success(result.subscribed ? 'Đã quan tâm sự kiện' : 'Đã bỏ quan tâm');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể cập nhật quan tâm');
+    } finally {
+      setSubscribingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background">
       <Header />
@@ -179,30 +210,14 @@ export default function LiveVideoPage() {
               ) : activeTab === 'scheduled' ? (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {scheduledSessions.map((session) => (
-                    <button
+                    <ScheduledLiveEventCard
                       key={session.id}
-                      type="button"
-                      onClick={() => handleOpenDetail(session)}
-                      className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50/40"
-                    >
-                      <div className="mb-2 inline-flex rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
-                        Đã lên lịch
-                      </div>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">{session.title}</p>
-                      {session.description && (
-                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{session.description}</p>
-                      )}
-                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        {session.scheduledAt
-                          ? `Bắt đầu lúc ${formatScheduledDisplayFromIso(session.scheduledAt)}`
-                          : 'Chưa có thời gian'}
-                      </p>
-                      {(session.subscriptionCount ?? 0) > 0 && (
-                        <p className="mt-1 text-xs font-semibold text-green-700">
-                          {session.subscriptionCount} người quan tâm
-                        </p>
-                      )}
-                    </button>
+                      session={session}
+                      currentUserId={currentUserId}
+                      isSubscribing={subscribingId === session.id}
+                      onOpen={handleOpenDetail}
+                      onToggleInterest={handleToggleInterest}
+                    />
                   ))}
                 </div>
               ) : (
@@ -235,6 +250,9 @@ export default function LiveVideoPage() {
         session={selectedSession}
         open={detailOpen}
         onOpenChange={setDetailOpen}
+        hideSubscribeButton={Boolean(
+          selectedSession && currentUserId && selectedSession.hostUserId !== currentUserId,
+        )}
         onUpdated={handleSessionUpdated}
         onDeleted={handleSessionDeleted}
       />

@@ -14,6 +14,7 @@ export interface GroupApiResponse {
   memberCount: number;
   role: 'ADMIN' | 'MEMBER' | null;
   status: 'PENDING' | 'APPROVED' | null;
+  createdAt: string;
   updatedAt: string;
 }
 

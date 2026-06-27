@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
-import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 interface Friend {
   id: string;
+  username?: string;
   name: string;
-  avatar: string;
+  avatarUrl?: string | null;
 }
 
 interface FriendsPreviewProps {
@@ -31,12 +32,18 @@ export function FriendsPreview({ userId, friendsCount, friends }: FriendsPreview
 
       <div className="grid grid-cols-3 gap-2">
         {friends.slice(0, 9).map((friend) => (
-          <Link key={friend.id} to={`/profile/${friend.id}`} className="group">
+          <Link
+            key={friend.id}
+            to={`/profile/${friend.username || friend.id}`}
+            className="group"
+          >
             <div className="mb-1 aspect-square overflow-hidden rounded-lg">
-              <ImageWithFallback
-                src={friend.avatar}
-                alt={friend.name}
-                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              <UserAvatar
+                name={friend.name}
+                avatarUrl={friend.avatarUrl}
+                userId={friend.id}
+                rounded="lg"
+                className="h-full w-full transition-transform group-hover:scale-105"
               />
             </div>
             <p className="line-clamp-2 text-sm font-medium text-gray-900 dark:text-white">

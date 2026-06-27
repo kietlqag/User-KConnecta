@@ -24,7 +24,7 @@ export const PostResult = ({ post, onReactionChange }: PostResultProps) => {
   }));
 
   return (
-    <div className="w-full">
+    <div className="h-full w-full">
       <Post
         id={post.id}
         author={{ id: post.author.id ?? '', name: post.author.name, avatar: post.author.avatar }}
@@ -42,6 +42,7 @@ export const PostResult = ({ post, onReactionChange }: PostResultProps) => {
         mediaList={mediaList}
         onReactionChange={onReactionChange}
         compact
+        fillHeight
       />
     </div>
   );

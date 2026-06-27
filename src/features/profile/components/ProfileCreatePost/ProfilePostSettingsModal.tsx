@@ -13,8 +13,6 @@ interface ProfilePostSettingsModalProps {
   postContent: string;
   postContext: PostPublishContext;
   privacy: AudienceId;
-  excludedCount?: number;
-  allowedCount?: number;
   isPosting?: boolean;
   onOpenAudienceSelection?: () => void;
   scheduleSubtitle: string;
@@ -35,8 +33,6 @@ export function ProfilePostSettingsModal({
   postContent,
   postContext,
   privacy,
-  excludedCount = 0,
-  allowedCount = 0,
   isPosting = false,
   onOpenAudienceSelection,
   scheduleSubtitle,
@@ -53,7 +49,7 @@ export function ProfilePostSettingsModal({
 
   const isGroupContext = postContext === 'GROUP';
 
-  const privacyLabel = getAudienceLabel(privacy, excludedCount, allowedCount);
+  const privacyLabel = getAudienceLabel(privacy);
 
   const groupPrivacyCopy = getGroupPrivacySummary(groupPrivacy);
   const canCrossPostToGroup = !isGroupContext && privacy === 'public';

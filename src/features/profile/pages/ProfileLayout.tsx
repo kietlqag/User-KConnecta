@@ -19,6 +19,7 @@ import {
   logProfileTabRedirect,
   logProfileTabRouteChange,
 } from '../utils/profileTabLogger';
+import { scrollToHomeTop } from '@/features/home/utils/scrollToHomeTop';
 
 export interface ProfileLayoutContext {
   profile: AuthUser | null;
@@ -63,6 +64,7 @@ export function ProfileLayout() {
   const [friendshipStatus, setFriendshipStatus] = React.useState<FriendshipStatusResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [accessDenied, setAccessDenied] = React.useState(false);
+  const [blocked, setBlocked] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
   const { t } = useTranslation();
   const locationRef = React.useRef(location);
@@ -83,6 +85,10 @@ export function ProfileLayout() {
   }, [location.pathname, resolvedId, accessDenied, profile?.username, userId]);
 
   React.useEffect(() => {
+    void scrollToHomeTop(480);
+  }, [location.pathname]);
+
+  React.useEffect(() => {
     if (!userId || userId === 'undefined') { setLoading(false); return; }
 
     const loaded = loadedProfileRef.current;
@@ -94,6 +100,7 @@ export function ProfileLayout() {
     let cancelled = false;
     setLoading(true);
     setAccessDenied(false);
+    setBlocked(false);
     setProfile(null);
     setResolvedId('');
     setFriendsCount(0);
@@ -104,6 +111,16 @@ export function ProfileLayout() {
         const profileData = (await authService.getUser(userId)) as AuthUser;
 
         const id: string = profileData.id;
+
+        if (profileData.blocked) {
+          if (cancelled) return;
+          setProfile(profileData);
+          setResolvedId(id);
+          setBlocked(true);
+          setAccessDenied(true);
+          loadedProfileRef.current = { id, username: profileData.username };
+          return;
+        }
 
         const fetchStatusPromise = (!currentUser || currentUser.id === id)
           ? Promise.resolve(null)
@@ -236,6 +253,33 @@ export function ProfileLayout() {
     loading,
     onEditClick: () => setIsEditOpen(true),
   };
+
+  if (blocked) {
+    return (
+      <div className="min-h-screen bg-gray-100 dark:bg-background">
+        <Header />
+        <div className="pt-14">
+          <div className="mx-auto max-w-[680px] px-4 py-16">
+            <div className="flex flex-col items-center rounded-xl border border-border bg-card px-6 py-14 text-center shadow-sm">
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                <Lock className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Không thể xem trang cá nhân này</h2>
+              <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                Nội dung hiện không khả dụng. Điều này có thể do bạn và người dùng này đã chặn nhau.
+              </p>
+              <button
+                onClick={() => navigate('/')}
+                className="mt-6 rounded-lg bg-primary px-5 py-2 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                Về trang chủ
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-background">

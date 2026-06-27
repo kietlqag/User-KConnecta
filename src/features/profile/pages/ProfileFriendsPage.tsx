@@ -40,8 +40,14 @@ export function ProfileFriendsPage() {
   const [search, setSearch] = React.useState('');
 
   React.useEffect(() => {
-    if (!resolvedId) return;
+    if (!resolvedId) {
+      setFriends([]);
+      setLoading(true);
+      return;
+    }
+
     let cancelled = false;
+    setFriends([]);
     setLoading(true);
 
     friendService.getFriends(resolvedId).then(res => {

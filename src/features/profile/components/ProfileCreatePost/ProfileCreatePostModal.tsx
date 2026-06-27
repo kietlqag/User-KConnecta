@@ -9,8 +9,6 @@ import {
   Image,
   Users,
   Smile,
-  UserMinus,
-  UserCheck,
   Loader2,
   AlertCircle,
   Lock,
@@ -71,8 +69,6 @@ export function ProfileCreatePostModal({
 }: ProfileCreatePostModalProps) {
   const [postContent, setPostContent] = useState('');
   const [privacy, setPrivacy] = useState<AudienceId>('public');
-  const [excludedUserIds, setExcludedUserIds] = useState<string[]>([]);
-  const [allowedUserIds, setAllowedUserIds] = useState<string[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -328,11 +324,6 @@ export function ProfileCreatePostModal({
 
     if (!postContent.trim() && selectedImages.length === 0 && !showPoll) return;
 
-    if (privacy === 'specific-friends' && allowedUserIds.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một bạn bè cho Bạn bè cụ thể');
-      return;
-    }
-
     if (scheduleMode === 'scheduled') {
       if (!scheduledAtLocal.trim()) {
         toast.error('Vui lòng chọn thời gian đăng bài');
@@ -413,8 +404,6 @@ export function ProfileCreatePostModal({
         imageUrl: uploadedMedia.length > 0 ? uploadedMedia[0].fileUrl : undefined,
         media: uploadedMedia.length > 0 ? uploadedMedia : undefined,
         privacy: apiPrivacy,
-        ...(!isGroupPost && excludedUserIds.length > 0 && { excludedUserIds }),
-        ...(!isGroupPost && allowedUserIds.length > 0 && { allowedUserIds }),
         status: isScheduled ? 'SCHEDULED' : 'PUBLISHED',
         ...(isScheduled && scheduledAtApi ? { scheduledAt: scheduledAtApi } : {}),
         ...(showPoll && isGroupPost && {
@@ -438,8 +427,6 @@ export function ProfileCreatePostModal({
       setShowSettingsModal(false);
       setScheduleMode('now');
       setScheduledAtLocal(defaultScheduledDatetimeLocal());
-      setExcludedUserIds([]);
-      setAllowedUserIds([]);
       setSelectedGroupId(null);
       setSelectedGroupName(null);
       setShowPoll(false);
@@ -457,14 +444,10 @@ export function ProfileCreatePostModal({
   };
 
   const getPrivacyInfo = () => {
-    const label = getAudienceLabel(privacy, excludedUserIds.length, allowedUserIds.length);
+    const label = getAudienceLabel(privacy);
     switch (privacy) {
       case 'friends':
         return { icon: Users, label };
-      case 'friends-except':
-        return { icon: UserMinus, label };
-      case 'specific-friends':
-        return { icon: UserCheck, label };
       case 'private':
         return { icon: Lock, label };
       default:
@@ -840,12 +823,8 @@ export function ProfileCreatePostModal({
           }
         }}
         selectedAudience={privacy}
-        excludedUserIds={excludedUserIds}
-        allowedUserIds={allowedUserIds}
-        onSelect={(audience, excluded, allowed) => {
+        onSelect={(audience) => {
           setPrivacy(audience);
-          setExcludedUserIds(excluded);
-          setAllowedUserIds(allowed);
           if (audience !== 'public') {
             setSelectedGroupId(null);
             setSelectedGroupName(null);
@@ -889,8 +868,6 @@ export function ProfileCreatePostModal({
         postContent={postContent}
         postContext={postContext}
         privacy={privacy}
-        excludedCount={excludedUserIds.length}
-        allowedCount={allowedUserIds.length}
         isPosting={isPosting}
         scheduleSubtitle={scheduleSubtitle}
         postActionLabel={scheduleMode === 'scheduled' ? 'Lên lịch' : 'Đăng'}

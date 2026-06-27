@@ -23,7 +23,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
 import { liveService, type LiveDestinationItem } from '@/services/liveService';
-import { friendService, type FriendApiResponse } from '@/services/friendService';
+import { LiveGroupDestinationAvatar } from '../components/LiveGroupDestinationAvatar';
 
 const leftMenuItems = [
   { icon: Camera, label: 'Thiết lập buổi phát trực tiếp', active: true },
@@ -48,7 +48,6 @@ const destinationOptions = [
 const privacyOptions = [
   { id: 'PUBLIC', label: 'Công khai', description: 'Mọi người đều có thể xem', icon: Globe },
   { id: 'FRIENDS', label: 'Bạn bè', description: 'Chỉ bạn bè của bạn có thể xem', icon: Users2 },
-  { id: 'FRIENDS_EXCEPT', label: 'Bạn bè ngoại trừ...', description: 'Ẩn với một số người bạn chọn', icon: Users2 },
   { id: 'ONLY_ME', label: 'Chỉ mình tôi', description: 'Chỉ bạn mới có thể xem', icon: Lock },
 ] as const;
 
@@ -70,12 +69,6 @@ export default function LiveSetupPage() {
   const [isDestinationLoading, setIsDestinationLoading] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
   const [selectedPrivacy, setSelectedPrivacy] = useState<(typeof privacyOptions)[number]['id']>('PUBLIC');
-  const [isExceptEditorOpen, setIsExceptEditorOpen] = useState(false);
-  const [friendSearch, setFriendSearch] = useState('');
-  const [friends, setFriends] = useState<FriendApiResponse[]>([]);
-  const [isFriendsLoading, setIsFriendsLoading] = useState(false);
-  const [excludedFriendIds, setExcludedFriendIds] = useState<string[]>([]);
-  const [pendingExcludedFriendIds, setPendingExcludedFriendIds] = useState<string[]>([]);
   const [pinnedEnabled, setPinnedEnabled] = useState(false);
   const [pinnedCommentText, setPinnedCommentText] = useState('Đây là một bình luận ghim sẵn. Bạn có thể nhấp vào nút Chỉnh sửa bên dưới để thêm bình luận.');
   const [isPinnedLoading, setIsPinnedLoading] = useState(false);
@@ -128,11 +121,6 @@ export default function LiveSetupPage() {
     if (!q) return destinationItems;
     return destinationItems.filter((item) => item.name.toLowerCase().includes(q));
   }, [destinationItems, destinationSearch]);
-  const filteredFriends = useMemo(() => {
-    const q = friendSearch.trim().toLowerCase();
-    if (!q) return friends;
-    return friends.filter((friend) => (friend.fullName || friend.username).toLowerCase().includes(q));
-  }, [friends, friendSearch]);
   const stopMicProbe = () => {
     micProbeTokenRef.current += 1;
   };
@@ -300,22 +288,6 @@ export default function LiveSetupPage() {
   }, [currentUserId]);
 
   useEffect(() => {
-    if (!currentUserId) return;
-    const loadFriends = async () => {
-      setIsFriendsLoading(true);
-      try {
-        const data = await friendService.getFriends(currentUserId);
-        setFriends(data);
-      } catch {
-        setFriends([]);
-      } finally {
-        setIsFriendsLoading(false);
-      }
-    };
-    void loadFriends();
-  }, [currentUserId]);
-
-  useEffect(() => {
     if (selectedDestination === 'profile') {
       setIsDestinationItemsOpen(false);
       return;
@@ -332,8 +304,6 @@ export default function LiveSetupPage() {
     if (!isGroupDestination) return;
     setSelectedPrivacy('PUBLIC');
     setIsPrivacyOpen(false);
-    setIsExceptEditorOpen(false);
-    setExcludedFriendIds([]);
   }, [isGroupDestination]);
 
   useEffect(() => {
@@ -752,7 +722,7 @@ export default function LiveSetupPage() {
     }
   };
 
-  const mapPrivacyToPostApi = (): 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'PRIVATE' => {
+  const mapPrivacyToPostApi = (): 'PUBLIC' | 'FRIENDS' | 'PRIVATE' => {
     if (selectedPrivacy === 'ONLY_ME') return 'PRIVATE';
     return selectedPrivacy;
   };
@@ -769,9 +739,6 @@ export default function LiveSetupPage() {
         description: postDescription.trim(),
         privacy: mapPrivacyToPostApi(),
         startMode: 'NOW',
-        ...(selectedPrivacy === 'FRIENDS_EXCEPT' && excludedFriendIds.length > 0
-          ? { excludedUserIds: excludedFriendIds }
-          : {}),
       });
 
       const producerState = {
@@ -936,20 +903,21 @@ export default function LiveSetupPage() {
                                 : [...prev, item],
                             );
                           }}
-                          className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-start gap-2 ${
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-center gap-2.5 ${
                             isSelected ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
                           }`}
                         >
                           <span
-                              className={`mt-0.5 inline-flex h-4 w-4 items-center justify-center rounded border ${
+                              className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                                 isSelected ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
                               }`}
                             >
                               {isSelected ? <Check className="h-3 w-3" /> : null}
                             </span>
-                          <span className="block">
-                            <p className="font-medium">{item.name}</p>
-                            {item.description ? <p className="text-xs text-gray-500 dark:text-gray-400">{item.description}</p> : null}
+                          <LiveGroupDestinationAvatar name={item.name} coverPhotoUrl={item.coverPhotoUrl} />
+                          <span className="min-w-0 flex-1">
+                            <p className="font-medium truncate">{item.name}</p>
+                            {item.description ? <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{item.description}</p> : null}
                           </span>
                         </button>
                       );
@@ -974,9 +942,7 @@ export default function LiveSetupPage() {
                 <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
                   <span className="inline-flex items-center gap-2">
                     <selectedPrivacyOption.icon className="w-5 h-5" />
-                    {selectedPrivacy === 'FRIENDS_EXCEPT'
-                      ? `${selectedPrivacyOption.label} (${excludedFriendIds.length})`
-                      : selectedPrivacyOption.label}
+                    {selectedPrivacyOption.label}
                   </span>
                   {!isPrivacyLocked && (
                     <ChevronDown className={`w-6 h-6 transition-transform ${isPrivacyOpen ? 'rotate-180' : ''}`} />
@@ -997,12 +963,6 @@ export default function LiveSetupPage() {
                         onClick={() => {
                           setSelectedPrivacy(option.id);
                           setIsPrivacyOpen(false);
-                          if (option.id === 'FRIENDS_EXCEPT') {
-                            setPendingExcludedFriendIds(excludedFriendIds);
-                            setIsExceptEditorOpen(true);
-                          } else {
-                            setIsExceptEditorOpen(false);
-                          }
                         }}
                         className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
                       >
@@ -1020,76 +980,6 @@ export default function LiveSetupPage() {
                 </div>
               )}
             </div>
-            {selectedPrivacy === 'FRIENDS_EXCEPT' && isExceptEditorOpen && (
-              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-                <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-                  <Search className="h-4 w-4 text-gray-400" />
-                  <input
-                    value={friendSearch}
-                    onChange={(e) => setFriendSearch(e.target.value)}
-                    placeholder="Tìm bạn bè..."
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
-                  />
-                </div>
-                <div className="max-h-44 space-y-1 overflow-auto">
-                  {isFriendsLoading && <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Đang tải bạn bè...</p>}
-                  {!isFriendsLoading && filteredFriends.length === 0 && (
-                    <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Không có bạn bè phù hợp.</p>
-                  )}
-                  {!isFriendsLoading &&
-                    filteredFriends.map((friend) => {
-                      const isChecked = pendingExcludedFriendIds.includes(friend.userId);
-                      return (
-                        <button
-                          key={friend.userId}
-                          type="button"
-                          onClick={() =>
-                            setPendingExcludedFriendIds((prev) =>
-                              prev.includes(friend.userId)
-                                ? prev.filter((id) => id !== friend.userId)
-                                : [...prev, friend.userId],
-                            )
-                          }
-                          className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-center gap-2 ${
-                            isChecked ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
-                          }`}
-                        >
-                          <span
-                            className={`inline-flex h-4 w-4 items-center justify-center rounded border ${
-                              isChecked ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
-                            }`}
-                          >
-                            {isChecked ? <Check className="h-3 w-3" /> : null}
-                          </span>
-                          <span className="truncate">{friend.fullName || friend.username}</span>
-                        </button>
-                      );
-                    })}
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPendingExcludedFriendIds(excludedFriendIds);
-                      setIsExceptEditorOpen(false);
-                    }}
-                    className="flex-1 rounded-lg bg-gray-200 dark:bg-gray-700 py-2 text-sm font-semibold text-gray-800 dark:text-gray-200"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setExcludedFriendIds(pendingExcludedFriendIds);
-                      setIsExceptEditorOpen(false);
-                    }}
-                    className="flex-1 rounded-lg bg-green-600 py-2 text-sm font-semibold text-white"
-                  >
-                    Luu
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="mt-4 space-y-2">
@@ -1120,7 +1010,7 @@ export default function LiveSetupPage() {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate('/live/video')}
+              onClick={() => navigate('/live')}
               className="flex-1 rounded-xl bg-gray-200 dark:bg-gray-700 py-2.5 text-base font-semibold text-gray-900 dark:text-gray-100"
             >
               Quay lại

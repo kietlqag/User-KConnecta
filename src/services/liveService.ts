@@ -4,6 +4,7 @@ export interface LiveDestinationItem {
   id: string;
   name: string;
   description?: string | null;
+  coverPhotoUrl?: string | null;
 }
 
 export interface LiveDestinationsResponse {

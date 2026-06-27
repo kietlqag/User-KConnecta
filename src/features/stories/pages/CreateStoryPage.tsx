@@ -7,7 +7,6 @@ import Picker from '@emoji-mart/react';
 import { authService, AuthUser } from '@/services/authService';
 import { useCreateStoryMutation } from '@/features/stories/hooks/useStories';
 import type { StoryDurationHours, StoryPrivacy } from '@/services/storyService';
-import { StoryFriendPickerModal } from '@/features/stories/components/StoryFriendPickerModal';
 import { estimateStoryTextSize } from '@/lib/storyShareText';
 import bgImg1 from './backgroundImage/000ecac94d4fa09a8369747056ce72f0.jpg';
 import bgImg2 from './backgroundImage/2886e1de8d8637a139478d903feb0643.jpg';
@@ -63,17 +62,14 @@ function formatStoryDurationLabel(hours: StoryDurationHours): string {
   return STORY_DURATION_OPTIONS.find((option) => option.value === hours)?.label ?? '1 ngày';
 }
 
-type StoryPrivacySetting = 'public' | 'friends' | 'specific-friends' | 'only_me';
+type StoryPrivacySetting = 'public' | 'friends' | 'only_me';
 
 function mapStoryPrivacyToApi(
   privacy: StoryPrivacySetting,
-  allowedFriendIds: string[],
-): { privacy: StoryPrivacy; allowedUserIds?: string[] } {
+): { privacy: StoryPrivacy } {
   switch (privacy) {
     case 'friends':
       return { privacy: 'FRIENDS' };
-    case 'specific-friends':
-      return { privacy: 'SPECIFIC_FRIENDS', allowedUserIds: allowedFriendIds };
     case 'only_me':
       return { privacy: 'ONLY_ME' };
     default:
@@ -81,30 +77,24 @@ function mapStoryPrivacyToApi(
   }
 }
 
-function getStoryPrivacyLabel(privacy: StoryPrivacySetting, allowedFriendIds: string[]): string {
+function getStoryPrivacyLabel(privacy: StoryPrivacySetting): string {
   switch (privacy) {
     case 'public':
       return 'Công khai';
     case 'only_me':
       return 'Chỉ mình tôi';
-    case 'specific-friends':
-      return allowedFriendIds.length === 1
-        ? '1 bạn bè'
-        : `${allowedFriendIds.length} bạn bè`;
     case 'friends':
     default:
       return 'Bạn bè';
   }
 }
 
-function getStoryPrivacySubtext(privacy: StoryPrivacySetting, allowedFriendIds: string[]): string {
+function getStoryPrivacySubtext(privacy: StoryPrivacySetting): string {
   switch (privacy) {
     case 'public':
       return 'Tất cả mọi người';
     case 'only_me':
       return 'Chỉ bạn mới thấy trên tin của mình';
-    case 'specific-friends':
-      return 'Chỉ những bạn bè được chọn';
     case 'friends':
     default:
       return 'Tất cả bạn bè của bạn';
@@ -198,9 +188,7 @@ export function CreateStoryPage() {
   const stickerDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [privacySetting, setPrivacySetting] = useState<StoryPrivacySetting>('public');
-  const [allowedFriendIds, setAllowedFriendIds] = useState<string[]>([]);
   const [isPrivacyDropdownOpen, setIsPrivacyDropdownOpen] = useState(false);
-  const [isFriendPickerOpen, setIsFriendPickerOpen] = useState(false);
   const [storyDurationHours, setStoryDurationHours] = useState<StoryDurationHours>(24);
   const [isDurationDropdownOpen, setIsDurationDropdownOpen] = useState(false);
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
@@ -285,7 +273,7 @@ export function CreateStoryPage() {
       ? selectedImageUrl
       : undefined;
 
-    const privacyPayload = mapStoryPrivacyToApi(privacySetting, allowedFriendIds);
+    const privacyPayload = mapStoryPrivacyToApi(privacySetting);
 
     createStory.mutate({
       userId: currentUser.id,
@@ -302,7 +290,6 @@ export function CreateStoryPage() {
       linkedPostId: linkedPostId ?? undefined,
       durationHours: storyDurationHours,
       privacy: privacyPayload.privacy,
-      allowedUserIds: privacyPayload.allowedUserIds,
     });
 
     navigate('/home');
@@ -324,22 +311,7 @@ export function CreateStoryPage() {
 
   const handlePrivacyButtonClick = () => {
     setIsDurationDropdownOpen(false);
-    if (privacySetting === 'friends' || privacySetting === 'specific-friends') {
-      setIsFriendPickerOpen(true);
-      return;
-    }
     setIsPrivacyDropdownOpen((open) => !open);
-  };
-
-  const handleFriendPickerDone = (selectedIds: string[]) => {
-    if (selectedIds.length === 0) {
-      setPrivacySetting('friends');
-      setAllowedFriendIds([]);
-    } else {
-      setPrivacySetting('specific-friends');
-      setAllowedFriendIds(selectedIds);
-    }
-    setIsFriendPickerOpen(false);
   };
 
   const hasSelectedImage = Boolean(selectedImageUrl);
@@ -643,15 +615,15 @@ export function CreateStoryPage() {
                   privacySetting === 'only_me' ? 'bg-gray-400' : 'bg-green-500'
                 }`}>
                   {privacySetting === 'public' && <Globe className="h-4 w-4" />}
-                  {(privacySetting === 'friends' || privacySetting === 'specific-friends') && <Users className="h-4 w-4" />}
+                  {privacySetting === 'friends' && <Users className="h-4 w-4" />}
                   {privacySetting === 'only_me' && <Lock className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0 flex-1 text-left">
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {getStoryPrivacyLabel(privacySetting, allowedFriendIds)}
+                    {getStoryPrivacyLabel(privacySetting)}
                   </p>
                   <p className="truncate text-xs text-gray-400">
-                    {getStoryPrivacySubtext(privacySetting, allowedFriendIds)}
+                    {getStoryPrivacySubtext(privacySetting)}
                   </p>
                 </div>
                 <ChevronRight className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${isPrivacyDropdownOpen ? 'rotate-90' : ''}`} />
@@ -661,7 +633,7 @@ export function CreateStoryPage() {
                 <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
                   {([
                     { value: 'public' as const, label: 'Công khai', sub: 'Tất cả mọi người', icon: <Globe className="h-4 w-4" />, color: 'bg-emerald-500' },
-                    { value: 'friends' as const, label: 'Bạn bè', sub: 'Chọn bạn bè cụ thể', icon: <Users className="h-4 w-4" />, color: 'bg-green-500' },
+                    { value: 'friends' as const, label: 'Bạn bè', sub: 'Tất cả bạn bè của bạn', icon: <Users className="h-4 w-4" />, color: 'bg-green-500' },
                     { value: 'only_me' as const, label: 'Chỉ mình tôi', sub: 'Không hiển thị trên bảng tin', icon: <Lock className="h-4 w-4" />, color: 'bg-gray-400' },
                   ]).map((opt) => (
                     <button
@@ -669,19 +641,10 @@ export function CreateStoryPage() {
                       type="button"
                       onClick={() => {
                         setIsPrivacyDropdownOpen(false);
-                        if (opt.value === 'friends') {
-                          setIsFriendPickerOpen(true);
-                          return;
-                        }
                         setPrivacySetting(opt.value);
-                        setAllowedFriendIds([]);
                       }}
                       className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                        (opt.value === 'friends'
-                          ? privacySetting === 'friends' || privacySetting === 'specific-friends'
-                          : privacySetting === opt.value)
-                          ? 'bg-gray-50 dark:bg-gray-900'
-                          : ''
+                        privacySetting === opt.value ? 'bg-gray-50 dark:bg-gray-900' : ''
                       }`}
                     >
                       <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white ${opt.color}`}>
@@ -691,9 +654,7 @@ export function CreateStoryPage() {
                         <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{opt.label}</p>
                         <p className="text-xs text-gray-400">{opt.sub}</p>
                       </div>
-                      {(opt.value === 'friends'
-                        ? privacySetting === 'friends' || privacySetting === 'specific-friends'
-                        : privacySetting === opt.value) && <Check className="h-4 w-4 text-emerald-500" />}
+                      {privacySetting === opt.value && <Check className="h-4 w-4 text-emerald-500" />}
                     </button>
                   ))}
                 </div>
@@ -1417,12 +1378,6 @@ export function CreateStoryPage() {
         </div>
       )}
 
-      <StoryFriendPickerModal
-        isOpen={isFriendPickerOpen}
-        selectedFriendIds={allowedFriendIds}
-        onClose={() => setIsFriendPickerOpen(false)}
-        onDone={handleFriendPickerDone}
-      />
 
       {/* 🔥 DISCARD CONFIRMATION MODAL */}
       {isDiscardModalOpen && (

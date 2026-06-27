@@ -20,3 +20,5 @@ export { GroupAlbumsTab } from './GroupAlbumsTab/GroupAlbumsTab';
 export { GroupTabEmptyState } from './GroupTabEmptyState/GroupTabEmptyState';
 export { GroupSearchDropdown } from './GroupSearchDropdown/GroupSearchDropdown';
 export { GroupRequestsTab } from './GroupRequestsTab/GroupRequestsTab';
+export { GroupsSortDropdown } from './GroupsSortDropdown';
+export { GroupListCard } from './GroupListCard';

@@ -1,10 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   MoreHorizontal,
   Bookmark,
   Trash2,
-  Shield,
-  Check,
   AlertTriangle,
   Pencil,
   Pin,
@@ -24,17 +22,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
-import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 import { postService, type ReportCategory } from '@/services/postService';
-import { ProfilePostAudienceModal } from '@/features/profile/components/ProfileCreatePost/ProfilePostAudienceModal';
-import {
-  apiPrivacyToAudience,
-  audienceToApiPrivacy,
-  getAudienceLabel,
-  type AudienceId,
-  type PostPrivacy,
-} from '@/features/profile/components/ProfileCreatePost/postAudienceUtils';
+import type { PostPrivacy } from '@/features/profile/components/ProfileCreatePost/postAudienceUtils';
 import { getScrollTop, runWithPreservedScroll, setScrollTop } from '@/features/home/utils/scrollToHomeTop';
 
 const REPORT_CATEGORIES: { value: ReportCategory; label: string }[] = [
@@ -52,19 +41,11 @@ interface PostMoreMenuProps {
   postId: string;
   isSaved?: boolean;
   isOwner?: boolean;
-  privacy?: PostPrivacy;
-  excludedUserIds?: string[];
-  allowedUserIds?: string[];
   isGroupPost?: boolean;
   currentUserId?: string;
   onToggleSave?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
-  onPrivacyChange?: (
-    privacy: PostPrivacy,
-    excludedUserIds: string[],
-    allowedUserIds: string[],
-  ) => void;
   canPin?: boolean;
   isPinned?: boolean;
   onPin?: () => void;
@@ -76,30 +57,25 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
   postId,
   isSaved = false,
   isOwner = false,
-  privacy = 'PUBLIC',
-  excludedUserIds = [],
-  allowedUserIds = [],
   isGroupPost = false,
   currentUserId,
   onToggleSave,
   onEdit,
   onDelete,
-  onPrivacyChange,
   canPin = false,
   isPinned = false,
   onPin,
   onUnpin,
   className,
 }) => {
-  const [updating, setUpdating] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [hasReported, setHasReported] = useState(false);
+  const [reportStatusLoading, setReportStatusLoading] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | null>(null);
   const [reportReason, setReportReason] = useState('');
-  const [showAudienceModal, setShowAudienceModal] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
-  const queryClient = useQueryClient();
 
   const runAfterMenuClose = (action?: () => void) => {
     if (!action) return;
@@ -111,76 +87,49 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
     }, 0);
   };
 
-  const audience = apiPrivacyToAudience(privacy);
-  const privacyLabel = getAudienceLabel(audience, excludedUserIds.length, allowedUserIds.length);
-
-  const handleAudienceSelect = async (
-    nextAudience: AudienceId,
-    nextExcluded: string[],
-    nextAllowed: string[],
-  ) => {
-    if (!currentUserId || updating) return;
-
-    const nextPrivacy = audienceToApiPrivacy(nextAudience);
-    const samePrivacy = nextPrivacy === privacy;
-    const sameExcluded =
-      nextPrivacy === 'FRIENDS_EXCEPT' &&
-      nextExcluded.length === excludedUserIds.length &&
-      nextExcluded.every((id) => excludedUserIds.includes(id));
-    const sameAllowed =
-      nextPrivacy === 'SPECIFIC_FRIENDS' &&
-      nextAllowed.length === allowedUserIds.length &&
-      nextAllowed.every((id) => allowedUserIds.includes(id));
-
-    if (samePrivacy && (nextPrivacy === 'PUBLIC' || nextPrivacy === 'FRIENDS' || nextPrivacy === 'PRIVATE' || sameExcluded || sameAllowed)) {
-      if (
-        (nextPrivacy === 'PUBLIC' || nextPrivacy === 'FRIENDS' || nextPrivacy === 'PRIVATE') &&
-        samePrivacy
-      ) {
-        return;
-      }
-      if (nextPrivacy === 'FRIENDS_EXCEPT' && sameExcluded) return;
-      if (nextPrivacy === 'SPECIFIC_FRIENDS' && sameAllowed) return;
+  useEffect(() => {
+    if (!postId || isOwner || !currentUserId) {
+      setHasReported(false);
+      return;
     }
 
-    setUpdating(true);
-    try {
-      await postService.updatePrivacy(postId, {
-        privacy: nextPrivacy,
-        ...(nextPrivacy === 'FRIENDS_EXCEPT' ? { excludedUserIds: nextExcluded } : {}),
-        ...(nextPrivacy === 'SPECIFIC_FRIENDS' ? { allowedUserIds: nextAllowed } : {}),
+    let cancelled = false;
+    setReportStatusLoading(true);
+    void postService
+      .getPostReportStatus(postId)
+      .then((status) => {
+        if (!cancelled) setHasReported(Boolean(status.reported));
+      })
+      .catch(() => {
+        if (!cancelled) setHasReported(false);
+      })
+      .finally(() => {
+        if (!cancelled) setReportStatusLoading(false);
       });
-      onPrivacyChange?.(nextPrivacy, nextExcluded, nextAllowed);
-      void queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
-      toast.success(`Đã đổi quyền riêng tư thành "${getAudienceLabel(nextAudience, nextExcluded.length, nextAllowed.length)}"`);
-      setShowAudienceModal(false);
-    } catch (error) {
-      const message =
-        error instanceof Error && error.message
-          ? error.message
-          : 'Không thể cập nhật quyền riêng tư. Vui lòng thử lại.';
-      toast.error(message);
-    } finally {
-      setUpdating(false);
-    }
-  };
+
+    return () => {
+      cancelled = true;
+    };
+  }, [postId, isOwner, currentUserId]);
 
   const handleOpenReportDialog = () => {
     if (!currentUserId) {
       toast.error('Vui lòng đăng nhập để báo cáo bài viết.');
       return;
     }
+    if (hasReported) return;
     setSelectedCategory(null);
     setReportReason('');
     runAfterMenuClose(() => setReportDialogOpen(true));
   };
 
   const handleReportPost = async () => {
-    if (reporting || !currentUserId || !selectedCategory) return;
+    if (reporting || !currentUserId || !selectedCategory || hasReported) return;
 
     setReporting(true);
     try {
       await postService.reportPost(postId, currentUserId, selectedCategory, reportReason);
+      setHasReported(true);
       setReportDialogOpen(false);
       toast.success('Đã gửi báo cáo bài viết tới quản trị viên.');
     } catch (error) {
@@ -188,6 +137,10 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         error instanceof Error && error.message
           ? error.message
           : 'Không thể báo cáo bài viết. Vui lòng thử lại.';
+      if (message.includes('đã báo cáo')) {
+        setHasReported(true);
+        setReportDialogOpen(false);
+      }
       toast.error(message);
     } finally {
       setReporting(false);
@@ -238,19 +191,30 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         {!isOwner && (
           <>
             <DropdownMenuItem
-              className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-              disabled={reporting}
+              className={`flex items-start gap-3 p-3 ${
+                hasReported
+                  ? 'cursor-default text-gray-500 focus:bg-transparent focus:text-gray-500'
+                  : 'cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50'
+              }`}
+              disabled={reporting || reportStatusLoading || hasReported}
               onSelect={(e) => {
                 e.preventDefault();
+                if (hasReported) return;
                 handleOpenReportDialog();
               }}
             >
               <div className="mt-1">
-                <AlertTriangle className="w-6 h-6" />
+                <AlertTriangle className={`w-6 h-6 ${hasReported ? 'text-gray-400' : ''}`} />
               </div>
               <div className="flex flex-col">
-                <span className="font-semibold text-[15px]">Báo cáo bài viết</span>
-                <span className="text-[13px] text-red-400">Gửi bài viết này cho quản trị viên xem xét.</span>
+                <span className="font-semibold text-[15px]">
+                  {hasReported ? 'Đã báo cáo bài viết' : 'Báo cáo bài viết'}
+                </span>
+                <span className={`text-[13px] ${hasReported ? 'text-gray-400' : 'text-red-400'}`}>
+                  {hasReported
+                    ? 'Đã gửi báo cáo cho quản trị viên xem xét.'
+                    : 'Gửi bài viết này cho quản trị viên xem xét.'}
+                </span>
               </div>
             </DropdownMenuItem>
 
@@ -278,54 +242,23 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
             <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
 
             {onEdit && (
-              <>
-                <DropdownMenuItem
-                  className="flex items-start gap-3 p-3 cursor-pointer"
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    runAfterMenuClose(onEdit);
-                  }}
-                >
-                  <div className="mt-1">
-                    <Pencil className="w-6 h-6 text-gray-900 dark:text-gray-100" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-[15px]">Chỉnh sửa bài viết</span>
-                    <span className="text-[13px] text-gray-500 dark:text-gray-400">Thay đổi nội dung hoặc ảnh/video.</span>
-                  </div>
-                </DropdownMenuItem>
-
-                <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
-              </>
-            )}
-
-            {isGroupPost ? (
-              <div className="flex items-start gap-3 p-3 opacity-80">
-                <div className="mt-1">
-                  <Shield className="w-6 h-6 text-gray-900 dark:text-gray-100" />
-                </div>
-                <div className="flex flex-col text-left">
-                  <span className="font-semibold text-[15px]">Quyền riêng tư</span>
-                  <span className="text-[13px] text-gray-500 dark:text-gray-400">
-                    Bài viết trong nhóm theo quyền riêng tư của nhóm, không thể thay đổi riêng.
-                  </span>
-                </div>
-              </div>
-            ) : (
               <DropdownMenuItem
                 className="flex items-start gap-3 p-3 cursor-pointer"
-                disabled={updating}
                 onSelect={(e) => {
                   e.preventDefault();
-                  runAfterMenuClose(() => setShowAudienceModal(true));
+                  runAfterMenuClose(onEdit);
                 }}
               >
                 <div className="mt-1">
-                  <Shield className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+                  <Pencil className="w-6 h-6 text-gray-900 dark:text-gray-100" />
                 </div>
-                <div className="flex flex-col text-left">
-                  <span className="font-semibold text-[15px]">Quyền riêng tư</span>
-                  <span className="text-[13px] text-gray-500 dark:text-gray-400">{privacyLabel}</span>
+                <div className="flex flex-col">
+                  <span className="font-semibold text-[15px]">Chỉnh sửa</span>
+                  <span className="text-[13px] text-gray-500 dark:text-gray-400">
+                    {isGroupPost
+                      ? 'Thay đổi nội dung bài viết.'
+                      : 'Thay đổi nội dung và quyền riêng tư.'}
+                  </span>
                 </div>
               </DropdownMenuItem>
             )}
@@ -351,19 +284,6 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         )}
       </DropdownMenuContent>
     </DropdownMenu>
-
-    {!isGroupPost && (
-      <ProfilePostAudienceModal
-        isOpen={showAudienceModal}
-        onClose={() => setShowAudienceModal(false)}
-        selectedAudience={audience}
-        excludedUserIds={excludedUserIds}
-        allowedUserIds={allowedUserIds}
-        onSelect={(nextAudience, nextExcluded, nextAllowed) => {
-          void handleAudienceSelect(nextAudience, nextExcluded, nextAllowed);
-        }}
-      />
-    )}
 
     <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
       <DialogContent className="sm:max-w-md">

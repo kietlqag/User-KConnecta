@@ -1,0 +1,1 @@
+export { LiveGroupDestinationAvatar } from './LiveGroupDestinationAvatar';

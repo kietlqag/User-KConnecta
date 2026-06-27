@@ -1,6 +1,6 @@
 import { Bell, Calendar, Globe, Loader2, Pencil, Trash2, UserRound, Users2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import {
@@ -9,6 +9,7 @@ import {
   type LiveSessionResponse,
 } from '@/services/liveService';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import {
   Dialog,
   DialogContent,
@@ -224,6 +225,24 @@ export function ScheduledLiveDetailDialog({
           <section className="space-y-4">
               {mode === 'view' ? (
                 <>
+                  <Link
+                    to={`/profile/${session.hostUserId}`}
+                    className="inline-flex max-w-full items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900/60 dark:hover:bg-gray-800/80"
+                  >
+                    <UserAvatar
+                      name={session.hostName || 'Người tạo'}
+                      avatarUrl={session.hostAvatarUrl}
+                      userId={session.hostUserId}
+                      rounded="full"
+                      className="h-10 w-10 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Người tạo</p>
+                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        {session.hostName || 'Người dùng'}
+                      </p>
+                    </div>
+                  </Link>
                   <div>
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Tên sự kiện</p>
                     <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{session.title}</p>

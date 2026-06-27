@@ -138,6 +138,8 @@ export interface PostProps {
   poll?: PostPollResponse | null;
   /** Narrower layout for search results and similar embedded views. */
   compact?: boolean;
+  /** Stretch the card to fill its container height (for equal-height grids). */
+  fillHeight?: boolean;
 }
 
 export function Post({
@@ -172,6 +174,7 @@ export function Post({
   sharedAlbum,
   poll,
   compact = false,
+  fillHeight = false,
 }: PostProps) {
   // For share wrappers, save/share actions target the original post; interactions use the wrapper id.
   const originalPostId = sharedPost && originalPost ? originalPost.id : id;
@@ -219,7 +222,7 @@ export function Post({
     setAllowedUserIds(initialAllowedUserIds);
   }, [initialPrivacy, initialExcludedUserIds, initialAllowedUserIds, id]);
   const isOwner = !!currentUser && currentUser.id === author.id;
-  const canEditPost = isOwner && !sharedPost && !hasLivePreview;
+  const canEditPost = isOwner && !hasLivePreview;
 
   const openDeleteDialog = useCallback(() => {
     deleteScrollYRef.current = getScrollTop();
@@ -478,8 +481,8 @@ export function Post({
       <div
         id={`post-${id}`}
         className={`bg-card shadow-sm border border-border ${
-          compact ? 'mb-2 rounded-xl' : 'mb-4 rounded-2xl'
-        }`}
+          compact ? 'rounded-xl' : 'rounded-2xl'
+        } ${fillHeight ? 'flex h-full flex-col' : compact ? 'mb-2' : 'mb-4'}`}
       >
         <div className={compact ? 'p-3' : 'p-4'}>
           <div className="flex items-start justify-between mb-3">
@@ -579,19 +582,11 @@ export function Post({
                 postId={id}
                 isSaved={isSaved}
                 isOwner={isOwner}
-                privacy={currentPrivacy}
-                excludedUserIds={excludedUserIds}
-                allowedUserIds={allowedUserIds}
                 isGroupPost={!!group}
                 currentUserId={currentUser?.id}
                 onToggleSave={handleToggleSave}
                 onEdit={canEditPost ? () => setEditModalOpen(true) : undefined}
                 onDelete={openDeleteDialog}
-                onPrivacyChange={(nextPrivacy, nextExcluded, nextAllowed) => {
-                  setCurrentPrivacy(nextPrivacy);
-                  setExcludedUserIds(nextExcluded);
-                  setAllowedUserIds(nextAllowed);
-                }}
                 canPin={canPin}
                 isPinned={isPinned}
                 onPin={onPin ? () => onPin(id) : undefined}
@@ -815,7 +810,7 @@ export function Post({
           </div>
         ) : null}
 
-        <div className="px-4 py-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+        <div className={`px-4 py-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 ${fillHeight ? 'mt-auto' : ''}`}>
           <div className="flex items-center gap-2">
             {totalReactionCount > 0 && (
               <button
@@ -1097,9 +1092,23 @@ export function Post({
         postId={id}
         initialContent={displayContent}
         initialMedia={galleryItems.map((g) => ({ type: g.type, url: g.url }))}
-        onPostUpdated={({ content: newContent, mediaList: newMediaList }) => {
+        initialPrivacy={currentPrivacy}
+        initialExcludedUserIds={excludedUserIds}
+        initialAllowedUserIds={allowedUserIds}
+        isGroupPost={!!group}
+        isShareWrapper={sharedPost}
+        onPostUpdated={({
+          content: newContent,
+          mediaList: newMediaList,
+          privacy: newPrivacy,
+          excludedUserIds: newExcluded,
+          allowedUserIds: newAllowed,
+        }) => {
           setDisplayContent(newContent);
           setDisplayMediaList(newMediaList);
+          if (newPrivacy !== undefined) setCurrentPrivacy(newPrivacy);
+          if (newExcluded !== undefined) setExcludedUserIds(newExcluded);
+          if (newAllowed !== undefined) setAllowedUserIds(newAllowed);
         }}
       />
 

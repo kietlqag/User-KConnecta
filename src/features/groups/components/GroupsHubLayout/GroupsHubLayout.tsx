@@ -12,6 +12,8 @@ interface GroupsHubLayoutProps {
   managedGroups?: Group[];
   activeSectionId: 'feed' | 'discover' | 'your-groups' | 'search';
   initialSearchQuery?: string;
+  /** Tailwind max-width class for the main content column. */
+  contentMaxWidthClass?: string;
 }
 
 export function GroupsHubLayout({
@@ -20,6 +22,7 @@ export function GroupsHubLayout({
   managedGroups = [],
   activeSectionId,
   initialSearchQuery,
+  contentMaxWidthClass = 'max-w-[680px]',
 }: GroupsHubLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-background">
@@ -36,7 +39,7 @@ export function GroupsHubLayout({
           />
 
           <main className="min-w-0 flex-1">
-            <div className="mx-auto w-full max-w-[680px] p-4">{children}</div>
+            <div className={`mx-auto w-full p-4 ${contentMaxWidthClass}`}>{children}</div>
           </main>
 
           <div className={`sticky top-14 z-10 h-[calc(100vh-56px)] shrink-0 self-start ${RIGHT_SIDEBAR_WIDTH}`}>
