@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import project.kconnecta.user.backend.feature.post.entity.Post;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -12,6 +13,8 @@ import java.util.UUID;
 
 @Repository
 public interface PostRepository extends JpaRepository<Post, UUID> {
+
+    List<Post> findByStatus(PostStatus status);
 
     @Query("SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group " +
            "WHERE p.status = 'PUBLISHED' AND p.privacy = 'PUBLIC'")
@@ -65,6 +68,13 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "  WHERE (:currentUserId IS NOT NULL AND pr2.user_id = CAST(:currentUserId AS uuid)) " +
         "  GROUP BY p2.author_id" +
         ") ui ON ui.author_id = p.author_id " +
+        "LEFT JOIN (" +
+        "  SELECT pt.post_id, AVG(COALESCE(uis.score, 0)) AS avg_score " +
+        "  FROM post_topics pt " +
+        "  LEFT JOIN user_interest_scores uis ON LOWER(uis.topic) = LOWER(pt.topic) " +
+        "    AND (:currentUserId IS NOT NULL AND uis.user_id = CAST(:currentUserId AS uuid)) " +
+        "  GROUP BY pt.post_id" +
+        ") topic_agg ON topic_agg.post_id = p.id " +
         "WHERE p.status = 'PUBLISHED' " +
         "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC') " +
         "  AND (" +
@@ -100,8 +110,8 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "  ) " +
         "ORDER BY (" +
         // w1 · affinity: 4 levels — self / close-friend (≥5 interactions) / friend / stranger.
-        // Weights (:wAffinity/:wEngagement/:wRecency) come from the admin recommendation policy
-        // (RecommendationPolicyReader), normalized to sum ≈ 1.0; default = 0.20/0.40/0.40.
+        // Weights (:wAffinity/:wEngagement/:wRecency/:wTopic) come from the admin recommendation policy
+        // (RecommendationPolicyReader), normalized to sum ≈ 1.0.
         "  :wAffinity * CASE " +
         "    WHEN :currentUserId IS NULL THEN 0.5 " +
         "    WHEN p.author_id = CAST(:currentUserId AS uuid) THEN 1.0 " +
@@ -124,7 +134,13 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "    / (100.0 * SQRT(1.0 + GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 604800.0)), " +
         "    1.0) + " +
         // w3 · recency: exponential decay, half-life ≈ 6 hours
-        "  :wRecency * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 21600.0)))" +
+        "  :wRecency * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 21600.0))) + " +
+        // w4 · topic affinity: avg user interest score for post hashtags (0.5 neutral when no topics)
+        "  :wTopic * CASE " +
+        "    WHEN :currentUserId IS NULL THEN 0.5 " +
+        "    WHEN topic_agg.post_id IS NULL THEN 0.5 " +
+        "    ELSE LEAST(1.0, topic_agg.avg_score / 100.0) " +
+        "  END" +
         ") DESC, p.created_at DESC",
         countQuery =
         "SELECT count(*) FROM posts p " +
@@ -149,12 +165,29 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         @org.springframework.data.repository.query.Param("wAffinity") double wAffinity,
         @org.springframework.data.repository.query.Param("wEngagement") double wEngagement,
         @org.springframework.data.repository.query.Param("wRecency") double wRecency,
+        @org.springframework.data.repository.query.Param("wTopic") double wTopic,
         org.springframework.data.domain.Pageable pageable
     );
 
     @org.springframework.data.jpa.repository.Query(value =
         "SELECT p.* FROM posts p " +
         "LEFT JOIN user_groups g ON p.group_id = g.id " +
+        "LEFT JOIN (SELECT post_id, COUNT(*) AS cnt FROM post_reactions GROUP BY post_id) pr_agg ON pr_agg.post_id = p.id " +
+        "LEFT JOIN (SELECT post_id, COUNT(*) AS cnt FROM post_comments GROUP BY post_id) pc_agg ON pc_agg.post_id = p.id " +
+        "LEFT JOIN (SELECT post_id, COUNT(*) AS cnt FROM post_shares  GROUP BY post_id) ps_agg ON ps_agg.post_id = p.id " +
+        "LEFT JOIN (" +
+        "  SELECT p2.author_id, COUNT(*) AS cnt FROM post_reactions pr2 " +
+        "  JOIN posts p2 ON pr2.post_id = p2.id " +
+        "  WHERE (:currentUserId IS NOT NULL AND pr2.user_id = CAST(:currentUserId AS uuid)) " +
+        "  GROUP BY p2.author_id" +
+        ") ui ON ui.author_id = p.author_id " +
+        "LEFT JOIN (" +
+        "  SELECT pt.post_id, AVG(COALESCE(uis.score, 0)) AS avg_score " +
+        "  FROM post_topics pt " +
+        "  LEFT JOIN user_interest_scores uis ON LOWER(uis.topic) = LOWER(pt.topic) " +
+        "    AND (:currentUserId IS NOT NULL AND uis.user_id = CAST(:currentUserId AS uuid)) " +
+        "  GROUP BY pt.post_id" +
+        ") topic_agg ON topic_agg.post_id = p.id " +
         "WHERE p.status = 'PUBLISHED' " +
         "  AND (" +
         "    EXISTS (SELECT 1 FROM post_media pm WHERE pm.post_id = p.id AND pm.media_type = 'VIDEO') " +
@@ -195,7 +228,30 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "      ) " +
         "    ) " +
         "  ) " +
-        "ORDER BY COALESCE(p.published_at, p.created_at) DESC",
+        "ORDER BY (" +
+        "  :wAffinity * CASE " +
+        "    WHEN :currentUserId IS NULL THEN 0.5 " +
+        "    WHEN p.author_id = CAST(:currentUserId AS uuid) THEN 1.0 " +
+        "    WHEN COALESCE(ui.cnt, 0) >= 5 THEN 0.9 " +
+        "    WHEN EXISTS (" +
+        "      SELECT 1 FROM friendships f " +
+        "      WHERE f.status = 'ACCEPTED' " +
+        "        AND ((f.requester_id = CAST(:currentUserId AS uuid) AND f.addressee_id = p.author_id) " +
+        "          OR (f.addressee_id = CAST(:currentUserId AS uuid) AND f.requester_id = p.author_id)) " +
+        "    ) THEN 0.7 " +
+        "    ELSE 0.5 " +
+        "  END + " +
+        "  :wEngagement * LEAST(" +
+        "    (COALESCE(pr_agg.cnt, 0) + COALESCE(pc_agg.cnt, 0) * 2.0 + COALESCE(ps_agg.cnt, 0) * 3.0) " +
+        "    / (100.0 * SQRT(1.0 + GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 604800.0)), " +
+        "    1.0) + " +
+        "  :wRecency * (1.0 / (1.0 + (GREATEST(0, EXTRACT(EPOCH FROM (to_timestamp(floor(extract(epoch from now()) / 600.0) * 600) - COALESCE(p.published_at, p.created_at)))) / 21600.0))) + " +
+        "  :wTopic * CASE " +
+        "    WHEN :currentUserId IS NULL THEN 0.5 " +
+        "    WHEN topic_agg.post_id IS NULL THEN 0.5 " +
+        "    ELSE LEAST(1.0, topic_agg.avg_score / 100.0) " +
+        "  END" +
+        ") DESC, p.created_at DESC",
         countQuery =
         "SELECT count(*) FROM posts p " +
         "LEFT JOIN user_groups g ON p.group_id = g.id " +
@@ -223,6 +279,10 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
     )
     org.springframework.data.domain.Page<Post> findWatchFeedPosts(
         @org.springframework.data.repository.query.Param("currentUserId") UUID currentUserId,
+        @org.springframework.data.repository.query.Param("wAffinity") double wAffinity,
+        @org.springframework.data.repository.query.Param("wEngagement") double wEngagement,
+        @org.springframework.data.repository.query.Param("wRecency") double wRecency,
+        @org.springframework.data.repository.query.Param("wTopic") double wTopic,
         org.springframework.data.domain.Pageable pageable
     );
 

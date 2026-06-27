@@ -60,8 +60,8 @@ class PostServiceImplShareTest {
         Post post1 = Post.builder().id(UUID.randomUUID()).author(author).createdAt(LocalDateTime.now()).updatedAt(LocalDateTime.now()).media(new ArrayList<>()).mentions(new ArrayList<>()).audienceAllowances(new ArrayList<>()).audienceExclusions(new ArrayList<>()).build();
         Page<Post> postPage = new PageImpl<>(List.of(post1), pageable, 1);
         when(recommendationPolicyReader.getFeedWeights())
-                .thenReturn(new RecommendationPolicyReader.FeedWeights(0.2, 0.4, 0.4));
-        when(postRepository.findHomeFeedPostsWithScoring(eq(currentUserId), anyDouble(), anyDouble(), anyDouble(), eq(pageable)))
+                .thenReturn(new RecommendationPolicyReader.FeedWeights(0.2, 0.4, 0.4, 0.0));
+        when(postRepository.findHomeFeedPostsWithScoring(eq(currentUserId), anyDouble(), anyDouble(), anyDouble(), anyDouble(), eq(pageable)))
                 .thenReturn(postPage);
 
         // Mock bulk processing data for the home feed post

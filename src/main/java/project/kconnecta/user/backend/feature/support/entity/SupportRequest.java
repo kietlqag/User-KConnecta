@@ -5,6 +5,8 @@ import lombok.*;
 import project.kconnecta.user.backend.feature.user.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -48,6 +50,10 @@ public class SupportRequest {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "supportRequest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<SupportRequestAttachment> attachments = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {

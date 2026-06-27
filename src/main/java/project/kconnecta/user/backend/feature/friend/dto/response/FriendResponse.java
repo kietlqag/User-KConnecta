@@ -16,6 +16,7 @@ public class FriendResponse {
     private String fullName;
     private String avatarUrl;
     private int mutualFriends;
+    private String suggestionReason;
     private FriendshipStatus status;
     private LocalDateTime createdAt;
 }

@@ -772,3 +772,38 @@ CREATE TABLE IF NOT EXISTS public.support_requests (
 
 CREATE INDEX IF NOT EXISTS idx_support_requests_user ON public.support_requests(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_support_requests_status ON public.support_requests(status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS public.support_request_attachments (
+    id                 UUID PRIMARY KEY,
+    support_request_id UUID NOT NULL REFERENCES public.support_requests(id) ON DELETE CASCADE,
+    image_url          TEXT NOT NULL,
+    created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_support_request_attachments_request
+    ON public.support_request_attachments(support_request_id, created_at ASC);
+
+-- -------------------------
+-- Interest / topic personalization (hashtags → feed ranking)
+-- -------------------------
+CREATE TABLE IF NOT EXISTS public.post_topics (
+    id       UUID PRIMARY KEY,
+    post_id  UUID NOT NULL REFERENCES public.posts(id) ON DELETE CASCADE,
+    topic    VARCHAR(50) NOT NULL,
+    CONSTRAINT uk_post_topic UNIQUE (post_id, topic)
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_topics_post ON public.post_topics(post_id);
+CREATE INDEX IF NOT EXISTS idx_post_topics_topic ON public.post_topics(topic);
+
+CREATE TABLE IF NOT EXISTS public.user_interest_scores (
+    id         UUID PRIMARY KEY,
+    user_id    UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    topic      VARCHAR(50) NOT NULL,
+    score      DOUBLE PRECISION NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_user_interest_topic UNIQUE (user_id, topic)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_interest_scores_user ON public.user_interest_scores(user_id, score DESC);
+CREATE INDEX IF NOT EXISTS idx_user_interest_scores_topic ON public.user_interest_scores(topic);

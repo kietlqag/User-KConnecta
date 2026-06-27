@@ -82,6 +82,22 @@ public class CloudinaryService {
         }
     }
 
+    public String uploadSupportEvidence(MultipartFile file) {
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "kconnecta/support-evidence",
+                            "resource_type", "image",
+                            "public_id", "support-evidence-" + UUID.randomUUID()
+                    )
+            );
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Upload support evidence failed", e);
+        }
+    }
+
     public String uploadPostImage(MultipartFile file) {
         try {
             String contentType = file.getContentType();

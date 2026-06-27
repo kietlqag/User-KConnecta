@@ -1,7 +1,6 @@
 package project.kconnecta.user.backend.feature.friend.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.feature.settings.service.SettingsService;
@@ -17,21 +16,17 @@ import project.kconnecta.user.backend.feature.friend.entity.Friendship;
 import project.kconnecta.user.backend.feature.friend.entity.enums.FriendshipStatus;
 import project.kconnecta.user.backend.feature.friend.repository.FriendshipRepository;
 import project.kconnecta.user.backend.feature.friend.service.FriendService;
+import project.kconnecta.user.backend.feature.friend.service.FriendSuggestionService;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
 import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
-import project.kconnecta.user.backend.feature.settings.repository.UserBlockRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +38,7 @@ public class FriendServiceImpl implements FriendService {
     private final ActivityLogService activityLogService;
     private final NotificationEventPublisher notificationEventPublisher;
     private final SettingsService settingsService;
-    private final UserBlockRepository userBlockRepository;
+    private final FriendSuggestionService friendSuggestionService;
 
     @Override
     public List<FriendResponse> getFriends(UUID userId) {
@@ -86,90 +81,7 @@ public class FriendServiceImpl implements FriendService {
 
     @Override
     public List<FriendResponse> getSuggestions(UUID userId) {
-        // BFS Level 1: current user's accepted friends
-        Set<UUID> myFriendIds = new HashSet<>(
-                friendshipRepository.findFriendIdsByUserIdAndStatus(userId, FriendshipStatus.ACCEPTED));
-
-        // All IDs to exclude: friends, pending sent/received, self, and blocked (either direction)
-        Set<UUID> excluded = new HashSet<>(myFriendIds);
-        excluded.addAll(friendshipRepository.findAddresseeIdsByRequesterId(userId));
-        excluded.addAll(friendshipRepository.findRequesterIdsByAddresseeId(userId));
-        excluded.addAll(userBlockRepository.findRelatedUserIds(userId));
-        excluded.add(userId);
-
-        // Friends-of-friends: one query for all edges touching my friends, then count mutuals in memory
-        Map<UUID, Integer> mutualCountMap = new HashMap<>();
-        if (!myFriendIds.isEmpty()) {
-            for (Object[] pair : friendshipRepository.findFriendshipPairsInvolvingUsers(
-                    new ArrayList<>(myFriendIds),
-                    FriendshipStatus.ACCEPTED)) {
-                UUID requesterId = (UUID) pair[0];
-                UUID addresseeId = (UUID) pair[1];
-                UUID candidate;
-                if (myFriendIds.contains(requesterId) && !myFriendIds.contains(addresseeId)) {
-                    candidate = addresseeId;
-                } else if (myFriendIds.contains(addresseeId) && !myFriendIds.contains(requesterId)) {
-                    candidate = requesterId;
-                } else {
-                    continue;
-                }
-                if (!excluded.contains(candidate)) {
-                    mutualCountMap.merge(candidate, 1, Integer::sum);
-                }
-            }
-        }
-
-        // Sort candidates by mutual friend count descending, take top 40
-        List<UUID> sortedCandidates = mutualCountMap.entrySet().stream()
-                .sorted(Map.Entry.<UUID, Integer>comparingByValue().reversed())
-                .map(Map.Entry::getKey)
-                .limit(40)
-                .toList();
-
-        List<FriendResponse> result = new ArrayList<>();
-
-        if (!sortedCandidates.isEmpty()) {
-            Map<UUID, User> userMap = userRepository.findAllById(sortedCandidates).stream()
-                    .collect(Collectors.toMap(User::getId, u -> u));
-
-            sortedCandidates.stream()
-                    .filter(userMap::containsKey)
-                    .map(id -> {
-                        User u = userMap.get(id);
-                        return FriendResponse.builder()
-                                .friendshipId(null)
-                                .userId(u.getId())
-                                .username(u.getUsername())
-                                .fullName(u.getFullName())
-                                .avatarUrl(u.getAvatarUrl())
-                                .mutualFriends(mutualCountMap.get(id))
-                                .status(null)
-                                .createdAt(null)
-                                .build();
-                    })
-                    .forEach(result::add);
-        }
-
-        // Fallback: if BFS yields fewer than 40 results, fill with strangers (no mutual friends)
-        if (result.size() < 40) {
-            Set<UUID> fullyExcluded = new HashSet<>(excluded);
-            result.forEach(r -> fullyExcluded.add(r.getUserId()));
-
-            int needed = 40 - result.size();
-            userRepository.findSuggestionsExcluding(fullyExcluded, PageRequest.of(0, needed))
-                    .forEach(u -> result.add(FriendResponse.builder()
-                            .friendshipId(null)
-                            .userId(u.getId())
-                            .username(u.getUsername())
-                            .fullName(u.getFullName())
-                            .avatarUrl(u.getAvatarUrl())
-                            .mutualFriends(0)
-                            .status(null)
-                            .createdAt(null)
-                            .build()));
-        }
-
-        return result;
+        return friendSuggestionService.getSuggestions(userId);
     }
 
     @Override

@@ -58,6 +58,9 @@ import project.kconnecta.user.backend.feature.settings.service.SettingsService;
 import project.kconnecta.user.backend.feature.album.entity.Album;
 import project.kconnecta.user.backend.feature.album.repository.AlbumMediaRepository;
 import project.kconnecta.user.backend.feature.album.repository.AlbumRepository;
+import project.kconnecta.user.backend.feature.interest.entity.enums.InterestEventType;
+import project.kconnecta.user.backend.feature.interest.service.PostTopicService;
+import project.kconnecta.user.backend.feature.interest.service.UserInterestService;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
@@ -131,6 +134,8 @@ public class PostServiceImpl implements PostService {
     private final PostPollRepository postPollRepository;
     private final PostPollOptionRepository postPollOptionRepository;
     private final PostPollVoteRepository postPollVoteRepository;
+    private final PostTopicService postTopicService;
+    private final UserInterestService userInterestService;
 
     @Override
     public PostRateLimitStatus getPostRateLimitStatus(UUID userId) {
@@ -302,6 +307,9 @@ public class PostServiceImpl implements PostService {
             attachPoll(saved, author, request.getPoll());
             saved = postRepository.save(saved);
         }
+        if (saved.getStatus() == PostStatus.PUBLISHED) {
+            postTopicService.syncTopics(saved.getId(), saved.getContent());
+        }
         log.info("create post saved: postId={}, status={}, publishedAt={}",
                 saved.getId(), saved.getStatus(), saved.getPublishedAt());
 
@@ -424,6 +432,9 @@ public class PostServiceImpl implements PostService {
         applyScheduleChanges(post, request);
 
         Post saved = postRepository.save(post);
+        if (saved.getStatus() == PostStatus.PUBLISHED) {
+            postTopicService.syncTopics(saved.getId(), saved.getContent());
+        }
         return mapToResponse(saved, userId);
     }
 
@@ -500,6 +511,7 @@ public class PostServiceImpl implements PostService {
             post.setStatus(PostStatus.PUBLISHED);
             post.setPublishedAt(now);
             Post saved = postRepository.save(post);
+            postTopicService.syncTopics(saved.getId(), saved.getContent());
             redisSearchIndexer.indexPost(saved);
             User author = saved.getAuthor();
             activityLogService.log(author.getId(), author.getUsername(), ActivityLogType.POST_CREATED,
@@ -659,7 +671,12 @@ public class PostServiceImpl implements PostService {
     public Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable) {
         var weights = recommendationPolicyReader.getFeedWeights();
         Page<Post> postPage = postRepository.findHomeFeedPostsWithScoring(
-                currentUserId, weights.affinity(), weights.engagement(), weights.recency(), pageable);
+                currentUserId,
+                weights.affinity(),
+                weights.engagement(),
+                weights.recency(),
+                weights.topic(),
+                pageable);
         List<Post> diversified = applyAuthorDiversity(postPage.getContent(), 3);
         List<PostResponse> responses = processPostsBulk(diversified, currentUserId);
 
@@ -722,9 +739,23 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostResponse> getWatchPosts(UUID currentUserId, Pageable pageable) {
-        Page<Post> postPage = postRepository.findWatchFeedPosts(currentUserId, pageable);
-        List<PostResponse> responses = processPostsBulk(postPage.getContent(), currentUserId);
-        return new PageImpl<>(responses, pageable, postPage.getTotalElements());
+        var weights = recommendationPolicyReader.getReelWeights();
+        Page<Post> postPage = postRepository.findWatchFeedPosts(
+                currentUserId,
+                weights.affinity(),
+                weights.engagement(),
+                weights.recency(),
+                weights.topic(),
+                pageable);
+        List<Post> diversified = applyAuthorDiversity(postPage.getContent(), 2);
+        List<PostResponse> responses = processPostsBulk(diversified, currentUserId);
+
+        long dbPageSize = postPage.getContent().size();
+        long adjustedTotal = dbPageSize < pageable.getPageSize()
+                ? pageable.getOffset() + diversified.size()
+                : postPage.getTotalElements();
+
+        return new PageImpl<>(responses, pageable, adjustedTotal);
     }
 
     @Override
@@ -974,6 +1005,8 @@ public class PostServiceImpl implements PostService {
         reaction.setReactionType(request.getReactionType());
 
         PostReaction saved = postReactionRepository.save(reaction);
+        userInterestService.recordInteraction(
+                request.getUserId(), target.post().getId(), InterestEventType.REACTION);
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.REACTION_ADDED,
                 "{\"targetId\":\"" + target.getTargetId() + "\",\"type\":\"" + request.getReactionType() + "\"}");
 
@@ -1190,6 +1223,9 @@ public class PostServiceImpl implements PostService {
                 .status(status)
                 .build());
 
+        userInterestService.recordInteraction(
+                request.getUserId(), target.post().getId(), InterestEventType.COMMENT);
+
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.COMMENT_ADDED,
                 "{\"targetId\":\"" + target.getTargetId() + "\"}");
 
@@ -1346,6 +1382,8 @@ public class PostServiceImpl implements PostService {
                 .privacy(sharePrivacy)
                 .build());
 
+        userInterestService.recordInteraction(request.getUserId(), postId, InterestEventType.SHARE);
+
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.POST_SHARED,
                 "{\"postId\":\"" + postId + "\",\"parentShareId\":\"" + request.getParentShareId() + "\"}");
 
@@ -1378,6 +1416,7 @@ public class PostServiceImpl implements PostService {
         Post post = getPost(request.getPostId());
         User user = getUser(request.getUserId(), "User not found");
         postSavedRepository.save(PostSaved.builder().post(post).user(user).build());
+        userInterestService.recordInteraction(request.getUserId(), request.getPostId(), InterestEventType.SAVE);
     }
 
     @Override

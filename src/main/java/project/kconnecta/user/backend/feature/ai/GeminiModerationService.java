@@ -129,7 +129,7 @@ public class GeminiModerationService {
         }
 
         String prompt = String.format(PROMPT_TEMPLATE, content);
-        return callGemini(prompt).flatMap(this::parseModerationResponse);
+        return generateContentJson(prompt).flatMap(this::parseModerationResponse);
     }
 
     public Optional<ReportAnalysisResult> analyzeReport(String postContent, String category, String reason) {
@@ -146,7 +146,26 @@ public class GeminiModerationService {
                 reason != null ? reason : "(không có)",
                 postContent
         );
-        return callGemini(prompt).flatMap(this::parseReportAnalysis);
+        return generateContentJson(prompt).flatMap(this::parseReportAnalysis);
+    }
+
+    /**
+     * Low-level Gemini JSON completion. Shared by moderation, reports, hashtag suggestion, etc.
+     */
+    public Optional<JsonNode> generateContentJson(String prompt) {
+        if (resolveApiKeys().isEmpty()) {
+            log.warn("Gemini API key not configured — skipping request");
+            return Optional.empty();
+        }
+        if (prompt == null || prompt.isBlank()) {
+            return Optional.empty();
+        }
+        return callGemini(prompt);
+    }
+
+    /** Extracts the first text candidate from a Gemini response root node. */
+    public Optional<String> extractText(JsonNode root) {
+        return firstCandidateText(root).map(this::stripCodeFence);
     }
 
     private List<String> resolveApiKeys() {

@@ -59,6 +59,38 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("SELECT u FROM User u WHERE u.id NOT IN :excludedIds")
     List<User> findSuggestionsExcluding(@Param("excludedIds") Collection<UUID> excludedIds, Pageable pageable);
 
+    @Query("""
+            SELECT u FROM User u
+            WHERE u.id NOT IN :excludedIds
+              AND u.school IS NOT NULL
+              AND TRIM(u.school) <> ''
+              AND LOWER(TRIM(u.school)) = :school
+            """)
+    List<User> findBySchoolExcluding(
+            @Param("school") String school,
+            @Param("excludedIds") Collection<UUID> excludedIds,
+            Pageable pageable);
+
+    @Query("""
+            SELECT u FROM User u
+            WHERE u.id NOT IN :excludedIds
+              AND (
+                (:hometown IS NOT NULL AND u.hometown IS NOT NULL AND TRIM(u.hometown) <> ''
+                    AND LOWER(TRIM(u.hometown)) = :hometown)
+                OR (:location IS NOT NULL AND u.location IS NOT NULL AND TRIM(u.location) <> ''
+                    AND LOWER(TRIM(u.location)) = :location)
+                OR (:hometown IS NOT NULL AND u.location IS NOT NULL AND TRIM(u.location) <> ''
+                    AND LOWER(TRIM(u.location)) = :hometown)
+                OR (:location IS NOT NULL AND u.hometown IS NOT NULL AND TRIM(u.hometown) <> ''
+                    AND LOWER(TRIM(u.hometown)) = :location)
+              )
+            """)
+    List<User> findByLocationSignalsExcluding(
+            @Param("hometown") String hometown,
+            @Param("location") String location,
+            @Param("excludedIds") Collection<UUID> excludedIds,
+            Pageable pageable);
+
     @Query(value = "SELECT * FROM public.users u WHERE unaccent(LOWER(u.full_name)) LIKE unaccent(LOWER(CONCAT('%', :q, '%')))", nativeQuery = true)
     List<User> searchByFullName(@Param("q") String q, Pageable pageable);
 
