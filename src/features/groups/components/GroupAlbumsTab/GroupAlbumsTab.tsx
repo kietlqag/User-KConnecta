@@ -14,14 +14,14 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
   const albums = data?.content ?? [];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-6">
+    <div className="bg-card rounded-xl border border-border shadow-sm p-4 sm:p-6">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
             <AlbumIcon className="w-5 h-5 text-emerald-600" />
             Album nhóm
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Lưu giữ kỷ niệm ảnh và video của cả nhóm
           </p>
         </div>
@@ -38,11 +38,11 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
       </div>
 
       {isLoading ? (
-        <div className="py-12 text-center text-gray-500">Đang tải album...</div>
+        <div className="py-12 text-center text-muted-foreground">Đang tải album...</div>
       ) : albums.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-10 text-center">
-          <AlbumIcon className="w-10 h-10 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500 mb-4">Nhóm chưa có album nào</p>
+        <div className="rounded-xl border border-dashed border-border p-10 text-center">
+          <AlbumIcon className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+          <p className="text-muted-foreground mb-4">Nhóm chưa có album nào</p>
           {canCreate && (
             <button
               type="button"
@@ -61,9 +61,9 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
               key={album.id}
               type="button"
               onClick={() => navigate(`/albums/${album.id}`)}
-              className="group text-left rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+              className="group text-left rounded-xl overflow-hidden border border-border hover:shadow-lg transition-shadow"
             >
-              <div className="aspect-square bg-gray-100 dark:bg-gray-900 relative overflow-hidden">
+              <div className="aspect-square bg-background relative overflow-hidden">
                 {album.coverUrl ? (
                   <ImageWithFallback
                     src={album.coverUrl}
@@ -71,14 +71,14 @@ export function GroupAlbumsTab({ groupId, canCreate = false }: GroupAlbumsTabPro
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                     <AlbumIcon className="w-10 h-10 opacity-40" />
                   </div>
                 )}
               </div>
-              <div className="p-3 bg-white dark:bg-gray-800">
-                <p className="font-semibold text-gray-900 dark:text-gray-100 truncate">{album.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+              <div className="p-3 bg-card">
+                <p className="font-semibold text-foreground truncate">{album.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {album.mediaCount} ảnh/video · {album.ownerName}
                 </p>
               </div>

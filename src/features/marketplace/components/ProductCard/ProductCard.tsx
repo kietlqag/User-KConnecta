@@ -13,9 +13,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow group">
+    <div className="bg-card rounded-lg overflow-hidden cursor-pointer hover:shadow-lg transition-shadow group">
       {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-background">
+      <div className="relative aspect-square overflow-hidden bg-background">
         <img
           src={product.image}
           alt={product.title}
@@ -31,8 +31,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       {/* Details */}
       <div className="p-3">
         <div className="text-lg font-semibold mb-1">{formatPrice(product.price)}</div>
-        <h3 className="text-sm text-gray-900 dark:text-gray-100 mb-1 line-clamp-2">{product.title}</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{product.location}</p>
+        <h3 className="text-sm text-foreground mb-1 line-clamp-2">{product.title}</h3>
+        <p className="text-xs text-muted-foreground">{product.location}</p>
       </div>
     </div>
   );

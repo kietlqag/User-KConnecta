@@ -146,9 +146,9 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
       {/* Suggestions Panel */}
-      <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-2xl z-50 max-h-[500px] overflow-hidden">
+      <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-lg shadow-2xl z-50 max-h-[500px] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h3 className="font-semibold text-base">
             {showRecent ? 'Tìm kiếm gần đây' : `Kết quả cho "${query}"`}
           </h3>
@@ -185,16 +185,16 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
                   className="w-9 h-9 rounded-full object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                   {item.type === 'person'
-                    ? <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                    : <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                    ? <User className="w-5 h-5 text-muted-foreground" />
+                    : <Users className="w-5 h-5 text-muted-foreground" />
                   }
                 </div>
               )}
               <div className="flex-1 text-left min-w-0">
                 <div className="font-medium text-sm truncate">{item.text}</div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-muted-foreground">
                   {item.type === 'person' ? 'Người dùng' : 'Nhóm'}
                 </div>
               </div>
@@ -203,14 +203,14 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
 
           {/* ── No API results ── */}
           {!loading && !showRecent && suggestions.length === 0 && (
-            <div className="text-center py-8 text-sm text-gray-400">
+            <div className="text-center py-8 text-sm text-muted-foreground">
               Không tìm thấy kết quả cho "{query}"
             </div>
           )}
 
           {/* ── Recent Search History ── */}
           {showRecent && history.length === 0 && (
-            <div className="text-center py-8 text-sm text-gray-400">
+            <div className="text-center py-8 text-sm text-muted-foreground">
               Chưa có lịch sử tìm kiếm
             </div>
           )}
@@ -221,17 +221,17 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
               onClick={() => handleHistoryClick(item)}
               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted transition-colors group cursor-pointer"
             >
-              <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                 {item.type === 'person'
-                  ? <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                  ? <User className="w-5 h-5 text-muted-foreground" />
                   : item.type === 'group'
-                  ? <Users className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                  : <Clock className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                  ? <Users className="w-5 h-5 text-muted-foreground" />
+                  : <Clock className="w-5 h-5 text-muted-foreground" />
                 }
               </div>
               <div className="flex-1 text-left min-w-0">
                 <div className="font-medium text-sm truncate">{item.text}</div>
-                <div className="text-xs text-gray-400">
+                <div className="text-xs text-muted-foreground">
                   {item.type === 'person' ? 'Người dùng'
                     : item.type === 'group' ? 'Nhóm'
                     : 'Tìm kiếm'}
@@ -239,10 +239,10 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
               </div>
               <button
                 onClick={(e) => handleRemoveHistory(e, item.id)}
-                className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer"
+                className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-pointer"
                 title="Xóa"
               >
-                <X className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <X className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
           ))}
@@ -252,7 +252,7 @@ export const SearchSuggestions = ({ query, onClose }: SearchSuggestionsProps) =>
             <button
               type="button"
               onClick={() => goSearch(trimmedQuery)}
-              className="w-full flex items-center gap-2 px-4 py-2.5 border-t border-gray-100 dark:border-gray-800 text-sm text-gray-500 dark:text-gray-400 hover:bg-muted transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2 px-4 py-2.5 border-t border-border text-sm text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
             >
               <Search className="w-4 h-4" />
               <span>Nhấn Enter để tìm kiếm "{query}"</span>

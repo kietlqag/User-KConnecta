@@ -11,7 +11,7 @@ export function AlbumSidebarCard() {
     <>
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-gray-600 dark:text-gray-400 font-semibold flex items-center gap-1.5">
+          <h3 className="text-muted-foreground font-semibold flex items-center gap-1.5">
             <Images className="w-4 h-4" />
             Kỷ niệm ảnh
           </h3>
@@ -25,10 +25,10 @@ export function AlbumSidebarCard() {
         </div>
 
         {isLoading ? (
-          <div className="p-3 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</div>
+          <div className="p-3 text-center text-sm text-muted-foreground">Đang tải...</div>
         ) : albums.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-4 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Chưa có album nào</p>
+          <div className="rounded-xl border border-dashed border-border p-4 text-center">
+            <p className="text-sm text-muted-foreground mb-3">Chưa có album nào</p>
             <button
               type="button"
               onClick={() => navigate('/albums/create')}
@@ -44,7 +44,7 @@ export function AlbumSidebarCard() {
             <button
               type="button"
               onClick={() => navigate('/albums/create')}
-              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium text-foreground transition-colors"
             >
               <ImagePlus className="w-4 h-4" />
               Tạo album mới
@@ -53,7 +53,7 @@ export function AlbumSidebarCard() {
         )}
       </div>
 
-      <div className="h-px bg-gray-300 dark:bg-gray-700" />
+      <div className="h-px bg-muted" />
     </>
   );
 }

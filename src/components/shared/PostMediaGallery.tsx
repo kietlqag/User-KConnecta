@@ -27,9 +27,7 @@ function MediaTile({
     <div
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
-      className={`relative h-full min-h-0 w-full overflow-hidden bg-black ${
-        clickable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70' : ''
-      }`}
+      className={`relative h-full min-h-0 w-full overflow-hidden bg-black ${ clickable ? 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70' : '' }`}
       onClick={clickable ? onActivate : undefined}
       onKeyDown={
         clickable

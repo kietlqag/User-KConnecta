@@ -12,11 +12,7 @@ interface SettingRowProps {
 export function SettingRow({ label, description, children, className, stacked }: SettingRowProps) {
   return (
     <div
-      className={cn(
-        'rounded-[10px] px-4 py-4 transition-colors hover:bg-muted/40',
-        stacked ? 'flex flex-col gap-3' : 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between',
-        className,
-      )}
+      className={cn( 'rounded-[10px] px-4 py-4 transition-colors hover:bg-muted/40', stacked ? 'flex flex-col gap-3' : 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between', className, )}
     >
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground">{label}</p>

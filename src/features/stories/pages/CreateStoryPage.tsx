@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, type ChangeEvent, type MouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { Camera, Check, ChevronRight, Clock, Crop, Globe, Lock, Music, Search, Sparkles, Type, UserPlus, Users, X } from 'lucide-react';
+import { Camera, Check, ChevronRight, Clock, Crop, Globe, Lock, Sparkles, Type, UserPlus, Users, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import data from '@emoji-mart/data';
@@ -16,7 +16,7 @@ import bgImg5 from './backgroundImage/992d312079803e982fed2aa32d3f6992.jpg';
 import bgImg6 from './backgroundImage/bb693fb7f6b569c4821a018d9bdcf242.jpg';
 import bgImg7 from './backgroundImage/e46e6b20a5944479a9ee44cbb495567c.jpg';
 
-type StoryEditorTool = 'text' | 'music' | 'alt-text' | 'image' | 'background' | 'filter' | 'sticker';
+type StoryEditorTool = 'text' | 'alt-text' | 'image' | 'background' | 'filter' | 'sticker';
 
 const COLOR_FILTERS = [
   { id: 'none',     label: 'Gốc',      style: '' },
@@ -26,28 +26,11 @@ const COLOR_FILTERS = [
   { id: 'dark',     label: 'Tối',      style: 'bg-black/35' },
   { id: 'pink',     label: 'Hồng',     style: 'bg-pink-400/30' },
   { id: 'green',    label: 'Xanh lá',  style: 'bg-green-400/25' },
-  { id: 'mono',     label: 'Xám',      style: 'bg-gray-500/40 mix-blend-color' },
+  { id: 'mono',     label: 'Xám',      style: 'bg-muted0/40 mix-blend-color' },
 ] as const;
 type FilterId = typeof COLOR_FILTERS[number]['id'];
 
 interface StickerItem { id: string; emoji: string; x: number; y: number; size: number; }
-
-
-
-interface MusicTrack {
-  id: string;
-  title: string;
-  artist: string;
-}
-
-const musicTracks: MusicTrack[] = [
-  { id: '1', title: 'Đạo Bước HongKong', artist: 'No-No-No' },
-  { id: '2', title: 'Nâng Lương Tích C', artist: 'DTrung, MẹMê Media' },
-  { id: '3', title: 'Đập Là Đập (Yap Y...)', artist: 'Iagadz' },
-  { id: '4', title: 'coffee or tea', artist: 'iShye' },
-  { id: '5', title: 'It Just Comes and G...', artist: 'Old Man Canyon' },
-  { id: '6', title: 'Late Night Walks', artist: 'Teddy Vogel' },
-];
 
 const textColorPalette = ['#FFFFFF', '#000000', '#F43F5E', '#F59E0B', '#22C55E', '#3B82F6', '#8B5CF6', '#F97316'];
 
@@ -177,8 +160,6 @@ export function CreateStoryPage() {
   const [isResizingText, setIsResizingText] = useState(false);
   const [isHoveringTextBox, setIsHoveringTextBox] = useState(false);
   const [altText, setAltText] = useState('');
-  const [musicKeyword, setMusicKeyword] = useState('');
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [imageScale, setImageScale] = useState(100);
   const [isGrabbing, setIsGrabbing] = useState(false);
   const [contentSize, setContentSize] = useState({ width: 360, height: 640 });
@@ -240,8 +221,6 @@ export function CreateStoryPage() {
       return null;
     });
     setSelectedImageFile(null);
-    setSelectedTrackId(null);
-    setMusicKeyword('');
     setStoryText('');
     setImageScale(100);
     lastScaleRef.current = 100;
@@ -284,7 +263,6 @@ export function CreateStoryPage() {
       textSize: hasText ? textSize : undefined,
       textPosX: hasText ? textPosition.x : undefined,
       textPosY: hasText ? textPosition.y : undefined,
-      musicTrackId: selectedTrackId ?? undefined,
       altText: altText.trim() || undefined,
       backgroundColor: isTextStoryMode ? selectedBg.value : undefined,
       linkedPostId: linkedPostId ?? undefined,
@@ -316,10 +294,6 @@ export function CreateStoryPage() {
 
   const hasSelectedImage = Boolean(selectedImageUrl);
   const isActive = hasSelectedImage || isTextStoryMode;
-  const filteredTracks = musicTracks.filter((track) =>
-    `${track.title} ${track.artist}`.toLowerCase().includes(musicKeyword.toLowerCase())
-  );
-  const selectedTrack = musicTracks.find((track) => track.id === selectedTrackId);
 
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -578,29 +552,29 @@ export function CreateStoryPage() {
   return (
     <div className="h-screen bg-[#f0f2f5] overflow-hidden">
       <div className="flex h-full w-full overflow-hidden">
-        <aside className="relative w-[320px] shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 pb-16 flex flex-col">
-          <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-5 py-3">
+        <aside className="relative w-[320px] shrink-0 border-r border-border bg-card pb-16 flex flex-col">
+          <div className="flex items-center gap-3 border-b border-border px-5 py-3">
             <button
               type="button"
               onClick={() => setIsDiscardModalOpen(true)}
-              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-gray-700 dark:text-gray-300 transition hover:bg-muted"
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-foreground transition hover:bg-muted"
               aria-label="Đóng"
             >
               <X className="h-5 w-5" />
             </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tin của bạn</h1>
+            <h1 className="text-2xl font-bold text-foreground">Tin của bạn</h1>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
             <div className="mb-4 flex items-center gap-3 rounded-lg px-2 py-2">
-              <div className="h-10 w-10 overflow-hidden rounded-full bg-gray-300 dark:bg-gray-600">
+              <div className="h-10 w-10 overflow-hidden rounded-full bg-muted">
                 <img
                   src={userAvatar}
                   alt="Avatar"
                   className="h-full w-full object-cover"
                 />
               </div>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{userFullName}</span>
+              <span className="font-medium text-foreground">{userFullName}</span>
             </div>
 
             {/* Privacy selector */}
@@ -608,29 +582,26 @@ export function CreateStoryPage() {
               <button
                 type="button"
                 onClick={handlePrivacyButtonClick}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 transition hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 transition hover:border-border hover:bg-muted"
               >
-                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-colors ${
-                  privacySetting === 'public' ? 'bg-emerald-500' :
-                  privacySetting === 'only_me' ? 'bg-gray-400' : 'bg-green-500'
-                }`}>
+                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white transition-colors ${ privacySetting === 'public' ? 'bg-emerald-500' : privacySetting === 'only_me' ? 'bg-gray-400' : 'bg-green-500' }`}>
                   {privacySetting === 'public' && <Globe className="h-4 w-4" />}
                   {privacySetting === 'friends' && <Users className="h-4 w-4" />}
                   {privacySetting === 'only_me' && <Lock className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  <p className="text-sm font-medium text-foreground">
                     {getStoryPrivacyLabel(privacySetting)}
                   </p>
-                  <p className="truncate text-xs text-gray-400">
+                  <p className="truncate text-xs text-muted-foreground">
                     {getStoryPrivacySubtext(privacySetting)}
                   </p>
                 </div>
-                <ChevronRight className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${isPrivacyDropdownOpen ? 'rotate-90' : ''}`} />
+                <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${isPrivacyDropdownOpen ? 'rotate-90' : ''}`} />
               </button>
 
               {isPrivacyDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
                   {([
                     { value: 'public' as const, label: 'Công khai', sub: 'Tất cả mọi người', icon: <Globe className="h-4 w-4" />, color: 'bg-emerald-500' },
                     { value: 'friends' as const, label: 'Bạn bè', sub: 'Tất cả bạn bè của bạn', icon: <Users className="h-4 w-4" />, color: 'bg-green-500' },
@@ -643,16 +614,14 @@ export function CreateStoryPage() {
                         setIsPrivacyDropdownOpen(false);
                         setPrivacySetting(opt.value);
                       }}
-                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                        privacySetting === opt.value ? 'bg-gray-50 dark:bg-gray-900' : ''
-                      }`}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-muted ${ privacySetting === opt.value ? 'bg-background' : '' }`}
                     >
                       <div className={`flex h-7 w-7 items-center justify-center rounded-full text-white ${opt.color}`}>
                         {opt.icon}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{opt.label}</p>
-                        <p className="text-xs text-gray-400">{opt.sub}</p>
+                        <p className="text-sm font-medium text-foreground">{opt.label}</p>
+                        <p className="text-xs text-muted-foreground">{opt.sub}</p>
                       </div>
                       {privacySetting === opt.value && <Check className="h-4 w-4 text-emerald-500" />}
                     </button>
@@ -669,24 +638,24 @@ export function CreateStoryPage() {
                   setIsDurationDropdownOpen((open) => !open);
                   setIsPrivacyDropdownOpen(false);
                 }}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 transition hover:border-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 transition hover:border-border hover:bg-muted"
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500 text-white">
                   <Clock className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                  <p className="text-sm font-medium text-foreground">
                     Thời gian tồn tại: {formatStoryDurationLabel(storyDurationHours)}
                   </p>
-                  <p className="truncate text-xs text-gray-400">
+                  <p className="truncate text-xs text-muted-foreground">
                     {STORY_DURATION_OPTIONS.find((option) => option.value === storyDurationHours)?.sub}
                   </p>
                 </div>
-                <ChevronRight className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${isDurationDropdownOpen ? 'rotate-90' : ''}`} />
+                <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${isDurationDropdownOpen ? 'rotate-90' : ''}`} />
               </button>
 
               {isDurationDropdownOpen && (
-                <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-border bg-card shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
                   {STORY_DURATION_OPTIONS.map((option) => (
                     <button
                       key={option.value}
@@ -695,14 +664,14 @@ export function CreateStoryPage() {
                         setStoryDurationHours(option.value);
                         setIsDurationDropdownOpen(false);
                       }}
-                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-gray-50 dark:hover:bg-gray-800 ${storyDurationHours === option.value ? 'bg-gray-50 dark:bg-gray-900' : ''}`}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-muted ${storyDurationHours === option.value ? 'bg-background' : ''}`}
                     >
                       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500 text-white">
                         <Clock className="h-4 w-4" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{option.label}</p>
-                        <p className="text-xs text-gray-400">{option.sub}</p>
+                        <p className="text-sm font-medium text-foreground">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">{option.sub}</p>
                       </div>
                       {storyDurationHours === option.value && <Check className="h-4 w-4 text-emerald-500" />}
                     </button>
@@ -712,34 +681,20 @@ export function CreateStoryPage() {
             </div>
 
             {isActive && (
-              <div className="space-y-1 border-t border-gray-200 dark:border-gray-700 pt-3">
+              <div className="space-y-1 border-t border-border pt-3">
                 <button
                   type="button"
                   onClick={handleAddText}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 dark:text-gray-100 transition hover:bg-muted ${
-                    activeTool === 'text' ? 'bg-gray-100 dark:bg-gray-900' : ''
-                  }`}
+                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-foreground transition hover:bg-muted ${ activeTool === 'text' ? 'bg-background' : '' }`}
                 >
                   <Type className="h-5 w-5" />
                   <span className="text-sm font-medium">Thêm văn bản</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTool('music')}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 dark:text-gray-100 transition hover:bg-muted ${
-                    activeTool === 'music' ? 'bg-gray-100 dark:bg-gray-900' : ''
-                  }`}
-                >
-                  <Music className="h-5 w-5" />
-                  <span className="text-sm font-medium">Thêm nhạc</span>
                 </button>
                 {isTextStoryMode && (
                   <button
                     type="button"
                     onClick={() => setActiveTool('background')}
-                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 dark:text-gray-100 transition hover:bg-muted ${
-                      activeTool === 'background' ? 'bg-gray-100 dark:bg-gray-900' : ''
-                    }`}
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-foreground transition hover:bg-muted ${ activeTool === 'background' ? 'bg-background' : '' }`}
                   >
                     <Sparkles className="h-5 w-5" />
                     <span className="text-sm font-medium">Phông nền</span>
@@ -748,7 +703,7 @@ export function CreateStoryPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTool('sticker')}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 dark:text-gray-100 transition hover:bg-muted ${activeTool === 'sticker' ? 'bg-gray-100 dark:bg-gray-900' : ''}`}
+                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-foreground transition hover:bg-muted ${activeTool === 'sticker' ? 'bg-background' : ''}`}
                 >
                   <span className="text-lg leading-none">😊</span>
                   <span className="text-sm font-medium">Sticker</span>
@@ -758,7 +713,7 @@ export function CreateStoryPage() {
                     <button
                       type="button"
                       onClick={() => setActiveTool('filter')}
-                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 dark:text-gray-100 transition hover:bg-muted ${activeTool === 'filter' ? 'bg-gray-100 dark:bg-gray-900' : ''}`}
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-foreground transition hover:bg-muted ${activeTool === 'filter' ? 'bg-background' : ''}`}
                     >
                       <Sparkles className="h-5 w-5" />
                       <span className="text-sm font-medium">Bộ lọc màu</span>
@@ -766,7 +721,7 @@ export function CreateStoryPage() {
                     <button
                       type="button"
                       onClick={() => setActiveTool('image')}
-                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-gray-900 dark:text-gray-100 transition hover:bg-muted ${activeTool === 'image' ? 'bg-gray-100 dark:bg-gray-900' : ''}`}
+                      className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left text-foreground transition hover:bg-muted ${activeTool === 'image' ? 'bg-background' : ''}`}
                     >
                       <Crop className="h-5 w-5" />
                       <span className="text-sm font-medium">Kích thước ảnh</span>
@@ -778,14 +733,14 @@ export function CreateStoryPage() {
 
             {hasSelectedImage && activeTool === 'alt-text' && (
               <div className="mt-4 space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   Sử dụng văn bản thay thế để mô tả nội dung ảnh cho người dùng hỗ trợ tiếp cận.
                 </p>
                 <textarea
                   value={altText}
                   onChange={(event) => setAltText(event.target.value)}
                   placeholder="Văn bản thay thế tùy chỉnh"
-                  className="h-24 w-full resize-none rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                  className="h-24 w-full resize-none rounded-md border border-border px-3 py-2 text-sm outline-none focus:border-emerald-500"
                 />
               </div>
             )}
@@ -793,7 +748,7 @@ export function CreateStoryPage() {
             {/* Sticker panel */}
             {activeTool === 'sticker' && (
               <div className="mt-4">
-                <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Nhấn để thêm vào tin</p>
+                <p className="mb-2 text-xs text-muted-foreground">Nhấn để thêm vào tin</p>
                 <Picker
                   data={data}
                   onEmojiSelect={(emoji: { native?: string }) => {
@@ -809,7 +764,7 @@ export function CreateStoryPage() {
                   <button
                     type="button"
                     onClick={() => setStickers([])}
-                    className="mt-3 w-full rounded-lg border border-gray-200 dark:border-gray-700 py-1.5 text-xs text-gray-500 dark:text-gray-400 transition hover:bg-gray-50 dark:hover:bg-gray-800"
+                    className="mt-3 w-full rounded-lg border border-border py-1.5 text-xs text-muted-foreground transition hover:bg-muted"
                   >
                     Xóa tất cả sticker
                   </button>
@@ -820,7 +775,7 @@ export function CreateStoryPage() {
             {/* Filter panel */}
             {hasSelectedImage && activeTool === 'filter' && (
               <div className="mt-4">
-                <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">Chọn bộ lọc màu</p>
+                <p className="mb-2 text-xs text-muted-foreground">Chọn bộ lọc màu</p>
                 <div className="grid grid-cols-4 gap-2">
                   {COLOR_FILTERS.map(f => (
                     <button
@@ -829,7 +784,7 @@ export function CreateStoryPage() {
                       onClick={() => setColorFilter(f.id)}
                       className={`flex flex-col items-center gap-1 rounded-lg p-1.5 transition hover:bg-muted ${colorFilter === f.id ? 'ring-2 ring-emerald-500' : ''}`}
                     >
-                      <div className="relative h-12 w-full overflow-hidden rounded-md bg-gray-200 dark:bg-gray-700">
+                      <div className="relative h-12 w-full overflow-hidden rounded-md bg-muted">
                         <img src={selectedImageUrl ?? ''} alt="" className="h-full w-full object-cover" />
                         {f.style && <div className={`absolute inset-0 ${f.style}`} />}
                         {colorFilter === f.id && (
@@ -838,7 +793,7 @@ export function CreateStoryPage() {
                           </div>
                         )}
                       </div>
-                      <span className="text-xs text-gray-600 dark:text-gray-400">{f.label}</span>
+                      <span className="text-xs text-muted-foreground">{f.label}</span>
                     </button>
                   ))}
                 </div>
@@ -847,7 +802,7 @@ export function CreateStoryPage() {
 
             {hasSelectedImage && activeTool === 'image' && (
               <div className="mt-4 space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   Sử dụng thanh trượt bên dưới ảnh preview để thu phóng và di chuyển ảnh.
                 </p>
                 <div className="pt-2 text-center">
@@ -867,18 +822,16 @@ export function CreateStoryPage() {
 
             {isActive && activeTool === 'text' && (
               <div className="mt-4 space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-400">Click chữ để sửa, giữ rồi kéo để di chuyển, hover text để hiện 4 góc kéo kích thước.</p>
+                <p className="text-muted-foreground">Click chữ để sửa, giữ rồi kéo để di chuyển, hover text để hiện 4 góc kéo kích thước.</p>
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">Màu chữ</p>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Màu chữ</p>
                   <div className="flex flex-wrap gap-2">
                     {textColorPalette.map((color) => (
                       <button
                         key={color}
                         type="button"
                         onClick={() => setTextColor(color)}
-                        className={`h-6 w-6 cursor-pointer rounded-full border-2 transition ${
-                          textColor === color ? 'border-emerald-500' : 'border-gray-200 dark:border-gray-700'
-                        }`}
+                        className={`h-6 w-6 cursor-pointer rounded-full border-2 transition ${ textColor === color ? 'border-emerald-500' : 'border-border' }`}
                         style={{ backgroundColor: color }}
                         aria-label={`Chọn màu chữ ${color}`}
                         title={`Chọn màu chữ ${color}`}
@@ -892,7 +845,7 @@ export function CreateStoryPage() {
             {isTextStoryMode && activeTool === 'background' && (
               <div className="mt-4 space-y-4 text-sm">
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">Ảnh nền</p>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Ảnh nền</p>
                   <div className="grid grid-cols-4 gap-2">
                     {bgImagePresets.map((src) => {
                       const isSelected = selectedBg.type === 'image' && selectedBg.value === src;
@@ -901,9 +854,7 @@ export function CreateStoryPage() {
                           key={src}
                           type="button"
                           onClick={() => setSelectedBg({ type: 'image', value: src })}
-                          className={`h-14 w-full cursor-pointer rounded-lg border-2 overflow-hidden transition-transform hover:scale-105 ${
-                            isSelected ? 'border-emerald-500 shadow-md' : 'border-transparent'
-                          }`}
+                          className={`h-14 w-full cursor-pointer rounded-lg border-2 overflow-hidden transition-transform hover:scale-105 ${ isSelected ? 'border-emerald-500 shadow-md' : 'border-transparent' }`}
                           aria-label="Chọn ảnh nền"
                         >
                           <img src={src} alt="" className="h-full w-full object-cover" />
@@ -913,7 +864,7 @@ export function CreateStoryPage() {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">Màu nền</p>
+                  <p className="mb-2 text-xs font-medium text-muted-foreground">Màu nền</p>
                   <div className="grid grid-cols-4 gap-2">
                     {bgPresets.map((preset) => {
                       const isSelected = selectedBg.type === preset.type && selectedBg.value === preset.value;
@@ -925,9 +876,7 @@ export function CreateStoryPage() {
                           key={preset.id}
                           type="button"
                           onClick={() => setSelectedBg({ type: preset.type, value: preset.value })}
-                          className={`h-14 w-full cursor-pointer rounded-lg border-2 transition-transform hover:scale-105 ${
-                            isSelected ? 'border-emerald-500 shadow-md' : 'border-transparent'
-                          }`}
+                          className={`h-14 w-full cursor-pointer rounded-lg border-2 transition-transform hover:scale-105 ${ isSelected ? 'border-emerald-500 shadow-md' : 'border-transparent' }`}
                           style={swatchStyle}
                           aria-label={`Chọn phông nền ${preset.id}`}
                           title={preset.id}
@@ -941,10 +890,10 @@ export function CreateStoryPage() {
           </div>
 
           {isActive && (
-            <div className="absolute right-0 bottom-0 left-0 flex gap-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+            <div className="absolute right-0 bottom-0 left-0 flex gap-3 border-t border-border bg-card px-4 py-3">
               <button
                 type="button"
-                className="flex-1 cursor-pointer rounded-md bg-gray-200 dark:bg-gray-700 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-300"
+                className="flex-1 cursor-pointer rounded-md bg-muted py-2 text-sm font-medium text-foreground transition hover:bg-muted"
                 onClick={() => setIsDiscardModalOpen(true)}
               >
                 Bỏ
@@ -971,7 +920,7 @@ export function CreateStoryPage() {
               >
                 <div className="absolute inset-0 bg-black/5" />
                 <div className="relative flex h-full flex-col items-center justify-center gap-4 px-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-card text-foreground shadow">
                     <Camera className="h-5 w-5" />
                   </div>
                   <p className="text-center text-sm font-semibold">Tạo tin dạng ảnh</p>
@@ -985,7 +934,7 @@ export function CreateStoryPage() {
               >
                 <div className="absolute inset-0 bg-black/5" />
                 <div className="relative flex h-full flex-col items-center justify-center gap-4 px-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-card text-foreground shadow">
                     <Type className="h-5 w-5" />
                   </div>
                   <p className="text-center text-sm font-semibold">Tạo tin dạng văn bản</p>
@@ -993,8 +942,8 @@ export function CreateStoryPage() {
               </button>
             </div>
           ) : (
-            <div className="w-full max-w-[900px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-sm dark:shadow-none">
-              <p className="mb-3 text-sm text-gray-700 dark:text-gray-300">Xem trước</p>
+            <div className="w-full max-w-[900px] rounded-lg border border-border bg-card p-3 shadow-sm dark:shadow-none">
+              <p className="mb-3 text-sm text-foreground">Xem trước</p>
               <div className="relative flex h-[660px] items-center justify-center rounded-lg bg-[#18191a] overflow-hidden">
                 <div
                   className="relative rounded-md shadow-[0_0_40px_rgba(0,0,0,0.5)] bg-transparent"
@@ -1024,10 +973,7 @@ export function CreateStoryPage() {
                         {/* 🔥 SCROLL CONTAINER */}
                         <div
                           ref={scrollContainerRef}
-                          className={`absolute inset-0 overflow-auto scrollbar-none touch-none select-none bg-transparent ${
-                            imageScale > 100 || (scrollContainerRef.current && (scrollContainerRef.current.scrollWidth > scrollContainerRef.current.clientWidth || scrollContainerRef.current.scrollHeight > scrollContainerRef.current.clientHeight)) 
-                            ? (isGrabbing ? 'cursor-grabbing' : 'cursor-grab') : ''
-                          }`}
+                          className={`absolute inset-0 overflow-auto scrollbar-none touch-none select-none bg-transparent ${ imageScale > 100 || (scrollContainerRef.current && (scrollContainerRef.current.scrollWidth > scrollContainerRef.current.clientWidth || scrollContainerRef.current.scrollHeight > scrollContainerRef.current.clientHeight)) ? (isGrabbing ? 'cursor-grabbing' : 'cursor-grab') : '' }`}
                           onPointerDown={handleScrollPointerDown}
                           onPointerMove={handleScrollPointerMove}
                           onPointerUp={handleScrollPointerUp}
@@ -1124,7 +1070,7 @@ export function CreateStoryPage() {
                         <>
                           <button
                             type="button"
-                            className="absolute -top-5 -left-5 z-20 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-white bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow hover:bg-muted"
+                            className="absolute -top-5 -left-5 z-20 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border border-white bg-card text-foreground shadow hover:bg-muted"
                             onPointerDown={(event: ReactPointerEvent<HTMLButtonElement>) => {
                               event.stopPropagation();
                               handleClearText(event as any);
@@ -1204,49 +1150,6 @@ export function CreateStoryPage() {
                   </div>
                 )}
 
-                {activeTool === 'music' && (
-                  <div className="absolute top-6 right-6 w-[280px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 shadow-xl">
-                    <div className="mb-3 flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-900 px-3 py-2">
-                      <Search className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                      <input
-                        value={musicKeyword}
-                        onChange={(event) => setMusicKeyword(event.target.value)}
-                        placeholder="Tìm kiếm nhạc"
-                        className="w-full bg-transparent text-sm outline-none"
-                      />
-                    </div>
-                    <div className="max-h-[360px] space-y-1 overflow-y-auto">
-                      {filteredTracks.map((track) => {
-                        const isSelected = selectedTrackId === track.id;
-                        return (
-                          <button
-                            key={track.id}
-                            type="button"
-                            onClick={() => setSelectedTrackId(track.id)}
-                            className={`flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-left transition ${
-                              isSelected ? 'bg-emerald-50' : 'hover:bg-muted'
-                            }`}
-                          >
-                            <div className="h-8 w-8 rounded bg-gray-200 dark:bg-gray-700" />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-medium text-gray-900 dark:text-gray-100">{track.title}</p>
-                              <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{track.artist}</p>
-                            </div>
-                            {isSelected && <Check className="h-4 w-4 text-emerald-600" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-3 space-y-3">
-                {selectedTrack && (
-                  <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-                    Nhạc đã chọn: <span className="font-semibold">{selectedTrack.title}</span> - {selectedTrack.artist}
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -1265,14 +1168,14 @@ export function CreateStoryPage() {
 
       {/* 🔥 PRIVACY MODAL */}
       {isPrivacyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-gray-800/70 backdrop-blur-sm">
-          <div className="w-full max-w-[500px] overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-card/70 backdrop-blur-sm">
+          <div className="w-full max-w-[500px] overflow-hidden rounded-xl bg-card shadow-2xl border border-border animate-in fade-in zoom-in duration-200">
             {/* Header */}
-            <div className="relative border-b border-gray-200 dark:border-gray-700 px-4 py-4 text-center">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Quyền riêng tư của tin</h2>
+            <div className="relative border-b border-border px-4 py-4 text-center">
+              <h2 className="text-xl font-bold text-foreground">Quyền riêng tư của tin</h2>
               <button 
                 onClick={() => setIsPrivacyModalOpen(false)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 transition hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-background text-muted-foreground transition hover:bg-muted"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1281,8 +1184,8 @@ export function CreateStoryPage() {
             {/* Content */}
             <div className="px-4 py-4">
               <div className="mb-4">
-                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">Ai có thể xem tin của bạn?</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <h3 className="text-base font-bold text-foreground">Ai có thể xem tin của bạn?</h3>
+                <p className="text-sm text-muted-foreground">
                   Tin của bạn sẽ hiển thị trên KConnecta trong {formatStoryDurationLabel(storyDurationHours).toLowerCase()}.
                 </p>
               </div>
@@ -1292,16 +1195,16 @@ export function CreateStoryPage() {
                 <button
                   type="button"
                   onClick={() => setPrivacySetting('public')}
-                  className="flex w-full items-center gap-4 rounded-lg px-2 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="flex w-full items-center gap-4 rounded-lg px-2 py-3 transition hover:bg-muted"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground">
                     <Globe className="h-6 w-6" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-bold text-gray-900 dark:text-gray-100">Công khai</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Bất kỳ ai trên KConnecta</p>
+                    <p className="font-bold text-foreground">Công khai</p>
+                    <p className="text-xs text-muted-foreground">Bất kỳ ai trên KConnecta</p>
                   </div>
-                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'public' ? 'border-emerald-600' : 'border-gray-300 dark:border-gray-700'}`}>
+                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'public' ? 'border-emerald-600' : 'border-border'}`}>
                     {privacySetting === 'public' && <div className="h-3 w-3 rounded-full bg-emerald-600" />}
                   </div>
                 </button>
@@ -1310,16 +1213,16 @@ export function CreateStoryPage() {
                 <button
                   type="button"
                   onClick={() => setPrivacySetting('friends')}
-                  className="flex w-full items-center gap-4 rounded-lg px-2 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="flex w-full items-center gap-4 rounded-lg px-2 py-3 transition hover:bg-muted"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground">
                     <Users className="h-6 w-6" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-bold text-gray-900 dark:text-gray-100">Bạn bè</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Chỉ bạn bè của bạn trên KConnecta</p>
+                    <p className="font-bold text-foreground">Bạn bè</p>
+                    <p className="text-xs text-muted-foreground">Chỉ bạn bè của bạn trên KConnecta</p>
                   </div>
-                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'friends' ? 'border-emerald-600' : 'border-gray-300 dark:border-gray-700'}`}>
+                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'friends' ? 'border-emerald-600' : 'border-border'}`}>
                     {privacySetting === 'friends' && <div className="h-3 w-3 rounded-full bg-emerald-600" />}
                   </div>
                 </button>
@@ -1328,39 +1231,39 @@ export function CreateStoryPage() {
                 <button
                   type="button"
                   onClick={() => setPrivacySetting('custom')}
-                  className="flex w-full items-center gap-4 rounded-lg px-2 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="flex w-full items-center gap-4 rounded-lg px-2 py-3 transition hover:bg-muted"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground">
                     <UserPlus className="h-6 w-6" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-bold text-gray-900 dark:text-gray-100">Tùy chỉnh</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Chọn đối tượng cho tin của bạn</p>
+                    <p className="font-bold text-foreground">Tùy chỉnh</p>
+                    <p className="text-xs text-muted-foreground">Chọn đối tượng cho tin của bạn</p>
                   </div>
-                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'custom' ? 'border-emerald-600' : 'border-gray-300 dark:border-gray-700'}`}>
+                  <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${privacySetting === 'custom' ? 'border-emerald-600' : 'border-border'}`}>
                     {privacySetting === 'custom' && <div className="h-3 w-3 rounded-full bg-emerald-600" />}
                   </div>
                 </button>
               </div>
 
-              <div className="my-4 border-t border-gray-100 dark:border-gray-800 pt-2">
+              <div className="my-4 border-t border-border pt-2">
                 <button
                    type="button"
-                   className="flex w-full items-center gap-4 rounded-lg px-2 py-3 transition hover:bg-gray-50 dark:hover:bg-gray-800"
+                   className="flex w-full items-center gap-4 rounded-lg px-2 py-3 transition hover:bg-muted"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-foreground">
                     <Users className="h-6 w-6" />
                   </div>
                   <div className="flex-1 text-left">
-                    <p className="font-bold text-gray-900 dark:text-gray-100">Ẩn tin với</p>
+                    <p className="font-bold text-foreground">Ẩn tin với</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-4">
+            <div className="flex justify-end gap-3 border-t border-border bg-background px-4 py-4">
               <button
                 onClick={() => setIsPrivacyModalOpen(false)}
                 className="px-6 py-2 text-sm font-bold text-emerald-600 transition hover:bg-emerald-50 rounded-md"
@@ -1381,14 +1284,14 @@ export function CreateStoryPage() {
 
       {/* 🔥 DISCARD CONFIRMATION MODAL */}
       {isDiscardModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white dark:bg-gray-800/70 backdrop-blur-sm">
-          <div className="w-full max-w-[450px] overflow-hidden rounded-xl bg-white dark:bg-gray-800 shadow-2xl border border-gray-200 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-card/70 backdrop-blur-sm">
+          <div className="w-full max-w-[450px] overflow-hidden rounded-xl bg-card shadow-2xl border border-border animate-in fade-in zoom-in duration-200">
             {/* Header */}
-            <div className="relative border-b border-gray-200 dark:border-gray-700 px-4 py-4 text-center">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Bỏ tin?</h2>
+            <div className="relative border-b border-border px-4 py-4 text-center">
+              <h2 className="text-xl font-bold text-foreground">Bỏ tin?</h2>
               <button 
                 onClick={() => setIsDiscardModalOpen(false)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 transition hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="absolute right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-background text-muted-foreground transition hover:bg-muted"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1396,7 +1299,7 @@ export function CreateStoryPage() {
 
             {/* Content */}
             <div className="px-6 py-6">
-              <p className="text-base text-gray-700 dark:text-gray-300 font-medium">
+              <p className="text-base text-foreground font-medium">
                 Bạn có chắc chắn muốn bỏ tin này không? Hệ thống sẽ không lưu tin của bạn.
               </p>
             </div>

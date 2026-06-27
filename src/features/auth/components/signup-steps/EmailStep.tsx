@@ -63,8 +63,8 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
           alt="KConnecta"
           className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg object-cover"
         />
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Tạo tài khoản mới</h2>
-        <p className="text-gray-600 dark:text-gray-400">Nhập email của bạn để bắt đầu</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Tạo tài khoản mới</h2>
+        <p className="text-muted-foreground">Nhập email của bạn để bắt đầu</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -98,7 +98,7 @@ export function EmailStep({ onNext, initialEmail = '' }: EmailStepProps) {
           )}
         </button>
 
-        <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-4">
+        <p className="text-sm text-muted-foreground text-center mt-4">
           Chúng tôi sẽ gửi mã xác nhận đến email của bạn
         </p>
       </form>

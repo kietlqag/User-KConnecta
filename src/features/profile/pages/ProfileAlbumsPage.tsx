@@ -10,7 +10,7 @@ import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogge
 const PAGE_SIZE = 24;
 
 function AlbumSkeleton() {
-  return <div className="aspect-square rounded-xl bg-gray-200 animate-pulse dark:bg-gray-700" />;
+  return <div className="aspect-square rounded-xl bg-muted animate-pulse" />;
 }
 
 function filterPersonalAlbums(albums: Album[]) {
@@ -69,14 +69,14 @@ export function ProfileAlbumsPage() {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-6">
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm dark:shadow-none">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">
             <Images className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-bold text-foreground">
               Album
               {!isLoading && (
-                <span className="ml-2 text-base font-normal text-gray-500 dark:text-gray-400">
+                <span className="ml-2 text-base font-normal text-muted-foreground">
                   · {items.length}
                 </span>
               )}
@@ -104,15 +104,15 @@ export function ProfileAlbumsPage() {
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="relative mb-4 h-20 w-20">
-                <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
-                <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
-                  <Images className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                <div className="absolute inset-0 rotate-6 rounded-xl bg-muted" />
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-border bg-muted">
+                  <Images className="h-10 w-10 text-muted-foreground" />
                 </div>
               </div>
-              <h3 className="mb-1 text-lg font-semibold text-gray-800 dark:text-gray-200">
+              <h3 className="mb-1 text-lg font-semibold text-foreground">
                 {isOwnProfile ? 'Chưa có album nào' : 'Không có album để hiển thị'}
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 {isOwnProfile
                   ? 'Tạo album để sắp xếp ảnh và video kỷ niệm của bạn.'
                   : 'Người dùng này chưa chia sẻ album công khai hoặc bạn không có quyền xem.'}
@@ -146,7 +146,7 @@ export function ProfileAlbumsPage() {
                     type="button"
                     onClick={handleLoadMore}
                     disabled={loadingMore || activeQuery.isFetching}
-                    className="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-6 py-2.5 font-semibold text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                    className="inline-flex items-center gap-2 rounded-xl bg-muted px-6 py-2.5 font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-60"
                   >
                     {(loadingMore || activeQuery.isFetching) && page > 0 ? (
                       <>

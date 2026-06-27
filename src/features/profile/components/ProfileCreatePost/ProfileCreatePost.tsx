@@ -26,7 +26,7 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none p-4">
+      <div className="bg-card rounded-2xl border border-border shadow-sm dark:shadow-none p-4">
         <div className="flex items-center gap-3 mb-4">
           <CurrentUserAvatar />
           <button
@@ -37,7 +37,7 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
           </button>
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
+        <div className="border-t border-border my-3" />
 
         <div className="grid grid-cols-2 gap-2">
           <Link
@@ -45,7 +45,7 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
             className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors justify-center"
           >
             <LiveFeatureIcon />
-            <span className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">
+            <span className="text-muted-foreground font-medium text-sm sm:text-base">
               {LIVE_NAV_LABEL}
             </span>
           </Link>
@@ -55,7 +55,7 @@ export function ProfileCreatePost({ username, onPostCreated }: ProfileCreatePost
             className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors justify-center cursor-pointer"
           >
             <Image className="w-6 h-6 text-green-500" />
-            <span className="text-gray-600 dark:text-gray-400 font-medium text-sm sm:text-base">
+            <span className="text-muted-foreground font-medium text-sm sm:text-base">
               Ảnh/video
             </span>
           </button>

@@ -5,12 +5,19 @@ export interface PublicCommunityRule {
   severity: string;
 }
 
+export type RateLimitWindowUnit = 'minute' | 'hour' | 'day';
+
 export interface PublicPostPolicy {
   maxPostLength: number;
   maxImagesPerPost: number;
   maxVideoMb: number;
   allowedFileTypes: string;
   postsPerMinute: number;
+  postRateLimitWindowValue?: number;
+  postRateLimitWindowUnit?: RateLimitWindowUnit;
+  editsPerMinute?: number;
+  editRateLimitWindowValue?: number;
+  editRateLimitWindowUnit?: RateLimitWindowUnit;
 }
 
 export interface PublicChatPolicy {

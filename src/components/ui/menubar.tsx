@@ -13,10 +13,7 @@ function Menubar({
   return (
     <MenubarPrimitive.Root
       data-slot="menubar"
-      className={cn(
-        "bg-background flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs",
-        className,
-      )}
+      className={cn( "bg-background flex h-9 items-center gap-1 rounded-md border p-1 shadow-xs", className, )}
       {...props}
     />
   );
@@ -55,10 +52,7 @@ function MenubarTrigger({
   return (
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex items-center rounded-sm px-2 py-1 text-sm font-medium outline-hidden select-none",
-        className,
-      )}
+      className={cn( "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex items-center rounded-sm px-2 py-1 text-sm font-medium outline-hidden select-none", className, )}
       {...props}
     />
   );
@@ -172,10 +166,7 @@ function MenubarLabel({
     <MenubarPrimitive.Label
       data-slot="menubar-label"
       data-inset={inset}
-      className={cn(
-        "px-2 py-1.5 text-sm font-medium data-[inset]:pl-8",
-        className,
-      )}
+      className={cn( "px-2 py-1.5 text-sm font-medium data-[inset]:pl-8", className, )}
       {...props}
     />
   );
@@ -201,10 +192,7 @@ function MenubarShortcut({
   return (
     <span
       data-slot="menubar-shortcut"
-      className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
-        className,
-      )}
+      className={cn( "text-muted-foreground ml-auto text-xs tracking-widest", className, )}
       {...props}
     />
   );
@@ -228,10 +216,7 @@ function MenubarSubTrigger({
     <MenubarPrimitive.SubTrigger
       data-slot="menubar-sub-trigger"
       data-inset={inset}
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[inset]:pl-8",
-        className,
-      )}
+      className={cn( "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[inset]:pl-8", className, )}
       {...props}
     >
       {children}

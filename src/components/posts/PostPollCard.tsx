@@ -85,11 +85,7 @@ export function PostPollCard({
               type="button"
               disabled={isVoting}
               onClick={() => void handleVote(option.id)}
-              className={`relative flex flex-1 items-center gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                isSelected
-                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                  : 'border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800/60 dark:hover:bg-gray-800'
-              }`}
+              className={`relative flex flex-1 items-center gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-colors ${ isSelected ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-border bg-muted hover:bg-muted/60' }`}
             >
               {showResults && (
                 <div
@@ -98,11 +94,7 @@ export function PostPollCard({
                 />
               )}
               <span
-                className={`relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                  isSelected
-                    ? 'border-emerald-600 bg-emerald-600 text-white'
-                    : 'border-gray-400 bg-white dark:border-gray-500 dark:bg-gray-700'
-                }`}
+                className={`relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${ isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-400 bg-card dark:border-gray-500' }`}
               >
                 {isSelected && (
                   <svg viewBox="0 0 12 10" className="h-3 w-3 fill-current">
@@ -110,11 +102,11 @@ export function PostPollCard({
                   </svg>
                 )}
               </span>
-              <span className="relative z-10 flex-1 text-[15px] font-medium text-gray-900 dark:text-gray-100">
+              <span className="relative z-10 flex-1 text-[15px] font-medium text-foreground">
                 {option.text}
               </span>
               {showResults && (
-                <span className="relative z-10 flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                <span className="relative z-10 flex items-center gap-1 text-sm text-muted-foreground">
                   {option.percentage}%
                   <ChevronRight className="h-4 w-4" />
                 </span>
@@ -125,7 +117,7 @@ export function PostPollCard({
                 type="button"
                 disabled={deletingOptionId === option.id}
                 onClick={() => void handleDeleteOption(option.id)}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-gray-600 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted"
               >
                 {deletingOptionId === option.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -151,7 +143,7 @@ export function PostPollCard({
               }
             }}
             placeholder="Thêm lựa chọn thăm dò ý kiến..."
-            className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-[15px] outline-none focus:border-emerald-500 dark:border-gray-600 dark:bg-gray-800/60 dark:text-gray-100"
+            className="flex-1 rounded-xl border border-border bg-muted px-3 py-2.5 text-[15px] outline-none focus:border-emerald-500/60"
           />
           {newOptionText.trim() && (
             <button

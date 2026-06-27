@@ -69,10 +69,10 @@ export const FriendCard = ({
   const isSuggestion = showRemove && onRemoveSuggestion && !friend.isFriend && !pendingFriendshipId;
 
   return (
-    <div className="group relative flex min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm [contain:paint] dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
+    <div className="group relative flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm [contain:paint] dark:shadow-none">
       <Link
         to={`/profile/${friend.userId}`}
-        className="relative block aspect-square w-full shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700"
+        className="relative block aspect-square w-full shrink-0 overflow-hidden bg-muted"
       >
         <UserAvatar
           name={friend.name}
@@ -85,11 +85,11 @@ export const FriendCard = ({
       <div className="flex min-h-[156px] flex-1 flex-col p-3">
         <div className="min-w-0">
           <Link to={`/profile/${friend.userId}`} className="block">
-            <h3 className="min-h-[1.5rem] truncate text-[15px] font-bold leading-6 text-gray-900 dark:text-white">
+            <h3 className="min-h-[1.5rem] truncate text-[15px] font-bold leading-6 text-foreground">
               {friend.name}
             </h3>
           </Link>
-          <p className="mt-1 h-5 truncate text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-1 h-5 truncate text-sm text-muted-foreground">
             {friend.mutualFriends > 0
               ? t('friendCard.mutualFriends', { count: friend.mutualFriends })
               : t('friendCard.noMutualFriends')}
@@ -112,7 +112,7 @@ export const FriendCard = ({
                 <button
                   onClick={handleUnfriend}
                   disabled={loading !== null}
-                  className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-gray-100 px-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                  className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-muted px-3 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading === 'unfriend' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -127,7 +127,7 @@ export const FriendCard = ({
             <button
               onClick={handleCancel}
               disabled={loading !== null}
-              className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-gray-200 dark:bg-gray-700 px-4 text-sm font-semibold text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-muted px-4 text-sm font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading === 'cancel' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

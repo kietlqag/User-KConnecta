@@ -832,19 +832,15 @@ function ChatInfoPanel({
         title={notificationsMuted ? 'Bật thông báo' : 'Tắt thông báo'}
       >
         <span
-          className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-            notificationsMuted
-              ? 'bg-emerald-100 dark:bg-emerald-900/40 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/60'
-              : 'bg-gray-200 dark:bg-gray-700 group-hover:bg-gray-300 dark:group-hover:bg-gray-600'
-          }`}
+          className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${ notificationsMuted ? 'bg-emerald-100 dark:bg-emerald-900/40 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/60' : 'bg-muted group-hover:bg-muted dark:group-hover:bg-gray-600' }`}
         >
           {notificationsMuted ? (
             <Bell className="h-4.5 w-4.5 text-emerald-600 dark:text-emerald-400" />
           ) : (
-            <BellOff className="h-4.5 w-4.5 text-gray-900 dark:text-gray-100" />
+            <BellOff className="h-4.5 w-4.5 text-foreground" />
           )}
         </span>
-        <span className="text-xs leading-tight text-gray-900 dark:text-gray-100">
+        <span className="text-xs leading-tight text-foreground">
           {notificationsMuted ? 'Bật thông báo' : 'Tắt thông báo'}
         </span>
       </button>
@@ -854,10 +850,10 @@ function ChatInfoPanel({
         className="group flex w-16 flex-col items-center gap-2 cursor-pointer"
         title="Tìm kiếm"
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors group-hover:bg-gray-300 dark:group-hover:bg-gray-600">
-          <SearchIcon className="h-4.5 w-4.5 text-gray-900 dark:text-gray-100" />
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-muted dark:group-hover:bg-gray-600">
+          <SearchIcon className="h-4.5 w-4.5 text-foreground" />
         </span>
-        <span className="text-xs leading-tight text-gray-900 dark:text-gray-100">Tìm kiếm</span>
+        <span className="text-xs leading-tight text-foreground">Tìm kiếm</span>
       </button>
     </div>
   );
@@ -874,20 +870,20 @@ function ChatInfoPanel({
           className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
           title="Quay lại"
         >
-          <ArrowLeft className="h-5 w-5 text-gray-900 dark:text-gray-100" />
+          <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Tìm kiếm trong đoạn chat</h3>
+        <h3 className="text-lg font-semibold text-foreground">Tìm kiếm trong đoạn chat</h3>
       </div>
 
       <div className="relative mt-6 shrink-0">
-        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           value={messageSearchQuery}
           onChange={(event) => setMessageSearchQuery(event.target.value)}
           placeholder="Tìm tin nhắn..."
           autoFocus
-          className="w-full rounded-full bg-gray-100 py-2 pl-10 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:bg-gray-200 dark:bg-gray-900 dark:focus:bg-gray-700"
+          className="w-full rounded-full bg-muted py-2 pl-10 pr-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:bg-muted"
         />
       </div>
 
@@ -905,10 +901,10 @@ function ChatInfoPanel({
                     key={message.id}
                     type="button"
                     onClick={() => handleMessageSearchSelect(message.id)}
-                    className="flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800"
+                    className="flex w-full flex-col gap-1 rounded-lg px-3 py-2.5 text-left hover:bg-muted"
                   >
-                    <span className="line-clamp-2 text-sm text-gray-900 dark:text-gray-100">{preview}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="line-clamp-2 text-sm text-foreground">{preview}</span>
+                    <span className="text-xs text-muted-foreground">
                       {formatMessageSearchTime(message.timestamp)}
                     </span>
                   </button>
@@ -916,10 +912,10 @@ function ChatInfoPanel({
               })}
             </div>
           ) : (
-            <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Không tìm thấy tin nhắn phù hợp</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">Không tìm thấy tin nhắn phù hợp</p>
           )
         ) : (
-          <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Nhập từ khóa để tìm tin nhắn</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">Nhập từ khóa để tìm tin nhắn</p>
         )}
       </div>
     </div>
@@ -1259,7 +1255,7 @@ function ChatInfoPanel({
 
   const renderTabLoadingFooter = () =>
     assetLoadingByTab[activeTab] ? (
-      <div className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</div>
+      <div className="py-4 text-center text-sm text-muted-foreground">Đang tải...</div>
     ) : null;
 
   const renderMediaGrid = () => (
@@ -1271,7 +1267,7 @@ function ChatInfoPanel({
               <h4 className="text-[14px] font-semibold text-slate-700">{group.title}</h4>
               <div className="grid grid-cols-2 gap-1">
                 {group.items.map((item) => (
-                  <div key={item.id} className="group/item relative aspect-square bg-gray-100 dark:bg-background">
+                  <div key={item.id} className="group/item relative aspect-square bg-background">
                     <button
                       type="button"
                       onClick={() => {
@@ -1311,7 +1307,7 @@ function ChatInfoPanel({
                     </button>
                     {mediaActionMenuId === item.id && mediaActionMenuPosition && (
                       <div
-                        className="fixed z-[350] w-56 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-2xl"
+                        className="fixed z-[350] w-56 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-2xl"
                         style={{ top: mediaActionMenuPosition.top, left: mediaActionMenuPosition.left }}
                         onClick={(event) => event.stopPropagation()}
                       >
@@ -1324,7 +1320,7 @@ function ChatInfoPanel({
                               await copyImageToClipboard(item.url);
                             }
                             setMediaActionMenuId(null);
-                          }} className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          }} className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Copy
                         </button>
@@ -1342,7 +1338,7 @@ function ChatInfoPanel({
                               isOwn: true,
                             });
                             setMediaActionMenuId(null);
-                          }} className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          }} className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Chuyển tiếp
                         </button>
@@ -1351,7 +1347,7 @@ function ChatInfoPanel({
                           onClick={() => {
                             void jumpToOriginalMessage(item.id, item.url);
                             setMediaActionMenuId(null);
-                          }} className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          }} className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Xem tin nhắn gốc
                         </button>
@@ -1360,11 +1356,11 @@ function ChatInfoPanel({
                           onClick={() => {
                             downloadMedia(item.url, `media-${item.id}`);
                             setMediaActionMenuId(null);
-                          }} className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          }} className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Lưu về máy
                         </button>
-                        <div className="my-1 h-px bg-gray-200 dark:bg-gray-700" />
+                        <div className="my-1 h-px bg-muted" />
                         <button
                           type="button"
                           onClick={() => {
@@ -1409,7 +1405,7 @@ function ChatInfoPanel({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="group/item relative flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-gray-900 px-3 py-3 hover:bg-muted"
+                    className="group/item relative flex items-center gap-3 rounded-xl bg-background px-3 py-3 hover:bg-muted"
                   >
                     <a
                       href={item.url}
@@ -1421,7 +1417,7 @@ function ChatInfoPanel({
                         <FileText className="h-5 w-5" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{item.label}</span>
+                        <span className="block truncate text-sm font-semibold text-foreground">{item.label}</span>
                       </span>
                     </a>
                     <button
@@ -1433,14 +1429,14 @@ function ChatInfoPanel({
                         setFileActionMenuPosition(position);
                         setFileActionMenuId((prev) => (prev === item.id ? null : item.id));
                       }}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 opacity-0 transition group-hover/item:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition group-hover/item:opacity-100 hover:bg-muted"
                       title="Tùy chọn"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </button>
                     {fileActionMenuId === item.id && fileActionMenuPosition && (
                       <div
-                        className="fixed z-[350] w-56 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-2xl"
+                        className="fixed z-[350] w-56 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-2xl"
                         style={{ top: fileActionMenuPosition.top, left: fileActionMenuPosition.left }}
                         onClick={(event) => event.stopPropagation()}
                       >
@@ -1450,7 +1446,7 @@ function ChatInfoPanel({
                             await copyText(item.url, 'Đã sao chép link file.');
                             setFileActionMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Copy
                         </button>
@@ -1468,7 +1464,7 @@ function ChatInfoPanel({
                             });
                             setFileActionMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Chuyển tiếp
                         </button>
@@ -1478,7 +1474,7 @@ function ChatInfoPanel({
                             void jumpToOriginalMessage(item.id, item.url);
                             setFileActionMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Xem tin nhắn gốc
                         </button>
@@ -1488,7 +1484,7 @@ function ChatInfoPanel({
                             downloadMedia(item.url, item.label);
                             setFileActionMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Lưu về máy
                         </button>
@@ -1518,7 +1514,7 @@ function ChatInfoPanel({
                 {group.items.map((item) => (
                   <div
                     key={item.id}
-                    className="group/item relative flex items-center gap-3 rounded-xl bg-gray-50 dark:bg-gray-900 px-3 py-3 hover:bg-muted"
+                    className="group/item relative flex items-center gap-3 rounded-xl bg-background px-3 py-3 hover:bg-muted"
                   >
                     <a
                       href={item.url}
@@ -1530,8 +1526,8 @@ function ChatInfoPanel({
                         <LinkIcon className="h-5 w-5" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{item.host}</span>
-                        <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{item.url}</span>
+                        <span className="block truncate text-sm font-semibold text-foreground">{item.host}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{item.url}</span>
                       </span>
                     </a>
                     <button
@@ -1543,14 +1539,14 @@ function ChatInfoPanel({
                         setLinkActionMenuPosition(position);
                         setLinkActionMenuId((prev) => (prev === item.id ? null : item.id));
                       }}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-500 opacity-0 transition group-hover/item:opacity-100 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition group-hover/item:opacity-100 hover:bg-muted"
                       title="Tùy chọn"
                     >
                       <MoreHorizontal className="h-4 w-4" />
                     </button>
                     {linkActionMenuId === item.id && linkActionMenuPosition && (
                       <div
-                        className="fixed z-[350] w-56 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-2xl"
+                        className="fixed z-[350] w-56 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-2xl"
                         style={{ top: linkActionMenuPosition.top, left: linkActionMenuPosition.left }}
                         onClick={(event) => event.stopPropagation()}
                       >
@@ -1560,7 +1556,7 @@ function ChatInfoPanel({
                             await copyText(item.url, 'Đã sao chép link.');
                             setLinkActionMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Copy
                         </button>
@@ -1576,7 +1572,7 @@ function ChatInfoPanel({
                             });
                             setLinkActionMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Chuyển tiếp
                         </button>
@@ -1586,7 +1582,7 @@ function ChatInfoPanel({
                             void jumpToOriginalMessage(item.id, item.url);
                             setLinkActionMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Xem tin nhắn gốc
                         </button>
@@ -1596,7 +1592,7 @@ function ChatInfoPanel({
                             window.open(item.url, '_blank', 'noopener,noreferrer');
                             setLinkActionMenuId(null);
                           }}
-                          className="w-full px-4 py-2 text-left text-[15px] text-gray-800 dark:text-gray-200 hover:bg-muted"
+                          className="w-full px-4 py-2 text-left text-[15px] text-foreground hover:bg-muted"
                         >
                           Mở liên kết
                         </button>
@@ -1624,7 +1620,7 @@ function ChatInfoPanel({
   if (infoView === 'search') {
     return (
       <aside
-        className="hidden h-full min-h-0 w-[320px] shrink-0 overflow-hidden border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 xl:flex xl:flex-col"
+        className="hidden h-full min-h-0 w-[320px] shrink-0 overflow-hidden border-l border-border bg-card xl:flex xl:flex-col"
         style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
       >
         {renderMessageSearchView()}
@@ -1656,17 +1652,17 @@ function ChatInfoPanel({
     ) => (
       <button
         type="button"
-        onClick={() => toggleGroupSection(section)} className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800"
+        onClick={() => toggleGroupSection(section)} className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-muted"
       >
-        <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">{label}</span>
-        <ChevronUp className={`h-4.5 w-4.5 text-gray-900 dark:text-gray-100 transition-transform ${groupSectionsOpen[section] ? '' : 'rotate-180'}`} />
+        <span className="text-[15px] font-semibold text-foreground">{label}</span>
+        <ChevronUp className={`h-4.5 w-4.5 text-foreground transition-transform ${groupSectionsOpen[section] ? '' : 'rotate-180'}`} />
       </button>
     );
 
     return (
       <>
       <aside
-        className="hidden h-full min-h-0 w-[320px] shrink-0 overflow-y-auto border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-4 xl:flex xl:flex-col"
+        className="hidden h-full min-h-0 w-[320px] shrink-0 overflow-y-auto border-l border-border bg-card px-4 py-4 xl:flex xl:flex-col"
         style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
       >
         <div className="shrink-0 px-1 pb-5 text-center">
@@ -1685,8 +1681,8 @@ function ChatInfoPanel({
               className="mx-auto h-24 w-24"
             />
           </button>
-          <h3 className="mt-3 truncate text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">{user.name}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <h3 className="mt-3 truncate text-lg font-semibold tracking-tight text-foreground">{user.name}</h3>
+          <p className="text-xs text-muted-foreground">
             {approvedMemberCount} thành viên
             {isGroupCreator && pendingMembers.length > 0 ? ` · ${pendingMembers.length} chờ duyệt` : ''}
           </p>
@@ -1697,14 +1693,14 @@ function ChatInfoPanel({
         <div className="space-y-2">
           {renderGroupSectionHeader('info', 'Thông tin về đoạn chat')}
           {groupSectionsOpen.info && (
-            <div className="px-3 pb-3 text-sm text-gray-500 dark:text-gray-400">
+            <div className="px-3 pb-3 text-sm text-muted-foreground">
               <button
                 type="button"
                 onClick={onOpenPinnedMessages}
-                className="flex w-full items-center gap-3 rounded-lg py-2 text-left text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                className="flex w-full items-center gap-3 rounded-lg py-2 text-left text-foreground hover:bg-muted cursor-pointer"
                 title="Xem tin nhắn đã ghim"
               >
-                <Pin className="h-5 w-5 shrink-0 fill-gray-900 text-gray-900 dark:text-gray-100" />
+                <Pin className="h-5 w-5 shrink-0 fill-gray-900 text-foreground" />
                 <span className="text-[15px] font-semibold">Xem tin nhắn đã ghim</span>
               </button>
             </div>
@@ -1712,17 +1708,17 @@ function ChatInfoPanel({
 
           {renderGroupSectionHeader('customize', 'Tùy chỉnh đoạn chat')}
           {groupSectionsOpen.customize && (
-            <div className="space-y-1 px-3 pb-3 text-sm text-gray-900 dark:text-gray-100">
-              <button type="button" onClick={onOpenRenameGroup} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
-                <Pencil className="h-5 w-5 shrink-0 text-gray-900 dark:text-gray-100" />
+            <div className="space-y-1 px-3 pb-3 text-sm text-foreground">
+              <button type="button" onClick={onOpenRenameGroup} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-muted cursor-pointer">
+                <Pencil className="h-5 w-5 shrink-0 text-foreground" />
                 <span className="text-[15px] font-semibold">Đổi tên đoạn chat</span>
               </button>
-              <button type="button" onClick={onOpenChangeGroupImage} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
-                <ImagePlus className="h-5 w-5 shrink-0 text-gray-900 dark:text-gray-100" />
+              <button type="button" onClick={onOpenChangeGroupImage} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-muted cursor-pointer">
+                <ImagePlus className="h-5 w-5 shrink-0 text-foreground" />
                 <span className="text-[15px] font-semibold">Thay đổi ảnh</span>
               </button>
-              <button type="button" onClick={onOpenNicknames} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
-                <Type className="h-5 w-5 shrink-0 text-gray-900 dark:text-gray-100" />
+              <button type="button" onClick={onOpenNicknames} className="flex min-h-11 w-full items-center gap-3 rounded-lg py-2 text-left hover:bg-muted cursor-pointer">
+                <Type className="h-5 w-5 shrink-0 text-foreground" />
                 <span className="text-[15px] font-semibold">Chỉnh sửa biệt danh</span>
               </button>
               {/* Legacy actions remain intentionally hidden until wired to real handlers. */}
@@ -1739,11 +1735,11 @@ function ChatInfoPanel({
             <>
               {renderGroupSectionHeader('options', 'Tùy chọn nhóm')}
               {groupSectionsOpen.options && (
-                <div className="space-y-2 px-3 pb-3 text-sm text-gray-600 dark:text-gray-400">
+                <div className="space-y-2 px-3 pb-3 text-sm text-muted-foreground">
                   <div className="flex items-center justify-between gap-3 rounded-lg py-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Phê duyệt thành viên</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                      <p className="text-[15px] font-semibold text-foreground">Phê duyệt thành viên</p>
+                      <p className="text-xs text-muted-foreground">
                         Thành viên tham gia qua liên kết hoặc được mời cần được bạn duyệt. Người do quản trị viên thêm sẽ vào nhóm ngay.
                       </p>
                     </div>
@@ -1762,14 +1758,14 @@ function ChatInfoPanel({
           {groupSectionsOpen.joinLink && (
             <div className="space-y-3 px-3 pb-3 text-sm">
               {joinLinkLoading ? (
-                <p className="text-gray-500 dark:text-gray-400">Đang tải liên kết...</p>
+                <p className="text-muted-foreground">Đang tải liên kết...</p>
               ) : joinLink ? (
                 <>
                   <div className="relative">
                     <input
                       readOnly
                       value={joinLink}
-                      className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-10 text-xs text-gray-700 outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+                      className="w-full rounded-xl border border-border bg-muted py-2 pl-3 pr-10 text-xs text-foreground outline-none"
                     />
                     <button
                       type="button"
@@ -1781,19 +1777,19 @@ function ChatInfoPanel({
                           () => toast.error('Không thể sao chép liên kết.'),
                         );
                       }}
-                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 cursor-pointer"
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground dark:text-muted-foreground dark:hover:text-gray-200 cursor-pointer"
                     >
                       <Copy className="h-4 w-4" />
                     </button>
                   </div>
                   {memberApprovalRequired && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-muted-foreground">
                       Người tham gia qua liên kết này cần được quản trị viên phê duyệt trước khi vào nhóm.
                     </p>
                   )}
                 </>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400">Không thể tải liên kết tham gia.</p>
+                <p className="text-muted-foreground">Không thể tải liên kết tham gia.</p>
               )}
             </div>
           )}
@@ -1816,7 +1812,7 @@ function ChatInfoPanel({
                         className="h-10 w-10"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[15px] font-semibold text-gray-900 dark:text-gray-100">{member.name}</p>
+                        <p className="truncate text-[15px] font-semibold text-foreground">{member.name}</p>
                         <p className="truncate text-sm text-amber-700 dark:text-amber-300">Đang chờ phê duyệt</p>
                       </div>
                       <div className="flex shrink-0 items-center gap-1">
@@ -1831,7 +1827,7 @@ function ChatInfoPanel({
                         <button
                           type="button"
                           onClick={() => onRejectMember?.(member.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 cursor-pointer dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700"
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-card text-foreground ring-1 ring-gray-200 hover:bg-muted cursor-pointer dark:ring-gray-700"
                           title="Từ chối"
                         >
                           <X className="h-4 w-4" />
@@ -1858,8 +1854,8 @@ function ChatInfoPanel({
                         className="h-10 w-10"
                       />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-semibold text-gray-900 dark:text-gray-100">{member.name}</p>
-                      <p className="truncate text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+                      <p className="truncate text-[15px] font-semibold text-foreground">{member.name}</p>
+                      <p className="truncate text-sm text-muted-foreground">{subtitle}</p>
                     </div>
                     {canShowMemberMenu && (
                       <>
@@ -1878,14 +1874,14 @@ function ChatInfoPanel({
                             setMemberActionMenuPosition({ top, left });
                             setMemberActionMenuId((prev) => (prev === member.id ? null : member.id));
                           }}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-gray-900 dark:text-gray-100 hover:bg-muted cursor-pointer"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-muted cursor-pointer"
                           title="Tùy chọn thành viên"
                         >
                           <MoreHorizontal className="h-5 w-5" />
                         </button>
                         {memberActionMenuId === member.id && memberActionMenuPosition && (
                           <div
-                            className="fixed z-[350] w-64 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-2xl"
+                            className="fixed z-[350] w-64 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-2xl"
                             style={{ top: memberActionMenuPosition.top, left: memberActionMenuPosition.left }}
                             onClick={(event) => event.stopPropagation()}
                           >
@@ -1910,13 +1906,13 @@ function ChatInfoPanel({
               <button
                 type="button"
                 onClick={onOpenAddMembers}
-                className="flex w-full items-center gap-3 rounded-lg py-1 text-left hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                className="flex w-full items-center gap-3 rounded-lg py-1 text-left hover:bg-muted cursor-pointer"
                 title="Thêm người"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-background text-foreground">
                   <UserPlus className="h-5 w-5" />
                 </span>
-                <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Thêm người</span>
+                <span className="text-[15px] font-semibold text-foreground">Thêm người</span>
               </button>
             </div>
           )}
@@ -1924,11 +1920,11 @@ function ChatInfoPanel({
           <section>
             <button
               type="button"
-              className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+              className="flex min-h-[56px] w-full items-center justify-between rounded-lg px-3 text-left hover:bg-muted cursor-pointer"
               onClick={() => setIsMediaSectionOpen((prev) => !prev)}
             >
-              <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Phương tiện, File, Link</span>
-              <ChevronUp className={`h-4.5 w-4.5 text-gray-900 dark:text-gray-100 transition-transform ${isMediaSectionOpen ? '' : 'rotate-180'}`} />
+              <span className="text-[15px] font-semibold text-foreground">Phương tiện, File, Link</span>
+              <ChevronUp className={`h-4.5 w-4.5 text-foreground transition-transform ${isMediaSectionOpen ? '' : 'rotate-180'}`} />
             </button>
             {isMediaSectionOpen && (
               <div className="space-y-4 px-3 pb-3 pt-2">
@@ -1939,8 +1935,8 @@ function ChatInfoPanel({
                     setInfoView('files');
                   }} className="flex w-full items-center gap-4 text-left"
                 >
-                  <ImageIcon className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                  <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Phương tiện</span>
+                  <ImageIcon className="h-5 w-5 text-foreground" />
+                  <span className="text-[15px] font-semibold text-foreground">Phương tiện</span>
                 </button>
                 <button
                   type="button"
@@ -1949,8 +1945,8 @@ function ChatInfoPanel({
                     setInfoView('files');
                   }} className="flex w-full items-center gap-4 text-left"
                 >
-                  <FileText className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                  <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">File</span>
+                  <FileText className="h-5 w-5 text-foreground" />
+                  <span className="text-[15px] font-semibold text-foreground">File</span>
                 </button>
                 <button
                   type="button"
@@ -1959,14 +1955,14 @@ function ChatInfoPanel({
                     setInfoView('files');
                   }} className="flex w-full items-center gap-4 text-left"
                 >
-                  <LinkIcon className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                  <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Link</span>
+                  <LinkIcon className="h-5 w-5 text-foreground" />
+                  <span className="text-[15px] font-semibold text-foreground">Link</span>
                 </button>
               </div>
             )}
           </section>
 
-          <div className="mt-4 space-y-2 border-t border-gray-200 px-1 pt-4 dark:border-gray-700">
+          <div className="mt-4 space-y-2 border-t border-border px-1 pt-4">
             {isGroupCreator && (
               <button
                 type="button"
@@ -2051,7 +2047,7 @@ function ChatInfoPanel({
   return (
     <>
     <aside
-      className="hidden xl:flex h-full min-h-0 w-[320px] shrink-0 overflow-hidden border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-col"
+      className="hidden xl:flex h-full min-h-0 w-[320px] shrink-0 overflow-hidden border-l border-border bg-card flex-col"
       style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
     >
       {infoView === 'overview' ? (
@@ -2071,9 +2067,9 @@ function ChatInfoPanel({
                 className="w-24 h-24 mx-auto"
               />
             </button>
-            <h3 className="mt-3 text-lg font-semibold text-gray-900 dark:text-gray-100 tracking-tight">{user.name}</h3>
+            <h3 className="mt-3 text-lg font-semibold text-foreground tracking-tight">{user.name}</h3>
             {formatLastActiveLabel(user.isOnline, user.lastActiveAt) ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400">{formatLastActiveLabel(user.isOnline, user.lastActiveAt)}</p>
+              <p className="text-xs text-muted-foreground">{formatLastActiveLabel(user.isOnline, user.lastActiveAt)}</p>
             ) : null}
           </div>
 
@@ -2085,8 +2081,8 @@ function ChatInfoPanel({
               className="flex w-full items-center justify-between py-2 text-left cursor-pointer"
               onClick={() => setIsMediaSectionOpen((prev) => !prev)}
             >
-              <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Phương tiện, File, Link</span>
-              <ChevronUp className={`h-4.5 w-4.5 text-gray-900 dark:text-gray-100 transition-transform ${isMediaSectionOpen ? '' : 'rotate-180'}`} />
+              <span className="text-[15px] font-semibold text-foreground">Phương tiện, File, Link</span>
+              <ChevronUp className={`h-4.5 w-4.5 text-foreground transition-transform ${isMediaSectionOpen ? '' : 'rotate-180'}`} />
             </button>
             {isMediaSectionOpen && <div className="mt-4 space-y-4">
               <button
@@ -2096,8 +2092,8 @@ function ChatInfoPanel({
                   setInfoView('files');
                 }} className="flex w-full items-center gap-4 text-left"
               >
-                <ImageIcon className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Phương tiện</span>
+                <ImageIcon className="h-5 w-5 text-foreground" />
+                <span className="text-[15px] font-semibold text-foreground">Phương tiện</span>
               </button>
               <button
                 type="button"
@@ -2106,8 +2102,8 @@ function ChatInfoPanel({
                   setInfoView('files');
                 }} className="flex w-full items-center gap-4 text-left"
               >
-                <FileText className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">File</span>
+                <FileText className="h-5 w-5 text-foreground" />
+                <span className="text-[15px] font-semibold text-foreground">File</span>
               </button>
               <button
                 type="button"
@@ -2116,8 +2112,8 @@ function ChatInfoPanel({
                   setInfoView('files');
                 }} className="flex w-full items-center gap-4 text-left"
               >
-                <LinkIcon className="h-5 w-5 text-gray-900 dark:text-gray-100" />
-                <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">Link</span>
+                <LinkIcon className="h-5 w-5 text-foreground" />
+                <span className="text-[15px] font-semibold text-foreground">Link</span>
               </button>
             </div>}
           </section>
@@ -2130,33 +2126,27 @@ function ChatInfoPanel({
               onClick={() => setInfoView('overview')} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted"
               title="Quay lại"
             >
-              <ArrowLeft className="h-5 w-5 text-gray-900 dark:text-gray-100" />
+              <ArrowLeft className="h-5 w-5 text-foreground" />
             </button>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Phương tiện, File, Link</h3>
+            <h3 className="text-lg font-semibold text-foreground">Phương tiện, File, Link</h3>
           </div>
 
-          <div className="mt-8 grid shrink-0 grid-cols-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="mt-8 grid shrink-0 grid-cols-3 border-b border-border">
             <button
               type="button"
-              onClick={() => setActiveTab('media')} className={`pb-3 text-center text-sm font-semibold transition-colors ${
-                activeTab === 'media' ? 'border-b-[3px] border-emerald-600 text-emerald-600' : 'text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100'
-              }`}
+              onClick={() => setActiveTab('media')} className={`pb-3 text-center text-sm font-semibold transition-colors ${ activeTab === 'media' ? 'border-b-[3px] border-emerald-600 text-emerald-600' : 'text-muted-foreground hover:text-foreground dark:hover:text-gray-100' }`}
             >
               Phương tiện
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('files')} className={`pb-3 text-center text-sm font-semibold transition-colors ${
-                activeTab === 'files' ? 'border-b-[3px] border-emerald-600 text-emerald-600' : 'text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100'
-              }`}
+              onClick={() => setActiveTab('files')} className={`pb-3 text-center text-sm font-semibold transition-colors ${ activeTab === 'files' ? 'border-b-[3px] border-emerald-600 text-emerald-600' : 'text-muted-foreground hover:text-foreground dark:hover:text-gray-100' }`}
             >
               File
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('links')} className={`pb-3 text-center text-sm font-semibold transition-colors ${
-                activeTab === 'links' ? 'border-b-[3px] border-emerald-600 text-emerald-600' : 'text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100'
-              }`}
+              onClick={() => setActiveTab('links')} className={`pb-3 text-center text-sm font-semibold transition-colors ${ activeTab === 'links' ? 'border-b-[3px] border-emerald-600 text-emerald-600' : 'text-muted-foreground hover:text-foreground dark:hover:text-gray-100' }`}
             >
               Link
             </button>
@@ -2236,8 +2226,8 @@ function ChatInfoPanel({
 
 function EmptyInfoTab({ icon, text }: { icon: ReactNode; text: string }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl bg-gray-50 dark:bg-gray-900 px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
-      <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-white dark:bg-gray-800 text-gray-400 shadow-sm dark:shadow-none">
+    <div className="flex flex-col items-center justify-center rounded-xl bg-background px-4 py-8 text-center text-sm text-muted-foreground">
+      <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-card text-muted-foreground shadow-sm dark:shadow-none">
         {icon}
       </div>
       {text}
@@ -3908,7 +3898,7 @@ export default function MessengerPage() {
 
   return (
     <div
-      className="h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden"
+      className="h-screen bg-background overflow-hidden"
       style={{ fontFamily: '"Segoe UI", Helvetica, Arial, sans-serif' }}
     >
       <Header />
@@ -3916,17 +3906,15 @@ export default function MessengerPage() {
 
       <div className="flex h-[calc(100vh-56px)] mt-14 overflow-hidden p-2 gap-2">
         <div
-          className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl flex flex-col transition-all duration-300 ease-in-out ${
-            activeChatUser ? 'w-0 -translate-x-full lg:w-[380px] lg:translate-x-0' : 'w-[380px]'
-          }`}
+          className={`bg-card border border-border rounded-xl flex flex-col transition-all duration-300 ease-in-out ${ activeChatUser ? 'w-0 -translate-x-full lg:w-[380px] lg:translate-x-0' : 'w-[380px]' }`}
         >
           <div className="flex flex-col h-full min-w-[380px]">
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <h1 className="text-[1.75rem] font-semibold tracking-tight">Đoạn chat</h1>
                   <span
-                    className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                    className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-muted'}`}
                     title={connected ? 'Đã kết nối realtime' : 'Chưa kết nối'}
                   />
                 </div>
@@ -3937,25 +3925,25 @@ export default function MessengerPage() {
                     className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors disabled:opacity-50 cursor-pointer"
                     title="Tải lại danh sách"
                   >
-                    <RefreshCw className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${isRefreshingConversations ? 'animate-spin' : ''}`} />
+                    <RefreshCw className={`w-5 h-5 text-muted-foreground ${isRefreshingConversations ? 'animate-spin' : ''}`} />
                   </button>
                   <button
                     onClick={() => setIsCreateGroupOpen(true)} className="w-9 h-9 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
                     title="Tạo nhóm chat"
                   >
-                    <UserRoundPlus className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                    <UserRoundPlus className="h-5 w-5 text-muted-foreground" />
                   </button>
                 </div>
               </div>
 
               <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Tìm kiếm trên Messenger"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full text-sm outline-none focus:bg-gray-200 dark:focus:bg-gray-700 transition-colors"
+                  className="w-full pl-10 pr-4 py-2 bg-background text-foreground placeholder:text-muted-foreground rounded-full text-sm outline-none focus:bg-muted transition-colors"
                 />
               </div>
 
@@ -3963,13 +3951,7 @@ export default function MessengerPage() {
                 {filters.map((filter) => (
                   <button
                     key={filter.key}
-                    onClick={() => setActiveFilter(filter.key)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                      activeFilter === filter.key
-                        ? filter.key === 'strangers'
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                          : 'bg-emerald-100 text-emerald-600'
-                        : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
+                    onClick={() => setActiveFilter(filter.key)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${ activeFilter === filter.key ? filter.key === 'strangers' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-emerald-100 text-emerald-600' : 'bg-background text-muted-foreground hover:bg-muted' }`}
                   >
                     {filter.label}
                   </button>
@@ -3979,7 +3961,7 @@ export default function MessengerPage() {
 
             <div className="flex-1 overflow-y-auto p-2">
               {loadingConversations && conversations.length === 0 ? (
-                <div className="text-center py-8 text-gray-400 text-sm">Đang tải...</div>
+                <div className="text-center py-8 text-muted-foreground text-sm">Đang tải...</div>
               ) : friendsError ? (
                 <div className="text-center py-8 text-sm">
                   <p className="text-red-500 mb-2">Không thể tải danh sách bạn bè</p>
@@ -3998,7 +3980,7 @@ export default function MessengerPage() {
                   />
                 ))
               ) : (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+                <div className="text-center py-8 text-muted-foreground text-sm">
                   {activeFilter === 'strangers'
                     ? 'Chưa có tin nhắn từ người lạ.'
                     : conversations.length === 0
@@ -4069,17 +4051,17 @@ export default function MessengerPage() {
               />
             </div>
           ) : activeChatUserId && (loadingConversations || isFetchingChatUser || (isActiveGroupChat && !effectiveChatUser && !groupConversationsReady)) ? (
-            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm bg-card rounded-xl border border-border">
               Đang tải...
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div className="flex-1 flex items-center justify-center bg-card rounded-xl border border-border">
               <div className="text-center px-6">
-                <div className="w-24 h-24 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Edit className="w-12 h-12 text-gray-400" />
+                <div className="w-24 h-24 bg-background rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Edit className="w-12 h-12 text-muted-foreground" />
                 </div>
                 <h2 className="text-xl font-semibold mb-2">Tin nhắn của bạn</h2>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
+                <p className="text-muted-foreground text-sm">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
               </div>
             </div>
           )}
@@ -4127,12 +4109,10 @@ export default function MessengerPage() {
       {groupSettingsModal && activeChatUserId?.startsWith('group:') && activeChatUser && (
         <div className="fixed inset-0 z-[230] flex items-center justify-center bg-black/35 p-4">
           <div
-            className={`flex max-h-[86vh] w-full flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl ${
-              groupSettingsModal === 'rename' ? 'max-w-[620px]' : 'max-w-[620px]'
-            }`}
+            className={`flex max-h-[86vh] w-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl ${ groupSettingsModal === 'rename' ? 'max-w-[620px]' : 'max-w-[620px]' }`}
           >
-            <div className="relative flex min-h-[70px] shrink-0 items-center justify-center border-b border-gray-200 dark:border-gray-700 px-5 py-3">
-              <h3 className="text-[24px] font-bold leading-tight text-gray-900 dark:text-gray-100">
+            <div className="relative flex min-h-[70px] shrink-0 items-center justify-center border-b border-border px-5 py-3">
+              <h3 className="text-[24px] font-bold leading-tight text-foreground">
                 {groupSettingsModal === 'rename'
                   ? 'Đổi tên đoạn chat'
                   : groupSettingsModal === 'image'
@@ -4142,7 +4122,7 @@ export default function MessengerPage() {
               <button
                 type="button"
                 onClick={() => setGroupSettingsModal(null)}
-                disabled={isGroupSettingsBusy} className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 disabled:opacity-60"
+                disabled={isGroupSettingsBusy} className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted disabled:opacity-60"
                 title="Đóng"
               >
                 <X className="h-7 w-7" />
@@ -4159,19 +4139,19 @@ export default function MessengerPage() {
                   void handleUpdateGroupConversation({ name: nextName });
                 }}
               >
-                <p className="mb-3 px-1 text-[17px] leading-6 text-gray-900 dark:text-gray-100">
+                <p className="mb-3 px-1 text-[17px] leading-6 text-foreground">
                   Mọi người đều biết khi tên nhóm chat thay đổi.
                 </p>
 
                 <label className="block rounded-[18px] border border-emerald-600 px-5 pb-3 pt-4 shadow-[0_0_0_2px_#10b981]">
                   <div className="mb-1 flex items-center justify-between gap-3">
                     <span className="text-[13px] leading-4 text-emerald-600">Tên đoạn chat</span>
-                    <span className="text-[15px] leading-4 text-gray-500 dark:text-gray-400">{groupNameDraft.length}/500</span>
+                    <span className="text-[15px] leading-4 text-muted-foreground">{groupNameDraft.length}/500</span>
                   </div>
                   <input
                     value={groupNameDraft}
                     onChange={(event) => setGroupNameDraft(event.target.value.slice(0, 500))}
-                    className="h-6 w-full bg-transparent text-[17px] leading-6 text-gray-900 dark:text-gray-100 outline-none"
+                    className="h-6 w-full bg-transparent text-[17px] leading-6 text-foreground outline-none"
                     autoFocus
                   />
                 </label>
@@ -4191,7 +4171,7 @@ export default function MessengerPage() {
                       !groupNameDraft.trim() ||
                       groupNameDraft.trim().length > 500 ||
                       groupNameDraft.trim() === activeChatUser.name.trim()
-                    } className="h-10 rounded-lg bg-emerald-600 px-5 text-[17px] font-semibold text-white hover:bg-emerald-700 disabled:bg-gray-200 dark:bg-gray-700 disabled:text-gray-400"
+                    } className="h-10 rounded-lg bg-emerald-600 px-5 text-[17px] font-semibold text-white hover:bg-emerald-700 disabled:bg-muted disabled:text-muted-foreground"
                   >
                     Lưu
                   </button>
@@ -4203,7 +4183,7 @@ export default function MessengerPage() {
               <div className="space-y-3 p-3 sm:p-4">
                 <div className="flex justify-center">
                   <div
-                    className="relative overflow-hidden rounded-full border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900"
+                    className="relative overflow-hidden rounded-full border border-border bg-background"
                     style={{ width: GROUP_AVATAR_CROP_SIZE, height: GROUP_AVATAR_CROP_SIZE }}
                   >
                     {groupImagePreview ? (
@@ -4217,16 +4197,16 @@ export default function MessengerPage() {
                         }}
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">Chưa có ảnh</div>
+                      <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">Chưa có ảnh</div>
                     )}
                   </div>
                 </div>
 
-                <p className="text-center text-sm text-gray-500 dark:text-gray-400">Kéo thanh để căn ảnh trước khi lưu.</p>
+                <p className="text-center text-sm text-muted-foreground">Kéo thanh để căn ảnh trước khi lưu.</p>
 
-                <div className="space-y-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-2.5">
+                <div className="space-y-2 rounded-xl border border-border bg-background p-2.5">
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Phóng to / thu nhỏ</label>
+                    <label className="mb-1 block text-sm font-medium text-foreground">Phóng to / thu nhỏ</label>
                     <input
                       type="range"
                       min={1}
@@ -4238,7 +4218,7 @@ export default function MessengerPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Di chuyển ngang</label>
+                    <label className="mb-1 block text-sm font-medium text-foreground">Di chuyển ngang</label>
                     <input
                       type="range"
                       min={-100}
@@ -4250,7 +4230,7 @@ export default function MessengerPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Di chuyển dọc</label>
+                    <label className="mb-1 block text-sm font-medium text-foreground">Di chuyển dọc</label>
                     <input
                       type="range"
                       min={-100}
@@ -4267,7 +4247,7 @@ export default function MessengerPage() {
                   <button
                     type="button"
                     onClick={() => setGroupSettingsModal(null)}
-                    disabled={isGroupSettingsBusy} className="h-10 flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-[15px] font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60"
+                    disabled={isGroupSettingsBusy} className="h-10 flex-1 rounded-lg border border-border bg-card text-[15px] font-semibold text-foreground hover:bg-muted disabled:opacity-60"
                   >
                     Hủy
                   </button>
@@ -4275,7 +4255,7 @@ export default function MessengerPage() {
                     type="button"
                     onClick={openGroupImagePicker}
                     disabled={isGroupSettingsBusy}
-                    className="h-10 flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-[15px] font-semibold text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-60 cursor-pointer"
+                    className="h-10 flex-1 rounded-lg border border-border bg-card text-[15px] font-semibold text-foreground hover:bg-muted disabled:opacity-60 cursor-pointer"
                   >
                     Chọn lại
                   </button>
@@ -4300,7 +4280,7 @@ export default function MessengerPage() {
                         setIsProcessingGroupImage(false);
                       }
                     }}
-                    disabled={isGroupSettingsBusy || !groupImagePreview} className="h-10 flex-1 rounded-lg bg-emerald-600 text-[15px] font-semibold text-white hover:bg-emerald-700 disabled:bg-gray-200 dark:bg-gray-700 disabled:text-gray-400"
+                    disabled={isGroupSettingsBusy || !groupImagePreview} className="h-10 flex-1 rounded-lg bg-emerald-600 text-[15px] font-semibold text-white hover:bg-emerald-700 disabled:bg-muted disabled:text-muted-foreground"
                   >
                     Lưu
                   </button>
@@ -4327,14 +4307,14 @@ export default function MessengerPage() {
                             <input
                               value={nicknameDraft}
                               onChange={(event) => setNicknameDraft(event.target.value)}
-                              className="h-11 min-w-0 flex-1 rounded-full bg-gray-100 dark:bg-gray-900 px-4 text-[16px] outline-none focus:bg-gray-200"
+                              className="h-11 min-w-0 flex-1 rounded-full bg-background px-4 text-[16px] outline-none focus:bg-muted"
                               placeholder={realName}
                               autoFocus
                             />
                             <button
                               type="button"
                               onClick={() => handleSaveNickname(member.id, nicknameDraft)}
-                              disabled={isGroupSettingsBusy} className="flex h-10 w-10 items-center justify-center rounded-full text-gray-900 dark:text-gray-100 hover:bg-muted disabled:opacity-60"
+                              disabled={isGroupSettingsBusy} className="flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted disabled:opacity-60"
                               title="Lưu biệt danh"
                             >
                               <Check className="h-6 w-6" />
@@ -4349,15 +4329,15 @@ export default function MessengerPage() {
                                 setNicknameDraft(member.nickname || '');
                               }} className="min-w-0 flex-1 text-left"
                             >
-                              <p className="truncate text-[16px] font-semibold text-gray-900 dark:text-gray-100">{realName}</p>
-                              <p className="truncate text-sm text-gray-600 dark:text-gray-400">{member.nickname || 'Đặt biệt danh'}</p>
+                              <p className="truncate text-[16px] font-semibold text-foreground">{realName}</p>
+                              <p className="truncate text-sm text-muted-foreground">{member.nickname || 'Đặt biệt danh'}</p>
                             </button>
                             <button
                               type="button"
                               onClick={() => {
                                 setNicknameEditingUserId(member.id);
                                 setNicknameDraft(member.nickname || '');
-                              }} className="flex h-10 w-10 items-center justify-center rounded-full text-gray-900 dark:text-gray-100 hover:bg-muted"
+                              }} className="flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
                               title="Sửa biệt danh"
                             >
                               <Pencil className="h-5 w-5 fill-gray-900" />
@@ -4376,14 +4356,14 @@ export default function MessengerPage() {
 
       {isCreateGroupOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/35 p-4">
-          <div className="w-full max-w-[560px] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
+          <div className="w-full max-w-[560px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div className="flex items-center gap-3">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                   <UserPlus className="h-5 w-5" />
                 </span>
                 <div>
-                  <h3 className="text-[18px] font-semibold text-gray-900 dark:text-gray-100">Tạo nhóm chat</h3>
+                  <h3 className="text-[18px] font-semibold text-foreground">Tạo nhóm chat</h3>
                 </div>
               </div>
               <button
@@ -4391,7 +4371,7 @@ export default function MessengerPage() {
                   setIsCreateGroupOpen(false);
                   setGroupNameInput('');
                   setSelectedGroupMemberIds([]);
-                }} className="rounded-full p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-muted"
+                }} className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted"
                 title="Đóng"
               >
                 <X className="h-4 w-4" />
@@ -4400,21 +4380,21 @@ export default function MessengerPage() {
 
             <div className="space-y-4 px-5 py-4">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Tên nhóm (tùy chọn)</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">Tên nhóm (tùy chọn)</label>
                 <input
                   type="text"
                   value={groupNameInput}
                   onChange={(e) => setGroupNameInput(e.target.value)}
                   placeholder="Ví dụ: Nhóm dự án KLTN"
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-2 text-sm outline-none transition-colors focus:border-emerald-500"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm outline-none transition-colors focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Chọn thành viên</p>
-                <div className="max-h-[280px] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                <p className="mb-2 text-sm font-medium text-foreground">Chọn thành viên</p>
+                <div className="max-h-[280px] overflow-y-auto rounded-lg border border-border p-2">
                   {selectableFriends.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">Chưa có bạn bè để tạo nhóm chat</div>
+                    <div className="p-4 text-center text-sm text-muted-foreground">Chưa có bạn bè để tạo nhóm chat</div>
                   ) : (
                     <div className="space-y-1">
                       {selectableFriends.map((friend) => {
@@ -4422,14 +4402,12 @@ export default function MessengerPage() {
                         return (
                           <button
                             key={friend.id}
-                            onClick={() => toggleGroupMemberSelection(friend.id)} className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                            onClick={() => toggleGroupMemberSelection(friend.id)} className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted"
                           >
                             <UserAvatar name={friend.name} avatarUrl={friend.avatar} userId={friend.id} rounded="full" className="h-9 w-9" />
-                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-gray-100">{friend.name}</span>
+                            <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{friend.name}</span>
                             <span
-                              className={`flex h-5 w-5 items-center justify-center rounded border ${
-                                selected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-transparent'
-                              }`}
+                              className={`flex h-5 w-5 items-center justify-center rounded border ${ selected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-border bg-card text-transparent' }`}
                             >
                               <Check className="h-3.5 w-3.5" />
                             </span>
@@ -4442,20 +4420,20 @@ export default function MessengerPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-4">
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
               <button
                 onClick={() => {
                   setIsCreateGroupOpen(false);
                   setGroupNameInput('');
                   setSelectedGroupMemberIds([]);
-                }} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-muted"
+                }} className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 Hủy
               </button>
               <button
                 onClick={handleCreateGroupChat}
                 disabled={selectedGroupMemberIds.length < 2}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-gray-600 cursor-pointer"
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-muted cursor-pointer"
               >
                 Tạo nhóm
               </button>
@@ -4466,13 +4444,13 @@ export default function MessengerPage() {
 
       {isAddGroupMembersOpen && activeChatUserId?.startsWith('group:') && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
-          <div className="flex max-h-[86vh] w-full max-w-[660px] flex-col overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl">
-            <div className="relative flex shrink-0 items-center justify-center border-b border-gray-200 dark:border-gray-700 px-5 py-4">
-              <h3 className="text-[24px] font-bold text-gray-900 dark:text-gray-100">Thêm người</h3>
+          <div className="flex max-h-[86vh] w-full max-w-[660px] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+            <div className="relative flex shrink-0 items-center justify-center border-b border-border px-5 py-4">
+              <h3 className="text-[24px] font-bold text-foreground">Thêm người</h3>
               <button
                 onClick={closeAddGroupMembersModal}
                 disabled={isAddingGroupMembers}
-                className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-300 disabled:opacity-60 cursor-pointer"
+                className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted disabled:opacity-60 cursor-pointer"
                 title="Đóng"
               >
                 <X className="h-7 w-7" />
@@ -4481,17 +4459,17 @@ export default function MessengerPage() {
 
             <div className="shrink-0 px-5 pb-4 pt-5">
               <div className="relative">
-                <SearchIcon className="absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-600 dark:text-gray-400" />
+                <SearchIcon className="absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   value={addGroupMemberSearch}
                   onChange={(e) => setAddGroupMemberSearch(e.target.value)}
                   placeholder="Tìm kiếm"
-                  className="h-11 w-full rounded-full bg-gray-100 dark:bg-gray-900 pl-11 pr-4 text-[16px] outline-none transition-colors focus:bg-gray-200"
+                  className="h-11 w-full rounded-full bg-background pl-11 pr-4 text-[16px] outline-none transition-colors focus:bg-muted"
                 />
               </div>
 
-              <div className="mt-7 min-h-[112px] text-sm text-gray-500 dark:text-gray-400">
+              <div className="mt-7 min-h-[112px] text-sm text-muted-foreground">
                 {selectedAddGroupMemberIds.length === 0 ? (
                   <div className="pt-6 text-center">Chưa chọn người dùng nào</div>
                 ) : (
@@ -4514,13 +4492,13 @@ export default function MessengerPage() {
                             />
                             <button
                               type="button"
-                              onClick={() => toggleAddGroupMemberSelection(id)} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 shadow-sm dark:shadow-none hover:bg-gray-300"
+                              onClick={() => toggleAddGroupMemberSelection(id)} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-muted text-foreground shadow-sm dark:shadow-none hover:bg-muted"
                               title="Bỏ chọn"
                             >
                               <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                          <span className="line-clamp-2 w-full text-sm leading-tight text-gray-500 dark:text-gray-400">{friend.name}</span>
+                          <span className="line-clamp-2 w-full text-sm leading-tight text-muted-foreground">{friend.name}</span>
                         </div>
                       );
                     })}
@@ -4530,9 +4508,9 @@ export default function MessengerPage() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">
-              <h4 className="mb-3 text-[24px] font-bold text-gray-900 dark:text-gray-100">Gợi ý</h4>
+              <h4 className="mb-3 text-[24px] font-bold text-foreground">Gợi ý</h4>
               {addableGroupMembers.length === 0 ? (
-                <div className="rounded-xl bg-gray-50 dark:bg-gray-900 px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="rounded-xl bg-background px-4 py-8 text-center text-sm text-muted-foreground">
                   Không có bạn bè phù hợp để thêm
                 </div>
               ) : (
@@ -4543,18 +4521,14 @@ export default function MessengerPage() {
                       <button
                         key={friend.id}
                         type="button"
-                        onClick={() => toggleAddGroupMemberSelection(friend.id)} className={`flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors ${
-                          selected ? 'bg-gray-100' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
+                        onClick={() => toggleAddGroupMemberSelection(friend.id)} className={`flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors ${ selected ? 'bg-muted' : 'hover:bg-muted' }`}
                       >
                         <UserAvatar name={friend.name} avatarUrl={friend.avatar} userId={friend.id} rounded="full" className="h-10 w-10" />
-                        <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-gray-900 dark:text-gray-100">
+                        <span className="min-w-0 flex-1 truncate text-[16px] font-semibold text-foreground">
                           {friend.name}
                         </span>
                         <span
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-                            selected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-500 bg-white dark:bg-gray-800 text-transparent'
-                          }`}
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${ selected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-500 bg-card text-transparent' }`}
                         >
                           <Check className="h-4 w-4" />
                         </span>
@@ -4565,11 +4539,11 @@ export default function MessengerPage() {
               )}
             </div>
 
-            <div className="shrink-0 border-t border-gray-100 dark:border-gray-800 px-5 py-4">
+            <div className="shrink-0 border-t border-border px-5 py-4">
               <button
                 onClick={handleAddGroupMembers}
                 disabled={selectedAddGroupMemberIds.length === 0 || isAddingGroupMembers}
-                className="h-11 w-full rounded-lg bg-emerald-600 text-[16px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-200 dark:bg-gray-700 disabled:text-gray-400 cursor-pointer"
+                className="h-11 w-full rounded-lg bg-emerald-600 text-[16px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground cursor-pointer"
               >
                 {isAddingGroupMembers ? 'Đang thêm...' : 'Thêm người'}
               </button>
@@ -4580,14 +4554,14 @@ export default function MessengerPage() {
 
       {forwardMessage && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
-          <div className="w-full max-w-[560px] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-5 py-4">
-              <h3 className="text-[18px] font-semibold text-gray-900 dark:text-gray-100">Chuyển tiếp tin nhắn</h3>
+          <div className="w-full max-w-[560px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <h3 className="text-[18px] font-semibold text-foreground">Chuyển tiếp tin nhắn</h3>
               <button
                 onClick={() => {
                   setForwardMessage(null);
                   setSelectedForwardTargetIds([]);
-                }} className="rounded-full p-2 text-gray-500 dark:text-gray-400 transition-colors hover:bg-muted"
+                }} className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted"
                 title="Đóng"
               >
                 <X className="h-4 w-4" />
@@ -4595,10 +4569,10 @@ export default function MessengerPage() {
             </div>
 
             <div className="px-5 py-4">
-              <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Chọn cuộc trò chuyện</p>
-              <div className="max-h-[320px] overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+              <p className="mb-2 text-sm font-medium text-foreground">Chọn cuộc trò chuyện</p>
+              <div className="max-h-[320px] overflow-y-auto rounded-lg border border-border p-2">
                 {conversations.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">Chưa có cuộc trò chuyện để chuyển tiếp</div>
+                  <div className="p-4 text-center text-sm text-muted-foreground">Chưa có cuộc trò chuyện để chuyển tiếp</div>
                 ) : (
                   <div className="space-y-1">
                     {conversations.map((conversation) => {
@@ -4607,7 +4581,7 @@ export default function MessengerPage() {
                       return (
                         <button
                           key={`forward-${targetId}`}
-                          onClick={() => toggleForwardTargetSelection(targetId)} className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                          onClick={() => toggleForwardTargetSelection(targetId)} className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted"
                         >
                           <UserAvatar
                             name={conversation.user.name}
@@ -4617,13 +4591,11 @@ export default function MessengerPage() {
                             rounded="full"
                             className="h-9 w-9"
                           />
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                             {conversation.user.name}
                           </span>
                           <span
-                            className={`flex h-5 w-5 items-center justify-center rounded border ${
-                              selected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-transparent'
-                            }`}
+                            className={`flex h-5 w-5 items-center justify-center rounded border ${ selected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-border bg-card text-transparent' }`}
                           >
                             <Check className="h-3.5 w-3.5" />
                           </span>
@@ -4635,19 +4607,19 @@ export default function MessengerPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-5 py-4">
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
               <button
                 onClick={() => {
                   setForwardMessage(null);
                   setSelectedForwardTargetIds([]);
-                }} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-muted"
+                }} className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 Hủy
               </button>
               <button
                 onClick={handleSubmitForward}
                 disabled={selectedForwardTargetIds.length === 0}
-                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:bg-gray-600 cursor-pointer"
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-muted cursor-pointer"
               >
                 Chuyển tiếp
               </button>
@@ -4667,19 +4639,19 @@ export default function MessengerPage() {
 
       {isDissolveGroupModalOpen && activeChatUserId?.startsWith('group:') && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
-            <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Giải tán nhóm</h3>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-lg font-bold text-foreground">Giải tán nhóm</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
                 Toàn bộ thành viên sẽ bị xóa khỏi nhóm và lịch sử chat nhóm sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.
               </p>
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
               <button
                 type="button"
                 onClick={() => setIsDissolveGroupModalOpen(false)}
                 disabled={isDissolvingGroup}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-muted dark:text-gray-300"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 Hủy
               </button>
@@ -4687,7 +4659,7 @@ export default function MessengerPage() {
                 type="button"
                 disabled={isDissolvingGroup}
                 onClick={() => void executeDissolveGroup()}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-muted dark:disabled:bg-gray-600"
               >
                 {isDissolvingGroup ? 'Đang giải tán...' : 'Giải tán nhóm'}
               </button>
@@ -4698,19 +4670,19 @@ export default function MessengerPage() {
 
       {removeMemberTarget && activeChatUserId?.startsWith('group:') && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
-            <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Xóa thành viên</h3>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Bạn có chắc muốn xóa <span className="font-semibold text-gray-900 dark:text-gray-100">{removeMemberTarget.name}</span> khỏi nhóm? Người này sẽ không nhận tin nhắn mới từ nhóm cho đến khi được mời lại.
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+            <div className="border-b border-border px-5 py-4">
+              <h3 className="text-lg font-bold text-foreground">Xóa thành viên</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Bạn có chắc muốn xóa <span className="font-semibold text-foreground">{removeMemberTarget.name}</span> khỏi nhóm? Người này sẽ không nhận tin nhắn mới từ nhóm cho đến khi được mời lại.
               </p>
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
               <button
                 type="button"
                 onClick={() => setRemoveMemberTarget(null)}
                 disabled={isRemovingGroupMember}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-muted dark:text-gray-300"
+                className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 Hủy
               </button>
@@ -4718,7 +4690,7 @@ export default function MessengerPage() {
                 type="button"
                 disabled={isRemovingGroupMember}
                 onClick={() => void executeRemoveGroupMember()}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-muted dark:disabled:bg-gray-600"
               >
                 {isRemovingGroupMember ? 'Đang xóa...' : 'Xóa thành viên'}
               </button>
@@ -4729,21 +4701,21 @@ export default function MessengerPage() {
 
       {leaveGroupModalMode && activeChatUserId?.startsWith('group:') && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/35 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
             {leaveGroupModalMode === 'confirm' ? (
               <>
-                <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Rời nhóm</h3>
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                <div className="border-b border-border px-5 py-4">
+                  <h3 className="text-lg font-bold text-foreground">Rời nhóm</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
                     Bạn có chắc muốn rời nhóm này? Bạn sẽ không nhận tin nhắn mới từ nhóm cho đến khi được mời lại.
                   </p>
                 </div>
-                <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+                <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
                   <button
                     type="button"
                     onClick={() => setLeaveGroupModalMode(null)}
                     disabled={isLeavingGroup}
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-muted dark:text-gray-300"
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     Hủy
                   </button>
@@ -4751,7 +4723,7 @@ export default function MessengerPage() {
                     type="button"
                     disabled={isLeavingGroup}
                     onClick={() => void executeLeaveGroup()}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-muted dark:disabled:bg-gray-600"
                   >
                     {isLeavingGroup ? 'Đang rời...' : 'Rời nhóm'}
                   </button>
@@ -4759,20 +4731,20 @@ export default function MessengerPage() {
               </>
             ) : (
               <>
-                <div className="border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Chuyển quyền quản trị</h3>
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                <div className="border-b border-border px-5 py-4">
+                  <h3 className="text-lg font-bold text-foreground">Chuyển quyền quản trị</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
                     Bạn cần chọn một thành viên làm quản trị viên mới trước khi rời nhóm.
                   </p>
                 </div>
                 <div className="px-5 py-4">
-                  <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="mb-2 block text-sm font-medium text-foreground">
                     Quản trị viên mới
                   </label>
                   <select
                     value={leaveGroupNewAdminId}
                     onChange={(event) => setLeaveGroupNewAdminId(event.target.value)}
-                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    className="w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none"
                   >
                     {(groupMembersById[activeChatUserId] ?? [])
                       .filter((member) => member.memberStatus !== 'PENDING' && member.id !== currentUser?.id)
@@ -4783,12 +4755,12 @@ export default function MessengerPage() {
                       ))}
                   </select>
                 </div>
-                <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+                <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
                   <button
                     type="button"
                     onClick={() => setLeaveGroupModalMode(null)}
                     disabled={isLeavingGroup}
-                    className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-muted dark:text-gray-300"
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     Hủy
                   </button>
@@ -4796,7 +4768,7 @@ export default function MessengerPage() {
                     type="button"
                     disabled={!leaveGroupNewAdminId || isLeavingGroup}
                     onClick={() => void executeLeaveGroup(leaveGroupNewAdminId)}
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-muted dark:disabled:bg-gray-600"
                   >
                     {isLeavingGroup ? 'Đang rời...' : 'Rời nhóm'}
                   </button>

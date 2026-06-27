@@ -42,29 +42,25 @@ export const CameraModal: React.FC<CameraModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/75 p-4">
-      <div className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-white dark:bg-gray-800 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-5 py-4">
-          <h4 className="text-[17px] font-bold text-gray-900 dark:text-gray-100">{title}</h4>
+      <div className="w-full max-w-[520px] overflow-hidden rounded-2xl bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h4 className="text-[17px] font-bold text-foreground">{title}</h4>
           <button
             type="button"
             onClick={onClose}
             disabled={isRecording || isSending}
-            className="rounded-full bg-gray-100 dark:bg-gray-900 p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer disabled:opacity-50"
+            className="rounded-full bg-background p-2 text-muted-foreground hover:bg-muted cursor-pointer disabled:opacity-50"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex gap-2 border-b border-gray-100 dark:border-gray-800 px-5 py-3">
+        <div className="flex gap-2 border-b border-border px-5 py-3">
           <button
             type="button"
             onClick={() => onModeChange('photo')}
             disabled={busy || isRecording}
-            className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
-              mode === 'photo'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
+            className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 ${ mode === 'photo' ? 'bg-emerald-600 text-white' : 'bg-background text-muted-foreground hover:bg-muted' }`}
           >
             Ảnh
           </button>
@@ -72,11 +68,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
             type="button"
             onClick={() => onModeChange('video')}
             disabled={busy || isRecording}
-            className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 ${
-              mode === 'video'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
+            className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 ${ mode === 'video' ? 'bg-emerald-600 text-white' : 'bg-background text-muted-foreground hover:bg-muted' }`}
           >
             Video
           </button>
@@ -108,13 +100,13 @@ export const CameraModal: React.FC<CameraModalProps> = ({
           )}
         </div>
 
-        <div className="flex justify-center bg-gray-50 dark:bg-gray-900 py-6">
+        <div className="flex justify-center bg-background py-6">
           {mode === 'photo' ? (
             <button
               type="button"
               onClick={onCapture}
               disabled={!isCameraReady || busy || isSending}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-white dark:bg-gray-800 text-emerald-600 shadow-lg ring-4 ring-emerald-600/10 hover:scale-105 active:scale-95 transition-transform cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-card text-emerald-600 shadow-lg ring-4 ring-emerald-600/10 hover:scale-105 active:scale-95 transition-transform cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
             >
               <Camera className="h-8 w-8" />
             </button>
@@ -131,7 +123,7 @@ export const CameraModal: React.FC<CameraModalProps> = ({
               type="button"
               onClick={onStartRecording}
               disabled={!isCameraReady || busy || isSending}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-white dark:bg-gray-800 text-red-600 shadow-lg ring-4 ring-red-600/15 hover:scale-105 active:scale-95 transition-transform cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
+              className="flex h-16 w-16 items-center justify-center rounded-full bg-card text-red-600 shadow-lg ring-4 ring-red-600/15 hover:scale-105 active:scale-95 transition-transform cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
             >
               <Video className="h-8 w-8" />
             </button>

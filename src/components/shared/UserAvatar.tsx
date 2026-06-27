@@ -49,11 +49,7 @@ export function UserAvatar({
 
   return (
     <div
-      className={cn(
-        'flex h-full w-full items-center justify-center bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
-        ROUNDED_CLASS[rounded],
-        className,
-      )}
+      className={cn( 'flex h-full w-full items-center justify-center bg-muted text-muted-foreground dark:text-muted-foreground', ROUNDED_CLASS[rounded], className, )}
       aria-label={name}
     >
       <FallbackIcon className="h-[52%] w-[52%] min-h-4 min-w-4" strokeWidth={1.75} aria-hidden />

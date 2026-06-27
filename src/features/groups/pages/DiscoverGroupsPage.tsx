@@ -37,7 +37,7 @@ export const DiscoverGroupsPage = () => {
     >
       <div className="flex h-[calc(100vh-88px)] flex-col">
         <div className="mb-4 flex shrink-0 items-center justify-between">
-          <h1 className="text-[17px] font-semibold text-gray-900 dark:text-gray-100">
+          <h1 className="text-[17px] font-semibold text-foreground">
             {loadingDiscover ? 'Đang tải các nhóm gợi ý...' : `Gợi ý cho bạn (${discoverGroups.length})`}
           </h1>
           {!loadingDiscover && discoverGroups.length > 0 && (
@@ -49,23 +49,23 @@ export const DiscoverGroupsPage = () => {
           {loadingDiscover ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-[280px] animate-pulse rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800" />
+                <div key={i} className="h-[280px] animate-pulse rounded-lg border border-border bg-card" />
               ))}
             </div>
           ) : discoverGroups.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
-              <Compass className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-              <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">Không tìm thấy nhóm mới</h3>
-              <p className="text-gray-500 dark:text-gray-400">Có vẻ như bạn đã tham gia tất cả các nhóm hiện có!</p>
+            <div className="rounded-xl border border-border bg-card p-12 text-center">
+              <Compass className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-semibold text-foreground">Không tìm thấy nhóm mới</h3>
+              <p className="text-muted-foreground">Có vẻ như bạn đã tham gia tất cả các nhóm hiện có!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {discoverGroups.map((group) => (
                 <div
                   key={group.id}
-                  className="group flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:shadow-none"
+                  className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-200 hover:shadow-md dark:shadow-none"
                 >
-                  <div className="relative h-32 overflow-hidden bg-gray-200 dark:bg-gray-700">
+                  <div className="relative h-32 overflow-hidden bg-muted">
                     {group.icon ? (
                       <img
                         src={group.icon}
@@ -80,13 +80,13 @@ export const DiscoverGroupsPage = () => {
                   </div>
 
                   <div className="flex flex-1 flex-col p-4">
-                    <h3 className="mb-1 line-clamp-2 text-[17px] font-bold leading-tight text-gray-900 transition-colors group-hover:text-emerald-600 dark:text-gray-100">
+                    <h3 className="mb-1 line-clamp-2 text-[17px] font-bold leading-tight text-foreground transition-colors group-hover:text-emerald-600">
                       {group.name}
                     </h3>
-                    <div className="mb-3 flex items-center gap-1.5 text-[13px] text-gray-500 dark:text-gray-400">
+                    <div className="mb-3 flex items-center gap-1.5 text-[13px] text-muted-foreground">
                       <span>{group.privacy === 'public' ? 'Nhóm công khai' : 'Nhóm riêng tư'}</span>
                       <span>·</span>
-                      <span className="font-medium text-gray-700 dark:text-gray-300">{group.members} thành viên</span>
+                      <span className="font-medium text-foreground">{group.members} thành viên</span>
                     </div>
 
                     <div className="mt-auto space-y-2">
@@ -104,7 +104,7 @@ export const DiscoverGroupsPage = () => {
                       <button
                         type="button"
                         onClick={() => navigate(`/groups/${group.id}`)}
-                        className="w-full rounded-lg bg-gray-100 py-2 text-[15px] font-semibold text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-700"
+                        className="w-full rounded-lg bg-muted py-2 text-[15px] font-semibold text-foreground transition-colors hover:bg-muted"
                       >
                         Xem thông tin
                       </button>

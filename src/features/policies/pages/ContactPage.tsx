@@ -48,11 +48,11 @@ export default function ContactPage() {
     >
       <div className="mt-8 space-y-6">
         {contactRows.map((row) => (
-          <section key={row.label} className="border-b border-gray-200 pb-6 last:border-b-0 dark:border-gray-700">
+          <section key={row.label} className="border-b border-border pb-6 last:border-b-0">
             <div className="flex items-start gap-3">
-              <row.icon className="mt-0.5 h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400" />
+              <row.icon className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
               <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{row.label}</h2>
+                <h2 className="text-sm font-semibold text-foreground">{row.label}</h2>
                 {'href' in row && row.href ? (
                   <a
                     href={row.href}
@@ -61,17 +61,17 @@ export default function ContactPage() {
                     {row.value}
                   </a>
                 ) : (
-                  <p className="mt-1 text-base font-medium text-gray-900 dark:text-gray-100">{row.value}</p>
+                  <p className="mt-1 text-base font-medium text-foreground">{row.value}</p>
                 )}
-                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{row.note}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{row.note}</p>
               </div>
             </div>
           </section>
         ))}
 
         <section className="pt-2">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Tài liệu liên quan</h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <h2 className="text-sm font-semibold text-foreground">Tài liệu liên quan</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
             Xem thêm{' '}
             <Link to="/privacy" className="font-medium text-emerald-600 hover:underline dark:text-emerald-400">
               Chính sách bảo mật

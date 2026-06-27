@@ -49,30 +49,30 @@ export function SearchRightPanel({
   }
 
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 self-start overflow-y-auto border-l border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 lg:block">
+    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 self-start overflow-y-auto border-l border-border bg-card p-4 lg:block">
       <div className="space-y-4">
         {showPostFilters && (
-          <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-4 dark:border-gray-700 dark:bg-gray-900/40">
+          <div className="rounded-xl border border-border bg-muted/80 p-4/40">
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="flex w-full items-center justify-between cursor-pointer"
             >
-              <div className="flex items-center gap-2 text-gray-800 dark:text-gray-200">
+              <div className="flex items-center gap-2 text-foreground">
                 <SlidersHorizontal className="h-4 w-4" />
                 <span className="text-sm font-semibold">Bộ lọc nâng cao</span>
               </div>
               {showAdvanced ? (
-                <ChevronUp className="h-4 w-4 text-gray-500" />
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-gray-500" />
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
             </button>
 
             {showAdvanced && (
               <div className="mt-4 space-y-5">
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Sắp xếp theo
                   </p>
                   <div className="space-y-1">
@@ -82,7 +82,7 @@ export function SearchRightPanel({
                     ].map((option) => (
                       <label
                         key={option.value}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white dark:hover:bg-gray-800"
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-card"
                       >
                         <input
                           type="radio"
@@ -92,21 +92,21 @@ export function SearchRightPanel({
                           onChange={() => onSortChange(option.value)}
                           className="accent-emerald-600"
                         />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{option.label}</span>
+                        <span className="text-sm text-foreground">{option.label}</span>
                       </label>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Thời gian đăng
                   </p>
                   <div className="space-y-1">
                     {dateOptions.map((option) => (
                       <label
                         key={option.value}
-                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white dark:hover:bg-gray-800"
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-card"
                       >
                         <input
                           type="radio"
@@ -116,7 +116,7 @@ export function SearchRightPanel({
                           onChange={() => onDateFilterChange(option.value)}
                           className="accent-emerald-600"
                         />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{option.label}</span>
+                        <span className="text-sm text-foreground">{option.label}</span>
                       </label>
                     ))}
                   </div>
@@ -127,8 +127,8 @@ export function SearchRightPanel({
         )}
 
         {showPeopleFilters && (
-          <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <div className="rounded-xl border border-border bg-muted/80 p-4/40">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Lọc mọi người
             </p>
             <div className="space-y-1">
@@ -139,7 +139,7 @@ export function SearchRightPanel({
               ].map((opt) => (
                 <label
                   key={opt.value}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white dark:hover:bg-gray-800"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-card"
                 >
                   <input
                     type="radio"
@@ -149,7 +149,7 @@ export function SearchRightPanel({
                     onChange={() => onPeopleFilterChange(opt.value)}
                     className="accent-emerald-600"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
+                  <span className="text-sm text-foreground">{opt.label}</span>
                 </label>
               ))}
             </div>
@@ -157,8 +157,8 @@ export function SearchRightPanel({
         )}
 
         {showGroupFilters && (
-          <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-4 dark:border-gray-700 dark:bg-gray-900/40">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <div className="rounded-xl border border-border bg-muted/80 p-4/40">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Lọc nhóm
             </p>
             <div className="space-y-1">
@@ -170,7 +170,7 @@ export function SearchRightPanel({
               ].map((opt) => (
                 <label
                   key={opt.value}
-                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white dark:hover:bg-gray-800"
+                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-card"
                 >
                   <input
                     type="radio"
@@ -180,7 +180,7 @@ export function SearchRightPanel({
                     onChange={() => onGroupFilterChange(opt.value)}
                     className="accent-emerald-600"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">{opt.label}</span>
+                  <span className="text-sm text-foreground">{opt.label}</span>
                 </label>
               ))}
             </div>

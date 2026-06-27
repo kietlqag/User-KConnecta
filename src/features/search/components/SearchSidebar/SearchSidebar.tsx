@@ -16,11 +16,11 @@ const filterOptions = [
 
 export const SearchSidebar = ({ activeFilter, onFilterChange }: SearchSidebarProps) => {
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 self-start overflow-y-auto border-r border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 md:block">
+    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-64 shrink-0 self-start overflow-y-auto border-r border-border bg-card p-4 md:block">
       <h2 className="mb-4 text-lg font-bold">Kết quả tìm kiếm</h2>
 
       <div className="space-y-1">
-        <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Bộ lọc
         </h3>
         {filterOptions.map((filter) => {
@@ -32,16 +32,10 @@ export const SearchSidebar = ({ activeFilter, onFilterChange }: SearchSidebarPro
               key={filter.id}
               type="button"
               onClick={() => onFilterChange(filter.id)}
-              className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors ${
-                isActive
-                  ? 'bg-emerald-50 text-emerald-600'
-                  : 'text-gray-700 hover:bg-muted dark:text-gray-300'
-              }`}
+              className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors ${ isActive ? 'bg-emerald-50 text-emerald-600' : 'text-foreground hover:bg-muted' }`}
             >
               <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full ${
-                  isActive ? 'bg-emerald-100' : 'bg-gray-200 dark:bg-gray-700'
-                }`}
+                className={`flex h-9 w-9 items-center justify-center rounded-full ${ isActive ? 'bg-emerald-100' : 'bg-muted' }`}
               >
                 <Icon className="h-5 w-5" />
               </div>

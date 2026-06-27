@@ -25,7 +25,7 @@ export function GroupsHubLayout({
   contentMaxWidthClass = 'max-w-[680px]',
 }: GroupsHubLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <div className="mx-auto max-w-[1920px]">

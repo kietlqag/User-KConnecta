@@ -30,31 +30,31 @@ export const SuggestionsSidebar = ({
   const visible = suggestions.filter((s) => !hiddenIds.has(s.id));
 
   return (
-    <div className="hidden h-full w-[clamp(300px,24vw,380px)] shrink-0 flex-col overflow-hidden border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 md:flex">
-      <div className="shrink-0 border-b border-gray-100 dark:border-gray-800 px-4 py-4">
+    <div className="hidden h-full w-[clamp(300px,24vw,380px)] shrink-0 flex-col overflow-hidden border-r border-border bg-card md:flex">
+      <div className="shrink-0 border-b border-border px-4 py-4">
         <div className="mb-3 flex items-center gap-2">
           <button
             onClick={onBack}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 dark:text-gray-400 transition-colors hover:bg-muted cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted cursor-pointer"
             aria-label="Quay lại"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Bạn bè</span>
+          <span className="text-sm font-medium text-muted-foreground">Bạn bè</span>
         </div>
-        <h1 className="text-[28px] font-bold leading-tight text-gray-900 dark:text-gray-100">Gợi ý</h1>
-        <p className="mt-1 text-[15px] font-semibold text-gray-800 dark:text-gray-200">Những người bạn có thể biết</p>
+        <h1 className="text-[28px] font-bold leading-tight text-foreground">Gợi ý</h1>
+        <p className="mt-1 text-[15px] font-semibold text-foreground">Những người bạn có thể biết</p>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2 sidebar-scrollbar">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : visible.length === 0 ? (
-          <p className="px-2 py-6 text-center text-sm text-gray-500 dark:text-gray-400">Không có gợi ý nào.</p>
+          <p className="px-2 py-6 text-center text-sm text-muted-foreground">Không có gợi ý nào.</p>
         ) : (
           <ul className="space-y-0.5">
             {visible.map((friend) => (
@@ -107,9 +107,7 @@ const SuggestionItem = ({
           onSelect(friend.userId);
         }
       }}
-      className={`group flex cursor-pointer gap-2 rounded-lg p-2 transition-colors ${
-        selected ? 'bg-emerald-50' : 'hover:bg-muted'
-      }`}
+      className={`group flex cursor-pointer gap-2 rounded-lg p-2 transition-colors ${ selected ? 'bg-emerald-50' : 'hover:bg-muted' }`}
     >
       <UserAvatar
         name={friend.name}
@@ -122,13 +120,11 @@ const SuggestionItem = ({
 
       <div className="min-w-0 flex-1">
         <p
-          className={`truncate text-[13px] font-semibold leading-tight ${
-            selected ? 'text-emerald-800' : 'text-gray-900 dark:text-gray-100'
-          }`}
+          className={`truncate text-[13px] font-semibold leading-tight ${ selected ? 'text-emerald-800' : 'text-foreground' }`}
         >
           {friend.name}
         </p>
-        <p className="truncate text-[11px] leading-tight text-gray-500 dark:text-gray-400">
+        <p className="truncate text-[11px] leading-tight text-muted-foreground">
           {friend.mutualFriends > 0
             ? `${friend.mutualFriends} bạn chung`
             : 'Gợi ý cho bạn'}
@@ -142,7 +138,7 @@ const SuggestionItem = ({
                 e.stopPropagation();
                 void onCancelFriendRequest(friend.userId);
               }}
-              className="flex h-7 min-w-0 flex-1 items-center justify-center rounded-md bg-gray-200 dark:bg-gray-700 px-2 text-[11px] font-semibold text-gray-800 dark:text-gray-200 transition-colors hover:bg-gray-300 cursor-pointer"
+              className="flex h-7 min-w-0 flex-1 items-center justify-center rounded-md bg-muted px-2 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted cursor-pointer"
             >
               Hủy lời mời
             </button>
@@ -165,7 +161,7 @@ const SuggestionItem = ({
               e.stopPropagation();
               onRemove(friend.id);
             }}
-            className="h-7 shrink-0 rounded-md bg-gray-200 dark:bg-gray-700 px-3 text-[11px] font-semibold text-gray-800 dark:text-gray-200 transition-colors hover:bg-gray-300 cursor-pointer"
+            className="h-7 shrink-0 rounded-md bg-muted px-3 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted cursor-pointer"
           >
             Gỡ
           </button>

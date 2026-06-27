@@ -40,7 +40,7 @@ export function AlbumSidebarCarousel({ albums }: AlbumSidebarCarouselProps) {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="overflow-hidden rounded-xl border border-border bg-card">
         <div
           className="flex will-change-transform"
           style={{
@@ -53,9 +53,9 @@ export function AlbumSidebarCarousel({ albums }: AlbumSidebarCarouselProps) {
               key={album.id}
               type="button"
               onClick={() => navigate(`/albums/${album.id}`)}
-              className="w-full shrink-0 text-left hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors duration-300"
+              className="w-full shrink-0 text-left hover:bg-muted/80/50 transition-colors duration-300"
             >
-              <div className="aspect-[4/3] bg-gray-100 dark:bg-gray-800 relative overflow-hidden">
+              <div className="aspect-[4/3] bg-muted relative overflow-hidden">
                 {album.coverUrl ? (
                   <ImageWithFallback
                     src={album.coverUrl}
@@ -63,16 +63,16 @@ export function AlbumSidebarCarousel({ albums }: AlbumSidebarCarouselProps) {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
                     Chưa có ảnh bìa
                   </div>
                 )}
               </div>
               <div className="p-2.5">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                <p className="text-sm font-semibold text-foreground truncate">
                   {album.title}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-muted-foreground">
                   {album.mediaCount} ảnh/video
                 </p>
               </div>
@@ -105,9 +105,7 @@ export function AlbumSidebarCarousel({ albums }: AlbumSidebarCarouselProps) {
                 key={a.id}
                 type="button"
                 onClick={() => goTo(i)}
-                className={`h-1.5 rounded-full transition-all duration-500 ease-out ${
-                  i === index ? 'w-4 bg-emerald-600' : 'w-1.5 bg-gray-300 dark:bg-gray-600'
-                }`}
+                className={`h-1.5 rounded-full transition-all duration-500 ease-out ${ i === index ? 'w-4 bg-emerald-600' : 'w-1.5 bg-muted' }`}
                 aria-label={`Album ${i + 1}`}
               />
             ))}

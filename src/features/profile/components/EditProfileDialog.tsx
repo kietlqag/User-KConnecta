@@ -165,9 +165,9 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="fixed inset-0 max-w-none w-full h-full p-0 m-0 border-none rounded-none overflow-hidden flex flex-col bg-white dark:bg-gray-900 translate-x-0 translate-y-0 top-0 left-0 md:max-w-none sm:max-w-none">
+      <DialogContent className="fixed inset-0 max-w-none w-full h-full p-0 m-0 border-none rounded-none overflow-hidden flex flex-col bg-card translate-x-0 translate-y-0 top-0 left-0 md:max-w-none sm:max-w-none">
         {/* Header - Fixed at top */}
-        <div className="flex items-center justify-between px-6 py-4 border-b dark:border-gray-800 flex-shrink-0 bg-white dark:bg-gray-900 z-10">
+        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0 bg-card z-10">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
               <User className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -175,7 +175,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
             <div>
               <DialogTitle className="text-xl font-bold">Chỉnh sửa trang cá nhân</DialogTitle>
               <DialogDescription className="sr-only">Chỉnh sửa thông tin trang cá nhân của bạn</DialogDescription>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Cập nhật hình ảnh và thông tin của bạn</p>
+              <p className="text-xs text-muted-foreground">Cập nhật hình ảnh và thông tin của bạn</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -195,7 +195,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
           <div className="flex-1 grid grid-cols-1 lg:grid-cols-[400px_1fr] h-full overflow-hidden">
             
             {/* Left Column: Photos (Scrollable independent) */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 border-r dark:border-gray-800 overflow-y-auto p-6 md:p-8 space-y-8">
+            <div className="bg-muted/50 border-r overflow-y-auto p-6 md:p-8 space-y-8">
               <div className="space-y-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-bold text-lg flex items-center gap-2">
@@ -204,8 +204,8 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                 </div>
 
                 {/* Avatar Section */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm dark:shadow-none border dark:border-gray-700 flex flex-col items-center">
-                  <Label className="mb-4 text-gray-500 dark:text-gray-400 uppercase tracking-wider text-[10px] font-bold">Ảnh đại diện</Label>
+                <div className="bg-card p-6 rounded-2xl shadow-sm dark:shadow-none border flex flex-col items-center">
+                  <Label className="mb-4 text-muted-foreground uppercase tracking-wider text-[10px] font-bold">Ảnh đại diện</Label>
                   <div className="relative group">
                     <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-emerald-500 ring-4 ring-white dark:ring-gray-900 shadow-xl">
                       <img 
@@ -232,13 +232,13 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     accept="image/*"
                     onChange={(e) => handleImageChange(e, 'avatar')}
                   />
-                  <p className="mt-4 text-xs text-center text-gray-400">Định dạng JPG, PNG hoặc WebP. <br/>Tối đa 5MB.</p>
+                  <p className="mt-4 text-xs text-center text-muted-foreground">Định dạng JPG, PNG hoặc WebP. <br/>Tối đa 5MB.</p>
                 </div>
 
                 {/* Cover Section */}
-                <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm dark:shadow-none border dark:border-gray-700">
-                  <Label className="mb-4 block text-gray-500 dark:text-gray-400 uppercase tracking-wider text-[10px] font-bold">Ảnh bìa</Label>
-                  <div className="relative h-44 w-full rounded-xl overflow-hidden border dark:border-gray-700 bg-gray-50 dark:bg-gray-900 group">
+                <div className="bg-card p-6 rounded-2xl shadow-sm dark:shadow-none border">
+                  <Label className="mb-4 block text-muted-foreground uppercase tracking-wider text-[10px] font-bold">Ảnh bìa</Label>
+                  <div className="relative h-44 w-full rounded-xl overflow-hidden border bg-background group">
                     <img 
                       src={coverPreview || 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200'} 
                       alt="Cover preview" 
@@ -267,19 +267,19 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
             </div>
 
             {/* Right Column: Info Form (Scrollable independent) */}
-            <div className="overflow-y-auto p-6 md:p-10 lg:p-16 bg-white dark:bg-gray-900">
+            <div className="overflow-y-auto p-6 md:p-10 lg:p-16 bg-card">
               <div className="max-w-3xl mx-auto space-y-12">
                 
                 {/* Section: Identity */}
                 <section className="space-y-6">
-                  <div className="flex items-center gap-4 pb-2 border-b dark:border-gray-800">
+                  <div className="flex items-center gap-4 pb-2 border-b">
                     <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Danh tính</h3>
+                    <h3 className="text-xl font-bold text-foreground">Danh tính</h3>
                   </div>
                   
                   <div className="grid grid-cols-1 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="fullName" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Họ và tên</Label>
+                      <Label htmlFor="fullName" className="text-xs font-bold text-muted-foreground uppercase">Họ và tên</Label>
                       <Input
                         id="fullName"
                         className="h-12 text-lg focus:ring-emerald-500"
@@ -290,10 +290,10 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="bio" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tiểu sử</Label>
+                      <Label htmlFor="bio" className="text-xs font-bold text-muted-foreground uppercase">Tiểu sử</Label>
                       <textarea
                         id="bio"
-                        className="w-full min-h-[120px] px-4 py-3 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl text-md focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none transition-all"
+                        className="w-full min-h-[120px] px-4 py-3 bg-card border rounded-xl text-md focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none transition-all"
                         {...register('bio')}
                         placeholder="Hãy chia sẻ điều gì đó về bản thân bạn..."
                       />
@@ -303,19 +303,19 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
 
                 {/* Section: Residence & Education */}
                 <section className="space-y-6">
-                  <div className="flex items-center gap-4 pb-2 border-b dark:border-gray-800">
+                  <div className="flex items-center gap-4 pb-2 border-b">
                     <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Cuộc sống & Học vấn</h3>
+                    <h3 className="text-xl font-bold text-foreground">Cuộc sống & Học vấn</h3>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label htmlFor="location" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Tỉnh/Thành phố hiện tại</Label>
+                      <Label htmlFor="location" className="text-xs font-bold text-muted-foreground uppercase">Tỉnh/Thành phố hiện tại</Label>
                       <div className="relative">
-                        <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                         <Input
                           id="location"
-                          className="pl-11 h-12 dark:bg-gray-800"
+                          className="pl-11 h-12"
                           {...register('location')}
                           placeholder="VD: TP. Hồ Chí Minh"
                         />
@@ -323,12 +323,12 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="hometown" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Quê quán</Label>
+                      <Label htmlFor="hometown" className="text-xs font-bold text-muted-foreground uppercase">Quê quán</Label>
                       <div className="relative">
-                        <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                        <svg className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                         <Input
                           id="hometown"
-                          className="pl-11 h-12 dark:bg-gray-800"
+                          className="pl-11 h-12"
                           {...register('hometown')}
                           placeholder="VD: An Giang"
                         />
@@ -336,12 +336,12 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="school" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Nơi học tập</Label>
+                      <Label htmlFor="school" className="text-xs font-bold text-muted-foreground uppercase">Nơi học tập</Label>
                       <div className="relative">
-                        <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                        <svg className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
                         <Input
                           id="school"
-                          className="pl-11 h-12 dark:bg-gray-800"
+                          className="pl-11 h-12"
                           {...register('school')}
                           placeholder="VD: Trường Đại học Công nghệ TP.HCM"
                         />
@@ -352,19 +352,19 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
 
                 {/* Section: Work */}
                 <section className="space-y-6">
-                  <div className="flex items-center gap-4 pb-2 border-b dark:border-gray-800">
+                  <div className="flex items-center gap-4 pb-2 border-b">
                     <div className="w-1.5 h-6 bg-amber-500 rounded-full"></div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Công việc</h3>
+                    <h3 className="text-xl font-bold text-foreground">Công việc</h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label htmlFor="workplace" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Nơi làm việc</Label>
+                      <Label htmlFor="workplace" className="text-xs font-bold text-muted-foreground uppercase">Nơi làm việc</Label>
                       <div className="relative">
-                        <Briefcase className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Briefcase className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                         <Input
                           id="workplace"
-                          className="pl-11 h-12 dark:bg-gray-800"
+                          className="pl-11 h-12"
                           {...register('workplace')}
                           placeholder="VD: Công ty ABC"
                         />
@@ -372,12 +372,12 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="jobTitle" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Chức danh</Label>
+                      <Label htmlFor="jobTitle" className="text-xs font-bold text-muted-foreground uppercase">Chức danh</Label>
                       <div className="relative">
-                        <Briefcase className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Briefcase className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                         <Input
                           id="jobTitle"
-                          className="pl-11 h-12 dark:bg-gray-800"
+                          className="pl-11 h-12"
                           {...register('jobTitle')}
                           placeholder="VD: Lập trình viên"
                         />
@@ -388,20 +388,20 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
 
                 {/* Section: Contact */}
                 <section className="space-y-6">
-                  <div className="flex items-center gap-4 pb-2 border-b dark:border-gray-800">
+                  <div className="flex items-center gap-4 pb-2 border-b">
                     <div className="w-1.5 h-6 bg-violet-500 rounded-full"></div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Thông tin liên hệ</h3>
+                    <h3 className="text-xl font-bold text-foreground">Thông tin liên hệ</h3>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label htmlFor="phoneNumber" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Số điện thoại</Label>
+                      <Label htmlFor="phoneNumber" className="text-xs font-bold text-muted-foreground uppercase">Số điện thoại</Label>
                       <div className="relative">
-                        <Phone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Phone className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                         <Input
                           id="phoneNumber"
                           type="tel"
-                          className="pl-11 h-12 dark:bg-gray-800"
+                          className="pl-11 h-12"
                           {...register('phoneNumber')}
                           placeholder="VD: 0901234567"
                         />
@@ -409,13 +409,13 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="website" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Website</Label>
+                      <Label htmlFor="website" className="text-xs font-bold text-muted-foreground uppercase">Website</Label>
                       <div className="relative">
-                        <Globe className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Globe className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                         <Input
                           id="website"
                           type="url"
-                          className="pl-11 h-12 dark:bg-gray-800"
+                          className="pl-11 h-12"
                           {...register('website')}
                           placeholder="VD: https://example.com"
                         />
@@ -423,38 +423,38 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
 
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="email" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Email</Label>
+                      <Label htmlFor="email" className="text-xs font-bold text-muted-foreground uppercase">Email</Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Mail className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                         <Input
                           id="email"
                           type="email"
-                          className="pl-11 h-12 bg-gray-50 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400"
+                          className="pl-11 h-12 bg-muted/80 text-muted-foreground"
                           value={currentUser?.email || ''}
                           readOnly
                           disabled
                         />
                       </div>
-                      <p className="text-xs text-gray-400">Email liên kết với tài khoản, không thể đổi tại đây.</p>
+                      <p className="text-xs text-muted-foreground">Email liên kết với tài khoản, không thể đổi tại đây.</p>
                     </div>
                   </div>
                 </section>
 
                 {/* Section: Personal Status */}
                 <section className="space-y-6 pt-4">
-                  <div className="flex items-center gap-4 pb-2 border-b dark:border-gray-800">
+                  <div className="flex items-center gap-4 pb-2 border-b">
                     <div className="w-1.5 h-6 bg-red-500 rounded-full"></div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Trạng thái cá nhân</h3>
+                    <h3 className="text-xl font-bold text-foreground">Trạng thái cá nhân</h3>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label htmlFor="relationship" className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Mối quan hệ</Label>
+                      <Label htmlFor="relationship" className="text-xs font-bold text-muted-foreground uppercase">Mối quan hệ</Label>
                       <div className="relative">
-                        <Heart className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                        <Heart className="absolute left-3 top-3.5 w-5 h-5 text-muted-foreground" />
                         <select
                           id="relationship"
-                          className="w-full h-12 pl-11 pr-4 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-md focus:ring-2 focus:ring-emerald-500 appearance-none shadow-sm dark:shadow-none"
+                          className="w-full h-12 pl-11 pr-4 bg-card border rounded-lg text-md focus:ring-2 focus:ring-emerald-500 appearance-none shadow-sm dark:shadow-none"
                           {...register('relationship')}
                         >
                           <option value="">Chọn trạng thái</option>
@@ -467,25 +467,25 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Ngày tháng năm sinh</Label>
+                      <Label className="text-xs font-bold text-muted-foreground uppercase">Ngày tháng năm sinh</Label>
                       <div className="grid grid-cols-3 gap-2">
                         <select
                           {...register('day')}
-                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
+                          className="h-12 px-2 bg-card border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
                         >
                           <option value="">Ngày</option>
                           {days.map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                         <select
                           {...register('month')}
-                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
+                          className="h-12 px-2 bg-card border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
                         >
                           <option value="">Tháng</option>
                           {months.map(m => <option key={m} value={m}>{m}</option>)}
                         </select>
                         <select
                           {...register('year')}
-                          className="h-12 px-2 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
+                          className="h-12 px-2 bg-card border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 shadow-sm dark:shadow-none"
                         >
                           <option value="">Năm</option>
                           {years.map(y => <option key={y} value={y}>{y}</option>)}
@@ -496,7 +496,7 @@ export function EditProfileDialog({ open, onOpenChange, onSaved, initialData }: 
                 </section>
                 
                 {/* Submit Area - Bottom of scrolling area */}
-                <div className="pt-8 border-t dark:border-gray-800 flex justify-end gap-4 pb-20">
+                <div className="pt-8 border-t flex justify-end gap-4 pb-20">
                   <Button
                     type="button"
                     variant="ghost"

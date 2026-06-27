@@ -14,7 +14,7 @@
   --secondary: #d1fae5;
   --secondary-foreground: #065f46;
   --muted: #eeeef6;
-  --muted-foreground: #9898b8;
+  --muted-foreground: #6b6b8a;
   --accent: #ecfdf5;
   --accent-foreground: #065f46;
   --destructive: #d4183d;
@@ -490,52 +490,51 @@ html {
   }
   
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: var(--border);
     border-radius: 4px;
   }
   
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: var(--muted-foreground);
   }
   
   .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+    background: var(--border);
   }
   
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     background: transparent;
   }
   
-  /* Hover-to-show scrollbar for sidebars */
+  /* Sidebar scrollbars: always reserve track width so hover never shifts layout */
   .sidebar-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
   }
-  
-  .sidebar-scrollbar::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari and Opera */
-  }
-  
-  /* Show scrollbar on hover */
+
   .sidebar-scrollbar:hover {
-    scrollbar-width: thin;  /* Firefox */
+    scrollbar-color: var(--border) transparent;
   }
-  
-  .sidebar-scrollbar:hover::-webkit-scrollbar {
-    display: block;
+
+  .sidebar-scrollbar::-webkit-scrollbar {
     width: 8px;
   }
-  
-  .sidebar-scrollbar:hover::-webkit-scrollbar-track {
+
+  .sidebar-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
-  
-  .sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
-    background: #d1d5db;
+
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
     border-radius: 4px;
   }
-  
+
+  .sidebar-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+
   .sidebar-scrollbar:hover::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
+    background: var(--muted-foreground);
   }
 }

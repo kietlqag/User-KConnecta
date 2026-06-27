@@ -35,12 +35,7 @@ export function SettingsSidebar({ active, onSelect, className }: SettingsSidebar
               <button
                 type="button"
                 onClick={() => onSelect(item.id)}
-                className={cn(
-                  'flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left transition-colors',
-                  isActive
-                    ? 'bg-accent text-primary font-semibold'
-                    : 'text-foreground hover:bg-muted/60',
-                )}
+                className={cn( 'flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left transition-colors', isActive ? 'bg-accent text-primary font-semibold' : 'text-foreground hover:bg-muted/60', )}
               >
                 <Icon
                   className={cn('h-5 w-5 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')}
@@ -69,12 +64,7 @@ export function SettingsMobileNav({ active, onSelect }: SettingsSidebarProps) {
             key={item.id}
             type="button"
             onClick={() => onSelect(item.id)}
-            className={cn(
-              'flex shrink-0 items-center gap-2 rounded-[10px] border px-3 py-2 text-sm transition-colors',
-              isActive
-                ? 'border-primary/30 bg-accent font-medium text-primary'
-                : 'border-border bg-card text-foreground hover:bg-muted/50',
-            )}
+            className={cn( 'flex shrink-0 items-center gap-2 rounded-[10px] border px-3 py-2 text-sm transition-colors', isActive ? 'border-primary/30 bg-accent font-medium text-primary' : 'border-border bg-card text-foreground hover:bg-muted/50', )}
           >
             <Icon className="h-4 w-4" aria-hidden />
             {t(`settings.tabs.${item.id}`)}

@@ -42,7 +42,7 @@ export function SocialButton({ provider, onClick }: SocialButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-300 font-medium transition-all duration-200 hover:shadow-md active:scale-[0.98]"
+      className="flex items-center justify-center gap-3 w-full py-3 px-4 bg-card hover:bg-muted border border-border rounded-xl text-foreground font-medium transition-all duration-200 hover:shadow-md active:scale-[0.98]"
     >
       {config.icon}
       <span>Tiếp tục với {config.label}</span>

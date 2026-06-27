@@ -60,35 +60,35 @@ export const FriendPickerModal: React.FC<FriendPickerModalProps> = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      <div className="relative bg-white dark:bg-gray-800 w-full max-w-[680px] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col h-[min(540px,90vh)]">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
+      <div className="relative bg-card w-full max-w-[680px] rounded-xl shadow-2xl border border-border overflow-hidden flex flex-col h-[min(540px,90vh)]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div className="w-8" />
-          <h2 className="text-[20px] font-bold text-gray-900 dark:text-gray-100">{title}</h2>
+          <h2 className="text-[20px] font-bold text-foreground">{title}</h2>
           <button
             type="button"
             onClick={onClose}
             className="p-2 rounded-full hover:bg-muted transition-colors"
             aria-label="Đóng"
           >
-            <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
         {description && (
-          <p className="px-6 pt-3 pb-1 text-sm text-gray-500 dark:text-gray-400 shrink-0">{description}</p>
+          <p className="px-6 pt-3 pb-1 text-sm text-muted-foreground shrink-0">{description}</p>
         )}
 
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          <div className="w-[60%] flex flex-col border-r border-gray-100 dark:border-gray-800 min-h-0">
+          <div className="w-[60%] flex flex-col border-r border-border min-h-0">
             <div className="p-4 shrink-0">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Tìm bạn bè theo tên"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 rounded-full text-[15px] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  className="w-full pl-10 pr-4 py-2 bg-background rounded-full text-[15px] focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
                   autoFocus
                 />
               </div>
@@ -96,9 +96,9 @@ export const FriendPickerModal: React.FC<FriendPickerModalProps> = ({
 
             <div className="flex-1 overflow-y-auto px-2 pb-2 min-h-0">
               {isLoading ? (
-                <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">Đang tải bạn bè...</div>
+                <div className="p-4 text-center text-muted-foreground text-sm">Đang tải bạn bè...</div>
               ) : filteredFriends.length === 0 ? (
-                <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
+                <div className="p-4 text-center text-muted-foreground text-sm">
                   {friends.length === 0 ? 'Bạn chưa có bạn bè nào.' : 'Không tìm thấy bạn bè phù hợp.'}
                 </div>
               ) : (
@@ -110,7 +110,7 @@ export const FriendPickerModal: React.FC<FriendPickerModalProps> = ({
                         key={friend.userId}
                         type="button"
                         onClick={() => toggleUserSelection(friend.userId)}
-                        className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group text-left"
+                        className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer group text-left"
                       >
                         <UserAvatar
                           name={friend.name}
@@ -119,15 +119,11 @@ export const FriendPickerModal: React.FC<FriendPickerModalProps> = ({
                           rounded="full"
                           className="w-9 h-9 shrink-0"
                         />
-                        <span className="flex-1 text-[15px] font-medium text-gray-900 dark:text-gray-100 truncate">
+                        <span className="flex-1 text-[15px] font-medium text-foreground truncate">
                           {friend.name}
                         </span>
                         <div
-                          className={`w-5 h-5 rounded border flex items-center justify-center transition-all shrink-0 ${
-                            isSelected
-                              ? 'bg-emerald-600 border-emerald-600'
-                              : 'border-gray-300 dark:border-gray-700 group-hover:border-gray-400'
-                          }`}
+                          className={`w-5 h-5 rounded border flex items-center justify-center transition-all shrink-0 ${ isSelected ? 'bg-emerald-600 border-emerald-600' : 'border-border group-hover:border-gray-400' }`}
                         >
                           {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
                         </div>
@@ -139,9 +135,9 @@ export const FriendPickerModal: React.FC<FriendPickerModalProps> = ({
             </div>
           </div>
 
-          <div className="w-[40%] bg-gray-50 dark:bg-gray-900/50 flex flex-col min-h-0">
-            <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 shrink-0">
-              <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">
+          <div className="w-[40%] bg-background/50 flex flex-col min-h-0">
+            <div className="px-4 py-4 border-b border-border bg-card shrink-0">
+              <span className="text-[15px] font-semibold text-foreground">
                 Đã chọn {tempSelected.length} người bạn
               </span>
             </div>
@@ -156,13 +152,13 @@ export const FriendPickerModal: React.FC<FriendPickerModalProps> = ({
                     rounded="full"
                     className="w-8 h-8 shrink-0"
                   />
-                  <span className="flex-1 text-[14px] font-medium text-gray-900 dark:text-gray-100 truncate">
+                  <span className="flex-1 text-[14px] font-medium text-foreground truncate">
                     {friend.name}
                   </span>
                   <button
                     type="button"
                     onClick={() => toggleUserSelection(friend.userId)}
-                    className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 transition-colors"
+                    className="p-1 rounded-full hover:bg-muted text-muted-foreground transition-colors"
                     aria-label={`Bỏ ${friend.name}`}
                   >
                     <X className="w-4 h-4" />
@@ -171,14 +167,14 @@ export const FriendPickerModal: React.FC<FriendPickerModalProps> = ({
               ))}
               {tempSelected.length === 0 && (
                 <div className="h-full flex items-center justify-center text-center p-4">
-                  <p className="text-sm text-gray-400">Chưa có bạn bè nào được chọn</p>
+                  <p className="text-sm text-muted-foreground">Chưa có bạn bè nào được chọn</p>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3 bg-white dark:bg-gray-800 shrink-0">
+        <div className="p-4 border-t border-border flex items-center justify-end gap-3 bg-card shrink-0">
           <button
             type="button"
             onClick={onClose}

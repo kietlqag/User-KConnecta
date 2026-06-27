@@ -52,7 +52,7 @@ export function CreatePost() {
           </button>
         </div>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 my-3" />
+        <div className="border-t border-border my-3" />
 
         <div className="flex items-center justify-around">
           <Link
@@ -60,8 +60,8 @@ export function CreatePost() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-muted transition-colors flex-1 justify-center cursor-pointer"
           >
             <LiveFeatureIcon />
-            <span className="text-gray-600 dark:text-gray-300 font-medium hidden sm:inline">{LIVE_NAV_LABEL}</span>
-            <span className="text-gray-600 dark:text-gray-300 font-medium sm:hidden">Live</span>
+            <span className="text-muted-foreground font-medium hidden sm:inline">{LIVE_NAV_LABEL}</span>
+            <span className="text-muted-foreground font-medium sm:hidden">Live</span>
           </Link>
 
           <button
@@ -70,8 +70,8 @@ export function CreatePost() {
             className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors hover:bg-muted"
           >
             <Image className="w-6 h-6 text-green-500" />
-            <span className="text-gray-600 dark:text-gray-300 font-medium hidden sm:inline">Ảnh/video</span>
-            <span className="text-gray-600 dark:text-gray-300 font-medium sm:hidden">Ảnh</span>
+            <span className="text-muted-foreground font-medium hidden sm:inline">Ảnh/video</span>
+            <span className="text-muted-foreground font-medium sm:hidden">Ảnh</span>
           </button>
 
 

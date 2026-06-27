@@ -82,13 +82,13 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[min(90vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Cài đặt album</h3>
+      <div className="flex max-h-[min(90vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
+          <h3 className="text-lg font-bold text-foreground">Cài đặt album</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-gray-500 hover:bg-muted dark:text-gray-400"
+            className="rounded-full p-2 text-muted-foreground hover:bg-muted dark:text-muted-foreground"
             aria-label="Đóng"
           >
             <X className="h-5 w-5" />
@@ -97,7 +97,7 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
 
         <div className="scrollbar-thin min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           <div>
-            <label htmlFor="album-settings-title" className="mb-1.5 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+            <label htmlFor="album-settings-title" className="mb-1.5 block text-sm font-semibold text-foreground">
               Tên album
             </label>
             <input
@@ -106,13 +106,13 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={150}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-[15px] text-gray-900 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              className="w-full rounded-lg border border-border px-3 py-2.5 text-[15px] text-foreground outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
             />
-            <p className="mt-1 text-right text-xs text-gray-500">{title.length}/150</p>
+            <p className="mt-1 text-right text-xs text-muted-foreground">{title.length}/150</p>
           </div>
 
           <div>
-            <label htmlFor="album-settings-description" className="mb-1.5 block text-sm font-semibold text-gray-800 dark:text-gray-200">
+            <label htmlFor="album-settings-description" className="mb-1.5 block text-sm font-semibold text-foreground">
               Mô tả
             </label>
             <textarea
@@ -122,14 +122,14 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
               rows={4}
               maxLength={5000}
               placeholder="Ghi chú về album — chuyến đi, sự kiện, người tham gia..."
-              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-[15px] text-gray-900 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              className="w-full resize-none rounded-lg border border-border px-3 py-2.5 text-[15px] text-foreground outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
             />
-            <p className="mt-1 text-right text-xs text-gray-500">{description.length}/5000</p>
+            <p className="mt-1 text-right text-xs text-muted-foreground">{description.length}/5000</p>
           </div>
 
           {!isGroupAlbum ? (
             <div>
-              <p className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-200">Quyền riêng tư</p>
+              <p className="mb-2 text-sm font-semibold text-foreground">Quyền riêng tư</p>
               <div className="space-y-2">
                 {ALBUM_PRIVACY_OPTIONS.map((option) => {
                   const Icon = option.icon;
@@ -139,22 +139,16 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
                       key={option.value}
                       type="button"
                       onClick={() => setPrivacy(option.value)}
-                      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                        active
-                          ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40'
-                          : 'border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900'
-                      }`}
+                      className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${ active ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40' : 'border-border hover:bg-muted' }`}
                     >
                       <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                          active ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-300'
-                        }`}
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${ active ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground' }`}
                       >
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{option.hint}</p>
+                        <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">{option.hint}</p>
                       </div>
                       {active && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
                     </button>
@@ -163,15 +157,15 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+            <div className="rounded-xl border border-border bg-muted px-3 py-2.5 text-sm text-muted-foreground">
               Album nhóm luôn hiển thị công khai với thành viên nhóm.
             </div>
           )}
 
           <div>
-            <p className="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-200">Ảnh bìa</p>
+            <p className="mb-2 text-sm font-semibold text-foreground">Ảnh bìa</p>
             {selectedCover ? (
-              <div className="mb-3 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="mb-3 overflow-hidden rounded-xl border border-border">
                 <ImageWithFallback
                   src={selectedCover.thumbnailUrl ?? selectedCover.url}
                   alt="Ảnh bìa album"
@@ -179,7 +173,7 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
                 />
               </div>
             ) : (
-              <p className="mb-3 text-sm text-gray-500">Chưa có ảnh trong album để chọn làm bìa.</p>
+              <p className="mb-3 text-sm text-muted-foreground">Chưa có ảnh trong album để chọn làm bìa.</p>
             )}
             {media.length > 0 && (
               <div className="scrollbar-thin flex gap-2 overflow-x-auto pb-1">
@@ -190,9 +184,7 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
                       key={item.id}
                       type="button"
                       onClick={() => setCoverMediaId(item.id)}
-                      className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${
-                        active ? 'border-emerald-600 ring-2 ring-emerald-200' : 'border-transparent'
-                      }`}
+                      className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 ${ active ? 'border-emerald-600 ring-2 ring-emerald-200' : 'border-transparent' }`}
                     >
                       {item.mediaType === 'VIDEO' ? (
                         <video src={item.url} className="h-full w-full object-cover" muted />
@@ -212,12 +204,12 @@ export function EditAlbumSettingsModal({ album, media, isOpen, onClose }: EditAl
           </div>
         </div>
 
-        <div className="flex shrink-0 gap-2 border-t border-gray-200 px-4 py-4 dark:border-gray-700">
+        <div className="flex shrink-0 gap-2 border-t border-border px-4 py-4">
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="flex-1 rounded-lg bg-gray-100 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200 disabled:opacity-60 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="flex-1 rounded-lg bg-muted py-2.5 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60"
           >
             Hủy
           </button>

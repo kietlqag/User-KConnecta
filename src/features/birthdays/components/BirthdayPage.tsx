@@ -29,7 +29,7 @@ interface BirthdayFriendCardProps {
 }
 
 const PANEL_CLASS =
-  'w-full rounded-xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-800 dark:shadow-none';
+  'w-full rounded-xl border border-border bg-card p-5 shadow-sm dark:shadow-none';
 
 const QUICK_WISH_KEYS = ['quickWish1', 'quickWish2', 'quickWish3', 'quickWish4'] as const;
 
@@ -50,7 +50,7 @@ function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWi
     : t('birthdays.daysUntil', { count: friend.daysUntil });
 
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50">
+    <div className="rounded-xl border border-border bg-muted p-4/50">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <Link to={`/profile/${friend.userId}`}>
@@ -59,14 +59,14 @@ function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWi
               avatarUrl={friend.avatar}
               userId={friend.userId}
               rounded="full"
-              className="h-14 w-14 shrink-0 border border-gray-200 dark:border-gray-700"
+              className="h-14 w-14 shrink-0 border border-border"
             />
           </Link>
           <div className="min-w-0">
-            <Link to={`/profile/${friend.userId}`} className="font-semibold text-gray-900 hover:underline dark:text-gray-100">
+            <Link to={`/profile/${friend.userId}`} className="font-semibold text-foreground hover:underline">
               {friend.name}
             </Link>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {timingLabel} · {birthDateLabel}
               {showAge ? ` · ${t('birthdays.age', { age: friend.age })}` : ''}
             </p>
@@ -74,7 +74,7 @@ function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWi
         </div>
         <Link
           to={`/messages?with=${friend.userId}`}
-          className="shrink-0 rounded-lg bg-gray-100 p-2 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+          className="shrink-0 rounded-lg bg-muted p-2 text-foreground hover:bg-muted"
           title={t('birthdays.message')}
         >
           <MessageCircle className="h-4 w-4" />
@@ -95,7 +95,7 @@ function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWi
         <button
           type="button"
           onClick={() => onOpenCustomWish(friend)}
-          className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+          className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
         >
           {t('birthdays.writeWish')}
         </button>
@@ -132,14 +132,14 @@ export function BirthdayPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="py-16 text-center text-gray-500 dark:text-gray-400">
+      <div className="py-16 text-center text-muted-foreground">
         <p className="text-lg font-medium">{t('birthdays.loadError')}</p>
         <p className="mt-1 text-sm">{(error as Error).message}</p>
       </div>
@@ -153,13 +153,13 @@ export function BirthdayPage() {
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
       <div className="relative mb-6 max-w-xl shrink-0">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder={t('birthdays.searchPlaceholder')}
-          className="w-full rounded-full bg-gray-100 py-2.5 pl-10 pr-4 text-sm outline-none focus:bg-gray-200 dark:bg-gray-900 dark:focus:bg-gray-800"
+          className="w-full rounded-full bg-muted py-2.5 pl-10 pr-4 text-sm outline-none focus:bg-muted dark:focus:bg-card"
         />
       </div>
 
@@ -168,7 +168,7 @@ export function BirthdayPage() {
             <section className={PANEL_CLASS}>
               <div className="mb-4 flex items-center gap-2">
                 <Gift className="h-5 w-5 text-pink-500" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{t('birthdays.today')}</h2>
+                <h2 className="text-xl font-bold text-foreground">{t('birthdays.today')}</h2>
               </div>
               {today.length > 0 ? (
                 <div className="flex flex-col gap-3">
@@ -182,24 +182,24 @@ export function BirthdayPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('birthdays.noToday')}</p>
+                <p className="text-sm text-muted-foreground">{t('birthdays.noToday')}</p>
               )}
             </section>
           )}
 
           {showMonthSection && (
             <section className={PANEL_CLASS}>
-              <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-gray-100">{t('birthdays.byMonth')}</h2>
+              <h2 className="mb-4 text-xl font-bold text-foreground">{t('birthdays.byMonth')}</h2>
               <div className="flex flex-col gap-4">
                 {byMonth.map((group) => (
                   <div
                     key={group.month}
-                    className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/50"
+                    className="rounded-xl border border-border bg-muted p-4/50"
                   >
-                    <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base font-bold text-foreground">
                       {t('birthdays.month', { month: group.month })}
                     </h3>
-                    <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+                    <p className="mb-3 text-sm text-muted-foreground">
                       {formatGroupLabel(group.friends, t)}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -216,7 +216,7 @@ export function BirthdayPage() {
                             avatarUrl={friend.avatar}
                             userId={friend.userId}
                             rounded="full"
-                            className="h-14 w-14 border-2 border-white shadow-sm transition-transform group-hover:scale-105 dark:border-gray-700"
+                            className="h-14 w-14 border-2 border-white shadow-sm transition-transform group-hover:scale-105"
                           />
                         </button>
                       ))}
@@ -228,7 +228,7 @@ export function BirthdayPage() {
           )}
 
       {isSearching && !hasSearchResults && (
-        <div className="py-16 text-center text-gray-500 dark:text-gray-400">
+        <div className="py-16 text-center text-muted-foreground">
           <p className="text-lg font-medium">{t('birthdays.noSearchResults')}</p>
           <p className="mt-1 text-sm">{t('birthdays.noSearchResultsHint')}</p>
         </div>

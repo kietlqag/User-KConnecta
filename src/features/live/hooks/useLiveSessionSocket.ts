@@ -5,7 +5,7 @@ import type { LiveSessionRealtimeEvent } from '@/services/liveService';
 
 export function useLiveSessionSocket(
   sessionId: string | null | undefined,
-  token: string | null | undefined,
+  enabled: boolean,
   onEvent: (event: LiveSessionRealtimeEvent) => void,
 ) {
   const [connected, setConnected] = useState(false);
@@ -13,11 +13,10 @@ export function useLiveSessionSocket(
   onEventRef.current = onEvent;
 
   useEffect(() => {
-    if (!sessionId || !token) return;
+    if (!sessionId || !enabled) return;
 
     const client = new Client({
       brokerURL: `${getWsBaseUrl()}/ws`,
-      connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
         setConnected(true);
@@ -43,7 +42,7 @@ export function useLiveSessionSocket(
       void client.deactivate();
       setConnected(false);
     };
-  }, [sessionId, token]);
+  }, [sessionId, enabled]);
 
   return { connected };
 }

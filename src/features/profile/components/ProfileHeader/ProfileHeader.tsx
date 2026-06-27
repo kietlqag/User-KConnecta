@@ -229,7 +229,7 @@ export function ProfileHeader({
   const showCoverSkeleton = loading || (!coverLoaded && !coverUploading);
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-none border-b border-gray-200 dark:border-gray-700">
+    <div className="bg-card shadow-sm dark:shadow-none border-b border-border">
 
       {/* ── Lightbox ── */}
       {viewerImage && (
@@ -238,7 +238,7 @@ export function ProfileHeader({
           onClick={() => setViewerImage(null)}
         >
           <button
-            className="absolute top-4 right-4 p-2 bg-gray-800/50 hover:bg-gray-700/50 rounded-full text-white transition-colors"
+            className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/60 rounded-full text-white transition-colors"
             onClick={e => { e.stopPropagation(); setViewerImage(null); }}
           >
             <X className="w-8 h-8" />
@@ -255,46 +255,45 @@ export function ProfileHeader({
       <div className="max-w-[1100px] mx-auto">
 
         {/* ── Cover photo ── */}
-        <div
-          className="relative h-[250px] md:h-[350px] w-full rounded-b-xl overflow-hidden bg-gray-200 dark:bg-gray-700 group/cover"
-          onClick={() => coverLoaded && !loading && setViewerImage(resolvedCover)}
-          style={{ cursor: coverLoaded && !loading ? 'pointer' : 'default' }}
-        >
-          {/* Shimmer — sits on top, fades out once the image is ready */}
+        <div className="relative h-[250px] md:h-[350px] w-full">
           <div
-            className={`absolute inset-0 bg-gray-300 dark:bg-gray-600 transition-opacity duration-500 pointer-events-none ${
-              showCoverSkeleton ? 'opacity-100 animate-pulse' : 'opacity-0'
-            }`}
-          />
-
-          {/* Real cover — rendered only after profile loaded; fades in on browser load */}
-          {!loading && (
-            <img
-              src={resolvedCover}
-              alt="Cover photo"
-              className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 group-hover/cover:scale-[1.02] ${
-                coverLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={() => setCoverLoaded(true)}
-              onError={e => { e.currentTarget.src = DEFAULT_COVER; setCoverLoaded(true); }}
+            className="absolute inset-0 overflow-hidden rounded-b-xl bg-muted group/cover"
+            onClick={() => coverLoaded && !loading && setViewerImage(resolvedCover)}
+            style={{ cursor: coverLoaded && !loading ? 'pointer' : 'default' }}
+          >
+            {/* Shimmer — sits on top, fades out once the image is ready */}
+            <div
+              className={`absolute inset-0 bg-muted transition-opacity duration-500 pointer-events-none ${ showCoverSkeleton ? 'opacity-100 animate-pulse' : 'opacity-0' }`}
             />
-          )}
 
-          {/* Upload overlay */}
-          {coverUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-              <Loader2 className="w-10 h-10 animate-spin text-white" />
-            </div>
-          )}
+            {/* Real cover — rendered only after profile loaded; fades in on browser load */}
+            {!loading && (
+              <img
+                src={resolvedCover}
+                alt="Cover photo"
+                className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 group-hover/cover:scale-[1.02] ${ coverLoaded ? 'opacity-100' : 'opacity-0' }`}
+                onLoad={() => setCoverLoaded(true)}
+                onError={e => { e.currentTarget.src = DEFAULT_COVER; setCoverLoaded(true); }}
+              />
+            )}
 
-          {/* Edit cover button */}
+            {/* Upload overlay */}
+            {coverUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <Loader2 className="w-10 h-10 animate-spin text-white" />
+              </div>
+            )}
+          </div>
+
+          {/* Edit cover — outside overflow-hidden layer, above overlapping profile row */}
           {isOwnProfile && !loading && (
             <>
               <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFileChange} onClick={e => e.stopPropagation()} />
               <button
+                type="button"
                 onClick={e => { e.stopPropagation(); coverInputRef.current?.click(); }}
                 disabled={coverUploading}
-                className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 hover:bg-muted text-gray-900 dark:text-gray-100 rounded-lg shadow-sm dark:shadow-none font-medium text-sm transition-colors disabled:opacity-70"
+                className="absolute bottom-4 right-4 z-40 flex items-center gap-2 px-4 py-2 bg-card hover:bg-muted text-foreground rounded-lg shadow-sm dark:shadow-none font-medium text-sm transition-colors disabled:opacity-70"
               >
                 {coverUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 {coverUploading ? 'Đang tải...' : 'Chỉnh sửa ảnh bìa'}
@@ -303,17 +302,17 @@ export function ProfileHeader({
           )}
         </div>
 
-        {/* ── Profile info row ── */}
-        <div className="relative px-4 pb-4 pt-1">
+        {/* ── Profile info row (overlaps cover; pass clicks through except on interactive parts) ── */}
+        <div className="relative px-4 pb-4 pt-1 pointer-events-none">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-4 -mt-8 md:-mt-12 lg:-mt-16">
 
             {/* ── Avatar ── */}
             <div
-              className="relative group/avatar flex-shrink-0"
+              className="relative group/avatar flex-shrink-0 pointer-events-auto"
               style={{ cursor: hasRealAvatar && !loading ? 'pointer' : 'default' }}
               onClick={() => hasRealAvatar && avatar && !loading && setViewerImage(avatar)}
             >
-              <div className="relative w-[168px] h-[168px] rounded-full border-[5px] border-white dark:border-card bg-white dark:bg-card overflow-hidden shadow-sm">
+              <div className="relative w-[168px] h-[168px] rounded-full border-[5px] border-white dark:border-card bg-card dark:bg-card overflow-hidden shadow-sm">
                 {loading ? (
                   <div className="absolute inset-0 bg-muted animate-pulse" />
                 ) : (
@@ -328,8 +327,8 @@ export function ProfileHeader({
                 )}
 
                 {avatarUploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 dark:bg-gray-700/80">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-500 dark:text-gray-400" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted/80/80">
+                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                   </div>
                 )}
               </div>
@@ -341,32 +340,32 @@ export function ProfileHeader({
                   <button
                     onClick={e => { e.stopPropagation(); avatarInputRef.current?.click(); }}
                     disabled={avatarUploading}
-                    className="absolute bottom-3 right-3 w-9 h-9 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-full flex items-center justify-center transition-colors border-2 border-white dark:border-gray-800 shadow-sm dark:shadow-none cursor-pointer disabled:opacity-70"
+                    className="absolute bottom-3 right-3 w-9 h-9 bg-muted hover:bg-muted rounded-full flex items-center justify-center transition-colors border-2 border-border shadow-sm dark:shadow-none cursor-pointer disabled:opacity-70"
                   >
-                    <Camera className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                    <Camera className="w-5 h-5 text-foreground" />
                   </button>
                 </>
               )}
             </div>
 
             {/* ── Name & friends count ── */}
-            <div className="flex-1 min-w-0 text-center md:text-left mb-2 md:pb-2">
+            <div className="flex-1 min-w-0 text-center md:text-left mb-2 md:pb-2 pointer-events-auto">
               {loading ? (
                 <div className="space-y-2.5 py-1">
-                  <div className="h-8 w-52 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse mx-auto md:mx-0" />
-                  <div className="h-4 w-32 rounded-md bg-gray-200 dark:bg-gray-700 animate-pulse mx-auto md:mx-0" />
+                  <div className="h-8 w-52 rounded-lg bg-muted animate-pulse mx-auto md:mx-0" />
+                  <div className="h-4 w-32 rounded-md bg-muted animate-pulse mx-auto md:mx-0" />
                 </div>
               ) : (
                 <>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white break-words">
+                  <h1 className="text-3xl font-bold text-foreground break-words">
                     {fullName}
                   </h1>
                   {username && (
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-0.5">
+                    <p className="text-muted-foreground text-sm mt-0.5">
                       @{username}
                     </p>
                   )}
-                  <p className="text-gray-600 dark:text-gray-400 font-semibold mt-1">
+                  <p className="text-muted-foreground font-semibold mt-1">
                     {t('common.friends', { count: friendsCount })}
                   </p>
                 </>
@@ -374,12 +373,12 @@ export function ProfileHeader({
             </div>
 
             {/* ── Action buttons ── */}
-            <div className="flex items-center gap-2 mb-2 md:pb-2 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-2 md:pb-2 flex-shrink-0 pointer-events-auto">
               {loading ? (
                 <>
-                  <div className="h-10 w-36 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                  <div className="h-10 w-48 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
-                  <div className="h-10 w-10 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                  <div className="h-10 w-36 rounded-lg bg-muted animate-pulse" />
+                  <div className="h-10 w-48 rounded-lg bg-muted animate-pulse" />
+                  <div className="h-10 w-10 rounded-lg bg-muted animate-pulse" />
                 </>
               ) : isOwnProfile ? (
                 <>
@@ -392,7 +391,7 @@ export function ProfileHeader({
                   </button>
                   <button
                     onClick={onEditClick}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium text-[15px]"
+                    className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-foreground rounded-lg transition-colors font-medium text-[15px]"
                   >
                     <Edit className="w-4 h-4" />
                     {t('profile.editProfile')}
@@ -404,7 +403,7 @@ export function ProfileHeader({
                     <button
                       onClick={handleUnfriend}
                       disabled={friendActionLoading}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
+                      className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
                       {t('profile.friends')}
@@ -413,7 +412,7 @@ export function ProfileHeader({
                     <button
                       onClick={handleCancelFriendRequest}
                       disabled={friendActionLoading}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
+                      className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
                       {t('profile.requestSent')}
@@ -431,7 +430,7 @@ export function ProfileHeader({
                       <button
                         onClick={handleCancelFriendRequest}
                         disabled={friendActionLoading}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors font-medium disabled:opacity-60"
+                        className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                       >
                         {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserMinus className="w-4 h-4" />}
                         {t('profile.reject')}
@@ -460,7 +459,7 @@ export function ProfileHeader({
                     <button
                       disabled
                       title={t('profile.messageDisabled')}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-400 rounded-lg font-medium cursor-not-allowed"
+                      className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg font-medium cursor-not-allowed"
                     >
                       <MessageCircle className="w-4 h-4" />
                       {t('profile.message')}
@@ -472,7 +471,7 @@ export function ProfileHeader({
                       <button
                         type="button"
                         disabled={blockActionLoading}
-                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white transition-colors disabled:opacity-60"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted hover:bg-muted text-foreground transition-colors disabled:opacity-60"
                         title={t('profile.more')}
                       >
                         {blockActionLoading ? (

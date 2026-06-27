@@ -372,7 +372,7 @@ export function LoginPage() {
       await authService.logout();
     }
     authService.saveCurrentUser(authUser, !!formData.rememberMe);
-    if (authUser.accountStatus === "BLOCKED" || !authUser.token) {
+    if (authUser.accountStatus === "BLOCKED") {
       return;
     }
     try {
@@ -380,7 +380,6 @@ export function LoginPage() {
       authService.saveCurrentUser(
         {
           ...profile,
-          token: authUser.token,
           hasPassword: authUser.hasPassword,
         },
         !!formData.rememberMe,
@@ -543,7 +542,7 @@ export function LoginPage() {
     authLockRef.current = true;
     setIsLoading(true);
     try {
-      const user = await authService.login(formData.email, formData.password);
+      const user = await authService.login(formData.email, formData.password, formData.rememberMe);
       if (user.requiresTwoFactor && user.twoFactorToken) {
         setTwoFactorPending({
           email: user.email || formData.email,
@@ -584,7 +583,7 @@ export function LoginPage() {
           style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
         />
         <div className="relative z-20">
-          <div className="inline-flex items-center rounded-xl bg-white dark:bg-gray-800/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
+          <div className="inline-flex items-center rounded-xl bg-card/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
             <img src={logoV1} alt="KConnecta Logo V1" className="h-9 w-auto" />
           </div>
         </div>

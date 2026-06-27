@@ -261,8 +261,8 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
   if (pendingDelete) {
     return (
       <div style={{ marginLeft: depth > 0 ? indent : 0 }}>
-        <div className="flex items-center gap-3 rounded-2xl bg-gray-100 dark:bg-gray-900 px-4 py-3">
-          <p className="flex-1 text-sm text-gray-500 dark:text-gray-400 italic">Bình luận đã bị xóa.</p>
+        <div className="flex items-center gap-3 rounded-2xl bg-background px-4 py-3">
+          <p className="flex-1 text-sm text-muted-foreground italic">Bình luận đã bị xóa.</p>
           <button
             onClick={handleUndo}
             className="text-sm font-semibold text-emerald-600 hover:underline cursor-pointer whitespace-nowrap"
@@ -278,7 +278,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
   if (isDeletedState) {
     return (
       <div style={{ marginLeft: depth > 0 ? indent : 0 }}>
-        <div className="text-sm text-gray-400 italic px-1 py-1 border-l-2 border-gray-200 dark:border-gray-700 pl-3">
+        <div className="text-sm text-muted-foreground italic px-1 py-1 border-l-2 border-border pl-3">
           Bình luận đã bị xóa.
         </div>
 
@@ -287,9 +287,9 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
             <button
               onClick={() => void handleShowReplies()}
               disabled={isLoadingReplies}
-              className="flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:underline px-3 cursor-pointer disabled:opacity-60"
+              className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:underline px-3 cursor-pointer disabled:opacity-60"
             >
-              <div className="w-6 h-0.5 bg-gray-300 dark:bg-gray-600" />
+              <div className="w-6 h-0.5 bg-muted" />
               {isLoadingReplies ? 'Đang tải...' : showReplies ? 'Ẩn phản hồi' : `${totalReplies} phản hồi`}
             </button>
 
@@ -319,7 +319,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
     <div style={{ marginLeft: depth > 0 ? indent : 0 }}>
       {/* Orphan label */}
       {isOrphan && (
-        <p className="text-xs text-gray-400 italic mb-1 px-1">
+        <p className="text-xs text-muted-foreground italic mb-1 px-1">
           Phản hồi cho một bình luận đã bị ẩn
         </p>
       )}
@@ -348,9 +348,9 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                 }}
                 rows={2}
                 autoFocus
-                className="w-full rounded-2xl bg-gray-100 dark:bg-gray-900 px-3 py-2 text-[15px] outline-none resize-none focus:ring-2 focus:ring-emerald-400"
+                className="w-full rounded-2xl bg-background px-3 py-2 text-[15px] outline-none resize-none focus:ring-2 focus:ring-emerald-400"
               />
-              <div className="flex gap-2 mt-1 px-1 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex gap-2 mt-1 px-1 text-xs text-muted-foreground">
                 <span>Enter để lưu · Esc để hủy</span>
                 <button
                   onClick={() => void handleSaveEdit()}
@@ -361,7 +361,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                 </button>
                 <button
                   onClick={() => { setIsEditing(false); setEditContent(comment.content); }}
-                  className="font-semibold text-gray-600 dark:text-gray-400 hover:underline cursor-pointer"
+                  className="font-semibold text-muted-foreground hover:underline cursor-pointer"
                 >
                   Hủy
                 </button>
@@ -370,7 +370,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
           ) : (
             <div className="inline-block max-w-full">
               {/* Bong bóng chỉ bọc tên + chữ; ảnh tách riêng bên dưới (giống Facebook) */}
-              <div className="bg-gray-100 dark:bg-gray-900 rounded-2xl px-3 py-2 inline-block max-w-full">
+              <div className="bg-background rounded-2xl px-3 py-2 inline-block max-w-full">
                 <p className="font-semibold text-[13px] mb-0.5">{comment.author.name}</p>
                 {comment.content && <p className="text-[15px] break-words">{comment.content}</p>}
               </div>
@@ -379,7 +379,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                   <img
                     src={comment.imageUrl}
                     alt="Ảnh bình luận"
-                    className="max-h-72 max-w-[260px] rounded-xl border border-gray-200 dark:border-gray-700 object-contain"
+                    className="max-h-72 max-w-[260px] rounded-xl border border-border object-contain"
                   />
                 </button>
               )}
@@ -396,7 +396,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
             />
             <button
               onClick={() => setShowReplyInput((v) => !v)}
-              className="text-xs font-semibold text-gray-600 dark:text-gray-400 hover:underline cursor-pointer"
+              className="text-xs font-semibold text-muted-foreground hover:underline cursor-pointer"
             >
               Trả lời
             </button>
@@ -406,7 +406,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                 Đang chờ duyệt
               </span>
             )}
-            <span className="text-xs text-gray-500 dark:text-gray-400">{comment.timestamp}</span>
+            <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
             {totalReactions > 0 && (
               <div className="flex items-center gap-1">
                 <div className="flex items-center -space-x-1">
@@ -414,7 +414,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                     <img key={r.type} src={r.emoji} alt={r.label} width={14} height={14} className="rounded-full" draggable={false} />
                   ))}
                 </div>
-                <span className="text-xs text-gray-600 dark:text-gray-400">{totalReactions}</span>
+                <span className="text-xs text-muted-foreground">{totalReactions}</span>
               </div>
             )}
           </div>
@@ -439,7 +439,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
               <button
                 onClick={() => void handleShowReplies()}
                 disabled={isLoadingReplies}
-                className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:underline px-3 cursor-pointer disabled:opacity-60"
+                className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:underline px-3 cursor-pointer disabled:opacity-60"
               >
                 <div className="w-6 h-0.5 bg-gray-400" />
                 {isLoadingReplies
@@ -474,18 +474,18 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
               onClick={() => setShowMenu((v) => !v)}
               className="p-1 hover:bg-muted rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
             >
-              <MoreHorizontal className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
             </button>
 
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                <div className="absolute right-0 top-7 z-20 w-40 rounded-xl bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 py-1 overflow-hidden">
+                <div className="absolute right-0 top-7 z-20 w-40 rounded-xl bg-card shadow-lg border border-border py-1 overflow-hidden">
                   {isOwner ? (
                     <>
                       <button
                         onClick={() => { setShowMenu(false); setIsEditing(true); setEditContent(comment.content); }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-muted transition-colors cursor-pointer"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors cursor-pointer"
                       >
                         <Pencil className="w-4 h-4" />
                         Chỉnh sửa
@@ -501,7 +501,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                   ) : (
                     <button
                       onClick={() => void handleReport()}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-muted transition-colors cursor-pointer"
+                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors cursor-pointer"
                     >
                       <Flag className="w-4 h-4" />
                       Báo cáo
@@ -523,7 +523,7 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
           <button
             type="button"
             onClick={() => setShowImageViewer(false)}
-            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 cursor-pointer"
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-card/10 text-white hover:bg-card/20 cursor-pointer"
             title="Đóng"
           >
             <X className="h-6 w-6" />

@@ -214,7 +214,7 @@ export function ScheduledLiveDetailDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="flex max-h-[90vh] max-w-xl flex-col overflow-hidden p-0">
-          <div className="shrink-0 border-b border-gray-100 px-6 py-4 dark:border-gray-800">
+          <div className="shrink-0 border-b border-border px-6 py-4">
           <DialogHeader>
             <DialogTitle>{mode === 'edit' ? 'Chỉnh sửa sự kiện live' : 'Chi tiết sự kiện live'}</DialogTitle>
             <DialogDescription className="sr-only">Thông tin buổi phát trực tiếp theo lịch</DialogDescription>
@@ -227,7 +227,7 @@ export function ScheduledLiveDetailDialog({
                 <>
                   <Link
                     to={`/profile/${session.hostUserId}`}
-                    className="inline-flex max-w-full items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5 transition-colors hover:bg-gray-100 dark:border-gray-800 dark:bg-gray-900/60 dark:hover:bg-gray-800/80"
+                    className="inline-flex max-w-full items-center gap-3 rounded-xl border border-border bg-muted px-3 py-2.5 transition-colors hover:bg-muted/60/80"
                   >
                     <UserAvatar
                       name={session.hostName || 'Người tạo'}
@@ -237,21 +237,21 @@ export function ScheduledLiveDetailDialog({
                       className="h-10 w-10 shrink-0"
                     />
                     <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Người tạo</p>
-                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <p className="text-xs font-medium text-muted-foreground">Người tạo</p>
+                      <p className="truncate text-sm font-semibold text-foreground">
                         {session.hostName || 'Người dùng'}
                       </p>
                     </div>
                   </Link>
                   <div>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Tên sự kiện</p>
-                    <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{session.title}</p>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tên sự kiện</p>
+                    <p className="text-base font-semibold text-foreground">{session.title}</p>
                   </div>
                   <div>
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Mô tả</p>
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700 dark:text-gray-300">{session.description || '—'}</p>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Mô tả</p>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{session.description || '—'}</p>
                   </div>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <div className="inline-flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-emerald-600" />
                       <span>{scheduledLabel || 'Chưa có thời gian'}</span>
@@ -265,38 +265,38 @@ export function ScheduledLiveDetailDialog({
               ) : (
                 <>
                   <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">Tên sự kiện</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-foreground">Tên sự kiện</label>
                     <input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                      className="w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">Mô tả</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-foreground">Mô tả</label>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={5}
-                      className="w-full resize-none rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                      className="w-full resize-none rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">Thời gian bắt đầu</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-foreground">Thời gian bắt đầu</label>
                     <input
                       type="datetime-local"
                       value={scheduledAt}
                       min={minScheduledAt}
                       onChange={(e) => setScheduledAt(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                      className="w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
                     />
                   </div>
                   <div>
-                    <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">Quyền riêng tư</label>
+                    <label className="mb-1.5 block text-sm font-semibold text-foreground">Quyền riêng tư</label>
                     <select
                       value={privacy}
                       onChange={(e) => setPrivacy(e.target.value as PrivacyChoice)}
-                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
+                      className="w-full rounded-xl border border-border px-4 py-2.5 text-sm outline-none focus:border-emerald-500"
                     >
                       <option value="PUBLIC">Công khai</option>
                       <option value="FRIENDS">Bạn bè</option>
@@ -308,18 +308,18 @@ export function ScheduledLiveDetailDialog({
           </section>
 
           {isOwner && (
-            <section className="mt-2 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+            <section className="mt-2 rounded-xl border border-border p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Người quan tâm ({subscriptionCount})</h4>
+                <h4 className="text-sm font-semibold text-foreground">Người quan tâm ({subscriptionCount})</h4>
               </div>
               {isSubscribersLoading ? (
                 <div className="flex justify-center py-6">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : subscribers.length === 0 ? (
-                <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">Chưa có ai quan tâm sự kiện này.</p>
+                <p className="py-4 text-center text-sm text-muted-foreground">Chưa có ai quan tâm sự kiện này.</p>
               ) : (
-                <div className="max-h-52 overflow-y-auto overscroll-contain rounded-lg border border-gray-100 bg-gray-50 pr-1 dark:border-gray-800 dark:bg-gray-900/60 sidebar-scrollbar">
+                <div className="max-h-52 overflow-y-auto overscroll-contain rounded-lg border border-border bg-muted pr-1/60 sidebar-scrollbar">
                   <div className="space-y-1 p-1">
                     {subscribers.map((subscriber) => (
                       <button
@@ -337,10 +337,10 @@ export function ScheduledLiveDetailDialog({
                           className="h-9 w-9 rounded-full object-cover"
                         />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                          <p className="truncate text-sm font-semibold text-foreground">
                             {subscriber.fullName || subscriber.username}
                           </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">@{subscriber.username}</p>
+                          <p className="text-xs text-muted-foreground">@{subscriber.username}</p>
                         </div>
                       </button>
                     ))}
@@ -352,7 +352,7 @@ export function ScheduledLiveDetailDialog({
 
           </div>
 
-          <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-6 py-4 dark:border-gray-800">
+          <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-4">
             <div className="flex flex-wrap gap-2">
               {isOwner ? (
                 mode === 'view' ? (
@@ -360,7 +360,7 @@ export function ScheduledLiveDetailDialog({
                     <button
                       type="button"
                       onClick={() => setMode('edit')}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
                     >
                       <Pencil className="h-4 w-4" />
                       Chỉnh sửa
@@ -379,7 +379,7 @@ export function ScheduledLiveDetailDialog({
                     <button
                       type="button"
                       onClick={() => setMode('view')}
-                      className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground hover:bg-muted"
                     >
                       Hủy
                     </button>
@@ -398,11 +398,7 @@ export function ScheduledLiveDetailDialog({
                   type="button"
                   disabled={isSubscribeLoading}
                   onClick={() => void handleToggleSubscription()}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold ${
-                    isSubscribed
-                      ? 'border border-green-600 bg-green-50 text-green-700'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  } disabled:cursor-not-allowed disabled:opacity-60`}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold ${ isSubscribed ? 'border border-green-600 bg-green-50 text-green-700' : 'bg-green-600 text-white hover:bg-green-700' } disabled:cursor-not-allowed disabled:opacity-60`}
                 >
                   <Bell className="h-4 w-4" />
                   {isSubscribeLoading ? 'Đang lưu...' : isSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
@@ -415,11 +411,7 @@ export function ScheduledLiveDetailDialog({
                 type="button"
                 disabled={!canStartScheduledLive}
                 onClick={() => void handleStartLive()}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
-                  canStartScheduledLive
-                    ? 'bg-emerald-600 hover:bg-emerald-700'
-                    : 'cursor-not-allowed bg-gray-400'
-                }`}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${ canStartScheduledLive ? 'bg-emerald-600 hover:bg-emerald-700' : 'cursor-not-allowed bg-gray-400' }`}
               >
                 {canStartScheduledLive ? 'Bắt đầu phát' : 'Chưa đến giờ'}
               </button>

@@ -58,14 +58,10 @@ export function DisplayAccessibilityPanel({ onBack }: DisplayAccessibilityPanelP
                 type="button"
                 disabled={!mounted}
                 onClick={() => setTheme(option.value)}
-                className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-colors cursor-pointer ${
-                  isActive ? 'bg-accent ring-1 ring-primary/25' : 'hover:bg-muted'
-                }`}
+                className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-colors cursor-pointer ${ isActive ? 'bg-accent ring-1 ring-primary/25' : 'hover:bg-muted' }`}
               >
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    isActive ? 'bg-primary/15' : 'bg-muted'
-                  }`}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${ isActive ? 'bg-primary/15' : 'bg-muted' }`}
                 >
                   <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                 </div>
@@ -76,9 +72,7 @@ export function DisplayAccessibilityPanel({ onBack }: DisplayAccessibilityPanelP
                   <div className="text-xs text-muted-foreground">{option.description}</div>
                 </div>
                 <div
-                  className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                    isActive ? 'border-primary bg-primary' : 'border-border'
-                  }`}
+                  className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${ isActive ? 'border-primary bg-primary' : 'border-border' }`}
                 />
               </button>
             );

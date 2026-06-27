@@ -26,7 +26,7 @@ export function GroupsListsPanel({
       {managedGroups.length > 0 && (
         <div className="mb-5">
           <div className="mb-2 flex items-center justify-between px-1">
-            <h3 className="text-[15px] font-semibold text-gray-600 dark:text-gray-400">
+            <h3 className="text-[15px] font-semibold text-muted-foreground">
               Nhóm do bạn quản lý
             </h3>
             <button
@@ -37,7 +37,7 @@ export function GroupsListsPanel({
               Xem tất cả
             </button>
           </div>
-          <div className="space-y-1 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900">
+          <div className="space-y-1 overflow-hidden rounded-lg border border-border bg-muted p-1">
             {recentManaged.map((group) => (
               <button
                 key={group.id}
@@ -53,11 +53,11 @@ export function GroupsListsPanel({
                   </div>
                 )}
                 <div className="min-w-0 flex-1 text-left">
-                  <h4 className="truncate pt-0.5 text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-emerald-600 dark:text-gray-100">
+                  <h4 className="truncate pt-0.5 text-[15px] font-semibold text-foreground transition-colors group-hover:text-emerald-600">
                     {group.name}
                   </h4>
                   {group.lastActivity && (
-                    <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{group.lastActivity}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{group.lastActivity}</p>
                   )}
                 </div>
               </button>
@@ -68,7 +68,7 @@ export function GroupsListsPanel({
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">Nhóm bạn đã tham gia</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground">Nhóm bạn đã tham gia</h3>
           <button
             type="button"
             onClick={() => navigate('/groups/joined')}
@@ -80,7 +80,7 @@ export function GroupsListsPanel({
 
         <div className="space-y-1">
           {recentJoined.length === 0 ? (
-            <p className="px-1 py-2 text-sm text-gray-400">Chưa tham gia nhóm nào.</p>
+            <p className="px-1 py-2 text-sm text-muted-foreground">Chưa tham gia nhóm nào.</p>
           ) : (
             recentJoined.map((group) => (
               <button
@@ -92,16 +92,16 @@ export function GroupsListsPanel({
                 {group.icon ? (
                   <img src={group.icon} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" />
                 ) : (
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-200 text-sm font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-semibold text-muted-foreground dark:text-muted-foreground">
                     {group.name.charAt(0)}
                   </div>
                 )}
                 <div className="min-w-0 flex-1 text-left">
-                  <h4 className="truncate font-medium text-gray-900 transition-colors group-hover:text-emerald-600 dark:text-gray-100">
+                  <h4 className="truncate font-medium text-foreground transition-colors group-hover:text-emerald-600">
                     {group.name}
                   </h4>
                   {group.lastActivity && (
-                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">{group.lastActivity}</p>
+                    <p className="truncate text-xs text-muted-foreground">{group.lastActivity}</p>
                   )}
                 </div>
               </button>

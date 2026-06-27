@@ -87,22 +87,41 @@ export function isUuid(value: string | undefined | null): boolean {
   return typeof value === 'string' && UUID_RE.test(value);
 }
 
-export const authService = {
-  // Cập nhật cặp token vào storage đang dùng (gọi sau khi refresh access token).
-  updateTokens(tokens: { token: string; refreshToken?: string }) {
-    for (const storage of [localStorage, sessionStorage]) {
-      const raw = storage.getItem(AUTH_USER_KEY);
-      if (!raw) continue;
-      try {
-        const parsed = JSON.parse(raw);
-        const target = parsed?.user ?? parsed;
-        target.token = tokens.token;
-        if (tokens.refreshToken) target.refreshToken = tokens.refreshToken;
-        storage.setItem(AUTH_USER_KEY, JSON.stringify(parsed));
-      } catch {
-        /* ignore */
+/** Strip JWT secrets before persisting profile — tokens live in HttpOnly cookies. */
+function sanitizeStoredUser(user: AuthUser): AuthUser {
+  const { token: _t, refreshToken: _r, ...rest } = user;
+  return rest;
+}
+
+/** Remove legacy JWT fields from existing storage (one-time cleanup on read). */
+function stripLegacyTokensFromStorage() {
+  for (const storage of [localStorage, sessionStorage]) {
+    const raw = storage.getItem(AUTH_USER_KEY);
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw) as StoredAuthUser | AuthUser;
+      if (typeof parsed === 'object' && parsed !== null && 'user' in parsed && 'expiresAt' in parsed) {
+        const payload = parsed as StoredAuthUser;
+        if (payload.user?.token || payload.user?.refreshToken) {
+          payload.user = sanitizeStoredUser(payload.user);
+          storage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
+        }
+      } else {
+        const user = parsed as AuthUser;
+        if (user.token || user.refreshToken) {
+          storage.setItem(AUTH_USER_KEY, JSON.stringify(sanitizeStoredUser(user)));
+        }
       }
+    } catch {
+      /* ignore */
     }
+  }
+}
+
+export const authService = {
+  /** @deprecated Tokens are HttpOnly cookies; kept as no-op for compatibility. */
+  updateTokens(_tokens: { token: string; refreshToken?: string }) {
+    /* no-op */
   },
 
   updateProfile: (id: string, data: Partial<RegisterData>) => {
@@ -155,8 +174,8 @@ export const authService = {
   register: (data: RegisterData) =>
     api.post<AuthUser>('/auth/register', data),
 
-  login: (email: string, password: string) =>
-    api.post<AuthUser>('/auth/login', { email, password }),
+  login: (email: string, password: string, rememberMe?: boolean) =>
+    api.post<AuthUser>('/auth/login', { email, password, rememberMe: !!rememberMe }),
 
   verifyTwoFactorLogin: (twoFactorToken: string, otp: string) =>
     api.post<AuthUser>('/auth/verify-2fa-login', { twoFactorToken, otp }),
@@ -225,11 +244,10 @@ export const authService = {
     };
 
     const currentState = readCurrentState();
-    const mergedUser: AuthUser = {
+    const mergedUser: AuthUser = sanitizeStoredUser({
       ...(currentState.user ?? {}),
       ...user,
-      token: user.accountStatus === 'BLOCKED' ? undefined : user.token ?? currentState.user?.token,
-    };
+    });
 
     const targetStorage: 'local' | 'session' =
       rememberMe === true
@@ -260,6 +278,7 @@ export const authService = {
   },
 
   getCurrentUser: (): AuthUser | null => {
+    stripLegacyTokensFromStorage();
     const localUser = localStorage.getItem(AUTH_USER_KEY);
     if (localUser) {
       try {
@@ -297,13 +316,10 @@ export const authService = {
   },
 
   logout: async () => {
-    const token = authService.getCurrentUser()?.token;
     try {
-      if (token) {
-        await api.post<{ message?: string }>('/auth/logout', {});
-      }
+      await api.post<{ message?: string }>('/auth/logout', {});
     } catch {
-      // Vẫn đăng xuất cục bộ nếu token hết hạn hoặc mạng lỗi
+      // Still clear local session if network fails
     } finally {
       localStorage.removeItem(AUTH_USER_KEY);
       sessionStorage.removeItem(AUTH_USER_KEY);

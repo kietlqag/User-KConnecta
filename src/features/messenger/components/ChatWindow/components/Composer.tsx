@@ -151,7 +151,7 @@ export const Composer: React.FC<ComposerProps> = ({
   };
 
   return (
-    <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+    <div className="p-3 bg-card border-t border-border">
       {cooldownSeconds > 0 && (
         <div className="mb-2 px-1 text-[11px] font-medium text-red-600">
           Tạm dừng gửi tin — thử lại sau {cooldownSeconds}s
@@ -159,13 +159,13 @@ export const Composer: React.FC<ComposerProps> = ({
       )}
 
       {replyToMessage && (
-        <div className="mb-2 px-3 py-2 bg-gray-50 dark:bg-gray-900 rounded-xl border-l-4 border-emerald-500 flex items-center justify-between group">
+        <div className="mb-2 px-3 py-2 bg-background rounded-xl border-l-4 border-emerald-500 flex items-center justify-between group">
           <div className="min-w-0">
             <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">Đang trả lời</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{replyToMessage.text}</p>
+            <p className="text-sm text-muted-foreground truncate">{replyToMessage.text}</p>
           </div>
-          <button onClick={onCancelReply} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-full cursor-pointer">
-            <X className="w-4 h-4 text-gray-400" />
+          <button onClick={onCancelReply} className="p-1 hover:bg-muted rounded-full cursor-pointer">
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
       )}
@@ -261,7 +261,7 @@ export const Composer: React.FC<ComposerProps> = ({
               </button>
             </div>
 
-            <div className="flex-1 relative bg-gray-100 dark:bg-gray-900 rounded-2xl">
+            <div className="flex-1 relative bg-background rounded-2xl">
               <textarea
                 ref={textareaRef}
                 value={inputText}
@@ -295,7 +295,7 @@ export const Composer: React.FC<ComposerProps> = ({
                     onEmojiClick();
                     setShowEmojiPicker((prev) => !prev);
                   }}
-                  className="cursor-pointer rounded-full p-1.5 text-emerald-600 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700"
+                  className="cursor-pointer rounded-full p-1.5 text-emerald-600 hover:bg-muted"
                   title="Emoji"
                 >
                   <Smile className="w-5 h-5" />
@@ -306,9 +306,7 @@ export const Composer: React.FC<ComposerProps> = ({
             <button
               onClick={onSend}
               disabled={!canSend}
-              className={`cursor-pointer rounded-full p-2 transition-all ${
-                canSend ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'text-emerald-300'
-              }`}
+              className={`cursor-pointer rounded-full p-2 transition-all ${ canSend ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'text-emerald-300' }`}
             >
               <Send className="w-5 h-5" />
             </button>

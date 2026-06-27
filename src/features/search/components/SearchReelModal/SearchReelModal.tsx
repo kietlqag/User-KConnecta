@@ -114,7 +114,7 @@ export function SearchReelModal({ open, reels, initialIndex, onClose }: SearchRe
         <button
           type="button"
           onClick={onClose}
-          className="rounded-full p-2 text-white transition-colors hover:bg-white/10"
+          className="rounded-full p-2 text-white transition-colors hover:bg-card/10"
           aria-label="Đóng"
         >
           <X className="h-6 w-6" />
@@ -132,7 +132,7 @@ export function SearchReelModal({ open, reels, initialIndex, onClose }: SearchRe
         ) : null}
       </div>
 
-      <div className="pointer-events-none absolute left-0 right-0 top-0 h-1 bg-white/10">
+      <div className="pointer-events-none absolute left-0 right-0 top-0 h-1 bg-card/10">
         <div
           className="h-full bg-emerald-500 transition-all duration-300"
           style={{ width: `${((currentIndex + 1) / reels.length) * 100}%` }}

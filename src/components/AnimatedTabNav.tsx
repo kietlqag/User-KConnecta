@@ -95,11 +95,7 @@ export function AnimatedTabNav({ items, onHomeClick }: AnimatedTabNavProps) {
             key={index}
             to={item.href}
             onClick={item.href === '/home' ? onHomeClick : undefined}
-            className={`relative flex items-center justify-center px-10 py-2 rounded-lg transition-colors ${
-              isActive
-                ? 'text-primary'
-                : 'text-muted-foreground hover:bg-muted'
-            }`}
+            className={`relative flex items-center justify-center px-10 py-2 rounded-lg transition-colors ${ isActive ? 'text-primary' : 'text-muted-foreground hover:bg-muted' }`}
             aria-label={item.label}
           >
             {item.icon}

@@ -250,7 +250,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent
         data-share-modal
-        className="!flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[500px] rounded-2xl border-none bg-white shadow-2xl dark:bg-gray-800"
+        className="!flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[500px] rounded-2xl border-none bg-card shadow-2xl"
         onWheel={stopWheelBubble}
         onPointerDownOutside={keepShareModalOpenOnEmojiPicker}
         onInteractOutside={keepShareModalOpenOnEmojiPicker}
@@ -265,7 +265,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                   onClick={() => { setShowFriendPicker(false); setSearchQuery(''); }}
                   className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted transition-colors cursor-pointer"
                 >
-                  <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <ArrowLeft className="w-5 h-5 text-muted-foreground" />
                 </button>
                 <DialogTitle className="text-lg font-bold">Gửi qua Messenger</DialogTitle>
               </div>
@@ -277,13 +277,13 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
             >
               <div className="flex flex-col gap-3">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Tìm kiếm bạn bè..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full rounded-full bg-gray-100 dark:bg-gray-900 py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-emerald-300"
+                    className="w-full rounded-full bg-background py-2 pl-9 pr-4 text-sm outline-none focus:ring-2 focus:ring-emerald-300"
                   />
                 </div>
                 <div className="min-h-0">
@@ -291,15 +291,15 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                     <div className="flex flex-col gap-2">
                       {[1, 2, 3, 4].map((i) => (
                         <div key={i} className="flex items-center gap-3 p-2 animate-pulse">
-                          <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 shrink-0" />
-                          <div className="flex-1 h-4 bg-gray-200 dark:bg-gray-700 rounded" />
-                          <div className="w-14 h-8 bg-gray-200 dark:bg-gray-700 rounded-full" />
+                          <div className="w-12 h-12 rounded-full bg-muted shrink-0" />
+                          <div className="flex-1 h-4 bg-muted rounded" />
+                          <div className="w-14 h-8 bg-muted rounded-full" />
                         </div>
                       ))}
                     </div>
                   ) : filteredConversations.length > 0 ? (
                     filteredConversations.map((conv) => (
-                      <div key={conv.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <div key={conv.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-muted transition-colors">
                         <div className="relative shrink-0">
                           <UserAvatar
                             name={conv.user.name}
@@ -313,7 +313,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                             <div className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
                           )}
                         </div>
-                        <span className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-200 truncate">{conv.user.name}</span>
+                        <span className="flex-1 text-sm font-semibold text-foreground truncate">{conv.user.name}</span>
                         <button
                           type="button"
                           disabled={sendingToUserId === conv.user.id}
@@ -325,7 +325,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                       </div>
                     ))
                   ) : (
-                    <div className="py-8 text-center text-sm text-gray-400">
+                    <div className="py-8 text-center text-sm text-muted-foreground">
                       {searchQuery ? 'Không tìm thấy bạn bè' : 'Chưa có bạn bè nào'}
                     </div>
                   )}
@@ -355,31 +355,31 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                     initialsClassName="text-sm font-bold"
                   />
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight">
+                    <span className="text-sm font-semibold text-foreground leading-tight">
                       {currentUser?.fullName}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="rounded-md bg-gray-100 dark:bg-gray-900 px-2 py-0.5 text-xs font-medium text-gray-600 dark:text-gray-400">
+                      <span className="rounded-md bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         Bảng feed
                       </span>
                       <div className="relative" ref={privacyRef}>
                         <button
                           type="button"
                           onClick={() => setShowPrivacyMenu((v) => !v)}
-                          className="flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-900 px-2 py-0.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                          className="flex items-center gap-1 rounded-md bg-background px-2 py-0.5 text-xs font-medium text-foreground hover:bg-muted transition-colors cursor-pointer"
                         >
                           {selectedPrivacy.icon}
                           <span>{selectedPrivacy.label}</span>
                           <ChevronDown className="w-3 h-3" />
                         </button>
                         {showPrivacyMenu && (
-                          <div className="absolute left-0 top-full mt-1 z-50 w-44 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-xl py-1">
+                          <div className="absolute left-0 top-full mt-1 z-50 w-44 rounded-xl border border-border bg-card shadow-xl py-1">
                             {PRIVACY_OPTIONS.map((opt) => (
                               <button
                                 key={opt.value}
                                 type="button"
                                 onClick={() => { setPrivacy(opt.value); setShowPrivacyMenu(false); }}
-                                className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer ${privacy === opt.value ? 'font-semibold text-emerald-600' : 'text-gray-700 dark:text-gray-300'}`}
+                                className={`flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors cursor-pointer ${privacy === opt.value ? 'font-semibold text-emerald-600' : 'text-foreground'}`}
                               >
                                 {opt.icon}
                                 {opt.label}
@@ -401,7 +401,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                     placeholder={placeholder}
                     rows={2}
                     maxLength={1000}
-                    className="w-full resize-none rounded-xl border-none bg-transparent px-0 py-1 text-base text-gray-800 dark:text-gray-200 outline-none placeholder:text-gray-400"
+                    className="w-full resize-none rounded-xl border-none bg-transparent px-0 py-1 text-base text-foreground outline-none placeholder:text-muted-foreground"
                   />
                   <div className="relative">
                     <button
@@ -415,7 +415,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                         }
                         setShowEmojiPicker((v) => !v);
                       }}
-                      className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:bg-muted hover:text-yellow-500 transition-colors cursor-pointer"
+                      className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-yellow-500 transition-colors cursor-pointer"
                     >
                       <Smile className="w-5 h-5" />
                     </button>
@@ -433,10 +433,10 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                   {isSharingNow ? 'Đang đăng...' : 'Đăng bài'}
                 </button>
 
-                <div className="h-px bg-gray-100 dark:bg-gray-900" />
+                <div className="h-px bg-background" />
 
                 <div>
-                  <h3 className="mb-2.5 font-sans text-sm font-semibold text-gray-800 dark:text-gray-200">
+                  <h3 className="mb-2.5 font-sans text-sm font-semibold text-foreground">
                     Gửi bằng Messenger
                   </h3>
                   <div className="scrollbar-thin -mx-1 flex flex-nowrap items-start gap-3 overflow-x-auto px-1 pb-1">
@@ -444,8 +444,8 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                       <div className="flex flex-nowrap gap-3">
                         {[1, 2, 3, 4, 5].map((i) => (
                           <div key={i} className="flex w-[58px] shrink-0 flex-col items-center gap-1.5 animate-pulse">
-                            <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700" />
-                            <div className="h-[28px] w-10 rounded bg-gray-200 dark:bg-gray-700" />
+                            <div className="h-12 w-12 rounded-full bg-muted" />
+                            <div className="h-[28px] w-10 rounded bg-muted" />
                           </div>
                         ))}
                       </div>
@@ -472,7 +472,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                                 <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-green-500" />
                               )}
                             </div>
-                            <span className="flex min-h-[28px] w-full items-start justify-center text-center text-[11px] font-medium leading-tight text-gray-700 line-clamp-2 dark:text-gray-300">
+                            <span className="flex min-h-[28px] w-full items-start justify-center text-center text-[11px] font-medium leading-tight text-foreground line-clamp-2">
                               {getMessengerChipLabel(conv.user.name)}
                             </span>
                           </button>
@@ -482,58 +482,58 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                           onClick={() => setShowFriendPicker(true)}
                           className="flex w-[58px] shrink-0 flex-col items-center gap-1.5 hover:opacity-80 cursor-pointer"
                         >
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
-                            <Search className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-background">
+                            <Search className="h-5 w-5 text-muted-foreground" />
                           </div>
-                          <span className="flex min-h-[28px] w-full items-start justify-center text-center text-[11px] font-medium leading-tight text-gray-500 line-clamp-2 dark:text-gray-400">
+                          <span className="flex min-h-[28px] w-full items-start justify-center text-center text-[11px] font-medium leading-tight text-muted-foreground line-clamp-2 dark:text-muted-foreground">
                             Tìm thêm
                           </span>
                         </button>
                       </>
                     ) : (
-                      <div className="w-full py-3 text-center text-sm text-gray-400">
+                      <div className="w-full py-3 text-center text-sm text-muted-foreground">
                         Chưa có cuộc hội thoại nào
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="h-px bg-gray-100 dark:bg-gray-900" />
+                <div className="h-px bg-background" />
 
                 <div className="grid shrink-0 grid-cols-3 gap-1.5 pb-2">
                   {storyState && (
                     <button
                       type="button"
                       onClick={handleShareToStory}
-                      className="flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                      className="flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-muted cursor-pointer"
                     >
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100">
                         <Newspaper className="h-4 w-4 text-emerald-600" />
                       </div>
-                      <span className="text-center text-[11px] font-medium leading-tight text-gray-600 dark:text-gray-400">Chia sẻ lên tin</span>
+                      <span className="text-center text-[11px] font-medium leading-tight text-muted-foreground">Chia sẻ lên tin</span>
                     </button>
                   )}
 
                   <button
                     type="button"
                     onClick={() => setShowFriendPicker(true)}
-                    className="flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                    className="flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-muted cursor-pointer"
                   >
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100">
                       <MessageCircle className="h-4 w-4 text-emerald-600" />
                     </div>
-                    <span className="text-center text-[11px] font-medium leading-tight text-gray-600 dark:text-gray-400">Messenger</span>
+                    <span className="text-center text-[11px] font-medium leading-tight text-muted-foreground">Messenger</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleCopyLink}
-                    className="flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                    className="flex flex-col items-center gap-1 rounded-xl p-2 transition-colors hover:bg-muted cursor-pointer"
                   >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
-                      <Link2 className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-background">
+                      <Link2 className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <span className="text-center text-[11px] font-medium leading-tight text-gray-600 dark:text-gray-400">Sao chép liên kết</span>
+                    <span className="text-center text-[11px] font-medium leading-tight text-muted-foreground">Sao chép liên kết</span>
                   </button>
                 </div>
               </div>

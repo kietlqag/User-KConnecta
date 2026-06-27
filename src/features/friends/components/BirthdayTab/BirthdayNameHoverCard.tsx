@@ -96,14 +96,14 @@ function BirthdayHoverCardContent({ friend, open, onClose }: BirthdayHoverCardCo
       side="bottom"
       align="start"
       sideOffset={8}
-      className="w-[min(360px,calc(100vw-2rem))] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-0 shadow-xl"
+      className="w-[min(360px,calc(100vw-2rem))] rounded-xl border border-border bg-card p-0 shadow-xl"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="relative p-4 pb-3">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-background text-muted-foreground transition-colors hover:bg-muted"
           aria-label="Đóng"
         >
           <X className="h-4 w-4" />
@@ -111,7 +111,7 @@ function BirthdayHoverCardContent({ friend, open, onClose }: BirthdayHoverCardCo
 
         <div className="flex gap-3 pr-8">
           <Link to={`/profile/${friend.userId}`} className="shrink-0">
-            <div className="h-20 w-20 overflow-hidden rounded-full border border-gray-200 dark:border-gray-700">
+            <div className="h-20 w-20 overflow-hidden rounded-full border border-border">
               <UserAvatar
                 name={friend.name}
                 avatarUrl={friend.avatar}
@@ -125,7 +125,7 @@ function BirthdayHoverCardContent({ friend, open, onClose }: BirthdayHoverCardCo
           <div className="min-w-0 pt-1">
             <Link
               to={`/profile/${friend.userId}`}
-              className="line-clamp-2 text-xl font-bold leading-tight text-gray-900 dark:text-gray-100 hover:underline"
+              className="line-clamp-2 text-xl font-bold leading-tight text-foreground hover:underline"
             >
               {friend.name}
             </Link>
@@ -133,19 +133,19 @@ function BirthdayHoverCardContent({ friend, open, onClose }: BirthdayHoverCardCo
         </div>
 
         <div className="mt-4 space-y-2.5">
-          <div className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300">
-            <Cake className="mt-0.5 h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400" />
+          <div className="flex items-start gap-2.5 text-sm text-foreground">
+            <Cake className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
             <span>{formatDaysUntilBirthday(friend.birthDate)}</span>
           </div>
 
           {loading ? (
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Đang tải bạn chung...
             </div>
           ) : mutualNames.length > 0 ? (
-            <div className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300">
-              <Users className="mt-0.5 h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400" />
+            <div className="flex items-start gap-2.5 text-sm text-foreground">
+              <Users className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
               <span>
                 <MutualFriendsLine names={mutualNames} />
               </span>
@@ -154,8 +154,8 @@ function BirthdayHoverCardContent({ friend, open, onClose }: BirthdayHoverCardCo
         </div>
       </div>
 
-      <div className="flex items-center gap-2 border-t border-gray-100 dark:border-gray-800 px-4 py-3">
-        <span className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-gray-200 dark:bg-gray-700 px-3 text-sm font-semibold text-gray-800 dark:text-gray-200">
+      <div className="flex items-center gap-2 border-t border-border px-4 py-3">
+        <span className="flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-muted px-3 text-sm font-semibold text-foreground">
           <UserCheck className="h-4 w-4" />
           Bạn bè
         </span>
@@ -168,7 +168,7 @@ function BirthdayHoverCardContent({ friend, open, onClose }: BirthdayHoverCardCo
         </Link>
         <Link
           to={`/profile/${friend.userId}`}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-300"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground transition-colors hover:bg-muted"
           aria-label="Xem trang cá nhân"
         >
           <MoreHorizontal className="h-5 w-5" />

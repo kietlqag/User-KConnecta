@@ -173,7 +173,7 @@ export function Post({
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-4">
+      <div className="bg-card rounded-lg shadow mb-4">
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">
@@ -194,8 +194,8 @@ export function Post({
                 className="cursor-pointer"
                 onClick={() => navigate(`/profile/${authorId}`)}
               >
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100 group-hover:underline">{userName}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{timestamp}</p>
+                <h3 className="font-semibold text-foreground group-hover:underline">{userName}</h3>
+                <p className="text-sm text-muted-foreground">{timestamp}</p>
               </div>
             </div>
             <div className="relative">
@@ -204,12 +204,12 @@ export function Post({
                 onClick={() => setIsMoreMenuOpen((prev) => !prev)}
                 className="cursor-pointer rounded-full p-2 transition-colors hover:bg-muted"
               >
-                <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
               </button>
               {isMoreMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setIsMoreMenuOpen(false)} />
-                  <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
+                  <div className="absolute right-0 top-full z-20 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-card py-1 shadow-lg">
                     {isOwner && (
                       <button
                         type="button"
@@ -230,7 +230,7 @@ export function Post({
             </div>
           </div>
 
-          <p className="text-gray-900 dark:text-gray-100 mb-3">{content}</p>
+          <p className="text-foreground mb-3">{content}</p>
         </div>
 
         {image && (
@@ -243,7 +243,7 @@ export function Post({
           </div>
         )}
 
-        <div className="px-4 py-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+        <div className="px-4 py-2 flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
             {totalReactionCount > 0 && (
               <button
@@ -255,7 +255,7 @@ export function Post({
                   {activeReactions.slice(0, 3).map((reaction) => (
                     <span
                       key={reaction.type}
-                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white dark:bg-gray-800 leading-none"
+                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-card leading-none"
                     >
                       <img src={reaction.emoji} alt={reaction.label} width={15} height={15} draggable={false} />
                     </span>
@@ -271,7 +271,7 @@ export function Post({
           </div>
         </div>
 
-        <div className="h-px bg-gray-300 dark:bg-gray-600 mx-4" />
+        <div className="h-px bg-muted mx-4" />
 
         <div className="px-4 py-2 grid grid-cols-3 gap-2 items-center">
           <ReactionButton
@@ -285,7 +285,7 @@ export function Post({
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 dark:text-gray-400 transition-colors hover:bg-muted"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-muted-foreground transition-colors hover:bg-muted"
           >
             <MessageCircle className="w-5 h-5" />
             <span className="font-medium">Bình luận</span>
@@ -294,7 +294,7 @@ export function Post({
           <button
             type="button"
             onClick={() => setIsShareModalOpen(true)}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-gray-600 dark:text-gray-400 transition-colors hover:bg-muted"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-muted-foreground transition-colors hover:bg-muted"
           >
             <Share2 className="w-5 h-5" />
             <span className="font-medium">Chia sẻ</span>
@@ -332,15 +332,15 @@ export function Post({
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800">
+        <AlertDialogContent className="border border-border bg-card sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-white">Xóa bài viết</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
+            <AlertDialogTitle className="text-foreground">Xóa bài viết</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Bạn có chắc muốn xóa bài viết không?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer border-gray-300 dark:border-gray-600">Không</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer border-border">Không</AlertDialogCancel>
             <AlertDialogAction
               className="cursor-pointer bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700"
               disabled={isDeleting}

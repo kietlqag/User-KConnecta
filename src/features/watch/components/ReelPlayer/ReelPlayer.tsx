@@ -208,9 +208,7 @@ export const ReelPlayer = ({
   return (
     <div className="flex h-full items-center justify-center overflow-hidden px-6">
       <div
-        className={`flex items-center gap-5 will-change-transform ${
-          showComments ? '-translate-x-[212px]' : 'translate-x-0'
-        }`}
+        className={`flex items-center gap-5 will-change-transform ${ showComments ? '-translate-x-[212px]' : 'translate-x-0' }`}
       >
         <div className="relative h-[calc(100vh-120px)] w-[500px] max-w-[calc(100vw-8rem)] shrink-0 overflow-hidden rounded-xl bg-black shadow-[0_8px_40px_rgba(0,0,0,0.18)] group">
           <video
@@ -253,7 +251,7 @@ export const ReelPlayer = ({
                 step="0.01"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-20 h-1 bg-white dark:bg-gray-800/30 rounded-full appearance-none outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white dark:bg-gray-800 [&::-webkit-slider-thumb]:rounded-full"
+                className="w-20 h-1 bg-card/30 rounded-full appearance-none outline-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-card [&::-webkit-slider-thumb]:rounded-full"
                 onClick={(e) => e.stopPropagation()}
               />
             )}
@@ -288,7 +286,7 @@ export const ReelPlayer = ({
               step="any"
               value={progress}
               onChange={handleSeek}
-              className="h-1 w-full cursor-pointer appearance-none bg-white/30 outline-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+              className="h-1 w-full cursor-pointer appearance-none bg-card/30 outline-none [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-card"
               style={{
                 background: `linear-gradient(to right, #10b981 ${(progress / (duration || 1)) * 100}%, rgba(255,255,255,0.3) ${(progress / (duration || 1)) * 100}%)`
               }}

@@ -29,8 +29,8 @@ export function LegalDocumentLayout({
       <div className="mt-8 space-y-8">
         {sections.map((section) => (
           <section key={section.title}>
-            <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-gray-100">{section.title}</h2>
-            <div className="space-y-3 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            <h2 className="mb-3 text-lg font-semibold text-foreground">{section.title}</h2>
+            <div className="space-y-3 text-sm leading-relaxed text-foreground">
               {section.paragraphs.map((paragraph) => (
                 <p key={paragraph}>{paragraph}</p>
               ))}

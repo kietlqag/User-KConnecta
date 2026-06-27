@@ -12,7 +12,7 @@ export const ReelResult = ({ reel, onPlay }: ReelResultProps) => {
     <button
       type="button"
       onClick={() => onPlay(reel.id)}
-      className="group relative aspect-[9/16] w-full cursor-pointer overflow-hidden rounded-xl bg-gray-900 text-left"
+      className="group relative aspect-[9/16] w-full cursor-pointer overflow-hidden rounded-xl bg-black text-left"
     >
       {reel.videoUrl ? (
         <video
@@ -24,7 +24,7 @@ export const ReelResult = ({ reel, onPlay }: ReelResultProps) => {
       ) : reel.thumbnail ? (
         <img src={reel.thumbnail} alt="" className="h-full w-full object-cover" />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-gray-800">
+        <div className="flex h-full w-full items-center justify-center bg-card">
           <Play className="h-10 w-10 text-white/70" />
         </div>
       )}

@@ -141,9 +141,7 @@ export function Header() {
                   setShowNotifications(false);
                   setShowAccountMenu(false);
                 }}
-                className={`lg:hidden p-2 rounded-full transition-colors cursor-pointer shrink-0 ${
-                  isLeftSidebarOpen ? 'bg-accent text-primary' : 'bg-muted hover:bg-muted/80'
-                }`}
+                className={`lg:hidden p-2 rounded-full transition-colors cursor-pointer shrink-0 ${ isLeftSidebarOpen ? 'bg-accent text-primary' : 'bg-muted hover:bg-muted/80' }`}
                 title="Menu điều hướng"
                 aria-label="Menu điều hướng"
                 aria-expanded={isLeftSidebarOpen}

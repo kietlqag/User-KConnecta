@@ -1,7 +1,6 @@
 ﻿import { useEffect, useRef, useState, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import { getWsBaseUrl } from '@/utils/apiBaseUrl';
-import { authService } from '@/services/authService';
 import type {
   IncomingCallError,
   IncomingChatError,
@@ -18,7 +17,7 @@ import type {
  * Quản lý kết nối WebSocket STOMP cho chat realtime + signaling call.
  */
 export function useChatSocket(
-  token: string | null | undefined,
+  enabled: boolean,
   onMessage: (msg: IncomingChatMessage) => void,
   onCallSignal?: (signal: IncomingCallSignal) => void,
   onCallError?: (error: IncomingCallError) => void,
@@ -49,24 +48,16 @@ export function useChatSocket(
   onChatErrorRef.current = onChatError;
 
   useEffect(() => {
-    if (!token) return;
+    if (!enabled) return;
 
     const wsUrl = `${getWsBaseUrl()}/ws`;
 
     const client = new Client({
       brokerURL: wsUrl,
-      connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       connectionTimeout: 15000,
-      beforeConnect: () => {
-        const freshToken = authService.getCurrentUser()?.token?.trim();
-        if (!freshToken) {
-          throw new Error('Missing auth token for WebSocket');
-        }
-        client.connectHeaders = { Authorization: `Bearer ${freshToken}` };
-      },
       onConnect: () => {
         setConnected(true);
 
@@ -165,7 +156,7 @@ export function useChatSocket(
       clientRef.current = null;
       setConnected(false);
     };
-  }, [token]);
+  }, [enabled]);
 
   const sendMessage = useCallback((receiverId: string, content: string) => {
     if (clientRef.current?.connected) {

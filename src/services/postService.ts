@@ -72,6 +72,8 @@ export interface UpdatePostPayload {
   excludedUserIds?: string[];
   allowedUserIds?: string[];
   taggedUserIds?: string[];
+  status?: PostResponse['status'];
+  scheduledAt?: string | null;
 }
 
 export interface CreateCommentPayload {
@@ -339,6 +341,7 @@ export const postService = {
     return api.post<PostResponse>('/posts', data);
   },
   getPostRateLimit: () => api.get<PostRateLimitStatus>('/posts/rate-limit'),
+  getPostEditRateLimit: () => api.get<PostRateLimitStatus>('/posts/edit-rate-limit'),
   updatePost: (postId: string, data: UpdatePostPayload) =>
     api.put<PostResponse>(`/posts/${postId}`, data),
   uploadPostImage: (file: File, signal?: AbortSignal) => {

@@ -32,9 +32,7 @@ export function PasswordRequirementsChecklist({
             {[0, 1, 2, 3].map((index) => (
               <div
                 key={index}
-                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                  index < passwordStrength ? strengthColors[passwordStrength - 1] : 'bg-muted'
-                }`}
+                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${ index < passwordStrength ? strengthColors[passwordStrength - 1] : 'bg-muted' }`}
               />
             ))}
           </div>
@@ -42,13 +40,7 @@ export function PasswordRequirementsChecklist({
             <p className="text-sm text-muted-foreground">
               Độ mạnh:{' '}
               <span
-                className={`font-semibold ${
-                  passwordStrength >= 3
-                    ? 'text-primary'
-                    : passwordStrength === 2
-                      ? 'text-amber-600'
-                      : 'text-orange-600'
-                }`}
+                className={`font-semibold ${ passwordStrength >= 3 ? 'text-primary' : passwordStrength === 2 ? 'text-amber-600' : 'text-orange-600' }`}
               >
                 {strengthLabels[passwordStrength - 1]}
               </span>
@@ -63,9 +55,7 @@ export function PasswordRequirementsChecklist({
           {items.map((item) => (
             <li key={item.label} className="flex items-center gap-2">
               <div
-                className={`flex h-4 w-4 items-center justify-center rounded-full ${
-                  item.ok ? 'bg-primary' : 'bg-muted-foreground/30'
-                }`}
+                className={`flex h-4 w-4 items-center justify-center rounded-full ${ item.ok ? 'bg-primary' : 'bg-muted-foreground/30' }`}
               >
                 {item.ok ? (
                   <svg className="h-3 w-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">

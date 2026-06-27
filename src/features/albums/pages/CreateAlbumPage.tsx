@@ -32,7 +32,7 @@ const ALBUM_TYPES: {
 ];
 
 const fieldClass =
-  'w-full rounded-[10px] border border-gray-200/90 bg-white px-4 py-3.5 text-[15px] text-gray-900 shadow-sm outline-none transition-all placeholder:text-gray-400 focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/12 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500';
+  'w-full rounded-[10px] border border-border/90 bg-card px-4 py-3.5 text-[15px] text-foreground shadow-sm outline-none transition-all placeholder:text-muted-foreground focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/12 dark:placeholder:text-muted-foreground';
 
 export function CreateAlbumPage() {
   const navigate = useNavigate();
@@ -96,7 +96,7 @@ export function CreateAlbumPage() {
           <button
             type="button"
             onClick={handleBack}
-            className="mb-5 inline-flex items-center gap-2 rounded-[10px] px-2 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-white/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100"
+            className="mb-5 inline-flex items-center gap-2 rounded-[10px] px-2 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-card/80 hover:text-foreground dark:text-muted-foreground dark:hover:text-gray-100"
           >
             <ArrowLeft className="h-4 w-4" />
             {groupId ? 'Quay lại nhóm' : 'Quay lại album'}
@@ -106,26 +106,26 @@ export function CreateAlbumPage() {
             <div className="order-2 lg:order-1">
               <div className="lg:sticky lg:top-[4.5rem]">
                 <p className="mb-3 text-sm font-medium text-[#2563EB]">Xem trước</p>
-                <div className="overflow-hidden rounded-xl border border-white/60 bg-white/80 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90">
+                <div className="overflow-hidden rounded-xl border border-white/60 bg-card/80 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-sm/90">
                   <div className={`relative flex aspect-[4/3] items-center justify-center overflow-hidden ${selectedType.soft} border-b`}>
                     <div className="absolute inset-0 opacity-40">
-                      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/50" />
-                      <div className="absolute -bottom-10 -left-6 h-28 w-28 rounded-full bg-white/40" />
+                      <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-card/50" />
+                      <div className="absolute -bottom-10 -left-6 h-28 w-28 rounded-full bg-card/40" />
                     </div>
                     <div className="relative flex flex-col items-center gap-3 px-6 text-center">
-                      <div className={`flex h-14 w-14 items-center justify-center rounded-xl bg-white shadow-md dark:bg-gray-800 ${selectedType.accent}`}>
+                      <div className={`flex h-14 w-14 items-center justify-center rounded-xl bg-card shadow-md ${selectedType.accent}`}>
                         <PreviewIcon className="h-7 w-7" />
                       </div>
                       <div>
-                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        <p className="text-lg font-semibold text-foreground">
                           {title.trim() || 'Album mới của bạn'}
                         </p>
-                        <p className="mt-1 line-clamp-2 text-sm text-gray-500 dark:text-gray-400">
+                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                           {description.trim() || 'Ảnh và video sẽ xuất hiện tại đây'}
                         </p>
                       </div>
                     </div>
-                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1 text-xs font-medium text-gray-600 shadow-sm dark:bg-gray-800/90 dark:text-gray-300">
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-lg bg-card/90 px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-sm/90">
                       <Camera className="h-3.5 w-3.5" />
                       0 ảnh/video
                     </div>
@@ -136,7 +136,7 @@ export function CreateAlbumPage() {
                       {selectedType.label}
                     </span>
                     {!groupId && (
-                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                         <PrivacyIcon className="h-3.5 w-3.5" />
                         {selectedPrivacy.label}
                       </span>
@@ -154,15 +154,15 @@ export function CreateAlbumPage() {
 
             <div className="order-1 lg:order-2">
               <div className="mb-8">
-                <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-50 sm:text-3xl">
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                   {groupId ? 'Tạo album nhóm' : 'Tạo album mới'}
                 </h1>
-                <p className="mt-2 max-w-lg text-base leading-relaxed text-gray-500 dark:text-gray-400">
+                <p className="mt-2 max-w-lg text-base leading-relaxed text-muted-foreground">
                   Lưu giữ ảnh và video của bạn trong cùng một không gian.
                 </p>
               </div>
 
-              <div className="space-y-8 rounded-xl border border-gray-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/90 sm:p-7">
+              <div className="space-y-8 rounded-xl border border-border/80 bg-card/90 p-5 shadow-sm backdrop-blur-sm/90 sm:p-7">
                 <div className="space-y-3">
                   <input
                     type="text"
@@ -189,7 +189,7 @@ export function CreateAlbumPage() {
                 {!groupId && (
                   <>
                     <div className="space-y-3">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Loại album</p>
+                      <p className="text-sm font-medium text-foreground">Loại album</p>
                       <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                         {ALBUM_TYPES.map((type) => {
                           const Icon = type.icon;
@@ -202,7 +202,7 @@ export function CreateAlbumPage() {
                               className={`flex flex-col items-center justify-center gap-1 rounded-[10px] border px-1 py-2.5 transition-all duration-200 sm:flex-row sm:gap-2 sm:px-3 sm:py-2 ${
                                 active
                                   ? `${type.soft} ${type.accent} shadow-sm`
-                                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'
+                                  : 'border-border bg-card text-foreground hover:border-border hover:bg-muted'
                               }`}
                             >
                               <Icon className="h-4 w-4 shrink-0" />
@@ -214,7 +214,7 @@ export function CreateAlbumPage() {
                     </div>
 
                     <div className="space-y-3">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Quyền riêng tư</p>
+                      <p className="text-sm font-medium text-foreground">Quyền riêng tư</p>
                       <div className="space-y-2">
                         {ALBUM_PRIVACY_OPTIONS.map((option) => {
                           const Icon = option.icon;
@@ -224,22 +224,16 @@ export function CreateAlbumPage() {
                               key={option.value}
                               type="button"
                               onClick={() => setPrivacy(option.value)}
-                              className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                                active
-                                  ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40'
-                                  : 'border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800'
-                              }`}
+                              className={`flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${ active ? 'border-emerald-500 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40' : 'border-border bg-card hover:bg-muted' }`}
                             >
                               <div
-                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                                  active ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
-                                }`}
+                                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${ active ? 'bg-emerald-600 text-white' : 'bg-muted text-muted-foreground' }`}
                               >
                                 <Icon className="h-4 w-4" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">{option.hint}</p>
+                                <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                                <p className="text-xs text-muted-foreground">{option.hint}</p>
                               </div>
                               {active && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
                             </button>
@@ -256,12 +250,12 @@ export function CreateAlbumPage() {
                   </p>
                 )}
 
-                <div className="flex flex-col-reverse gap-3 border-t border-gray-100 pt-2 dark:border-gray-800 sm:flex-row sm:justify-end">
+                <div className="flex flex-col-reverse gap-3 border-t border-border pt-2 sm:flex-row sm:justify-end">
                   <button
                     type="button"
                     onClick={handleBack}
                     disabled={createAlbum.isPending}
-                    className="rounded-[10px] px-5 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 disabled:opacity-60 dark:text-gray-300 dark:hover:bg-gray-800"
+                    className="rounded-[10px] px-5 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-60"
                   >
                     Hủy
                   </button>

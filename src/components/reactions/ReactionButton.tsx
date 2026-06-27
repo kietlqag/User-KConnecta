@@ -203,7 +203,7 @@ export function ReactionButton({
             {/* Label tooltip */}
             {hoveredReaction === index && hasEntered && (
               <span
-                className="pointer-events-none absolute -top-8 left-1/2 whitespace-nowrap rounded-md bg-gray-900 px-2 py-0.5 text-[10px] font-bold text-white dark:bg-gray-700"
+                className="pointer-events-none absolute -top-8 left-1/2 whitespace-nowrap rounded-md bg-black px-2 py-0.5 text-[10px] font-bold text-white"
                 style={{
                   transform: 'translateX(-50%)',
                   animation: 'reaction-label-in 0.18s ease-out both',
@@ -238,9 +238,7 @@ export function ReactionButton({
           style={likeAnimStyle}
         >
           <div
-            className={`flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-800 shadow-sm border border-gray-200/80 transition-all group-hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 dark:group-hover:bg-gray-700 ${
-              selectedReaction ? 'ring-2 ring-primary/30' : ''
-            }`}
+            className={`flex h-10 w-10 items-center justify-center rounded-full bg-muted text-foreground shadow-sm border border-border/80 transition-all group-hover:bg-muted dark:group-hover:bg-muted ${ selectedReaction ? 'ring-2 ring-primary/30' : '' }`}
           >
             {selectedReaction ? (
               <img src={selectedReaction.emoji} alt={selectedReaction.label} width={22} height={22} draggable={false} />
@@ -248,7 +246,7 @@ export function ReactionButton({
               <ThumbsUp className="h-5 w-5" strokeWidth={2.25} />
             )}
           </div>
-          <span className="text-[11px] font-semibold leading-none text-gray-700 tabular-nums dark:text-gray-300">
+          <span className="text-[11px] font-semibold leading-none text-foreground tabular-nums">
             {formatReelCount(count)}
           </span>
         </button>
@@ -268,9 +266,7 @@ export function ReactionButton({
         onClick={handleButtonClick}
         disabled={disabled}
         type="button"
-        className={`flex items-center justify-center gap-2 rounded-lg transition-colors hover:bg-muted disabled:opacity-60 ${
-          compact ? 'px-3 py-1 text-sm' : 'w-full px-4 py-2'
-        } ${selectedReaction ? selectedReaction.color : 'text-muted-foreground'} ${buttonClassName}`}
+        className={`flex items-center justify-center gap-2 rounded-lg transition-colors hover:bg-muted disabled:opacity-60 ${ compact ? 'px-3 py-1 text-sm' : 'w-full px-4 py-2' } ${selectedReaction ? selectedReaction.color : 'text-muted-foreground'} ${buttonClassName}`}
         style={likeAnimStyle}
       >
         {selectedReaction ? (

@@ -12,7 +12,15 @@ export function getApiBaseUrl() {
   if (!import.meta.env.VITE_API_URL) {
     return '/api';
   }
-  return `${normalizeOrigin(import.meta.env.VITE_API_URL)}/api`;
+
+  const apiOrigin = normalizeOrigin(import.meta.env.VITE_API_URL);
+
+  // Local dev: route API through Vite proxy (/api) so HttpOnly auth cookies stay same-origin.
+  if (import.meta.env.DEV && /^https?:\/\/(localhost|127\.0\.0\.1):8080$/i.test(apiOrigin)) {
+    return '/api';
+  }
+
+  return `${apiOrigin}/api`;
 }
 
 /** WebSocket base URL — same host proxy in dev, backend origin in production */

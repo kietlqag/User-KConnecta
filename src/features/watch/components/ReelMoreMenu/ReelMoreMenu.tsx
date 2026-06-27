@@ -172,34 +172,30 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
         <DropdownMenuContent
           side="left"
           align="center"
-          className="z-[80] w-64 rounded-xl border-gray-700 bg-gray-900 p-1 text-white shadow-xl"
+          className="z-[80] w-64 rounded-xl border-border bg-black p-1 text-white shadow-xl"
         >
           <DropdownMenuItem
-            className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-white focus:bg-gray-800 focus:text-white"
+            className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-white focus:bg-card focus:text-white"
             onClick={() => void handleCopyLink()}
           >
-            <Link2 className="h-5 w-5 shrink-0 text-gray-300" />
+            <Link2 className="h-5 w-5 shrink-0 text-muted-foreground" />
             <span className="font-medium">Sao chép liên kết</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-white focus:bg-gray-800 focus:text-white"
+            className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-white focus:bg-card focus:text-white"
             disabled={saving}
             onClick={() => void handleToggleSave()}
           >
             <Bookmark
-              className={`h-5 w-5 shrink-0 ${isSaved ? 'fill-emerald-400 text-emerald-400' : 'text-gray-300'}`}
+              className={`h-5 w-5 shrink-0 ${isSaved ? 'fill-emerald-400 text-emerald-400' : 'text-muted-foreground'}`}
             />
             <span className="font-medium">{isSaved ? 'Bỏ lưu video' : 'Lưu video'}</span>
           </DropdownMenuItem>
 
           {!isOwner && (
             <DropdownMenuItem
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 ${
-                hasReported
-                  ? 'cursor-default text-gray-500 focus:bg-transparent focus:text-gray-500'
-                  : 'cursor-pointer text-red-400 focus:bg-red-950/50 focus:text-red-300'
-              }`}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 ${ hasReported ? 'cursor-default text-muted-foreground focus:bg-transparent focus:text-muted-foreground' : 'cursor-pointer text-red-400 focus:bg-red-950/50 focus:text-red-300' }`}
               disabled={reporting || reportStatusLoading || hasReported}
               onClick={() => {
                 if (hasReported) {
@@ -233,11 +229,7 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
               {REPORT_CATEGORIES.map((cat) => (
                 <label
                   key={cat.value}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedCategory === cat.value
-                      ? 'border-red-400 bg-red-50'
-                      : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${ selectedCategory === cat.value ? 'border-red-400 bg-red-50' : 'border-border hover:bg-muted' }`}
                 >
                   <input
                     type="radio"
@@ -253,11 +245,11 @@ export function ReelMoreMenu({ postId, isSaved: initialSaved = false, isOwner = 
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">
-                Mô tả thêm <span className="text-gray-400">(tuỳ chọn)</span>
+              <label className="text-sm text-muted-foreground mb-1 block">
+                Mô tả thêm <span className="text-muted-foreground">(tuỳ chọn)</span>
               </label>
               <textarea
-                className="w-full rounded-md border border-gray-200 dark:border-gray-700 p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+                className="w-full rounded-md border border-border p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
                 rows={3}
                 placeholder="Mô tả chi tiết vi phạm..."
                 value={reportReason}

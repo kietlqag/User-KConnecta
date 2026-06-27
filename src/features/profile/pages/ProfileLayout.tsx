@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Outlet, useNavigate, useLocation, useParams, useOutletContext } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, useParams, useOutletContext, useNavigationType } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Header } from '../../home/components/Header';
@@ -20,6 +20,11 @@ import {
   logProfileTabRouteChange,
 } from '../utils/profileTabLogger';
 import { scrollToHomeTop } from '@/features/home/utils/scrollToHomeTop';
+import {
+  getProfileLayoutCache,
+  hasProfileLayoutCache,
+  setProfileLayoutCache,
+} from '../utils/profileSessionCache';
 
 export interface ProfileLayoutContext {
   profile: AuthUser | null;
@@ -67,6 +72,7 @@ export function ProfileLayout() {
   const [blocked, setBlocked] = React.useState(false);
   const [isEditOpen, setIsEditOpen] = React.useState(false);
   const { t } = useTranslation();
+  const navigationType = useNavigationType();
   const locationRef = React.useRef(location);
   locationRef.current = location;
   const loadedProfileRef = React.useRef<{ id: string; username?: string } | null>(null);
@@ -85,8 +91,21 @@ export function ProfileLayout() {
   }, [location.pathname, resolvedId, accessDenied, profile?.username, userId]);
 
   React.useEffect(() => {
+    if (navigationType === 'POP' && hasProfileLayoutCache(userId)) return;
     void scrollToHomeTop(480);
-  }, [location.pathname]);
+  }, [location.pathname, navigationType, userId]);
+
+  React.useEffect(() => {
+    if (!profile || !resolvedId || loading) return;
+    setProfileLayoutCache(userId, {
+      profile,
+      resolvedId,
+      friendsCount,
+      friendshipStatus,
+      accessDenied,
+      blocked,
+    });
+  }, [userId, profile, resolvedId, friendsCount, friendshipStatus, accessDenied, blocked, loading]);
 
   React.useEffect(() => {
     if (!userId || userId === 'undefined') { setLoading(false); return; }
@@ -97,14 +116,29 @@ export function ProfileLayout() {
       return;
     }
 
+    const cached = getProfileLayoutCache(userId);
+    const usedCache = Boolean(cached);
+    if (cached) {
+      setProfile(cached.profile);
+      setResolvedId(cached.resolvedId);
+      setFriendsCount(cached.friendsCount);
+      setFriendshipStatus(cached.friendshipStatus);
+      setAccessDenied(cached.accessDenied);
+      setBlocked(cached.blocked);
+      setLoading(false);
+      loadedProfileRef.current = { id: cached.resolvedId, username: cached.profile.username };
+    }
+
     let cancelled = false;
-    setLoading(true);
-    setAccessDenied(false);
-    setBlocked(false);
-    setProfile(null);
-    setResolvedId('');
-    setFriendsCount(0);
-    setFriendshipStatus(null);
+    if (!usedCache) {
+      setLoading(true);
+      setAccessDenied(false);
+      setBlocked(false);
+      setProfile(null);
+      setResolvedId('');
+      setFriendsCount(0);
+      setFriendshipStatus(null);
+    }
 
     const run = async () => {
       try {
@@ -174,7 +208,7 @@ export function ProfileLayout() {
         logProfileTabError('layout', 'load-profile', err, {
           userId,
           pathname: location.pathname,
-          hasToken: Boolean(currentUser?.token),
+          hasSession: Boolean(currentUser),
         });
         if (cancelled) return;
 
@@ -256,7 +290,7 @@ export function ProfileLayout() {
 
   if (blocked) {
     return (
-      <div className="min-h-screen bg-gray-100 dark:bg-background">
+      <div className="min-h-screen bg-background">
         <Header />
         <div className="pt-14">
           <div className="mx-auto max-w-[680px] px-4 py-16">
@@ -282,7 +316,7 @@ export function ProfileLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background">
+    <div className="min-h-screen bg-background">
       <Header />
       <div className="pt-14">
         <ProfileHeader

@@ -72,7 +72,7 @@ export const ReelInteractionPanel = ({
 
       {showNavigation && (
         <>
-          <div className="my-0.5 h-px w-9 bg-gray-200 dark:bg-gray-700" aria-hidden />
+          <div className="my-0.5 h-px w-9 bg-muted" aria-hidden />
           <div className="flex flex-col items-center gap-2">
             <button
               type="button"

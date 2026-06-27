@@ -127,7 +127,7 @@ export function CommentInput({
         {/* Ảnh xem trước */}
         {imagePreview && (
           <div className="mb-2 inline-block relative">
-            <img src={imagePreview} alt="Ảnh đính kèm" className="max-h-40 rounded-lg border border-gray-200 dark:border-gray-700 object-cover" />
+            <img src={imagePreview} alt="Ảnh đính kèm" className="max-h-40 rounded-lg border border-border object-cover" />
             {isUploading && (
               <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40">
                 <Loader2 className="h-6 w-6 animate-spin text-white" />
@@ -136,7 +136,7 @@ export function CommentInput({
             <button
               type="button"
               onClick={removeImage}
-              className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-gray-800 text-white shadow hover:bg-gray-900 cursor-pointer"
+              className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-card text-white shadow hover:bg-black cursor-pointer"
               title="Gỡ ảnh"
             >
               <X className="h-4 w-4" />
@@ -145,9 +145,7 @@ export function CommentInput({
         )}
 
         <div
-          className={`bg-gray-100 dark:bg-gray-900 rounded-full flex items-center px-3 py-2 transition-all ${
-            isFocused ? 'ring-1 ring-emerald-500' : ''
-          }`}
+          className={`bg-background rounded-full flex items-center px-3 py-2 transition-all ${ isFocused ? 'ring-1 ring-emerald-500' : '' }`}
         >
           <input
             ref={inputRef}
@@ -159,7 +157,7 @@ export function CommentInput({
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
             autoFocus={autoFocus}
-            className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-gray-500 dark:text-gray-400"
+            className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-muted-foreground"
           />
 
           <div className="ml-2 flex items-center gap-1">
@@ -172,10 +170,10 @@ export function CommentInput({
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker((prev) => !prev)}
-                className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-full transition-colors cursor-pointer"
+                className="p-1.5 hover:bg-muted rounded-full transition-colors cursor-pointer"
                 title="Emoji"
               >
-                <Smile className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <Smile className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
             {enableImage && (
@@ -191,10 +189,10 @@ export function CommentInput({
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-1.5 hover:bg-muted rounded-full transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Ảnh"
                 >
-                  <Image className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <Image className="w-5 h-5 text-muted-foreground" />
                 </button>
               </>
             )}

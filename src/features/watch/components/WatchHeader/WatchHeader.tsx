@@ -22,7 +22,7 @@ export function WatchHeader() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-background shadow-sm dark:shadow-none z-50 border-b border-gray-200 dark:border-gray-700">
+    <header className="fixed top-0 left-0 right-0 bg-background shadow-sm dark:shadow-none z-50 border-b border-border">
       <div className="max-w-[1920px] mx-auto px-4">
         <div className="flex items-center justify-between h-14">
           {/* Left Section - Logo & Search */}
@@ -34,11 +34,11 @@ export function WatchHeader() {
             </Link>
             
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Tìm kiếm trên KConnecta"
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-gray-200 dark:focus:bg-gray-700 transition-colors"
+                className="w-full pl-10 pr-4 py-2 bg-background text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-muted transition-colors"
               />
             </div>
           </div>
@@ -48,8 +48,8 @@ export function WatchHeader() {
 
           {/* Right Section - User Actions */}
           <div className="flex items-center gap-2 flex-1 justify-end max-w-[320px]">
-            <button className="p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer lg:hidden">
-              <Menu className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+            <button className="p-2 bg-background hover:bg-muted rounded-full transition-colors cursor-pointer lg:hidden">
+              <Menu className="w-6 h-6 text-foreground" />
             </button>
             
             <button 
@@ -58,15 +58,13 @@ export function WatchHeader() {
                 setShowMessenger(false);
                 setShowNotifications(false);
               }}
-              className={`hidden sm:flex p-2 hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-full transition-colors cursor-pointer ${
-                isMenuOpen ? 'bg-emerald-100' : 'bg-gray-100 dark:bg-gray-900'
-              }`}
+              className={`hidden sm:flex p-2 hover:bg-muted rounded-full transition-colors cursor-pointer ${ isMenuOpen ? 'bg-emerald-100' : 'bg-background' }`}
               title="Menu"
               aria-label="Menu"
               aria-expanded={isMenuOpen}
               data-menu-toggle
             >
-              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-emerald-600' : 'text-gray-700 dark:text-gray-300'}`} />
+              <Grid3x3 className={`w-5 h-5 ${isMenuOpen ? 'text-emerald-600' : 'text-foreground'}`} />
             </button>
             
             <button 
@@ -75,9 +73,9 @@ export function WatchHeader() {
                 setMenuOpen(false);
                 setShowNotifications(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer"
+              className="hidden sm:flex relative p-2 bg-background hover:bg-muted rounded-full transition-colors cursor-pointer"
             >
-              <MessageCircle className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <MessageCircle className="w-5 h-5 text-foreground" />
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 3
               </span>
@@ -89,9 +87,9 @@ export function WatchHeader() {
                 setMenuOpen(false);
                 setShowMessenger(false);
               }}
-              className="hidden sm:flex relative p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer"
+              className="hidden sm:flex relative p-2 bg-background hover:bg-muted rounded-full transition-colors cursor-pointer"
             >
-              <Bell className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <Bell className="w-5 h-5 text-foreground" />
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 5
               </span>

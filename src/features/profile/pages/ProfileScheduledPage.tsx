@@ -61,32 +61,32 @@ export function ProfileScheduledPage() {
 
   return (
     <div className="max-w-[680px] mx-auto px-4 py-6">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm dark:shadow-none overflow-hidden">
-        <div className="flex items-center gap-3 p-5 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-card rounded-2xl border border-border shadow-sm dark:shadow-none overflow-hidden">
+        <div className="flex items-center gap-3 p-5 border-b border-border">
           <Calendar className="w-5 h-5 text-emerald-600" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Bài viết đã lên lịch</h2>
-          {!loading && <span className="ml-auto text-sm text-gray-500 dark:text-gray-400 font-medium">{posts.length} bài</span>}
+          <h2 className="text-xl font-bold text-foreground">Bài viết đã lên lịch</h2>
+          {!loading && <span className="ml-auto text-sm text-muted-foreground font-medium">{posts.length} bài</span>}
         </div>
 
         {loading ? (
           <div className="p-12 flex justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         ) : posts.length === 0 ? (
           <div className="p-12 flex flex-col items-center text-center">
             <div className="relative mb-4 h-20 w-20">
-              <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
-              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                <FileText className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+              <div className="absolute inset-0 rotate-6 rounded-xl bg-muted" />
+              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-muted border border-border">
+                <FileText className="h-10 w-10 text-muted-foreground" />
               </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">Chưa có bài viết lên lịch</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Các bài viết bạn đặt lịch đăng sẽ xuất hiện ở đây.</p>
+            <h3 className="text-lg font-semibold text-foreground mb-1">Chưa có bài viết lên lịch</h3>
+            <p className="text-sm text-muted-foreground">Các bài viết bạn đặt lịch đăng sẽ xuất hiện ở đây.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          <div className="divide-y divide-gray-100">
             {posts.map(post => (
-              <div key={post.id} className="p-5 hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-700/50 transition-colors">
+              <div key={post.id} className="p-5 hover:bg-background/50 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
@@ -96,7 +96,7 @@ export function ProfileScheduledPage() {
                       </span>
                     </div>
                     {post.content && (
-                      <p className="text-gray-800 dark:text-gray-200 text-[15px] line-clamp-3 whitespace-pre-wrap mb-3">
+                      <p className="text-foreground text-[15px] line-clamp-3 whitespace-pre-wrap mb-3">
                         {post.content}
                       </p>
                     )}
@@ -104,16 +104,16 @@ export function ProfileScheduledPage() {
                       <div className="flex gap-2 flex-wrap">
                         {post.media.slice(0, 3).map((m, i) =>
                           m.mediaType === 'IMAGE' ? (
-                            <img key={i} src={m.mediaUrl || m.fileUrl} alt="" className="h-20 w-20 rounded-lg object-cover border border-gray-200 dark:border-gray-600" />
+                            <img key={i} src={m.mediaUrl || m.fileUrl} alt="" className="h-20 w-20 rounded-lg object-cover border border-border" />
                           ) : (
-                            <div key={i} className="h-20 w-20 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center border border-gray-200 dark:border-gray-600">
-                              <span className="text-xs text-gray-500 dark:text-gray-400">Video</span>
+                            <div key={i} className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center border border-border">
+                              <span className="text-xs text-muted-foreground">Video</span>
                             </div>
                           )
                         )}
                         {post.media.length > 3 && (
-                          <div className="h-20 w-20 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                            <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">+{post.media.length - 3}</span>
+                          <div className="h-20 w-20 rounded-lg bg-muted flex items-center justify-center">
+                            <span className="text-sm font-semibold text-muted-foreground">+{post.media.length - 3}</span>
                           </div>
                         )}
                       </div>
@@ -127,7 +127,7 @@ export function ProfileScheduledPage() {
                   <button
                     onClick={() => handleDelete(post.id)}
                     disabled={deletingId === post.id}
-                    className="shrink-0 p-2 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                    className="shrink-0 p-2 rounded-full text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
                     title="Xóa bài viết"
                   >
                     {deletingId === post.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}

@@ -269,12 +269,7 @@ export const ChatWindow = ({
   }, [jumpToMessage, jumpToMessageRequest?.nonce]);
 
   return (
-    <div className={`
-      ${fullScreen 
-        ? 'w-full h-full min-w-0 flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden' 
-        : 'fixed bottom-0 right-6 w-[360px] h-[520px] rounded-t-xl shadow-2xl z-50'}
-      relative min-w-0 flex flex-col
-    `}>
+    <div className={`${fullScreen ? 'w-full h-full min-w-0 flex flex-col rounded-2xl border border-border bg-card overflow-hidden' : 'fixed bottom-0 right-6 w-[360px] h-[520px] rounded-t-xl shadow-2xl z-50'} relative min-w-0 flex flex-col`}>
       <ChatHeader 
         user={user}
         connected={connected}
@@ -308,16 +303,16 @@ export const ChatWindow = ({
         <button
           type="button"
           onClick={() => setShowPinnedModal(true)}
-          className="flex cursor-pointer items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2 text-left hover:bg-muted"
+          className="flex cursor-pointer items-center gap-2 border-b border-border bg-background px-4 py-2 text-left hover:bg-muted"
           title="Tin nhắn đã ghim"
         >
-          <Pin className="h-4 w-4 shrink-0 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm text-gray-500 dark:text-gray-400">Đã ghim</span>
-          <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+          <Pin className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Đã ghim</span>
+          <span className="truncate text-sm font-medium text-foreground">
             {pinnedMessages[0]?.text || 'Tin nh?n'}
           </span>
           {pinnedMessages.length > 1 && (
-            <span className="ml-auto rounded-full bg-gray-200 dark:bg-gray-700 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+            <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground">
               {pinnedMessages.length}
             </span>
           )}
@@ -407,7 +402,7 @@ export const ChatWindow = ({
           />
         </>
       ) : (
-        <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400 select-none">
+        <div className="shrink-0 border-t border-border bg-background px-4 py-3 text-center text-sm text-muted-foreground select-none">
           {messagingDisabledReason}
         </div>
       )}
@@ -430,7 +425,7 @@ export const ChatWindow = ({
       />
 
       {reportNotice && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 bg-gray-800/90 text-white text-sm rounded-lg shadow-xl z-[200] animate-in fade-in zoom-in duration-200">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 bg-card/90 text-white text-sm rounded-lg shadow-xl z-[200] animate-in fade-in zoom-in duration-200">
           {reportNotice}
         </div>
       )}

@@ -147,6 +147,10 @@ export const router = createBrowserRouter([
             lazy: () => lazyNamed(() => import('../features/saved/pages/SavedPage'), 'SavedPage'),
           },
           {
+            path: '/support',
+            lazy: () => lazyNamed(() => import('../features/support/pages/SupportPage'), 'SupportPage'),
+          },
+          {
             path: '/albums/create',
             lazy: () => lazyNamed(() => import('../features/albums/pages'), 'CreateAlbumPage'),
           },

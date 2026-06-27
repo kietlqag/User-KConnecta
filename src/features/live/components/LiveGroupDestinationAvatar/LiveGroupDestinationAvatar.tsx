@@ -9,7 +9,7 @@ export function LiveGroupDestinationAvatar({ name, coverPhotoUrl }: LiveGroupDes
       <img
         src={coverPhotoUrl}
         alt={name}
-        className="h-10 w-10 shrink-0 rounded-lg border border-gray-100 object-cover dark:border-gray-700"
+        className="h-10 w-10 shrink-0 rounded-lg border border-border object-cover"
       />
     );
   }

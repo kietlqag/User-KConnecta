@@ -78,12 +78,12 @@ export const GroupsLeftSidebar = ({
   ];
 
   return (
-    <div className="sidebar-scrollbar sticky top-14 z-10 hidden h-[calc(100vh-56px)] w-[300px] shrink-0 self-start overflow-y-auto border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 md:block">
+    <div className="sidebar-scrollbar sticky top-14 z-10 hidden h-[calc(100vh-56px)] w-[300px] shrink-0 self-start overflow-y-auto border-r border-border bg-card md:block">
       <div className="p-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">{t('groups.title')}</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-4">{t('groups.title')}</h1>
 
         <div className="relative mb-4" ref={searchWrapRef}>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -94,7 +94,7 @@ export const GroupsLeftSidebar = ({
             onFocus={() => setShowSearchPanel(true)}
             onKeyDown={handleSearchKeyDown}
             placeholder={t('groups.searchPlaceholder')}
-            className="w-full pl-10 pr-9 py-2 bg-gray-100 dark:bg-gray-900 text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-gray-200 dark:focus:bg-gray-700 focus:ring-2 focus:ring-emerald-500/30 transition-colors text-[15px]"
+            className="w-full pl-10 pr-9 py-2 bg-background text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-muted focus:ring-2 focus:ring-emerald-500/30 transition-colors text-[15px]"
             aria-label={t('groups.searchPlaceholder')}
             aria-expanded={showSearchPanel}
             autoComplete="off"
@@ -106,7 +106,7 @@ export const GroupsLeftSidebar = ({
                 setSearchQuery('');
                 setShowSearchPanel(false);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-muted text-muted-foreground"
               aria-label={t('groups.clearSearch')}
             >
               <X className="w-4 h-4" />
@@ -144,11 +144,9 @@ export const GroupsLeftSidebar = ({
                   else if (section.id === 'feed') navigate('/groups');
                   else if (section.id === 'discover') navigate('/groups/discover');
                 }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                  isActive ? 'bg-emerald-50 text-emerald-600' : 'text-gray-900 dark:text-gray-100 hover:bg-muted'
-                }`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${ isActive ? 'bg-emerald-50 text-emerald-600' : 'text-foreground hover:bg-muted' }`}
               >
-                <div className={isActive ? 'text-emerald-600' : 'text-gray-600 dark:text-gray-400'}>{section.icon}</div>
+                <div className={isActive ? 'text-emerald-600' : 'text-muted-foreground'}>{section.icon}</div>
                 <span className="font-medium">{section.label}</span>
               </button>
             );
@@ -158,17 +156,17 @@ export const GroupsLeftSidebar = ({
         <button
           type="button"
           onClick={() => navigate('/groups/create')}
-          className="mb-4 flex w-full items-center gap-3 rounded-lg bg-gray-100 px-3 py-2.5 transition-colors hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-700"
+          className="mb-4 flex w-full items-center gap-3 rounded-lg bg-muted px-3 py-2.5 transition-colors hover:bg-muted"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600">
-            <Plus className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
+            <Plus className="h-5 w-5 text-foreground" />
           </div>
-          <span className="font-semibold text-gray-900 dark:text-gray-100">{t('groups.createGroup')}</span>
+          <span className="font-semibold text-foreground">{t('groups.createGroup')}</span>
         </button>
 
         {showGroupLists && (
           <>
-            <div className="my-4 border-t border-gray-200 dark:border-gray-700" />
+            <div className="my-4 border-t border-border" />
             <GroupsListsPanel joinedGroups={joinedGroups} managedGroups={managedGroups} />
           </>
         )}

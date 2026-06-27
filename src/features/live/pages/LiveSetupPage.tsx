@@ -783,21 +783,21 @@ export default function LiveSetupPage() {
   const progressPercent = (completedCount / checklist.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <div className="pt-14 flex">
-        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-border bg-card">
           <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-5 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <h1 className="text-2xl leading-tight font-bold text-gray-900 dark:text-gray-100 mb-2">Tạo video trực tiếp</h1>
-            <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          <div className="mb-5 border-b border-border pb-4">
+            <h1 className="text-2xl leading-tight font-bold text-foreground mb-2">Tạo video trực tiếp</h1>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div className="h-full bg-green-600 transition-all duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
             <div className="mt-3 space-y-2">
               {checklist.map((item) => (
-                <div key={item.label} className="flex items-center gap-3 text-sm text-gray-900 dark:text-gray-100">
-                  {item.done ? <CircleCheck className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5 text-gray-500 dark:text-gray-400" />}
+                <div key={item.label} className="flex items-center gap-3 text-sm text-foreground">
+                  {item.done ? <CircleCheck className="w-5 h-5 text-green-600" /> : <Circle className="w-5 h-5 text-muted-foreground" />}
                   {item.label}
                 </div>
               ))}
@@ -805,27 +805,27 @@ export default function LiveSetupPage() {
           </div>
 
           <div className="mb-3 flex items-center gap-2.5">
-            <div className="h-11 w-11 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+            <div className="h-11 w-11 overflow-hidden rounded-full bg-muted flex items-center justify-center">
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
               ) : (
-                <UserRound className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+                <UserRound className="w-6 h-6 text-muted-foreground" />
               )}
             </div>
             <div className="leading-snug">
-              <p className="text-base font-bold text-gray-900 dark:text-gray-100">{currentUserName}</p>
-              <p className="text-xs text-gray-700 dark:text-gray-300">Người tổ chức - Trang cá nhân của bạn</p>
+              <p className="text-base font-bold text-foreground">{currentUserName}</p>
+              <p className="text-xs text-foreground">Người tổ chức - Trang cá nhân của bạn</p>
             </div>
           </div>
 
-          <div className="space-y-3 border-b border-gray-200 dark:border-gray-700 pb-4">
+          <div className="space-y-3 border-b border-border pb-4">
             <div className="relative">
               <button
                 onClick={() => setIsDestinationOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-left bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="w-full rounded-xl border border-border px-4 py-2.5 text-left bg-card hover:bg-muted"
               >
-                <p className="text-sm text-gray-500 dark:text-gray-400">Chọn nơi đăng</p>
-                <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-sm text-muted-foreground">Chọn nơi đăng</p>
+                <div className="flex items-center justify-between text-base font-semibold text-foreground">
                   <span>
                     {isGroupDestination && selectedGroups.length > 0
                       ? `${selectedGroups.length} nhóm đã chọn`
@@ -836,7 +836,7 @@ export default function LiveSetupPage() {
               </button>
 
               {isDestinationOpen && (
-                <div className="absolute top-full left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none overflow-hidden">
+                <div className="absolute top-full left-0 right-0 z-20 mt-2 rounded-xl border border-border bg-card shadow-sm dark:shadow-none overflow-hidden">
                   {destinationOptions.map((option) => (
                     <button
                       key={option.id}
@@ -854,12 +854,12 @@ export default function LiveSetupPage() {
                         setDestinationSearch('');
                       }}
                       disabled={option.id === 'group' && !hasGroupItems}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left disabled:cursor-not-allowed disabled:opacity-50"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted text-left disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">{option.icon}</div>
+                      <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center">{option.icon}</div>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">
                           {option.id === 'group' && !hasGroupItems
                             ? 'Chưa có dữ liệu để chọn'
                             : option.description}
@@ -873,21 +873,21 @@ export default function LiveSetupPage() {
             </div>
 
             {isGroupDestination && isDestinationItemsOpen && (
-              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-                <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-                  <Search className="h-4 w-4 text-gray-400" />
+              <div className="rounded-xl border border-border bg-card p-3">
+                <div className="mb-2 flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
                   <input
                     value={destinationSearch}
                     onChange={(e) => setDestinationSearch(e.target.value)}
                     placeholder="Tìm nhóm..."
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
+                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                 </div>
 
                 <div className="max-h-48 space-y-1 overflow-auto">
-                  {isDestinationLoading && <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Đang tải dữ liệu...</p>}
+                  {isDestinationLoading && <p className="px-2 py-1 text-sm text-muted-foreground">Đang tải dữ liệu...</p>}
                   {!isDestinationLoading && filteredDestinationItems.length === 0 && (
-                    <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Không có dữ liệu phù hợp.</p>
+                    <p className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu phù hợp.</p>
                   )}
                   {!isDestinationLoading &&
                     filteredDestinationItems.map((item) => {
@@ -903,21 +903,17 @@ export default function LiveSetupPage() {
                                 : [...prev, item],
                             );
                           }}
-                          className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-center gap-2.5 ${
-                            isSelected ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
-                          }`}
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm flex items-center gap-2.5 ${ isSelected ? 'bg-green-50 text-green-700' : 'hover:bg-muted text-foreground' }`}
                         >
                           <span
-                              className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                                isSelected ? 'border-green-600 bg-green-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
-                              }`}
+                              className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded border ${ isSelected ? 'border-green-600 bg-green-600 text-white' : 'border-border bg-card' }`}
                             >
                               {isSelected ? <Check className="h-3 w-3" /> : null}
                             </span>
                           <LiveGroupDestinationAvatar name={item.name} coverPhotoUrl={item.coverPhotoUrl} />
                           <span className="min-w-0 flex-1">
                             <p className="font-medium truncate">{item.name}</p>
-                            {item.description ? <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{item.description}</p> : null}
+                            {item.description ? <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p> : null}
                           </span>
                         </button>
                       );
@@ -934,12 +930,10 @@ export default function LiveSetupPage() {
                   setIsPrivacyOpen((prev) => !prev);
                 }}
                 disabled={isPrivacyLocked}
-                className={`w-full rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-left bg-white dark:bg-gray-800 ${
-                  isPrivacyLocked ? 'cursor-not-allowed opacity-80' : 'hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
+                className={`w-full rounded-xl border border-border px-4 py-2.5 text-left bg-card ${ isPrivacyLocked ? 'cursor-not-allowed opacity-80' : 'hover:bg-muted' }`}
               >
-                <p className="text-sm text-gray-500 dark:text-gray-400">Quyền riêng tư</p>
-                <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-sm text-muted-foreground">Quyền riêng tư</p>
+                <div className="flex items-center justify-between text-base font-semibold text-foreground">
                   <span className="inline-flex items-center gap-2">
                     <selectedPrivacyOption.icon className="w-5 h-5" />
                     {selectedPrivacyOption.label}
@@ -949,11 +943,11 @@ export default function LiveSetupPage() {
                   )}
                 </div>
                 {isPrivacyLocked && (
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Bài đăng trong nhóm luôn công khai</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Bài đăng trong nhóm luôn công khai</p>
                 )}
               </button>
               {isPrivacyOpen && !isPrivacyLocked && (
-                <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none overflow-hidden">
+                <div className="absolute left-0 right-0 z-20 mt-2 rounded-xl border border-border bg-card shadow-sm dark:shadow-none overflow-hidden">
                   {privacyOptions.map((option) => {
                     const Icon = option.icon;
                     return (
@@ -964,14 +958,14 @@ export default function LiveSetupPage() {
                           setSelectedPrivacy(option.id);
                           setIsPrivacyOpen(false);
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted text-left"
                       >
-                        <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                        <div className="h-8 w-8 rounded-full bg-background flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-foreground" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{option.description}</p>
+                          <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                          <p className="text-xs text-muted-foreground">{option.description}</p>
                         </div>
                         {selectedPrivacy === option.id && <Check className="w-4 h-4 text-green-600" />}
                       </button>
@@ -988,14 +982,10 @@ export default function LiveSetupPage() {
               return (
                 <button
                   key={item.label}
-                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-base font-semibold ${
-                    item.active ? 'bg-green-50 text-gray-900 dark:text-gray-100' : 'hover:bg-muted text-gray-900 dark:text-gray-100'
-                  }`}
+                  className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-base font-semibold ${ item.active ? 'bg-green-50 text-foreground' : 'hover:bg-muted text-foreground' }`}
                 >
                   <span
-                    className={`h-11 w-11 rounded-full flex items-center justify-center ${
-                      item.active ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
-                    }`}
+                    className={`h-11 w-11 rounded-full flex items-center justify-center ${ item.active ? 'bg-green-600 text-white' : 'bg-muted text-foreground' }`}
                   >
                     <Icon className="w-5 h-5" />
                   </span>
@@ -1006,21 +996,19 @@ export default function LiveSetupPage() {
           </div>
           </div>
 
-          <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+          <div className="shrink-0 border-t border-border bg-card p-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/live')}
-              className="flex-1 rounded-xl bg-gray-200 dark:bg-gray-700 py-2.5 text-base font-semibold text-gray-900 dark:text-gray-100"
+              className="flex-1 rounded-xl bg-muted py-2.5 text-base font-semibold text-foreground"
             >
               Quay lại
             </button>
             <button
               onClick={() => void handleGoLive()}
               disabled={!canGoLive || isCreatingLivePost}
-              className={`flex-1 rounded-xl py-2.5 text-base font-semibold text-white transition-colors ${
-                canGoLive && !isCreatingLivePost ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'
-              }`}
+              className={`flex-1 rounded-xl py-2.5 text-base font-semibold text-white transition-colors ${ canGoLive && !isCreatingLivePost ? 'bg-primary hover:bg-primary/90' : 'bg-gray-400 cursor-not-allowed' }`}
             >
               {isCreatingLivePost ? 'Đang lưu...' : 'Phát trực tiếp'}
             </button>
@@ -1032,9 +1020,9 @@ export default function LiveSetupPage() {
         <main className="flex-1 p-6">
           <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-4 xl:grid-cols-[1.15fr_1fr]">
             <div className="space-y-4">
-              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-                <h2 className="mb-3 text-2xl font-bold text-gray-900 dark:text-gray-100">Kiểm soát camera</h2>
-                <p className="mb-4 text-base text-gray-700 dark:text-gray-300">Trước khi phát trực tiếp, hãy kiểm tra xem đầu vào camera và micrô đã hoạt động đúng cách chưa.</p>
+              <section className="rounded-2xl border border-border bg-card p-4">
+                <h2 className="mb-3 text-2xl font-bold text-foreground">Kiểm soát camera</h2>
+                <p className="mb-4 text-base text-foreground">Trước khi phát trực tiếp, hãy kiểm tra xem đầu vào camera và micrô đã hoạt động đúng cách chưa.</p>
 
                 <div className="space-y-3">
                   <div className="relative">
@@ -1044,7 +1032,7 @@ export default function LiveSetupPage() {
                         setIsCameraOpen((prev) => !prev);
                         setIsMicOpen(false);
                       }}
-                      className="h-11 w-full flex items-center gap-2.5 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900 px-3"
+                      className="h-11 w-full flex items-center gap-2.5 overflow-hidden rounded-xl bg-background px-3"
                     >
                       <Camera className="w-5 h-5 text-green-600 shrink-0" />
                       <span
@@ -1056,15 +1044,13 @@ export default function LiveSetupPage() {
                       <ChevronDown className={`w-5 h-5 shrink-0 transition-transform ${isCameraOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {isCameraOpen && cameras.length > 0 && (
-                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md">
+                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-border bg-card shadow-md">
                         {cameras.map((camera) => (
                           <button
                             key={camera.deviceId}
                             type="button"
                             onClick={() => handleSelectCamera(camera)}
-                            className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                              selectedCameraId === camera.deviceId ? 'bg-green-50 text-green-700' : 'text-gray-800 dark:text-gray-200'
-                            }`}
+                            className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-muted ${ selectedCameraId === camera.deviceId ? 'bg-green-50 text-green-700' : 'text-foreground' }`}
                           >
                             <span className="min-w-0 flex-1">
                               <span className="block truncate">{camera.label || 'Camera mặc định'}</span>
@@ -1086,7 +1072,7 @@ export default function LiveSetupPage() {
                         setIsMicOpen((prev) => !prev);
                         setIsCameraOpen(false);
                       }}
-                      className="h-11 w-full flex items-center gap-2.5 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-900 px-3"
+                      className="h-11 w-full flex items-center gap-2.5 overflow-hidden rounded-xl bg-background px-3"
                     >
                       <Mic className="w-5 h-5 text-green-600 shrink-0" />
                       <span
@@ -1098,21 +1084,19 @@ export default function LiveSetupPage() {
                       <ChevronDown className={`w-5 h-5 shrink-0 transition-transform ${isMicOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {isMicOpen && microphones.length > 0 && (
-                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md">
+                      <div className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-border bg-card shadow-md">
                         {microphones.map((mic) => (
                           <button
                             key={mic.deviceId}
                             type="button"
                             onClick={() => handleSelectMic(mic)}
-                            className={`w-full px-3 py-2 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                              selectedMicId === mic.deviceId ? 'bg-green-50 text-green-700' : 'text-gray-800 dark:text-gray-200'
-                            }`}
+                            className={`w-full px-3 py-2 text-left text-xs hover:bg-muted ${ selectedMicId === mic.deviceId ? 'bg-green-50 text-green-700' : 'text-foreground' }`}
                           >
                             <div className="flex items-center justify-between gap-2">
                               <span className="truncate">{mic.label || 'Microphone mặc định'}</span>
-                              <span className="shrink-0 text-[11px] text-gray-500 dark:text-gray-400">{`${micLevels[mic.deviceId] ?? 0}%`}</span>
+                              <span className="shrink-0 text-[11px] text-muted-foreground">{`${micLevels[mic.deviceId] ?? 0}%`}</span>
                             </div>
-                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                               <div
                                 className="h-full rounded-full bg-green-600 transition-[width] duration-100"
                                 style={{ width: `${micLevels[mic.deviceId] ?? 0}%` }}
@@ -1127,16 +1111,16 @@ export default function LiveSetupPage() {
                     type="button"
                     onClick={() => void handleShareScreen()}
                     disabled={isStartingShare}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gray-200 dark:bg-gray-700 py-2.5 text-base font-semibold hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-muted py-2.5 text-base font-semibold hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <MonitorSmartphone className="w-5 h-5" />
                     {isStartingShare ? 'Đang mở chia sẻ...' : isScreenSharing ? 'Đang chia sẻ màn hình' : 'Chia sẻ màn hình'}
                   </button>
-                  {!!mediaError && !isSwitchingCamera && <p className="text-xs text-gray-500 dark:text-gray-400">{mediaError}</p>}
+                  {!!mediaError && !isSwitchingCamera && <p className="text-xs text-muted-foreground">{mediaError}</p>}
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <section className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="mb-3 text-2xl font-bold">Video</h2>
                 <div className="relative h-[300px] rounded-xl bg-black flex items-center justify-center overflow-hidden">
                   <video
@@ -1171,41 +1155,41 @@ export default function LiveSetupPage() {
                   />
                 </div>
                 <button className="mt-4 inline-flex items-center gap-3 text-base font-semibold">
-                  <MessageSquare className="w-8 h-8 text-gray-600 dark:text-gray-400" /> Nhật ký sự kiện
+                  <MessageSquare className="w-8 h-8 text-muted-foreground" /> Nhật ký sự kiện
                 </button>
               </section>
             </div>
 
             <div className="space-y-4">
-              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <section className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="mb-4 text-2xl font-bold">Thêm chi tiết về bài viết</h2>
                 <div className="mb-4 space-y-3">
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-300">Tiêu đề</label>
+                    <label className="mb-1 block text-sm font-semibold text-foreground">Tiêu đề</label>
                     <input
                       value={postTitle}
                       onChange={(e) => setPostTitle(e.target.value)}
-                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-500 outline-none ring-2 ring-transparent focus:border-green-400 focus:ring-green-100"
+                      className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none ring-2 ring-transparent focus:border-green-400 focus:ring-green-100"
                       placeholder="Nhập tiêu đề buổi phát trực tiếp"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-300">Mô tả</label>
+                    <label className="mb-1 block text-sm font-semibold text-foreground">Mô tả</label>
                     <textarea
                       value={postDescription}
                       onChange={(e) => setPostDescription(e.target.value)}
                       rows={3}
-                      className="w-full resize-none rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 placeholder:text-gray-500 outline-none ring-2 ring-transparent focus:border-green-400 focus:ring-green-100"
+                      className="w-full resize-none rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none ring-2 ring-transparent focus:border-green-400 focus:ring-green-100"
                       placeholder="Mô tả ngắn về nội dung buổi phát trực tiếp"
                     />
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <section className="rounded-2xl border border-border bg-card p-4">
                 <h2 className="mb-3 text-2xl font-bold">Bình luận ghim sẵn</h2>
-                <p className="text-sm text-gray-700 dark:text-gray-300">Bình luận này sẽ tự động được ghim trong đoạn chat của tất cả video trực tiếp mà bạn đăng.</p>
-                <div className="my-4 flex items-center justify-between border-y border-gray-200 dark:border-gray-700 py-2.5">
+                <p className="text-sm text-foreground">Bình luận này sẽ tự động được ghim trong đoạn chat của tất cả video trực tiếp mà bạn đăng.</p>
+                <div className="my-4 flex items-center justify-between border-y border-border py-2.5">
                   <p className="text-sm font-semibold">Bật bình luận ghim sẵn</p>
                   <button
                     type="button"
@@ -1213,27 +1197,25 @@ export default function LiveSetupPage() {
                     onClick={() => {
                       void savePinnedComment(!pinnedEnabled, pinnedCommentText);
                     }}
-                    className={`h-7 w-14 rounded-full p-1 transition-colors ${
-                      pinnedEnabled ? 'bg-green-600' : 'bg-gray-400'
-                    } disabled:opacity-60 disabled:cursor-not-allowed`}
+                    className={`h-7 w-14 rounded-full p-1 transition-colors ${ pinnedEnabled ? 'bg-green-600' : 'bg-gray-400' } disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
-                    <div className={`h-5 w-5 rounded-full bg-white dark:bg-gray-800 transition-transform ${pinnedEnabled ? 'translate-x-7' : ''}`} />
+                    <div className={`h-5 w-5 rounded-full bg-card transition-transform ${pinnedEnabled ? 'translate-x-7' : ''}`} />
                   </button>
                 </div>
                 <p className="mb-3 text-sm font-semibold">Xem trước</p>
                 <div className="mb-3 flex items-center gap-2 text-green-600 text-sm"><Pin className="w-4 h-4" /> Bình luận ghim</div>
-                <div className="rounded-2xl bg-gray-100 dark:bg-gray-900 p-3">
+                <div className="rounded-2xl bg-background p-3">
                   <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted flex items-center justify-center">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                       ) : (
-                        <UserRound className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                        <UserRound className="w-5 h-5 text-muted-foreground" />
                       )}
                     </div>
                     <div>
                       <p className="text-sm font-semibold">{currentUserName}</p>
-                      <p className="text-sm text-gray-800 dark:text-gray-200">{pinnedCommentText}</p>
+                      <p className="text-sm text-foreground">{pinnedCommentText}</p>
                     </div>
                   </div>
                 </div>
@@ -1243,7 +1225,7 @@ export default function LiveSetupPage() {
                       value={pinnedDraftText}
                       onChange={(e) => setPinnedDraftText(e.target.value)}
                       rows={3}
-                      className="w-full resize-none rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-green-400"
+                      className="w-full resize-none rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-green-400"
                       placeholder="Nhập nội dung bình luận ghim..."
                     />
                     <div className="flex gap-2">
@@ -1253,7 +1235,7 @@ export default function LiveSetupPage() {
                           setPinnedDraftText(pinnedCommentText);
                           setIsPinnedEditMode(false);
                         }}
-                        className="flex-1 rounded-xl bg-gray-200 dark:bg-gray-700 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300"
+                        className="flex-1 rounded-xl bg-muted py-2 text-sm font-semibold text-foreground"
                       >
                         Hủy
                       </button>

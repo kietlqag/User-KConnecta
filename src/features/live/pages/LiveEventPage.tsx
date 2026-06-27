@@ -34,13 +34,13 @@ const destinationOptions = [
     id: 'profile' as const,
     label: 'Đăng lên trang cá nhân',
     description: 'Trang cá nhân của bạn',
-    icon: <UserRound className="w-4 h-4 text-gray-600 dark:text-gray-400" />,
+    icon: <UserRound className="w-4 h-4 text-muted-foreground" />,
   },
   {
     id: 'group' as const,
     label: 'Đăng trong nhóm',
     description: 'Chia sẻ trong các nhóm',
-    icon: <UsersRound className="w-4 h-4 text-gray-600 dark:text-gray-400" />,
+    icon: <UsersRound className="w-4 h-4 text-muted-foreground" />,
   },
 ];
 
@@ -175,25 +175,25 @@ export default function LiveEventPage() {
       <Header />
 
       <div className="flex pt-14">
-        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-emerald-100/80 bg-white dark:bg-gray-800/90 shadow-[4px_0_24px_rgba(16,185,129,0.06)] backdrop-blur-sm">
+        <aside className="sticky top-14 flex h-[calc(100vh-56px)] w-[340px] shrink-0 flex-col border-r border-emerald-100/80 bg-card/90 shadow-[4px_0_24px_rgba(16,185,129,0.06)] backdrop-blur-sm">
           <div className="flex-1 overflow-y-auto p-4">
           <div className="mb-5 overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50/60 p-4">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-white dark:bg-gray-800/80 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm dark:shadow-none">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-emerald-200/80 bg-card/80 px-3 py-1 text-xs font-semibold text-emerald-700 shadow-sm dark:shadow-none">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
               Lên lịch phát trực tiếp
             </div>
-            <h1 className="mb-2 text-2xl font-bold leading-tight text-gray-900 dark:text-gray-100">Lên lịch buổi live</h1>
-            <p className="mb-4 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+            <h1 className="mb-2 text-2xl font-bold leading-tight text-foreground">Lên lịch buổi live</h1>
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
               Tạo bài thông báo trước. Đến giờ bạn mới thiết lập camera và bắt đầu phát.
             </p>
-            <div className="mb-1 flex items-center justify-between text-xs font-medium text-gray-500 dark:text-gray-400">
+            <div className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
               <span>Tiến độ chuẩn bị</span>
               <span className="text-emerald-700">{completedSteps}/{checklist.length}</span>
             </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-white dark:bg-gray-800/80 shadow-inner">
+            <div className="h-2.5 overflow-hidden rounded-full bg-card/80 shadow-inner">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 transition-all duration-500 ease-out"
                 style={{ width: `${progressPercent}%` }}
@@ -203,14 +203,12 @@ export default function LiveEventPage() {
               {checklist.map((item) => (
                 <div
                   key={item.label}
-                  className={`flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors ${
-                    item.done ? 'bg-emerald-50/90 text-emerald-900' : 'text-gray-700 dark:text-gray-300'
-                  }`}
+                  className={`flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm transition-colors ${ item.done ? 'bg-emerald-50/90 text-emerald-900' : 'text-foreground' }`}
                 >
                   {item.done ? (
                     <CircleCheck className="h-5 w-5 shrink-0 text-emerald-600" />
                   ) : (
-                    <Circle className="h-5 w-5 shrink-0 text-gray-400" />
+                    <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
                   )}
                   <span className={item.done ? 'font-medium' : ''}>{item.label}</span>
                 </div>
@@ -218,7 +216,7 @@ export default function LiveEventPage() {
             </div>
           </div>
 
-          <div className="mb-4 flex items-center gap-3 rounded-2xl border border-gray-100 dark:border-gray-800 bg-gradient-to-r from-white to-gray-50/80 p-3 shadow-sm dark:shadow-none">
+          <div className="mb-4 flex items-center gap-3 rounded-2xl border border-border bg-gradient-to-r from-white to-gray-50/80 p-3 shadow-sm dark:shadow-none">
             <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 ring-2 ring-emerald-200/60 ring-offset-2">
               {currentUserAvatar ? (
                 <img src={currentUserAvatar} alt={currentUserName} className="h-full w-full object-cover" />
@@ -227,27 +225,27 @@ export default function LiveEventPage() {
               )}
             </div>
             <div className="min-w-0 leading-snug">
-              <p className="truncate text-base font-bold text-gray-900 dark:text-gray-100">{currentUserName}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Người tổ chức · Trang cá nhân</p>
+              <p className="truncate text-base font-bold text-foreground">{currentUserName}</p>
+              <p className="text-xs text-muted-foreground">Người tổ chức · Trang cá nhân</p>
             </div>
           </div>
 
-          <div className="space-y-3 border-b border-gray-200 dark:border-gray-700 pb-4">
+          <div className="space-y-3 border-b border-border pb-4">
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsDestinationOpen((prev) => !prev)}
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-left shadow-sm dark:shadow-none transition-all hover:border-emerald-200 hover:shadow-md"
+                className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-left shadow-sm dark:shadow-none transition-all hover:border-emerald-200 hover:shadow-md"
               >
-                <p className="text-sm text-gray-500 dark:text-gray-400">Chọn nơi đăng</p>
-                <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-sm text-muted-foreground">Chọn nơi đăng</p>
+                <div className="flex items-center justify-between text-base font-semibold text-foreground">
                   <span>{selectedDestinationOption?.label}</span>
                   <ChevronDown className={`h-6 w-6 transition-transform ${isDestinationOpen ? 'rotate-180' : ''}`} />
                 </div>
               </button>
 
               {isDestinationOpen && (
-                <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none">
+                <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-border bg-card shadow-sm dark:shadow-none">
                   {destinationOptions.map((option) => {
                     const disabled = option.id === 'group' && groups.length === 0;
                     return (
@@ -265,12 +263,12 @@ export default function LiveEventPage() {
                           setIsDestinationOpen(false);
                           setDestinationSearch('');
                         }}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-background">{option.icon}</div>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background">{option.icon}</div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                          <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                          <p className="text-xs text-muted-foreground">
                             {disabled ? 'Chưa có dữ liệu để chọn' : option.description}
                           </p>
                         </div>
@@ -283,20 +281,20 @@ export default function LiveEventPage() {
             </div>
 
             {isGroupDestination && (
-              <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
-                <div className="mb-2 flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-                  <Search className="h-4 w-4 text-gray-400" />
+              <div className="rounded-xl border border-border bg-card p-3">
+                <div className="mb-2 flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
                   <input
                     value={destinationSearch}
                     onChange={(e) => setDestinationSearch(e.target.value)}
                     placeholder="Tìm nhóm..."
-                    className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400"
+                    className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                 </div>
                 <div className="max-h-48 space-y-1 overflow-auto">
-                  {isLoadingDestinations && <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Đang tải dữ liệu...</p>}
+                  {isLoadingDestinations && <p className="px-2 py-1 text-sm text-muted-foreground">Đang tải dữ liệu...</p>}
                   {!isLoadingDestinations && filteredDestinationItems.length === 0 && (
-                    <p className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">Không có dữ liệu phù hợp.</p>
+                    <p className="px-2 py-1 text-sm text-muted-foreground">Không có dữ liệu phù hợp.</p>
                   )}
                   {!isLoadingDestinations && filteredDestinationItems.map((item) => {
                     const isSelected = selectedGroupId === item.id;
@@ -305,16 +303,12 @@ export default function LiveEventPage() {
                         key={item.id}
                         type="button"
                         onClick={() => setSelectedGroupId(item.id)}
-                        className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm transition-colors ${
-                          isSelected ? 'bg-emerald-50 text-emerald-800' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
+                        className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm transition-colors ${ isSelected ? 'bg-emerald-50 text-emerald-800' : 'text-foreground hover:bg-muted' }`}
                       >
                         <LiveGroupDestinationAvatar name={item.name} coverPhotoUrl={item.coverPhotoUrl} />
                         <span className="min-w-0 flex-1 truncate font-medium">{item.name}</span>
                         <span
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                            isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'
-                          }`}
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${ isSelected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-border bg-card' }`}
                         >
                           {isSelected && <Check className="h-3 w-3" />}
                         </span>
@@ -333,24 +327,22 @@ export default function LiveEventPage() {
                   setIsPrivacyOpen((prev) => !prev);
                 }}
                 disabled={isPrivacyLocked}
-                className={`w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-left shadow-sm dark:shadow-none transition-all ${
-                  isPrivacyLocked ? 'cursor-not-allowed opacity-80' : 'hover:border-emerald-200 hover:shadow-md'
-                }`}
+                className={`w-full rounded-xl border border-border bg-card px-4 py-2.5 text-left shadow-sm dark:shadow-none transition-all ${ isPrivacyLocked ? 'cursor-not-allowed opacity-80' : 'hover:border-emerald-200 hover:shadow-md' }`}
               >
-                <p className="text-sm text-gray-500 dark:text-gray-400">Chọn quyền riêng tư</p>
-                <div className="flex items-center justify-between text-base font-semibold text-gray-900 dark:text-gray-100">
+                <p className="text-sm text-muted-foreground">Chọn quyền riêng tư</p>
+                <div className="flex items-center justify-between text-base font-semibold text-foreground">
                   <span>{selectedPrivacyOption?.label}</span>
                   {!isPrivacyLocked && (
                     <ChevronDown className={`h-6 w-6 transition-transform ${isPrivacyOpen ? 'rotate-180' : ''}`} />
                   )}
                 </div>
                 {isPrivacyLocked && (
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Bài đăng trong nhóm luôn công khai</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Bài đăng trong nhóm luôn công khai</p>
                 )}
               </button>
 
               {isPrivacyOpen && !isPrivacyLocked && (
-                <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm dark:shadow-none">
+                <div className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-xl border border-border bg-card shadow-sm dark:shadow-none">
                   {privacyOptions.map((option) => {
                     const Icon = option.icon;
                     return (
@@ -361,14 +353,14 @@ export default function LiveEventPage() {
                           setPrivacy(option.id);
                           setIsPrivacyOpen(false);
                         }}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted"
                       >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-background">
-                          <Icon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-background">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{option.label}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{option.description}</p>
+                          <p className="text-sm font-semibold text-foreground">{option.label}</p>
+                          <p className="text-xs text-muted-foreground">{option.description}</p>
                         </div>
                         {privacy === option.id && <Check className="h-4 w-4 text-emerald-600" />}
                       </button>
@@ -381,12 +373,12 @@ export default function LiveEventPage() {
 
           </div>
 
-          <div className="shrink-0 border-t border-emerald-100/80 bg-white dark:bg-gray-800/95 p-4 backdrop-blur-sm">
+          <div className="shrink-0 border-t border-emerald-100/80 bg-card/95 p-4 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => navigate('/live')}
-              className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-2.5 text-base font-semibold text-gray-800 dark:text-gray-200 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="flex-1 rounded-xl border border-border bg-card py-2.5 text-base font-semibold text-foreground transition-colors hover:bg-muted"
             >
               Quay lại
             </button>
@@ -394,11 +386,7 @@ export default function LiveEventPage() {
               type="button"
               disabled={!canSubmit || isSubmitting}
               onClick={() => void handleCreateEvent()}
-              className={`flex-1 rounded-xl py-2.5 text-base font-semibold text-white transition-all ${
-                canSubmit && !isSubmitting
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/30 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/40'
-                  : 'cursor-not-allowed bg-gray-300 dark:bg-gray-600'
-              }`}
+              className={`flex-1 rounded-xl py-2.5 text-base font-semibold text-white transition-all ${ canSubmit && !isSubmitting ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-lg shadow-emerald-500/30 hover:from-emerald-500 hover:to-teal-500 hover:shadow-emerald-500/40' : 'cursor-not-allowed bg-muted' }`}
             >
               {isSubmitting ? 'Đang tạo...' : 'Tạo sự kiện'}
             </button>
@@ -410,60 +398,60 @@ export default function LiveEventPage() {
         <main className="flex-1 p-6 lg:p-8">
           <div className="mx-auto grid max-w-6xl gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
           <section className="max-w-xl">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Chi tiết sự kiện</h2>
-            <p className="mt-1 mb-6 text-sm text-gray-600 dark:text-gray-400">
+            <h2 className="text-xl font-bold text-foreground">Chi tiết sự kiện</h2>
+            <p className="mt-1 mb-6 text-sm text-muted-foreground">
               Thông tin này sẽ hiển thị trên bài thông báo trong feed.
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">Tên sự kiện</label>
+                <label className="mb-1.5 block text-sm font-semibold text-foreground">Tên sự kiện</label>
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Ví dụ: Livestream giới thiệu sản phẩm mới"
-                  className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 outline-none placeholder:text-gray-500 focus:border-green-500"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-green-500"
                 />
                 <div className="mt-1 flex items-center justify-between text-xs">
                   {!isTitleValid && title.length > 0 ? (
                     <span className="text-red-600">Cần ít nhất 5 ký tự</span>
                   ) : (
-                    <span className="text-gray-400">Tối thiểu 5 ký tự</span>
+                    <span className="text-muted-foreground">Tối thiểu 5 ký tự</span>
                   )}
-                  <span className="text-gray-400">{title.trim().length}/255</span>
+                  <span className="text-muted-foreground">{title.trim().length}/255</span>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">Mô tả</label>
+                <label className="mb-1.5 block text-sm font-semibold text-foreground">Mô tả</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={5}
                   placeholder="Mô tả nội dung buổi phát để mọi người biết trước khi tham gia"
-                  className="w-full resize-none rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 outline-none placeholder:text-gray-500 focus:border-green-500"
+                  className="w-full resize-none rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-green-500"
                 />
                 <div className="mt-1 flex items-center justify-between text-xs">
                   {!isDescriptionValid && description.length > 0 ? (
                     <span className="text-red-600">Cần ít nhất 10 ký tự</span>
                   ) : (
-                    <span className="text-gray-400">Giúp người xem hiểu buổi live về chủ đề gì</span>
+                    <span className="text-muted-foreground">Giúp người xem hiểu buổi live về chủ đề gì</span>
                   )}
-                  <span className="text-gray-400">{description.trim().length} ký tự</span>
+                  <span className="text-muted-foreground">{description.trim().length} ký tự</span>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-300">Thời gian bắt đầu</label>
+                <label className="mb-1.5 block text-sm font-semibold text-foreground">Thời gian bắt đầu</label>
                 <input
                   type="datetime-local"
                   value={scheduledAt}
                   min={minScheduledAt}
                   onChange={(e) => setScheduledAt(e.target.value)}
-                  className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-200 outline-none focus:border-green-500"
+                  className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none focus:border-green-500"
                 />
                 {scheduledAt && isTimeValid && (
-                  <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                  <p className="mt-2 text-sm text-foreground">
                     Sự kiện sẽ diễn ra lúc {formatScheduledDisplay(scheduledAt)}
                   </p>
                 )}
@@ -475,9 +463,9 @@ export default function LiveEventPage() {
           </section>
 
           <aside className="xl:sticky xl:top-[4.5rem] xl:self-start">
-            <div className="overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-800 shadow-[0_8px_30px_rgba(17,17,38,0.06)]">
-              <div className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/80 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Xem trước bài thông báo</p>
+            <div className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-[0_8px_30px_rgba(17,17,38,0.06)]">
+              <div className="border-b border-border bg-background/80 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Xem trước bài thông báo</p>
               </div>
               <div className="p-4">
                 <div className="mb-3 flex items-center gap-3">
@@ -489,8 +477,8 @@ export default function LiveEventPage() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold text-gray-900 dark:text-gray-100">{currentUserName}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Đăng bài thông báo live</p>
+                    <p className="truncate text-sm font-bold text-foreground">{currentUserName}</p>
+                    <p className="text-xs text-muted-foreground">Đăng bài thông báo live</p>
                   </div>
                 </div>
 
@@ -506,11 +494,11 @@ export default function LiveEventPage() {
                   </div>
                 </div>
 
-                <p className="mt-3 text-sm leading-relaxed text-gray-700 dark:text-gray-300 line-clamp-4">
+                <p className="mt-3 text-sm leading-relaxed text-foreground line-clamp-4">
                   {description.trim() || 'Mô tả buổi live sẽ hiển thị ở đây để mọi người biết nội dung trước khi tham gia.'}
                 </p>
 
-                <div className="mt-3 flex items-center gap-2 border-t border-gray-100 dark:border-gray-800 pt-3 text-sm text-gray-600 dark:text-gray-400">
+                <div className="mt-3 flex items-center gap-2 border-t border-border pt-3 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4 shrink-0 text-emerald-600" />
                   <span>
                     {scheduledAt && isTimeValid

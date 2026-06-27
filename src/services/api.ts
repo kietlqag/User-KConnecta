@@ -2,63 +2,32 @@ import axios from 'axios';
 import { getApiBaseUrl } from '@/utils/apiBaseUrl';
 import { authService } from '@/services/authService';
 
-function getToken(): string | null {
+// One in-flight refresh for concurrent 401s.
+let refreshPromise: Promise<void> | null = null;
+
+async function refreshAccessToken(): Promise<void> {
   try {
-    const AUTH_KEY = 'authUser';
-    for (const storage of [localStorage, sessionStorage]) {
-      const raw = storage.getItem(AUTH_KEY);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-      const token = parsed?.user?.token ?? parsed?.token ?? null;
-      if (token) return token;
+    await axios.post(
+      `${getApiBaseUrl()}/auth/refresh`,
+      {},
+      { withCredentials: true, headers: { 'Content-Type': 'application/json' } },
+    );
+  } catch (err) {
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
+      const data = err.response.data;
+      if (typeof data === 'object' && data !== null && (data as { accountStatus?: string }).accountStatus === 'BLOCKED') {
+        sessionStorage.setItem('blockedInfo', JSON.stringify(data));
+      }
     }
-  } catch { /* ignore */ }
-  return null;
-}
-
-function getRefreshToken(): string | null {
-  try {
-    const AUTH_KEY = 'authUser';
-    for (const storage of [localStorage, sessionStorage]) {
-      const raw = storage.getItem(AUTH_KEY);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-      const rt = parsed?.user?.refreshToken ?? parsed?.refreshToken ?? null;
-      if (rt) return rt;
-    }
-  } catch { /* ignore */ }
-  return null;
-}
-
-// Đảm bảo nhiều request 401 đồng thời chỉ kích hoạt MỘT lần refresh.
-let refreshPromise: Promise<string> | null = null;
-
-async function refreshAccessToken(): Promise<string> {
-  const rt = getRefreshToken();
-  if (!rt) throw new Error('No refresh token');
-  // Dùng axios "trần" (không qua axiosInstance) để KHÔNG đi vào interceptor → tránh đệ quy.
-  const resp = await axios.post(
-    `${getApiBaseUrl()}/auth/refresh`,
-    { refreshToken: rt },
-    { headers: { 'Content-Type': 'application/json' } },
-  );
-  const data = resp.data as { token: string; refreshToken?: string };
-  authService.updateTokens({ token: data.token, refreshToken: data.refreshToken });
-  return data.token;
+    throw err;
+  }
 }
 
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
   timeout: 45000,
-});
-
-axiosInstance.interceptors.request.use(config => {
-  const token = getToken();
-  if (token) {
-    config.headers['Authorization'] = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true,
 });
 
 axiosInstance.interceptors.response.use(
@@ -69,24 +38,31 @@ axiosInstance.interceptors.response.use(
       const url = error.config?.url ?? '';
       const isAuthEndpoint = url.startsWith('/auth/');
 
-      // Access token hết hạn → thử refresh MỘT lần rồi retry request gốc.
       const original = error.config as (typeof error.config & { _retried?: boolean }) | undefined;
-      if (status === 401 && !isAuthEndpoint && original && !original._retried && getRefreshToken()) {
+      const shouldTryRefresh =
+        (status === 401 || status === 403)
+        && !isAuthEndpoint
+        && original
+        && !original._retried
+        && authService.getCurrentUser();
+
+      if (shouldTryRefresh) {
         try {
           if (!refreshPromise) {
             refreshPromise = refreshAccessToken().finally(() => { refreshPromise = null; });
           }
-          const newToken = await refreshPromise;
+          await refreshPromise;
           original._retried = true;
-          original.headers = original.headers ?? {};
-          original.headers['Authorization'] = `Bearer ${newToken}`;
+          if (original.headers) {
+            delete original.headers.Authorization;
+          }
           return axiosInstance(original);
         } catch {
-          // refresh thất bại → rơi xuống nhánh logout bên dưới
+          // refresh failed → logout below
         }
       }
 
-      if (status === 401 && !isAuthEndpoint) {
+      if ((status === 401 || status === 403) && !isAuthEndpoint) {
         const data = error.response?.data;
         const locked =
           typeof data === 'object' && data !== null &&
@@ -94,7 +70,6 @@ axiosInstance.interceptors.response.use(
         localStorage.removeItem('authUser');
         sessionStorage.removeItem('authUser');
         if (locked) {
-          // Carry the lock reason to the login screen so a force-logged-out user can see why.
           sessionStorage.setItem('blockedInfo', JSON.stringify(data));
         }
         window.location.href = '/auth/login';

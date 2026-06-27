@@ -32,12 +32,10 @@ export function AlbumListCard({
       onDragOver={onDragOver}
       onDrop={onDrop}
       onDragEnd={onDragEnd}
-      className={`group relative overflow-hidden rounded-xl border border-gray-200 bg-white text-left transition-shadow hover:shadow-lg dark:border-gray-700 dark:bg-gray-900 ${
-        isDragging ? 'opacity-70 ring-2 ring-emerald-500' : ''
-      } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      className={`group relative overflow-hidden rounded-xl border border-border bg-card text-left transition-shadow hover:shadow-lg ${ isDragging ? 'opacity-70 ring-2 ring-emerald-500' : '' } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
       <button type="button" onClick={onOpen} className="block w-full text-left">
-        <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-800">
+        <div className="relative aspect-square overflow-hidden bg-muted">
           {album.coverUrl ? (
             <ImageWithFallback
               src={album.coverUrl}
@@ -45,14 +43,14 @@ export function AlbumListCard({
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-gray-400">
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
               <Images className="h-10 w-10 opacity-40" />
             </div>
           )}
         </div>
         <div className="p-3">
-          <p className="truncate font-semibold text-gray-900 dark:text-gray-100">{album.title}</p>
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{album.mediaCount} ảnh/video</p>
+          <p className="truncate font-semibold text-foreground">{album.title}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{album.mediaCount} ảnh/video</p>
         </div>
       </button>
 

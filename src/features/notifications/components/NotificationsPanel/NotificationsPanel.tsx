@@ -86,7 +86,7 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
 
       <div className="fixed top-14 right-4 w-[360px] bg-popover rounded-xl shadow-2xl border border-border z-50 max-h-[calc(100vh-80px)] flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-bold dark:text-white">Thông báo</h2>
             <div className="flex items-center gap-2">
@@ -104,21 +104,13 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveFilter('all')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
-                activeFilter === 'all'
-                  ? 'bg-emerald-100 text-emerald-600'
-                  : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${ activeFilter === 'all' ? 'bg-emerald-100 text-emerald-600' : 'bg-background text-muted-foreground hover:bg-muted' }`}
             >
               Tất cả
             </button>
             <button
               onClick={() => setActiveFilter('unread')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${
-                activeFilter === 'unread'
-                  ? 'bg-emerald-100 text-emerald-600'
-                  : 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-              }`}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer ${ activeFilter === 'unread' ? 'bg-emerald-100 text-emerald-600' : 'bg-background text-muted-foreground hover:bg-muted' }`}
             >
               Chưa đọc
             </button>
@@ -128,7 +120,7 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
         {/* List */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">Đang tải thông báo...</div>
+            <div className="text-center py-8 text-muted-foreground text-sm">Đang tải thông báo...</div>
           ) : filteredNotifications.length > 0 ? (
             filteredNotifications.map((notification) => (
               <NotificationItem
@@ -143,14 +135,14 @@ export const NotificationsPanel = ({ onClose }: NotificationsPanelProps) => {
               />
             ))
           ) : (
-            <div className="text-center py-8 text-gray-500 dark:text-gray-400 text-sm">
+            <div className="text-center py-8 text-muted-foreground text-sm">
               {activeFilter === 'unread' ? 'Không có thông báo chưa đọc' : 'Chưa có thông báo nào'}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-3 border-t border-border">
           <button
             onClick={onClose}
             className="w-full text-center text-emerald-600 hover:bg-muted py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"

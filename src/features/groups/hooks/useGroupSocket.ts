@@ -14,18 +14,17 @@ export interface GroupRealtimeEvent {
  */
 export function useGroupSocket(
   groupId: string | null | undefined,
-  token: string | null | undefined,
+  enabled: boolean,
   onEvent: (event: GroupRealtimeEvent) => void,
 ) {
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
   useEffect(() => {
-    if (!groupId || !token) return;
+    if (!groupId || !enabled) return;
 
     const client = new Client({
       brokerURL: `${getWsBaseUrl()}/ws`,
-      connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
         client.subscribe(`/topic/group/${groupId}`, (frame) => {
@@ -48,5 +47,5 @@ export function useGroupSocket(
     return () => {
       void client.deactivate();
     };
-  }, [groupId, token]);
+  }, [groupId, enabled]);
 }

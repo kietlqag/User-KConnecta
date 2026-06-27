@@ -117,18 +117,18 @@ export const FriendsPage = () => {
 
   const renderContent = () => {
     if (loading) {
-      return <div className="text-center py-16 text-gray-500 dark:text-gray-400">{t('friendsPage.loading')}</div>;
+      return <div className="text-center py-16 text-muted-foreground">{t('friendsPage.loading')}</div>;
     }
 
     if (activeTab === 'requests') {
       return (
         <section>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+          <h2 className="text-xl font-bold text-foreground mb-4">
             {t('friendsPage.requests')}
-            <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">{friendRequests.length}</span>
+            <span className="ml-2 text-muted-foreground font-normal">{friendRequests.length}</span>
           </h2>
           {friendRequests.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">{t('friendsPage.noRequests')}</p>
+            <p className="text-muted-foreground">{t('friendsPage.noRequests')}</p>
           ) : (
             <div className={FRIEND_GRID_CLASS}>
               {friendRequests.map((request) => (
@@ -158,12 +158,12 @@ export const FriendsPage = () => {
       const hasMore = visibleCount < friends.length;
       return (
         <section>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+          <h2 className="text-xl font-bold text-foreground mb-4">
             {t('friendsPage.allFriends')}
-            <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">{friends.length}</span>
+            <span className="ml-2 text-muted-foreground font-normal">{friends.length}</span>
           </h2>
           {friends.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">{t('friendsPage.noFriends')}</p>
+            <p className="text-muted-foreground">{t('friendsPage.noFriends')}</p>
           ) : (
             <>
               <div className={FRIEND_GRID_CLASS}>
@@ -188,9 +188,9 @@ export const FriendsPage = () => {
         {friendRequests.length > 0 && (
           <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <h2 className="text-xl font-bold text-foreground">
                 {t('friendsPage.requests')}
-                <span className="ml-2 text-gray-500 dark:text-gray-400 font-normal">{friendRequests.length}</span>
+                <span className="ml-2 text-muted-foreground font-normal">{friendRequests.length}</span>
               </h2>
               <button
                 onClick={() => setActiveTab('requests')}
@@ -214,7 +214,7 @@ export const FriendsPage = () => {
 
         {homeSuggestions.length > 0 && (
           <section>
-            <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className="mb-4 text-xl font-bold text-foreground">
               {t('friendsPage.peopleYouMayKnow')}
             </h2>
             <div className={FRIEND_GRID_CLASS}>
@@ -236,13 +236,13 @@ export const FriendsPage = () => {
 
         {friendRequests.length === 0 && homeSuggestions.length === 0 && (
           <div className="text-center py-16">
-            <div className="text-gray-400 mb-4">
+            <div className="text-muted-foreground mb-4">
               <svg className="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">{t('friendsPage.emptyTitle')}</h3>
-            <p className="text-gray-600 dark:text-gray-400">{t('friendsPage.emptyDesc')}</p>
+            <h3 className="text-xl font-semibold text-foreground mb-2">{t('friendsPage.emptyTitle')}</h3>
+            <p className="text-muted-foreground">{t('friendsPage.emptyDesc')}</p>
           </div>
         )}
       </>
@@ -259,11 +259,7 @@ export const FriendsPage = () => {
             requestCount={friendRequests.length}
           />
           <main
-            className={`min-h-0 min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 ${
-              activeTab === 'birthdays'
-                ? 'flex flex-col overflow-hidden'
-                : 'overflow-y-scroll overscroll-contain [scrollbar-gutter:stable] sidebar-scrollbar'
-            }`}
+            className={`min-h-0 min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 ${ activeTab === 'birthdays' ? 'flex flex-col overflow-hidden' : 'overflow-y-scroll overscroll-contain [scrollbar-gutter:stable] sidebar-scrollbar' }`}
           >
             {renderContent()}
           </main>

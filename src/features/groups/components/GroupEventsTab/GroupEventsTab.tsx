@@ -25,7 +25,7 @@ function statusBadge(session: LiveSessionResponse) {
     return { label: 'Đã lên lịch', className: 'bg-emerald-600 text-white' };
   }
   if (session.status === 'ENDED') {
-    return { label: 'Đã kết thúc', className: 'bg-gray-500 text-white' };
+    return { label: 'Đã kết thúc', className: 'bg-muted0 text-white' };
   }
   return { label: session.status, className: 'bg-gray-400 text-white' };
 }
@@ -49,11 +49,7 @@ function EventInterestButton({
         e.stopPropagation();
         onToggle();
       }}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-        isSubscribed
-          ? 'border border-emerald-600 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300'
-          : 'bg-emerald-600 text-white hover:bg-emerald-700'
-      } disabled:cursor-not-allowed disabled:opacity-60`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${ isSubscribed ? 'border border-emerald-600 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300' : 'bg-emerald-600 text-white hover:bg-emerald-700' } disabled:cursor-not-allowed disabled:opacity-60`}
     >
       {loading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -144,7 +140,7 @@ export function GroupEventsTab({ groupId }: GroupEventsTabProps) {
     return (
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="h-28 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+          <div key={index} className="h-28 animate-pulse rounded-lg bg-muted" />
         ))}
       </div>
     );
@@ -170,7 +166,7 @@ export function GroupEventsTab({ groupId }: GroupEventsTabProps) {
           return (
             <div
               key={session.id}
-              className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+              className="rounded-lg border border-border bg-card"
             >
               <div className="p-4">
                 <button
@@ -184,11 +180,11 @@ export function GroupEventsTab({ groupId }: GroupEventsTabProps) {
                     </span>
                     {session.status === 'LIVE' && <Radio className="h-3.5 w-3.5 text-red-600" aria-hidden />}
                   </div>
-                  <p className="line-clamp-1 font-semibold text-gray-900 dark:text-gray-100">{session.title}</p>
+                  <p className="line-clamp-1 font-semibold text-foreground">{session.title}</p>
                   {session.description && (
-                    <p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{session.description}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{session.description}</p>
                   )}
-                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     {session.scheduledAt
                       ? session.status === 'SCHEDULED' && isScheduledSessionDue(session.scheduledAt)
                         ? `Đã đến giờ · ${formatScheduledDisplayFromIso(session.scheduledAt)}`
@@ -201,7 +197,7 @@ export function GroupEventsTab({ groupId }: GroupEventsTabProps) {
 
                 <Link
                   to={`/profile/${session.hostUserId}`}
-                  className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg py-1 pr-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700/60"
+                  className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg py-1 pr-2 transition-colors hover:bg-muted/60"
                 >
                   <UserAvatar
                     name={session.hostName || 'Người tạo'}
@@ -210,9 +206,9 @@ export function GroupEventsTab({ groupId }: GroupEventsTabProps) {
                     rounded="full"
                     className="h-8 w-8 shrink-0"
                   />
-                  <span className="min-w-0 truncate text-sm text-gray-700 dark:text-gray-300">
-                    <span className="text-gray-500 dark:text-gray-400">Tạo bởi </span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="min-w-0 truncate text-sm text-foreground">
+                    <span className="text-muted-foreground">Tạo bởi </span>
+                    <span className="font-semibold text-foreground">
                       {session.hostName || 'Người dùng'}
                     </span>
                   </span>
@@ -220,8 +216,8 @@ export function GroupEventsTab({ groupId }: GroupEventsTabProps) {
               </div>
 
               {(showInterest || (session.subscriptionCount ?? 0) > 0) && (
-                <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 dark:border-gray-700">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                <div className="flex items-center justify-between gap-3 border-t border-border px-4 py-3">
+                  <p className="text-xs font-medium text-muted-foreground">
                     {(session.subscriptionCount ?? 0) > 0
                       ? `${session.subscriptionCount} người quan tâm`
                       : 'Chưa có ai quan tâm'}

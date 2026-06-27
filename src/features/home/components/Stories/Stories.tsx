@@ -101,9 +101,9 @@ export function Stories() {
         <button
           onClick={handlePrevious}
           aria-label="Xem tin trước đó"
-          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-card rounded-full shadow-lg flex items-center justify-center hover:bg-muted transition-colors cursor-pointer"
         >
-          <ChevronLeft className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+          <ChevronLeft className="w-6 h-6 text-foreground" />
         </button>
       )}
 
@@ -111,9 +111,9 @@ export function Stories() {
         <button
           onClick={handleNext}
           aria-label="Xem tin tiếp theo"
-          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-card rounded-full shadow-lg flex items-center justify-center hover:bg-muted transition-colors cursor-pointer"
         >
-          <ChevronRight className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+          <ChevronRight className="w-6 h-6 text-foreground" />
         </button>
       )}
 
@@ -129,7 +129,7 @@ export function Stories() {
           onClick={() => navigate('/stories/create')}
           aria-label="Tạo tin của bạn"
         >
-          <div className="relative w-[112px] h-[160px] bg-gray-100 dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 flex flex-col">
+          <div className="relative w-[112px] h-[160px] bg-muted rounded-xl overflow-hidden border border-border flex flex-col">
             <div className="h-[105px] w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
               <img
                 src={currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14'}
@@ -140,14 +140,14 @@ export function Stories() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <div className="h-[55px] bg-white dark:bg-gray-800 flex flex-col items-center justify-center relative">
-              <div className="absolute -top-5 w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center border-4 border-white dark:border-gray-800">
+            <div className="h-[55px] bg-card flex flex-col items-center justify-center relative">
+              <div className="absolute -top-5 w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center border-4 border-border">
                 <Plus className="w-5 h-5 text-white" />
               </div>
             </div>
           </div>
           <div className="mt-2">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 text-center line-clamp-2">Tạo tin</p>
+            <p className="text-sm font-medium text-foreground text-center line-clamp-2">Tạo tin</p>
           </div>
         </button>
 
@@ -182,7 +182,7 @@ export function Stories() {
                   <Loader2 className="w-6 h-6 text-white animate-spin" />
                 </div>
               )}
-              <div className="absolute top-2 left-2 w-10 h-10 rounded-full border-[3px] border-emerald-500 bg-white dark:bg-gray-800 overflow-hidden">
+              <div className="absolute top-2 left-2 w-10 h-10 rounded-full border-[3px] border-emerald-500 bg-card overflow-hidden">
                 <img
                   src={group.userAvatarUrl}
                   alt={`Ảnh đại diện của ${group.userFullName}`}
@@ -194,7 +194,7 @@ export function Stories() {
               </div>
             </div>
             <div className="mt-2">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 text-center">
+              <p className="text-sm font-medium text-foreground line-clamp-2 text-center">
                 {group.userFullName}
               </p>
             </div>

@@ -17,7 +17,7 @@ export function NotFoundPage() {
   };
 
   return (
-    <section className="bg-white dark:bg-gray-900 min-h-screen flex items-center justify-center">
+    <section className="bg-card min-h-screen flex items-center justify-center">
       <div className="container mx-auto px-4">
         <div className="flex justify-center">
           <div className="w-full sm:w-10/12 md:w-8/12 text-center">
@@ -34,7 +34,7 @@ export function NotFoundPage() {
               <h3 className="text-2xl text-black dark:text-white sm:text-3xl font-bold mb-4">
                 Có vẻ như bạn đã bị lạc đường
               </h3>
-              <p className="mb-6 text-gray-600 dark:text-gray-400 sm:mb-5">
+              <p className="mb-6 text-muted-foreground sm:mb-5">
                 Trang bạn đang tìm kiếm hiện không khả dụng!
               </p>
 

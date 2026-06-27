@@ -197,17 +197,17 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
   return (
     <div className="px-4 py-3">
       {isLoading ? (
-        <div className="py-4 text-sm text-gray-500 dark:text-gray-400">Đang tải bình luận...</div>
+        <div className="py-4 text-sm text-muted-foreground">Đang tải bình luận...</div>
       ) : comments.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-8">
           <div className="relative mb-3 h-20 w-20">
-            <div className="absolute inset-0 rotate-6 rounded-lg bg-gray-200 dark:bg-gray-700" />
-            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-gray-300 dark:bg-gray-600">
-              <FileText className="h-10 w-10 text-gray-500 dark:text-gray-400" />
+            <div className="absolute inset-0 rotate-6 rounded-lg bg-muted" />
+            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-muted">
+              <FileText className="h-10 w-10 text-muted-foreground" />
             </div>
           </div>
-          <h3 className="mb-1 text-[17px] font-semibold text-gray-800 dark:text-gray-200">Chưa có bình luận nào</h3>
-          <p className="text-[15px] text-gray-600 dark:text-gray-400">Hãy là người đầu tiên bình luận.</p>
+          <h3 className="mb-1 text-[17px] font-semibold text-foreground">Chưa có bình luận nào</h3>
+          <p className="text-[15px] text-muted-foreground">Hãy là người đầu tiên bình luận.</p>
         </div>
       ) : (
         <div className="mb-4 space-y-4">
@@ -215,23 +215,23 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
           <div className="relative inline-block" ref={sortRef}>
             <button
               onClick={() => setSortMenuOpen((o) => !o)}
-              className="flex items-center gap-1 text-sm font-semibold text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100 transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-sm font-semibold text-muted-foreground hover:text-foreground dark:hover:text-gray-100 transition-colors cursor-pointer"
             >
               {activeSort.label}
               <ChevronDown className="h-4 w-4" />
             </button>
             {sortMenuOpen && (
-              <div className="absolute left-0 top-full z-10 mt-1 w-72 rounded-lg bg-white dark:bg-gray-800 py-2 shadow-xl ring-1 ring-black/10">
+              <div className="absolute left-0 top-full z-10 mt-1 w-72 rounded-lg bg-card py-2 shadow-xl ring-1 ring-black/10">
                 {SORT_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => { setSortBy(opt.value); setSortMenuOpen(false); }}
-                    className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                    className="flex w-full flex-col items-start px-4 py-2 text-left hover:bg-muted transition-colors cursor-pointer"
                   >
-                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-emerald-600' : 'text-gray-900 dark:text-gray-100'}`}>
+                    <span className={`text-sm font-semibold ${sortBy === opt.value ? 'text-emerald-600' : 'text-foreground'}`}>
                       {opt.label}
                     </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{opt.desc}</span>
+                    <span className="text-xs text-muted-foreground">{opt.desc}</span>
                   </button>
                 ))}
               </div>
@@ -248,7 +248,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
             <button
               onClick={handleLoadMore}
               disabled={isLoadingMore}
-              className="text-sm font-semibold text-gray-600 dark:text-gray-400 hover:underline disabled:opacity-60 cursor-pointer"
+              className="text-sm font-semibold text-muted-foreground hover:underline disabled:opacity-60 cursor-pointer"
             >
               {isLoadingMore
                 ? 'Đang tải...'
@@ -259,9 +259,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
       )}
 
       <div
-        className={`sticky bottom-0 -mx-4 -mb-3 rounded-b-lg border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 ${
-          isSubmitting ? 'pointer-events-none opacity-70' : ''
-        }`}
+        className={`sticky bottom-0 -mx-4 -mb-3 rounded-b-lg border-t border-border bg-card px-4 py-3 ${ isSubmitting ? 'pointer-events-none opacity-70' : '' }`}
       >
         <CommentInput
           onSubmit={handleAddComment}

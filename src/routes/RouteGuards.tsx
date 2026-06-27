@@ -30,7 +30,7 @@ export function GuestRoute() {
     return location.pathname === '/auth/login' ? <Outlet /> : <Navigate to="/auth/login" replace />;
   }
 
-  if (currentUser?.accountStatus === 'ACTIVE' || currentUser?.token) {
+  if (currentUser?.accountStatus === 'ACTIVE') {
     return <Navigate to="/home" replace />;
   }
 

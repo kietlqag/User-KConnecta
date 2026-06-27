@@ -76,7 +76,7 @@ export const FriendSuggestions = () => {
   return (
     <div className="mb-4 rounded-xl bg-card p-4 shadow-sm border border-border">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Bạn bè có thể biết</h3>
+        <h3 className="text-lg font-bold text-foreground">Bạn bè có thể biết</h3>
         <button
           type="button"
           className="cursor-pointer text-sm font-semibold text-emerald-600 hover:underline"
@@ -95,14 +95,14 @@ export const FriendSuggestions = () => {
             ? [1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="h-[308px] shrink-0 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700"
+                  className="h-[308px] shrink-0 animate-pulse rounded-lg bg-muted"
                   style={{ width: CARD_WIDTH }}
                 />
               ))
             : suggestions.map((user) => (
                 <article
                   key={user.userId}
-                  className="flex shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:shadow-none"
+                  className="flex shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm dark:shadow-none"
                   style={{ width: CARD_WIDTH }}
                 >
                   <button
@@ -124,12 +124,12 @@ export const FriendSuggestions = () => {
                       <button
                         type="button"
                         title={user.fullName}
-                        className="line-clamp-2 text-left text-[15px] font-bold leading-snug text-gray-900 dark:text-white hover:underline"
+                        className="line-clamp-2 text-left text-[15px] font-bold leading-snug text-foreground hover:underline"
                         onClick={() => navigate(`/profile/${user.userId}`)}
                       >
                         {user.fullName}
                       </button>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {user.mutualFriends > 0
                           ? `${user.mutualFriends} bạn chung`
                           : 'Gợi ý cho bạn'}
@@ -148,7 +148,7 @@ export const FriendSuggestions = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveSuggestion(user.userId)}
-                        className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md bg-gray-200 dark:bg-gray-700 px-2 text-[13px] font-semibold text-gray-800 dark:text-gray-200 transition-colors hover:bg-gray-300 dark:hover:bg-gray-600"
+                        className="flex h-8 w-full cursor-pointer items-center justify-center gap-1.5 rounded-md bg-muted px-2 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted"
                       >
                         <X className="h-4 w-4 shrink-0" />
                         Xóa
@@ -163,7 +163,7 @@ export const FriendSuggestions = () => {
           <button
             type="button"
             onClick={() => scrollBy(-1)}
-            className="absolute left-0 top-[calc(50%-18px)] z-10 flex h-9 w-9 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md opacity-0 transition-opacity hover:bg-gray-50 dark:hover:bg-gray-700 group-hover/carousel:opacity-100"
+            className="absolute left-0 top-[calc(50%-18px)] z-10 flex h-9 w-9 -translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md opacity-0 transition-opacity hover:bg-muted group-hover/carousel:opacity-100"
             aria-label="Cuộn trái"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -173,7 +173,7 @@ export const FriendSuggestions = () => {
           <button
             type="button"
             onClick={() => scrollBy(1)}
-            className="absolute right-0 top-[calc(50%-18px)] z-10 flex h-9 w-9 translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 shadow-md opacity-0 transition-opacity hover:bg-gray-50 dark:hover:bg-gray-700 group-hover/carousel:opacity-100"
+            className="absolute right-0 top-[calc(50%-18px)] z-10 flex h-9 w-9 translate-x-1/2 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md opacity-0 transition-opacity hover:bg-muted group-hover/carousel:opacity-100"
             aria-label="Cuộn phải"
           >
             <ChevronRight className="h-5 w-5" />

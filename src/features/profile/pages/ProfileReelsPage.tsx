@@ -18,7 +18,7 @@ import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogge
 type ReelsTab = 'yours' | 'saved';
 
 function ReelSkeleton() {
-  return <div className="aspect-[9/16] rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse" />;
+  return <div className="aspect-[9/16] rounded-xl bg-muted animate-pulse" />;
 }
 
 function ReelsGrid({
@@ -39,7 +39,7 @@ function ReelsGrid({
       {reels.map((reel) => (
         <div
           key={reel.id}
-          className="group relative aspect-[9/16] cursor-pointer overflow-hidden rounded-xl bg-gray-900"
+          className="group relative aspect-[9/16] cursor-pointer overflow-hidden rounded-xl bg-black"
           onClick={() => onOpen(reel.id)}
         >
           <video
@@ -199,26 +199,22 @@ export function ProfileReelsPage() {
 
   return (
     <div className="mx-auto max-w-[1100px] px-4 py-6">
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm dark:shadow-none">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">
             <Clapperboard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('watch.title')}</h2>
+            <h2 className="text-xl font-bold text-foreground">{t('watch.title')}</h2>
           </div>
         </div>
 
         {isOwner && (
-          <div className="flex border-b border-gray-200 px-2 dark:border-gray-700">
+          <div className="flex border-b border-border px-2">
             {ownerTabs.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-                  activeTab === tab.key
-                    ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-                    : 'border-transparent text-gray-600 hover:bg-muted dark:text-gray-400'
-                }`}
+                className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${ activeTab === tab.key ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-muted-foreground hover:bg-muted dark:text-muted-foreground' }`}
               >
                 {t(`profileReels.${tab.labelKey}`)}
               </button>
@@ -236,19 +232,19 @@ export function ProfileReelsPage() {
           ) : reels.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="relative mb-4 h-20 w-20">
-                <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
-                <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800">
+                <div className="absolute inset-0 rotate-6 rounded-xl bg-muted" />
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-border bg-muted">
                   {isOwner && activeTab === 'saved' ? (
-                    <Play className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                    <Play className="h-10 w-10 text-muted-foreground" />
                   ) : (
-                    <Clapperboard className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                    <Clapperboard className="h-10 w-10 text-muted-foreground" />
                   )}
                 </div>
               </div>
-              <h3 className="mb-1 text-lg font-semibold text-gray-800 dark:text-gray-200">
+              <h3 className="mb-1 text-lg font-semibold text-foreground">
                 {isOwner && activeTab === 'saved' ? t('profileReels.emptySaved') : t('profileReels.empty')}
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 {isOwner && activeTab === 'saved'
                   ? t('profileReels.emptySavedHint')
                   : t('profileReels.emptyHint')}

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/shared';
 import { Notification } from '../../types/notifications.types';
+import { NotificationDetailDialog } from '../NotificationDetailDialog';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -27,6 +28,7 @@ export const NotificationItem = ({
   const navigate = useNavigate();
   const [friendLoading, setFriendLoading] = useState<'accept' | 'reject' | null>(null);
   const [inviteLoading, setInviteLoading] = useState<'accept' | 'reject' | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const handleViewProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -65,6 +67,12 @@ export const NotificationItem = ({
     if (notification.isUnread && onRead) {
       onRead(notification.id);
     }
+
+    if (notification.type === 'system') {
+      setDetailOpen(true);
+      return;
+    }
+
     if (POST_TYPES.has(notification.type) && notification.relatedId) {
       onClose?.();
       navigate(`/home?post=${notification.relatedId}`);
@@ -83,14 +91,15 @@ export const NotificationItem = ({
     } else if ((notification.type === 'birthday' || notification.type === 'birthday_wish') && notification.user.id) {
       onClose?.();
       navigate(`/friends?tab=birthdays`);
+    } else {
+      setDetailOpen(true);
     }
   };
   return (
+    <>
     <div
       onClick={handleClick}
-      className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-muted transition-colors cursor-pointer ${
-        notification.isUnread ? 'bg-accent' : ''
-      }`}
+      className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-muted transition-colors cursor-pointer ${ notification.isUnread ? 'bg-accent' : '' }`}
     >
       {/* Avatar */}
       <div
@@ -108,7 +117,7 @@ export const NotificationItem = ({
 
       {/* Content */}
       <div className="flex-1 min-w-0 text-left">
-        <p className="text-sm text-gray-900 dark:text-gray-100 leading-snug mb-1">
+        <p className="text-sm text-foreground leading-snug mb-1">
           <span
             onClick={handleViewProfile}
             className={`font-semibold ${notification.user.id ? 'cursor-pointer hover:underline' : ''}`}
@@ -197,7 +206,7 @@ export const NotificationItem = ({
                   setFriendLoading(null);
                 }
               }}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 disabled:opacity-60 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-muted hover:bg-muted disabled:opacity-60 disabled:cursor-not-allowed text-foreground text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               {friendLoading === 'reject' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
               Từ chối
@@ -211,5 +220,13 @@ export const NotificationItem = ({
         <div className="flex-shrink-0 w-3 h-3 bg-emerald-600 rounded-full mt-2" />
       )}
     </div>
+
+    <NotificationDetailDialog
+      notification={notification}
+      open={detailOpen}
+      onOpenChange={setDetailOpen}
+      onClosePanel={onClose}
+    />
+    </>
   );
 };

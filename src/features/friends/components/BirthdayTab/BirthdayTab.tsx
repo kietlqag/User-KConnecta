@@ -92,7 +92,7 @@ interface UpcomingCardProps {
 }
 
 const UpcomingCard = ({ friend }: UpcomingCardProps) => (
-  <div className="flex items-center justify-between rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-4 shadow-sm dark:shadow-none">
+  <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-sm dark:shadow-none">
     <div className="flex items-center gap-3">
       <Link to={`/profile/${friend.userId}`}>
         <UserAvatar
@@ -100,16 +100,16 @@ const UpcomingCard = ({ friend }: UpcomingCardProps) => (
           avatarUrl={friend.avatar}
           userId={friend.userId}
           rounded="full"
-          className="h-14 w-14 shrink-0 border border-gray-200 dark:border-gray-700"
+          className="h-14 w-14 shrink-0 border border-border"
         />
       </Link>
       <div>
         <BirthdayNameHoverCard friend={friend}>
           <Link to={`/profile/${friend.userId}`} className="inline-block">
-            <p className="font-semibold text-gray-900 dark:text-gray-100 hover:underline">{friend.name}</p>
+            <p className="font-semibold text-foreground hover:underline">{friend.name}</p>
           </Link>
         </BirthdayNameHoverCard>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           {formatBirthDate(friend.birthDate)} · {getAge(friend.birthDate)} tuổi
         </p>
       </div>
@@ -130,9 +130,9 @@ interface MonthSectionProps {
 }
 
 const MonthSection = ({ month, friends }: MonthSectionProps) => (
-  <div className="overflow-visible rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-4 shadow-sm dark:shadow-none">
-    <h3 className="mb-1 text-base font-bold text-gray-900 dark:text-gray-100">{getMonthName(month)}</h3>
-    <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">{formatGroupLabel(friends)}</p>
+  <div className="overflow-visible rounded-xl border border-border bg-card p-4 shadow-sm dark:shadow-none">
+    <h3 className="mb-1 text-base font-bold text-foreground">{getMonthName(month)}</h3>
+    <p className="mb-3 text-sm text-muted-foreground">{formatGroupLabel(friends)}</p>
     <div className="flex flex-wrap gap-2">
       {friends.map((f) => (
         <div key={f.id} className="group/avatar relative">
@@ -142,12 +142,12 @@ const MonthSection = ({ month, friends }: MonthSectionProps) => (
               avatarUrl={f.avatar}
               userId={f.userId}
               rounded="full"
-              className="h-14 w-14 border-2 border-white shadow-sm transition-transform group-hover/avatar:scale-105 dark:border-gray-700"
+              className="h-14 w-14 border-2 border-white shadow-sm transition-transform group-hover/avatar:scale-105"
             />
           </Link>
           <div
             role="tooltip"
-            className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-max max-w-[min(280px,calc(100vw-2rem))] -translate-x-1/2 rounded-lg bg-gray-900 px-3 py-2 text-center text-sm font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/avatar:opacity-100"
+            className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-50 w-max max-w-[min(280px,calc(100vw-2rem))] -translate-x-1/2 rounded-lg bg-black px-3 py-2 text-center text-sm font-medium leading-snug text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/avatar:opacity-100"
           >
             {formatBirthdayHoverText(f.birthDate, f.name)}
             <span
@@ -171,14 +171,14 @@ export const BirthdayTab = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="py-16 text-center text-gray-500 dark:text-gray-400">
+      <div className="py-16 text-center text-muted-foreground">
         <p className="text-lg font-medium">Không thể tải sinh nhật bạn bè</p>
         <p className="mt-1 text-sm">{(error as Error).message}</p>
       </div>
@@ -189,7 +189,7 @@ export const BirthdayTab = () => {
     <div className="max-w-2xl space-y-4">
       {upcoming.length > 0 && (
         <section>
-          <h2 className="mb-3 text-xl font-bold text-gray-900 dark:text-gray-100">Sinh nhật sắp tới</h2>
+          <h2 className="mb-3 text-xl font-bold text-foreground">Sinh nhật sắp tới</h2>
           <div className="space-y-3">
             {upcoming.map((f) => (
               <UpcomingCard key={f.id} friend={f} />
@@ -207,7 +207,7 @@ export const BirthdayTab = () => {
       )}
 
       {upcoming.length === 0 && byMonth.size === 0 && (
-        <div className="py-16 text-center text-gray-500 dark:text-gray-400">
+        <div className="py-16 text-center text-muted-foreground">
           <p className="text-lg font-medium">Không có sinh nhật nào sắp tới</p>
           <p className="mt-1 text-sm">Bạn bè chưa cập nhật ngày sinh hoặc chưa có bạn bè.</p>
         </div>

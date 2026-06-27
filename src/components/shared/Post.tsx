@@ -8,6 +8,7 @@ import {
   Users,
   Lock,
   Images,
+  Clock,
   X,
   ChevronLeft,
   ChevronRight,
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
-import { postService, SAVED_POSTS_CHANGED_EVENT, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
+import { postService, SAVED_POSTS_CHANGED_EVENT, type PostReactionCountResponse, type PostResponse, type ReactionType } from '@/services/postService';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { UserAvatar } from './UserAvatar';
 import { PostDetailModal } from '../posts/PostDetailModal';
@@ -37,7 +38,8 @@ import {
   type ReactionOption,
   updateReactionCounts,
 } from '../reactions';
-import { POSTS_FEED_KEY, removePostFromClientCaches } from '@/features/home/hooks/usePosts';
+import { formatScheduledPostLabel, formatPostTimestamp } from '@/utils/postUtils';
+import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 import { getScrollTop, setScrollTop } from '@/features/home/utils/scrollToHomeTop';
 import { PostMoreMenu, type Privacy } from './PostMoreMenu';
 import { PostPollCard } from '../posts/PostPollCard';
@@ -136,10 +138,13 @@ export interface PostProps {
   onPin?: (postId: string) => void;
   onUnpin?: (postId: string) => void;
   poll?: PostPollResponse | null;
+  status?: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT' | 'HIDDEN' | 'DELETED';
+  scheduledAt?: string | null;
   /** Narrower layout for search results and similar embedded views. */
   compact?: boolean;
   /** Stretch the card to fill its container height (for equal-height grids). */
   fillHeight?: boolean;
+  onPostUpdated?: (post: PostResponse) => void;
 }
 
 export function Post({
@@ -173,8 +178,11 @@ export function Post({
   sharedGroup,
   sharedAlbum,
   poll,
+  status: initialStatus,
+  scheduledAt: initialScheduledAt,
   compact = false,
   fillHeight = false,
+  onPostUpdated,
 }: PostProps) {
   // For share wrappers, save/share actions target the original post; interactions use the wrapper id.
   const originalPostId = sharedPost && originalPost ? originalPost.id : id;
@@ -209,7 +217,14 @@ export function Post({
   const [currentPrivacy, setCurrentPrivacy] = useState<Privacy>(initialPrivacy);
   const [excludedUserIds, setExcludedUserIds] = useState<string[]>(initialExcludedUserIds);
   const [allowedUserIds, setAllowedUserIds] = useState<string[]>(initialAllowedUserIds);
+  const [postStatus, setPostStatus] = useState(initialStatus);
+  const [displayTimestamp, setDisplayTimestamp] = useState(timestamp);
   const currentUser = authService.getCurrentUser();
+
+  useEffect(() => {
+    setPostStatus(initialStatus);
+    setDisplayTimestamp(timestamp);
+  }, [initialStatus, timestamp, id]);
 
   useEffect(() => {
     setDisplayContent(content);
@@ -222,6 +237,7 @@ export function Post({
     setAllowedUserIds(initialAllowedUserIds);
   }, [initialPrivacy, initialExcludedUserIds, initialAllowedUserIds, id]);
   const isOwner = !!currentUser && currentUser.id === author.id;
+  const isScheduled = postStatus === 'SCHEDULED';
   const canEditPost = isOwner && !hasLivePreview;
 
   const openDeleteDialog = useCallback(() => {
@@ -480,10 +496,14 @@ export function Post({
     <>
       <div
         id={`post-${id}`}
-        className={`bg-card shadow-sm border border-border ${
-          compact ? 'rounded-xl' : 'rounded-2xl'
-        } ${fillHeight ? 'flex h-full flex-col' : compact ? 'mb-2' : 'mb-4'}`}
+        className={`bg-card shadow-sm border ${ isScheduled ? 'border-amber-300/70 dark:border-amber-700/50' : 'border-border' } ${ compact ? 'rounded-xl' : 'rounded-2xl' } ${fillHeight ? 'flex h-full flex-col' : compact ? 'mb-2' : 'mb-4'}`}
       >
+        {isScheduled && (
+          <div className="flex items-center gap-2 border-b border-amber-200/60 bg-amber-50/80 px-4 py-2 text-sm font-medium text-amber-800 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-300">
+            <Clock className="h-4 w-4 shrink-0" aria-hidden />
+            <span>{displayTimestamp}</span>
+          </div>
+        )}
         <div className={compact ? 'p-3' : 'p-4'}>
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">
@@ -543,17 +563,17 @@ export function Post({
               </div>
               <div className="flex flex-col">
                 <h3
-                  className="font-bold text-[15px] text-gray-900 dark:text-white cursor-pointer hover:underline leading-tight"
+                  className="font-bold text-[15px] text-foreground cursor-pointer hover:underline leading-tight"
                   onClick={() => group ? navigate(`/groups/${group.id}`) : navigate(`/profile/${author.id}`)}
                 >
                   {group?.name || author.name}
                 </h3>
-                <div className="flex items-center gap-1 text-[13px] text-gray-500 dark:text-gray-400 leading-tight flex-wrap">
+                <div className="flex items-center gap-1 text-[13px] text-muted-foreground leading-tight flex-wrap">
                   {sharedPost && originalPost ? (
                     <>
                       <span>đã chia sẻ bài viết của</span>
                       <span
-                        className="font-semibold text-gray-700 dark:text-gray-300 hover:underline cursor-pointer"
+                        className="font-semibold text-foreground hover:underline cursor-pointer"
                         onClick={(e) => { e.stopPropagation(); navigate(`/profile/${originalPost.author.id}`); }}
                       >
                         {originalPost.author.name}
@@ -571,8 +591,12 @@ export function Post({
                       <span>·</span>
                     </>
                   ) : null}
-                  <span>{timestamp}</span>
-                  <span>·</span>
+                  {!isScheduled && (
+                    <>
+                      <span>{displayTimestamp}</span>
+                      <span>·</span>
+                    </>
+                  )}
                   <PostPrivacyIcon privacy={currentPrivacy} />
                 </div>
               </div>
@@ -596,10 +620,10 @@ export function Post({
           </div>
 
           {(displayContent && !hasLivePreview) || (sharedPost && displayContent) ? (
-            <p className="text-gray-900 dark:text-gray-100 mb-3 whitespace-pre-wrap">{displayContent}</p>
+            <p className="text-foreground mb-3 whitespace-pre-wrap">{displayContent}</p>
           ) : null}
 
-          {poll && !sharedPost && (
+          {poll && !sharedPost && !isScheduled && (
             <PostPollCard
               postId={id}
               poll={poll}
@@ -634,12 +658,12 @@ export function Post({
                     </div>
                     <div className="flex flex-col">
                       <span
-                        className="text-sm font-semibold text-gray-900 dark:text-white hover:underline cursor-pointer leading-tight"
+                        className="text-sm font-semibold text-foreground hover:underline cursor-pointer leading-tight"
                         onClick={(e) => { e.stopPropagation(); navigate(`/profile/${originalPost.author.id}`); }}
                       >
                         {originalPost.author.name}
                       </span>
-                      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 leading-tight">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground leading-tight">
                         <span>{originalPost.timestamp}</span>
                         <span>·</span>
                         <PostPrivacyIcon privacy={originalPost.privacy ?? 'PUBLIC'} />
@@ -657,7 +681,7 @@ export function Post({
                     </div>
                   ) : (
                     originalPost.content && (
-                      <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap line-clamp-4">{originalPost.content}</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap line-clamp-4">{originalPost.content}</p>
                     )
                   )}
                 </div>
@@ -700,8 +724,8 @@ export function Post({
               )}
               <div className="flex items-center justify-between gap-3 p-3">
                 <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-gray-900 dark:text-white">{sharedGroup.name}</p>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="truncate text-base font-semibold text-foreground">{sharedGroup.name}</p>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                     {sharedGroup.privacy === 'PUBLIC' ? (
                       <Globe className="h-3.5 w-3.5" aria-hidden />
                     ) : (
@@ -715,7 +739,7 @@ export function Post({
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); navigate(`/groups/${sharedGroup.id}`); }}
-                  className="shrink-0 rounded-lg bg-gray-200 px-4 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                  className="shrink-0 rounded-lg bg-muted px-4 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
                 >
                   Xem nhóm
                 </button>
@@ -737,15 +761,15 @@ export function Post({
               )}
               <div className="flex items-center justify-between gap-3 p-3">
                 <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-gray-900 dark:text-white">{sharedAlbum.title}</p>
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="truncate text-base font-semibold text-foreground">{sharedAlbum.title}</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {sharedAlbum.mediaCount} ảnh/video · {sharedAlbum.ownerName}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); navigate(`/albums/${sharedAlbum.id}`); }}
-                  className="shrink-0 rounded-lg bg-gray-200 px-4 py-1.5 text-sm font-semibold text-gray-900 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600"
+                  className="shrink-0 rounded-lg bg-muted px-4 py-1.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
                 >
                   Xem album
                 </button>
@@ -810,7 +834,9 @@ export function Post({
           </div>
         ) : null}
 
-        <div className={`px-4 py-2 flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 ${fillHeight ? 'mt-auto' : ''}`}>
+        {!isScheduled && (
+        <>
+        <div className={`px-4 py-2 flex items-center justify-between text-sm text-muted-foreground ${fillHeight ? 'mt-auto' : ''}`}>
           <div className="flex items-center gap-2">
             {totalReactionCount > 0 && (
               <button
@@ -823,7 +849,7 @@ export function Post({
                   {activeReactions.slice(0, 3).map((reaction) => (
                     <span
                       key={reaction.type}
-                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-white dark:bg-gray-800 leading-none"
+                      className="flex h-5 w-5 items-center justify-center rounded-full border border-white bg-card leading-none"
                     >
                       <img src={reaction.emoji} alt={reaction.label} width={15} height={15} draggable={false} />
                     </span>
@@ -839,7 +865,7 @@ export function Post({
           </div>
         </div>
 
-        <div className="h-px bg-gray-300 dark:bg-gray-700 mx-4" />
+        <div className="h-px bg-muted mx-4" />
 
         <div className="px-4 py-2 grid grid-cols-3 gap-2 items-center">
           <ReactionButton
@@ -868,6 +894,8 @@ export function Post({
             <span className="font-medium">Chia sẻ</span>
           </button>
         </div>
+        </>
+        )}
       </div>
 
       <PostDetailModal
@@ -993,7 +1021,7 @@ export function Post({
                 <div className="flex items-center gap-1 rounded-full bg-black/60 p-1.5 text-white shadow-lg">
               <button
                 type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-white dark:bg-gray-800/15"
+                className="cursor-pointer rounded-full p-2 hover:bg-card/15"
                 aria-label="Thu nhỏ"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1004,7 +1032,7 @@ export function Post({
               </button>
               <button
                 type="button"
-                className="min-w-[3.25rem] cursor-pointer rounded-full px-2 py-1.5 text-sm font-semibold tabular-nums hover:bg-white dark:bg-gray-800/15"
+                className="min-w-[3.25rem] cursor-pointer rounded-full px-2 py-1.5 text-sm font-semibold tabular-nums hover:bg-card/15"
                 title="Ctrl + cuộn chuột để zoom"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1016,7 +1044,7 @@ export function Post({
               </button>
               <button
                 type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-white dark:bg-gray-800/15"
+                className="cursor-pointer rounded-full p-2 hover:bg-card/15"
                 aria-label="Phóng to"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1027,7 +1055,7 @@ export function Post({
               </button>
               <button
                 type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-white dark:bg-gray-800/15"
+                className="cursor-pointer rounded-full p-2 hover:bg-card/15"
                 aria-label="Xoay ảnh 90°"
                 title="Xoay 90°"
                 onClick={(e) => {
@@ -1039,7 +1067,7 @@ export function Post({
               </button>
               <button
                 type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-white dark:bg-gray-800/15"
+                className="cursor-pointer rounded-full p-2 hover:bg-card/15"
                 aria-label="Vừa khung"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1095,41 +1123,46 @@ export function Post({
         initialPrivacy={currentPrivacy}
         initialExcludedUserIds={excludedUserIds}
         initialAllowedUserIds={allowedUserIds}
+        initialStatus={postStatus}
+        initialScheduledAt={initialScheduledAt}
         isGroupPost={!!group}
         isShareWrapper={sharedPost}
-        onPostUpdated={({
-          content: newContent,
-          mediaList: newMediaList,
-          privacy: newPrivacy,
-          excludedUserIds: newExcluded,
-          allowedUserIds: newAllowed,
-        }) => {
-          setDisplayContent(newContent);
-          setDisplayMediaList(newMediaList);
-          if (newPrivacy !== undefined) setCurrentPrivacy(newPrivacy);
-          if (newExcluded !== undefined) setExcludedUserIds(newExcluded);
-          if (newAllowed !== undefined) setAllowedUserIds(newAllowed);
+        onPostUpdated={(updated) => {
+          setDisplayContent(updated.content);
+          setDisplayMediaList(updated.mediaList);
+          if (updated.privacy !== undefined) setCurrentPrivacy(updated.privacy);
+          if (updated.excludedUserIds !== undefined) setExcludedUserIds(updated.excludedUserIds);
+          if (updated.allowedUserIds !== undefined) setAllowedUserIds(updated.allowedUserIds);
+          if (updated.status !== undefined) setPostStatus(updated.status);
+          if (updated.status === 'SCHEDULED' && updated.scheduledAt) {
+            setDisplayTimestamp(formatScheduledPostLabel(updated.scheduledAt));
+          } else if (updated.publishedAt || updated.createdAt) {
+            setDisplayTimestamp(formatPostTimestamp(updated.publishedAt || updated.createdAt));
+          }
+          if (updated.fullPost) {
+            onPostUpdated?.(updated.fullPost);
+          }
         }}
       />
 
       <AlertDialog modal={false} open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent
-          className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800"
+          className="border border-border bg-card sm:max-w-md"
           onOpenAutoFocus={(e) => e.preventDefault()}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-white">
+            <AlertDialogTitle className="text-foreground">
               {sharedPost ? 'Xóa bài chia sẻ' : 'Xóa bài viết'}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
+            <AlertDialogDescription className="text-muted-foreground">
               {sharedPost
                 ? 'Bạn có chắc muốn gỡ bài chia sẻ này khỏi bảng tin? Bài viết gốc sẽ không bị xóa.'
                 : 'Bạn có chắc muốn xóa bài viết không?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer border-gray-300 dark:border-gray-600">Không</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer border-border">Không</AlertDialogCancel>
             <AlertDialogAction
               className="cursor-pointer bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 disabled:cursor-not-allowed dark:bg-red-600 dark:hover:bg-red-700"
               disabled={isDeleting}

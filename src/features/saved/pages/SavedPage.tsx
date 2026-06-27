@@ -168,7 +168,7 @@ export const SavedPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background">
+    <div className="min-h-screen bg-background">
       <Header />
 
       <div className="flex pt-14">
@@ -182,7 +182,7 @@ export const SavedPage = () => {
         <main className="ml-[360px] flex-1 p-6">
           <div className="max-w-[800px] mx-auto">
             <div className="mb-4">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+              <h1 className="text-xl font-bold text-foreground">
                 {activeCollection === 'all'
                   ? 'Tất cả'
                   : collections.find((c) => c.id === activeCollection)?.name ?? 'Bộ sưu tập'}
@@ -199,7 +199,7 @@ export const SavedPage = () => {
                 return (
                   <div className="flex flex-col items-center justify-center py-20">
                     <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mb-4" />
-                    <p className="text-gray-500 dark:text-gray-400">
+                    <p className="text-muted-foreground">
                       {collectionLoading ? 'Đang tải bộ sưu tập...' : 'Đang tải bài viết đã lưu...'}
                     </p>
                   </div>
@@ -217,19 +217,19 @@ export const SavedPage = () => {
               }
 
               return (
-                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-                  <div className="w-20 h-20 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <SlidersHorizontal className="w-10 h-10 text-gray-400" />
+                <div className="bg-card rounded-xl border border-border p-12 text-center">
+                  <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center mx-auto mb-4">
+                    <SlidersHorizontal className="w-10 h-10 text-muted-foreground" />
                   </div>
                   {collectionPostIds ? (
                     <>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Bộ sưu tập trống</h3>
-                      <p className="text-gray-500 dark:text-gray-400">Thêm bài viết vào bộ sưu tập để xem ở đây.</p>
+                      <h3 className="text-lg font-bold text-foreground mb-2">Bộ sưu tập trống</h3>
+                      <p className="text-muted-foreground">Thêm bài viết vào bộ sưu tập để xem ở đây.</p>
                     </>
                   ) : (
                     <>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Chưa có bài viết nào được lưu</h3>
-                      <p className="text-gray-500 dark:text-gray-400">Hãy lưu các bài viết thú vị để xem lại sau.</p>
+                      <h3 className="text-lg font-bold text-foreground mb-2">Chưa có bài viết nào được lưu</h3>
+                      <p className="text-muted-foreground">Hãy lưu các bài viết thú vị để xem lại sau.</p>
                     </>
                   )}
                 </div>

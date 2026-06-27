@@ -157,7 +157,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
           className={`p-2 hover:bg-muted rounded-full transition-colors cursor-pointer ${className}`}
           onClick={(e) => e.stopPropagation()}
         >
-          <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+          <MoreHorizontal className="w-5 h-5 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -176,26 +176,22 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               onClick={isPinned ? onUnpin : onPin}
             >
               <div className="mt-1">
-                <Pin className={`w-6 h-6 ${isPinned ? 'text-emerald-600 fill-emerald-600' : 'text-gray-900 dark:text-gray-100'}`} />
+                <Pin className={`w-6 h-6 ${isPinned ? 'text-emerald-600 fill-emerald-600' : 'text-foreground'}`} />
               </div>
               <div className="flex flex-col">
                 <span className="font-semibold text-[15px]">{isPinned ? 'Bỏ ghim bài viết' : 'Ghim bài viết'}</span>
-                <span className="text-[13px] text-gray-500 dark:text-gray-400">
+                <span className="text-[13px] text-muted-foreground">
                   {isPinned ? 'Gỡ khỏi khu bài viết nổi bật của nhóm.' : 'Đưa lên khu bài viết nổi bật của nhóm.'}
                 </span>
               </div>
             </DropdownMenuItem>
-            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+            <div className="my-1 border-t border-border" />
           </>
         )}
         {!isOwner && (
           <>
             <DropdownMenuItem
-              className={`flex items-start gap-3 p-3 ${
-                hasReported
-                  ? 'cursor-default text-gray-500 focus:bg-transparent focus:text-gray-500'
-                  : 'cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50'
-              }`}
+              className={`flex items-start gap-3 p-3 ${ hasReported ? 'cursor-default text-muted-foreground focus:bg-transparent focus:text-muted-foreground' : 'cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50' }`}
               disabled={reporting || reportStatusLoading || hasReported}
               onSelect={(e) => {
                 e.preventDefault();
@@ -204,13 +200,13 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               }}
             >
               <div className="mt-1">
-                <AlertTriangle className={`w-6 h-6 ${hasReported ? 'text-gray-400' : ''}`} />
+                <AlertTriangle className={`w-6 h-6 ${hasReported ? 'text-muted-foreground' : ''}`} />
               </div>
               <div className="flex flex-col">
                 <span className="font-semibold text-[15px]">
                   {hasReported ? 'Đã báo cáo bài viết' : 'Báo cáo bài viết'}
                 </span>
-                <span className={`text-[13px] ${hasReported ? 'text-gray-400' : 'text-red-400'}`}>
+                <span className={`text-[13px] ${hasReported ? 'text-muted-foreground' : 'text-red-400'}`}>
                   {hasReported
                     ? 'Đã gửi báo cáo cho quản trị viên xem xét.'
                     : 'Gửi bài viết này cho quản trị viên xem xét.'}
@@ -218,7 +214,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               </div>
             </DropdownMenuItem>
 
-            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+            <div className="my-1 border-t border-border" />
           </>
         )}
 
@@ -227,11 +223,11 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
           onClick={onToggleSave}
         >
           <div className="mt-1">
-            <Bookmark className={`w-6 h-6 ${isSaved ? 'text-emerald-600 fill-emerald-600' : 'text-gray-900 dark:text-gray-100 fill-gray-900'}`} />
+            <Bookmark className={`w-6 h-6 ${isSaved ? 'text-emerald-600 fill-emerald-600' : 'text-foreground fill-gray-900'}`} />
           </div>
           <div className="flex flex-col">
             <span className="font-semibold text-[15px]">{isSaved ? 'Bỏ lưu bài viết' : 'Lưu bài viết'}</span>
-            <span className="text-[13px] text-gray-500 dark:text-gray-400">
+            <span className="text-[13px] text-muted-foreground">
               {isSaved ? 'Xóa khỏi danh sách mục đã lưu.' : 'Thêm vào danh sách mục đã lưu.'}
             </span>
           </div>
@@ -239,7 +235,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
 
         {isOwner && (
           <>
-            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+            <div className="my-1 border-t border-border" />
 
             {onEdit && (
               <DropdownMenuItem
@@ -250,11 +246,11 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
                 }}
               >
                 <div className="mt-1">
-                  <Pencil className="w-6 h-6 text-gray-900 dark:text-gray-100" />
+                  <Pencil className="w-6 h-6 text-foreground" />
                 </div>
                 <div className="flex flex-col">
                   <span className="font-semibold text-[15px]">Chỉnh sửa</span>
-                  <span className="text-[13px] text-gray-500 dark:text-gray-400">
+                  <span className="text-[13px] text-muted-foreground">
                     {isGroupPost
                       ? 'Thay đổi nội dung bài viết.'
                       : 'Thay đổi nội dung và quyền riêng tư.'}
@@ -263,7 +259,7 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
               </DropdownMenuItem>
             )}
 
-            <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
+            <div className="my-1 border-t border-border" />
 
             <DropdownMenuItem
               className="flex items-start gap-3 p-3 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
@@ -295,16 +291,12 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Chọn lý do báo cáo bài viết này:</p>
+          <p className="text-sm text-muted-foreground">Chọn lý do báo cáo bài viết này:</p>
           <div className="space-y-2">
             {REPORT_CATEGORIES.map((cat) => (
               <label
                 key={cat.value}
-                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selectedCategory === cat.value
-                    ? 'border-red-400 bg-red-50'
-                    : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-                }`}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${ selectedCategory === cat.value ? 'border-red-400 bg-red-50' : 'border-border hover:bg-muted' }`}
               >
                 <input
                   type="radio"
@@ -320,11 +312,11 @@ export const PostMoreMenu: React.FC<PostMoreMenuProps> = ({
           </div>
 
           <div>
-            <label className="text-sm text-gray-600 dark:text-gray-400 mb-1 block">
-              Mô tả thêm <span className="text-gray-400">(tuỳ chọn)</span>
+            <label className="text-sm text-muted-foreground mb-1 block">
+              Mô tả thêm <span className="text-muted-foreground">(tuỳ chọn)</span>
             </label>
             <textarea
-              className="w-full rounded-md border border-gray-200 dark:border-gray-700 p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="w-full rounded-md border border-border p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
               rows={3}
               placeholder="Mô tả chi tiết vi phạm..."
               value={reportReason}

@@ -25,8 +25,8 @@ function isWatchOverlayTarget(target: EventTarget | null): boolean {
 const sidebarTabClass = (active: boolean) =>
   `flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors ${
     active
-      ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white'
-      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+      ? 'bg-muted text-foreground dark:text-white'
+      : 'text-foreground hover:bg-muted'
   }`;
 
 const WatchSidebar = ({
@@ -43,15 +43,15 @@ const WatchSidebar = ({
   const { t } = useTranslation();
 
   return (
-  <aside className="hidden lg:flex fixed top-14 left-0 z-40 h-[calc(100vh-56px)] w-[320px] flex-col gap-1 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-4">
-    <h1 className="px-3 pb-3 text-2xl font-bold text-gray-900 dark:text-white">{t('watch.title')}</h1>
+  <aside className="hidden lg:flex fixed top-14 left-0 z-40 h-[calc(100vh-56px)] w-[320px] flex-col gap-1 border-r border-border bg-card px-3 py-4">
+    <h1 className="px-3 pb-3 text-2xl font-bold text-foreground">{t('watch.title')}</h1>
 
     {searchQuery ? (
-      <div className="flex items-center gap-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 px-3 py-2.5 text-gray-900 dark:text-white">
+      <div className="flex items-center gap-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 px-3 py-2.5 text-foreground">
         <Search className="h-6 w-6 shrink-0 text-emerald-600 dark:text-emerald-400" />
         <div className="min-w-0">
           <span className="block text-[15px] font-semibold">{t('watch.searchResults')}</span>
-          <span className="block truncate text-xs text-gray-500 dark:text-gray-400">&quot;{searchQuery}&quot;</span>
+          <span className="block truncate text-xs text-muted-foreground">&quot;{searchQuery}&quot;</span>
         </div>
       </div>
     ) : (
@@ -233,7 +233,7 @@ export const WatchPage = () => {
   }, [currentUser?.id, isLoading, isFetchingNextPage, reels.length, t]);
 
   return (
-    <div className="h-screen bg-white dark:bg-gray-800 overflow-hidden">
+    <div className="h-screen bg-card overflow-hidden">
       <Header />
       <WatchSidebar
         activeTab={watchTab}
@@ -244,17 +244,13 @@ export const WatchPage = () => {
 
       {!isSearchWatchMode && showSavedTab && (
         <nav
-          className="lg:hidden fixed top-14 left-0 right-0 z-40 flex border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+          className="lg:hidden fixed top-14 left-0 right-0 z-40 flex border-b border-border bg-card"
           aria-label={t('watch.navAria')}
         >
           <button
             type="button"
             onClick={() => handleWatchTabChange('forYou')}
-            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
-              watchTab === 'forYou'
-                ? 'border-b-2 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-                : 'text-gray-600 dark:text-gray-400'
-            }`}
+            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${ watchTab === 'forYou' ? 'border-b-2 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'text-muted-foreground' }`}
           >
             <Star className="h-4 w-4" />
             {t('watch.forYou')}
@@ -262,11 +258,7 @@ export const WatchPage = () => {
           <button
             type="button"
             onClick={() => handleWatchTabChange('saved')}
-            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${
-              watchTab === 'saved'
-                ? 'border-b-2 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-                : 'text-gray-600 dark:text-gray-400'
-            }`}
+            className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${ watchTab === 'saved' ? 'border-b-2 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'text-muted-foreground' }`}
           >
             <Bookmark className="h-4 w-4" />
             {t('watch.saved')}
@@ -276,13 +268,13 @@ export const WatchPage = () => {
 
       <div className={`mt-14 h-[calc(100vh-56px)] relative overflow-hidden overscroll-none lg:pl-[320px] ${showSavedTab && !isSearchWatchMode ? 'pt-12 lg:pt-0' : ''}`}>
         {loadingMessage ? (
-          <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">{loadingMessage}</div>
+          <div className="flex h-full items-center justify-center text-foreground">{loadingMessage}</div>
         ) : isError ? (
-          <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">
+          <div className="flex h-full items-center justify-center text-foreground">
             {t('watch.loadError')}
           </div>
         ) : reels.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-gray-700 dark:text-gray-300">
+          <div className="flex h-full items-center justify-center text-foreground">
             {isSearchWatchMode
               ? t('watch.emptySearch')
               : isSavedWatchMode

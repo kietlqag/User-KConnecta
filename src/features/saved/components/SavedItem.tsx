@@ -76,14 +76,14 @@ export const SavedItem = ({
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-4 flex gap-4 hover:shadow-sm dark:shadow-none transition-shadow">
+      <div className="bg-card rounded-xl border border-border p-4 mb-4 flex gap-4 hover:shadow-sm dark:shadow-none transition-shadow">
         {/* Thumbnail */}
         <div
-          className="w-48 h-48 rounded-lg overflow-hidden shrink-0 relative bg-gray-100 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 cursor-pointer"
+          className="w-48 h-48 rounded-lg overflow-hidden shrink-0 relative bg-background border border-border cursor-pointer"
           onClick={handleOpenPost}
         >
           {!imgLoaded && !imgError && (
-            <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700 animate-pulse" />
+            <div className="absolute inset-0 bg-muted animate-pulse" />
           )}
           <img
             src={imgError ? PLACEHOLDER_THUMBNAIL : (thumbnail || PLACEHOLDER_THUMBNAIL)}
@@ -104,10 +104,10 @@ export const SavedItem = ({
         {/* Content */}
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 line-clamp-2 mb-1 hover:underline cursor-pointer" onClick={handleOpenPost}>
+            <h2 className="text-xl font-bold text-foreground line-clamp-2 mb-1 hover:underline cursor-pointer" onClick={handleOpenPost}>
               {title}
             </h2>
-            <div className="text-[13px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mb-3">
+            <div className="text-[13px] text-muted-foreground flex items-center gap-1.5 mb-3">
               <span>{type}</span>
               <span>·</span>
               <span className="font-semibold">{source}</span>
@@ -121,36 +121,32 @@ export const SavedItem = ({
                 rounded="full"
                 initialsClassName="text-[10px] font-bold"
               />
-              <span className="text-[13px] text-gray-600 dark:text-gray-400">
-                Đã lưu từ <span className="font-semibold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">bài viết của {author.name}</span>
-                {savedFrom && <span> trong <span className="font-semibold text-gray-900 dark:text-gray-100 hover:underline cursor-pointer">{savedFrom}</span></span>}
+              <span className="text-[13px] text-muted-foreground">
+                Đã lưu từ <span className="font-semibold text-foreground hover:underline cursor-pointer">bài viết của {author.name}</span>
+                {savedFrom && <span> trong <span className="font-semibold text-foreground hover:underline cursor-pointer">{savedFrom}</span></span>}
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-[15px] transition-colors cursor-pointer ${
-                isAddedToCurrentCollection
-                  ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                  : 'bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100'
-              }`}
+              className={`flex items-center gap-2 px-6 py-2 rounded-lg font-semibold text-[15px] transition-colors cursor-pointer ${ isAddedToCurrentCollection ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700' : 'bg-background hover:bg-muted text-foreground' }`}
               onClick={handleOpenCollectionModal}
             >
               {isAddedToCurrentCollection ? <Check className="w-5 h-5" /> : <BookmarkPlus className="w-5 h-5" />}
               {isAddedToCurrentCollection ? 'Đã thêm vào bộ sưu tập' : 'Thêm vào bộ sưu tập'}
             </button>
             <button
-              className="p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+              className="p-2 bg-background hover:bg-muted rounded-lg transition-colors cursor-pointer"
               onClick={() => setShareOpen(true)}
             >
-              <Share2 className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <Share2 className="w-5 h-5 text-foreground" />
             </button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-2 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer">
-                  <MoreHorizontal className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                <button className="p-2 bg-background hover:bg-muted rounded-lg transition-colors cursor-pointer">
+                  <MoreHorizontal className="w-5 h-5 text-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">

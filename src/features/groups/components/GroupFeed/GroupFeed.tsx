@@ -79,34 +79,34 @@ export function GroupFeed({
   return (
     <div className="flex flex-col gap-4">
       {/* Create Post Card — only for approved members */}
-      {isApprovedMember && <div id="group-composer" className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none p-4 border border-gray-200 dark:border-gray-700 scroll-mt-24">
+      {isApprovedMember && <div id="group-composer" className="bg-card rounded-lg shadow-sm dark:shadow-none p-4 border border-border scroll-mt-24">
         <div className="flex gap-2 items-center mb-3">
           <CurrentUserAvatar />
           <button
             onClick={() => openComposer(false)}
-            className="flex-1 bg-gray-100 dark:bg-gray-900 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer rounded-full py-2.5 px-4 text-gray-500 dark:text-gray-400 text-[15px] text-left"
+            className="flex-1 bg-background hover:bg-muted transition-colors cursor-pointer rounded-full py-2.5 px-4 text-muted-foreground text-[15px] text-left"
           >
             Bạn đang nghĩ gì?
           </button>
         </div>
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-3 flex flex-wrap">
+        <div className="border-t border-border pt-3 flex flex-wrap">
           <button
             onClick={() => openComposer(false)}
-            className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-gray-600 dark:text-gray-400 font-semibold text-[15px]"
+            className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground font-semibold text-[15px]"
           >
             <Image className="w-6 h-6 text-green-500" />
             Ảnh/video
           </button>
           <button
             onClick={() => openComposer(false)}
-            className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-gray-600 dark:text-gray-400 font-semibold text-[15px]"
+            className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground font-semibold text-[15px]"
           >
             <Smile className="w-6 h-6 text-yellow-500" />
             Cảm xúc
           </button>
           <button
             onClick={() => openComposer(true)}
-            className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-gray-600 dark:text-gray-400 font-semibold text-[15px]"
+            className="flex-1 min-w-[120px] flex justify-center items-center gap-2 py-2 hover:bg-muted rounded-lg transition-colors text-muted-foreground font-semibold text-[15px]"
           >
             <Briefcase className="w-6 h-6 text-orange-500" />
             Thăm dò ý kiến
@@ -116,17 +116,17 @@ export function GroupFeed({
 
       {/* Posts */}
       {isLoading && (
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 text-center text-sm text-gray-500 dark:text-gray-400 shadow">
+        <div className="rounded-lg bg-card p-6 text-center text-sm text-muted-foreground shadow">
           Đang tải bài viết...
         </div>
       )}
       {!isLoading && error && (
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 text-center text-sm text-red-500 shadow">
+        <div className="rounded-lg bg-card p-6 text-center text-sm text-red-500 shadow">
           {error}
         </div>
       )}
       {!isLoading && !error && posts.length === 0 && (
-        <div className="rounded-lg bg-white dark:bg-gray-800 p-6 text-center text-sm text-gray-500 dark:text-gray-400 shadow">
+        <div className="rounded-lg bg-card p-6 text-center text-sm text-muted-foreground shadow">
           Chưa có bài viết nào trong nhóm.
         </div>
       )}

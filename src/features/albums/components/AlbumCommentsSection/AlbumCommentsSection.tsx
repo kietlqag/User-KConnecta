@@ -28,8 +28,8 @@ export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-5 mt-6">
-      <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
+    <div className="bg-card rounded-xl border border-border p-5 mt-6">
+      <h2 className="text-lg font-bold text-foreground mb-4">
         Bình luận {comments.length > 0 && `(${comments.length})`}
       </h2>
 
@@ -64,9 +64,9 @@ export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-gray-500 text-center py-4">Đang tải bình luận...</p>
+        <p className="text-sm text-muted-foreground text-center py-4">Đang tải bình luận...</p>
       ) : comments.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-4">Chưa có bình luận nào</p>
+        <p className="text-sm text-muted-foreground text-center py-4">Chưa có bình luận nào</p>
       ) : (
         <div className="space-y-4">
           {comments.map((comment) => (
@@ -81,10 +81,10 @@ export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
               />
               <div className="flex-1 min-w-0">
                 <div className="inline-block max-w-full rounded-2xl bg-muted px-3 py-2">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{comment.userName}</p>
-                  <p className="text-sm text-gray-800 dark:text-gray-200 break-words">{comment.content}</p>
+                  <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
+                  <p className="text-sm text-foreground break-words">{comment.content}</p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1 ml-1">
+                <p className="text-xs text-muted-foreground mt-1 ml-1">
                   {new Date(comment.createdAt).toLocaleString('vi-VN')}
                 </p>
               </div>

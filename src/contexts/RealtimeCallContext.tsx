@@ -252,7 +252,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const { connected, sendMessage, sendGroupMessage, sendCallSignal, sendMessageDelivered, sendConversationSeen: sendConversationSeenRaw } = useChatSocket(
-    currentUser?.token,
+    Boolean(currentUser),
     handleIncomingMessage,
     handleIncomingCallSignal,
     handleIncomingCallError,

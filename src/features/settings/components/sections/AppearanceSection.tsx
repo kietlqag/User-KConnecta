@@ -52,17 +52,11 @@ export function AppearanceSection({
               <label
                 key={option.value}
                 htmlFor={`theme-${option.value}`}
-                className={`flex cursor-pointer items-center gap-3 rounded-[10px] border px-4 py-3 transition-colors ${
-                  isActive
-                    ? 'border-primary/30 bg-accent'
-                    : 'border-border bg-card hover:bg-muted/40'
-                }`}
+                className={`flex cursor-pointer items-center gap-3 rounded-[10px] border px-4 py-3 transition-colors ${ isActive ? 'border-primary/30 bg-accent' : 'border-border bg-card hover:bg-muted/40' }`}
               >
                 <RadioGroupItem value={option.value} id={`theme-${option.value}`} className="sr-only" />
                 <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
-                    isActive ? 'bg-primary/15' : 'bg-muted'
-                  }`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${ isActive ? 'bg-primary/15' : 'bg-muted' }`}
                 >
                   <Icon className={`h-5 w-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
                 </div>
@@ -73,9 +67,7 @@ export function AppearanceSection({
                   <p className="text-xs text-muted-foreground">{option.description}</p>
                 </div>
                 <div
-                  className={`h-4 w-4 shrink-0 rounded-full border-2 ${
-                    isActive ? 'border-primary bg-primary' : 'border-border'
-                  }`}
+                  className={`h-4 w-4 shrink-0 rounded-full border-2 ${ isActive ? 'border-primary bg-primary' : 'border-border' }`}
                 />
               </label>
             );

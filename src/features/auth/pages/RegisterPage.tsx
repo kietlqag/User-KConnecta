@@ -138,7 +138,7 @@ export function RegisterPage() {
           style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
         />
         <div className="relative z-20">
-          <div className="inline-flex items-center rounded-xl bg-white dark:bg-gray-800/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
+          <div className="inline-flex items-center rounded-xl bg-card/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
             <img src={logoV1} alt="KConnecta Logo V1" className="h-9 w-auto" />
           </div>
         </div>

@@ -1,18 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
-import { X, Image, Loader2, AlertCircle, FileText, Globe, Users, Lock } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { X, Image, Loader2, AlertCircle, FileText, Globe, Users, Lock, CalendarClock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/authService';
-import { postService, type CreatePostMediaRequest } from '@/services/postService';
+import { postService, type CreatePostMediaRequest, type PostResponse } from '@/services/postService';
 import { compressImage } from '@/utils/imageUtils';
 import { CurrentUserAvatar } from '@/components/shared';
 import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { useRefreshPoliciesOnOpen } from '@/hooks/useRefreshPoliciesOnOpen';
+import { usePostEditRateLimit } from '@/hooks/usePostEditRateLimit';
+import { formatPostEditRateLimitMessage, isPostEditRateLimitReached } from '@/utils/postRateLimit';
 import { PostAllowedFormatsHint } from '@/features/profile/components/ProfileCreatePost/PostAllowedFormatsHint';
 import { validatePostAgainstPolicy, checkKeywords, validatePostMediaFiles } from '@/utils/policyValidation';
 import { buildPostMediaAcceptAttribute, getPostMediaKind, toApiMediaType, type PostMediaKind } from '@/utils/allowedFileTypes';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
 import { ProfilePostAudienceModal } from '@/features/profile/components/ProfileCreatePost/ProfilePostAudienceModal';
+import {
+  ProfilePostScheduleModal,
+  defaultScheduledDatetimeLocal,
+  type PostScheduleMode,
+} from '@/features/profile/components/ProfileCreatePost/ProfilePostScheduleModal';
+import { toApiScheduledAt, scheduledAtApiToDatetimeLocal } from '@/features/profile/components/ProfileCreatePost/postScheduleUtils';
 import {
   apiPrivacyToAudience,
   audienceToApiPrivacy,
@@ -42,6 +50,8 @@ export interface EditPostModalProps {
   initialPrivacy?: PostPrivacy;
   initialExcludedUserIds?: string[];
   initialAllowedUserIds?: string[];
+  initialStatus?: PostResponse['status'];
+  initialScheduledAt?: string | null;
   isGroupPost?: boolean;
   isShareWrapper?: boolean;
   onPostUpdated?: (data: {
@@ -50,6 +60,11 @@ export interface EditPostModalProps {
     privacy?: PostPrivacy;
     excludedUserIds?: string[];
     allowedUserIds?: string[];
+    status?: PostResponse['status'];
+    scheduledAt?: string | null;
+    publishedAt?: string | null;
+    createdAt?: string;
+    fullPost?: PostResponse;
   }) => void;
 }
 
@@ -62,19 +77,31 @@ export function EditPostModal({
   initialPrivacy = 'PUBLIC',
   initialExcludedUserIds = [],
   initialAllowedUserIds = [],
+  initialStatus,
+  initialScheduledAt,
   isGroupPost = false,
   isShareWrapper = false,
   onPostUpdated,
 }: EditPostModalProps) {
+  const isScheduledPost = initialStatus === 'SCHEDULED';
   const [content, setContent] = useState(initialContent);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [privacy, setPrivacy] = useState<AudienceId>('public');
   const [showAudienceModal, setShowAudienceModal] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleMode, setScheduleMode] = useState<PostScheduleMode>('scheduled');
+  const [scheduledAtLocal, setScheduledAtLocal] = useState(defaultScheduledDatetimeLocal());
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadPromisesRef = useRef<Map<string, Promise<string>>>(new Map());
   const uploadControllersRef = useRef<Map<string, AbortController>>(new Map());
   const { data: publicPolicy, isLoading: policyLoading } = usePublicPolicies();
+  const { data: editRateLimit } = usePostEditRateLimit(isOpen);
+  const editRateLimitMessage = useMemo(
+    () => (editRateLimit ? formatPostEditRateLimitMessage(editRateLimit) : null),
+    [editRateLimit],
+  );
+  const editRateLimitBlocked = isPostEditRateLimitReached(editRateLimit);
   useRefreshPoliciesOnOpen(isOpen);
   const queryClient = useQueryClient();
   const currentUser = authService.getCurrentUser();
@@ -83,6 +110,13 @@ export function EditPostModal({
     if (!isOpen) return;
     setContent(initialContent);
     setPrivacy(apiPrivacyToAudience(initialPrivacy));
+    if (isScheduledPost) {
+      setScheduleMode('scheduled');
+      setScheduledAtLocal(scheduledAtApiToDatetimeLocal(initialScheduledAt));
+    } else {
+      setScheduleMode('now');
+      setScheduledAtLocal(defaultScheduledDatetimeLocal());
+    }
     setMediaItems(
       initialMedia.map((m, i) => ({
         id: `existing-${i}-${m.url}`,
@@ -92,7 +126,7 @@ export function EditPostModal({
         isExisting: true,
       })),
     );
-  }, [isOpen, initialContent, initialMedia, initialPrivacy]);
+  }, [isOpen, initialContent, initialMedia, initialPrivacy, initialScheduledAt, isScheduledPost]);
 
   useEffect(() => {
     if (isOpen) {
@@ -248,6 +282,24 @@ export function EditPostModal({
       return;
     }
 
+    if (editRateLimitBlocked) {
+      toast.error(editRateLimitMessage ?? 'Bạn đã chỉnh sửa quá nhiều bài trong phút qua.');
+      void queryClient.invalidateQueries({ queryKey: ['posts', 'edit-rate-limit'] });
+      return;
+    }
+
+    if (isScheduledPost && scheduleMode === 'scheduled') {
+      if (!scheduledAtLocal.trim()) {
+        toast.error('Chọn ngày và giờ đăng bài');
+        return;
+      }
+      const scheduledDate = new Date(scheduledAtLocal);
+      if (Number.isNaN(scheduledDate.getTime()) || scheduledDate.getTime() <= Date.now()) {
+        toast.error('Chọn thời gian trong tương lai');
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const apiPrivacy = audienceToApiPrivacy(privacy);
@@ -267,6 +319,16 @@ export function EditPostModal({
         payload.privacy = apiPrivacy;
       }
 
+      if (isScheduledPost) {
+        if (scheduleMode === 'scheduled') {
+          payload.status = 'SCHEDULED';
+          payload.scheduledAt = toApiScheduledAt(scheduledAtLocal);
+        } else {
+          payload.status = 'PUBLISHED';
+          payload.scheduledAt = null;
+        }
+      }
+
       const updated = await postService.updatePost(postId, payload);
 
       const updatedMediaList = (updated.media ?? []).map((m) => ({
@@ -280,10 +342,18 @@ export function EditPostModal({
         privacy: updated.privacy,
         excludedUserIds: updated.excludedUserIds ?? [],
         allowedUserIds: updated.allowedUserIds ?? [],
+        status: updated.status,
+        scheduledAt: updated.scheduledAt ?? null,
+        publishedAt: updated.publishedAt ?? null,
+        createdAt: updated.createdAt,
+        fullPost: updated,
       });
 
       void queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
-      toast.success('Đã cập nhật bài viết');
+      void queryClient.invalidateQueries({ queryKey: ['posts', 'edit-rate-limit'] });
+      toast.success(
+        updated.status === 'SCHEDULED' ? 'Đã cập nhật bài viết lên lịch' : 'Đã cập nhật bài viết',
+      );
       onClose();
     } catch (error) {
       const message = error instanceof Error && error.message
@@ -310,28 +380,39 @@ export function EditPostModal({
   const privacyInfo = getPrivacyInfo();
   const PrivacyIcon = privacyInfo.icon;
   const canSave = isShareWrapper || content.trim().length > 0 || mediaItems.length > 0;
+  const scheduleSummary =
+    scheduleMode === 'scheduled' && scheduledAtLocal
+      ? new Date(scheduledAtLocal).toLocaleString('vi-VN', {
+          weekday: 'short',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : 'Đăng ngay';
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="relative flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
+      <div className="relative flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-card shadow-xl">
         {isSaving && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-white/80 backdrop-blur-[2px] dark:bg-gray-800/80">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-lg bg-card/80 backdrop-blur-[2px]/80">
             <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang lưu thay đổi...</p>
+            <p className="text-sm font-medium text-foreground">Đang lưu thay đổi...</p>
           </div>
         )}
 
-        <div className="relative flex shrink-0 items-center justify-center border-b border-gray-200 p-4 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Chỉnh sửa bài viết</h2>
+        <div className="relative flex shrink-0 items-center justify-center border-b border-border p-4">
+          <h2 className="text-xl font-bold text-foreground">Chỉnh sửa bài viết</h2>
           <button
             type="button"
             onClick={handleClose}
             disabled={isSaving}
-            className="absolute right-4 rounded-full p-2 transition-colors hover:bg-gray-100 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-700"
+            className="absolute right-4 rounded-full p-2 transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+            <X className="h-6 w-6 text-muted-foreground" />
           </button>
         </div>
 
@@ -339,22 +420,35 @@ export function EditPostModal({
           <div className="mb-4 flex items-center gap-3">
             <CurrentUserAvatar />
             <div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
+              <h3 className="font-semibold text-foreground">
                 {currentUser?.fullName || currentUser?.username || 'Bạn'}
               </h3>
               {!isGroupPost && (
-                <button
-                  type="button"
-                  onClick={() => setShowAudienceModal(true)}
-                  disabled={isSaving}
-                  className="mt-1 flex items-center gap-1 rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-                >
-                  <PrivacyIcon className="h-3 w-3" />
-                  <span>{privacyInfo.label}</span>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAudienceModal(true)}
+                    disabled={isSaving}
+                    className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <PrivacyIcon className="h-3 w-3" />
+                    <span>{privacyInfo.label}</span>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isScheduledPost && (
+                    <button
+                      type="button"
+                      onClick={() => setShowScheduleModal(true)}
+                      disabled={isSaving}
+                      className="flex items-center gap-1 rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 transition-colors hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                    >
+                      <CalendarClock className="h-3 w-3" />
+                      <span>{scheduleSummary}</span>
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -364,7 +458,7 @@ export function EditPostModal({
             onChange={(e) => setContent(e.target.value)}
             placeholder={isShareWrapper ? 'Thêm ghi chú khi chia sẻ...' : 'Bạn đang nghĩ gì?'}
             disabled={isSaving}
-            className="min-h-[120px] w-full resize-none border-none bg-transparent text-xl text-gray-900 outline-none placeholder:text-gray-400 disabled:cursor-not-allowed disabled:opacity-60 dark:text-white dark:placeholder:text-gray-500"
+            className="min-h-[120px] w-full resize-none border-none bg-transparent text-xl text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60 dark:text-white dark:placeholder:text-muted-foreground"
             autoFocus
           />
 
@@ -373,9 +467,7 @@ export function EditPostModal({
             const len = content.length;
             const ratio = len / max;
             return (
-              <div className={`text-right text-xs ${
-                ratio >= 1 ? 'font-medium text-red-500' : ratio >= 0.9 ? 'text-orange-500' : 'text-gray-400'
-              }`}>
+              <div className={`text-right text-xs ${ ratio >= 1 ? 'font-medium text-red-500' : ratio >= 0.9 ? 'text-orange-500' : 'text-muted-foreground' }`}>
                 {len} / {max}
               </div>
             );
@@ -396,7 +488,7 @@ export function EditPostModal({
               {mediaItems.map((item) => (
                 <div
                   key={item.id}
-                  className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-black dark:border-gray-600"
+                  className="relative aspect-square overflow-hidden rounded-lg border border-border bg-black"
                 >
                   {item.type === 'video' ? (
                     <video
@@ -406,9 +498,9 @@ export function EditPostModal({
                       playsInline
                     />
                   ) : item.type === 'document' ? (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gray-100 p-3 dark:bg-gray-900">
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-muted p-3">
                       <FileText className="h-10 w-10 text-slate-600 dark:text-slate-300" />
-                      <span className="line-clamp-2 text-center text-xs font-medium text-gray-700 dark:text-gray-200">
+                      <span className="line-clamp-2 text-center text-xs font-medium text-foreground">
                         {item.fileName ?? 'Tài liệu'}
                       </span>
                     </div>
@@ -433,7 +525,7 @@ export function EditPostModal({
                     type="button"
                     onClick={() => removeMedia(item.id)}
                     disabled={isSaving}
-                    className="absolute right-2 top-2 rounded-full bg-white dark:bg-gray-800/90 p-1 text-gray-700 dark:text-gray-300 shadow hover:bg-white dark:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="absolute right-2 top-2 rounded-full bg-card/90 p-1 text-foreground shadow hover:bg-card disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -461,7 +553,7 @@ export function EditPostModal({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isSaving || policyLoading}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:bg-gray-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-background disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Image className="h-4 w-4" />
                 Thêm file đính kèm
@@ -476,10 +568,17 @@ export function EditPostModal({
           )}
         </div>
 
-        <div className="shrink-0 border-t border-gray-200 p-4 dark:border-gray-700">
+        <div className="shrink-0 border-t border-border p-4">
+          {editRateLimitMessage ? (
+            <p
+              className={`mb-3 text-xs ${ editRateLimitBlocked ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-muted-foreground' }`}
+            >
+              {editRateLimitMessage}
+            </p>
+          ) : null}
           <button
             type="button"
-            disabled={isSaving || !canSave}
+            disabled={isSaving || !canSave || editRateLimitBlocked}
             onClick={() => void handleSave()}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -503,6 +602,19 @@ export function EditPostModal({
           onSelect={(nextAudience) => {
             setPrivacy(nextAudience);
             setShowAudienceModal(false);
+          }}
+        />
+      )}
+
+      {isScheduledPost && (
+        <ProfilePostScheduleModal
+          isOpen={showScheduleModal}
+          onClose={() => setShowScheduleModal(false)}
+          mode={scheduleMode}
+          scheduledAtLocal={scheduledAtLocal}
+          onConfirm={({ mode, scheduledAtLocal: nextScheduledAtLocal }) => {
+            setScheduleMode(mode);
+            setScheduledAtLocal(nextScheduledAtLocal || defaultScheduledDatetimeLocal());
           }}
         />
       )}

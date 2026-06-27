@@ -196,8 +196,8 @@ export function ForgotPasswordPage() {
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Mail className="text-emerald-600" size={32} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">Quên mật khẩu</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Nhập email của bạn để nhận mã xác thực</p>
+              <h2 className="text-2xl font-bold text-foreground mb-1">Quên mật khẩu</h2>
+              <p className="text-muted-foreground text-sm">Nhập email của bạn để nhận mã xác thực</p>
             </div>
             <AuthInput
               label="Email"
@@ -212,7 +212,7 @@ export function ForgotPasswordPage() {
             <button type="submit" disabled={isLoading} className={submitBtnClass}>
               {isLoading ? spinnerSvg : "Gửi mã xác thực"}
             </button>
-            <Link to="/auth/login" className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100 transition-colors mt-4">
+            <Link to="/auth/login" className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground dark:hover:text-gray-100 transition-colors mt-4">
               <ArrowLeft size={16} />
               Quay lại đăng nhập
             </Link>
@@ -228,33 +228,33 @@ export function ForgotPasswordPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">Xác thực OTP</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Nhập mã OTP đã được gửi đến</p>
+              <h2 className="text-2xl font-bold text-foreground mb-1">Xác thực OTP</h2>
+              <p className="text-muted-foreground text-sm">Nhập mã OTP đã được gửi đến</p>
               <p className="text-emerald-600 font-medium mt-1">{email}</p>
             </div>
             <OTPInput value={otp} onChange={(value) => { setOtp(value); setErrors({}); }} error={errors.otp} />
             <button type="submit" disabled={isLoading} className={submitBtnClass}>
               {isLoading ? spinnerSvg : "Xác thực"}
             </button>
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center -mt-2">
+            <p className="text-sm text-muted-foreground text-center -mt-2">
               Mã hết hạn sau:{" "}
               <span className={otpExpiresIn > 10 ? "font-semibold text-amber-600" : "font-semibold text-red-500"}>
                 {formattedOtpExpiresIn}
               </span>
             </p>
             <div className="text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Không nhận được mã?{" "}
                 {countdown > 0 ? (
-                  <span className="text-gray-400">Gửi lại sau {countdown}s</span>
+                  <span className="text-muted-foreground">Gửi lại sau {countdown}s</span>
                 ) : (
-                  <button type="button" onClick={handleResendOTP} disabled={isLoading} className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:text-gray-400 disabled:cursor-not-allowed">
+                  <button type="button" onClick={handleResendOTP} disabled={isLoading} className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors disabled:text-muted-foreground disabled:cursor-not-allowed">
                     Gửi lại
                   </button>
                 )}
               </p>
             </div>
-            <button type="button" onClick={() => setStep("email")} className="flex items-center justify-center gap-2 w-full text-sm text-gray-600 hover:text-gray-900 dark:hover:text-gray-100 dark:text-gray-100 transition-colors">
+            <button type="button" onClick={() => setStep("email")} className="flex items-center justify-center gap-2 w-full text-sm text-muted-foreground hover:text-foreground dark:hover:text-gray-100 transition-colors">
               <ArrowLeft size={16} />
               Thay đổi email
             </button>
@@ -268,8 +268,8 @@ export function ForgotPasswordPage() {
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Lock className="text-emerald-600" size={32} />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">Đặt lại mật khẩu</h2>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Tạo mật khẩu mới cho tài khoản của bạn</p>
+              <h2 className="text-2xl font-bold text-foreground mb-1">Đặt lại mật khẩu</h2>
+              <p className="text-muted-foreground text-sm">Tạo mật khẩu mới cho tài khoản của bạn</p>
             </div>
             <AuthInput label="Mật khẩu mới" name="password" type="password" placeholder="........" icon={<Lock size={20} />} value={password} onChange={(e) => { setPassword(e.target.value); setErrors((prev) => ({ ...prev, password: "" })); }} error={errors.password} />
             <AuthInput
@@ -289,11 +289,11 @@ export function ForgotPasswordPage() {
                     : ""
               }
             />
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 space-y-2">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mật khẩu phải có:</p>
-              <ul className="space-y-1.5 text-sm text-gray-600 dark:text-gray-400">
+            <div className="bg-background rounded-xl p-4 space-y-2">
+              <p className="text-sm font-medium text-foreground mb-2">Mật khẩu phải có:</p>
+              <ul className="space-y-1.5 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasMinLength ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasMinLength ? 'bg-green-500' : 'bg-muted'}`}>
                     {hasMinLength && (
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -303,7 +303,7 @@ export function ForgotPasswordPage() {
                   Ít nhất 8 ký tự
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasUpperAndLower ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasUpperAndLower ? 'bg-green-500' : 'bg-muted'}`}>
                     {hasUpperAndLower && (
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -313,7 +313,7 @@ export function ForgotPasswordPage() {
                   Chữ hoa và chữ thường
                 </li>
                 <li className="flex items-center gap-2">
-                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasNumber ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                  <div className={`w-4 h-4 rounded-full flex items-center justify-center ${hasNumber ? 'bg-green-500' : 'bg-muted'}`}>
                     {hasNumber && (
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -337,8 +337,8 @@ export function ForgotPasswordPage() {
               <CheckCircle2 className="text-green-600" size={40} />
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Thành công!</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Mật khẩu của bạn đã được đặt lại thành công</p>
+              <h3 className="text-2xl font-bold text-foreground mb-2">Thành công!</h3>
+              <p className="text-muted-foreground text-sm">Mật khẩu của bạn đã được đặt lại thành công</p>
             </div>
             <Link to="/auth/login" className="inline-block w-full py-3.5 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]">
               Đăng nhập ngay
@@ -368,7 +368,7 @@ export function ForgotPasswordPage() {
           style={{ background: 'radial-gradient(circle, #10b981 0%, transparent 70%)' }}
         />
         <div className="relative z-20">
-          <div className="inline-flex items-center rounded-xl bg-white dark:bg-gray-800/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
+          <div className="inline-flex items-center rounded-xl bg-card/90 px-3 py-2 shadow-lg shadow-black/20 ring-1 ring-white/70 backdrop-blur-sm">
             <img src={logoV1} alt="KConnecta Logo V1" className="h-9 w-auto" />
           </div>
         </div>

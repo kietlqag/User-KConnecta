@@ -80,39 +80,39 @@ export function GroupSearchPage() {
           <Search className="h-6 w-6 text-emerald-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Tìm kiếm nhóm</h1>
-          <p className="text-gray-500 dark:text-gray-400">
+          <h1 className="text-2xl font-bold text-foreground">Tìm kiếm nhóm</h1>
+          <p className="text-muted-foreground">
             {query.trim()
-              ? <>Kết quả cho &quot;<span className="font-medium text-gray-700 dark:text-gray-300">{query}</span>&quot;</>
+              ? <>Kết quả cho &quot;<span className="font-medium text-foreground">{query}</span>&quot;</>
               : 'Nhập tên nhóm để bắt đầu tìm kiếm'}
           </p>
         </div>
       </div>
 
       {!query.trim() && (
-        <div className="rounded-xl border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
-          <Search className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-          <p className="text-[15px] text-gray-500 dark:text-gray-400">Dùng ô tìm kiếm bên trái hoặc gõ tên nhóm rồi nhấn Enter.</p>
+        <div className="rounded-xl border border-border bg-card p-12 text-center">
+          <Search className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
+          <p className="text-[15px] text-muted-foreground">Dùng ô tìm kiếm bên trái hoặc gõ tên nhóm rồi nhấn Enter.</p>
         </div>
       )}
 
       {query.trim() && loading && (
-        <div className="flex items-center justify-center gap-2 py-16 text-gray-500 dark:text-gray-400">
+        <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
           Đang tìm kiếm...
         </div>
       )}
 
       {query.trim() && error && (
-        <div className="rounded-xl border border-red-200 bg-white p-6 text-center text-sm text-red-600 dark:bg-gray-800">
+        <div className="rounded-xl border border-red-200 bg-card p-6 text-center text-sm text-red-600">
           {error}
         </div>
       )}
 
       {query.trim() && !loading && !error && resultCards.length === 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-12 text-center dark:border-gray-700 dark:bg-gray-800">
-          <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">Không tìm thấy nhóm</h3>
-          <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">Thử từ khóa khác hoặc khám phá nhóm gợi ý.</p>
+        <div className="rounded-xl border border-border bg-card p-12 text-center">
+          <h3 className="mb-2 text-lg font-semibold text-foreground">Không tìm thấy nhóm</h3>
+          <p className="mb-4 text-sm text-muted-foreground">Thử từ khóa khác hoặc khám phá nhóm gợi ý.</p>
           <button
             type="button"
             onClick={() => navigate('/groups/discover')}
@@ -125,7 +125,7 @@ export function GroupSearchPage() {
 
       {query.trim() && !loading && !error && resultCards.length > 0 && (
         <>
-          <p className="mb-4 text-[15px] font-semibold text-gray-700 dark:text-gray-300">
+          <p className="mb-4 text-[15px] font-semibold text-foreground">
             {resultCards.length} nhóm
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

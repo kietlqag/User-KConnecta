@@ -416,9 +416,7 @@ export function ProfileCreatePostModal({
 
       toast.success(isScheduled ? 'Đã lên lịch đăng bài' : 'Đăng bài thành công');
       void queryClient.invalidateQueries({ queryKey: ['posts', 'rate-limit'] });
-      if (!isScheduled) {
-        onPostCreated?.(createdPost);
-      }
+      onPostCreated?.(createdPost);
       onClose();
       setPostContent('');
       setSelectedImages([]);
@@ -461,14 +459,14 @@ export function ProfileCreatePostModal({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-        <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
-          <div className="relative flex shrink-0 items-center justify-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tạo bài viết</h2>
+        <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-card shadow-xl">
+          <div className="relative flex shrink-0 items-center justify-center border-b border-border bg-card p-4">
+            <h2 className="text-xl font-bold text-foreground">Tạo bài viết</h2>
             <button
               onClick={handleCancel}
               className="absolute right-4 rounded-full p-2 transition-colors hover:bg-muted"
             >
-              <X className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+              <X className="h-6 w-6 text-muted-foreground" />
             </button>
           </div>
 
@@ -477,7 +475,7 @@ export function ProfileCreatePostModal({
             <div className="mb-4 flex items-center gap-3">
               <CurrentUserAvatar />
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">{username}</h3>
+                <h3 className="font-semibold text-foreground">{username}</h3>
                 <div className="mt-1 flex flex-wrap items-center gap-1">
                   {isGroupPost && targetGroup ? (
                     <span className="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
@@ -497,7 +495,7 @@ export function ProfileCreatePostModal({
                         setReopenSettingsAfterAudience(false);
                         setShowAudienceModal(true);
                       }}
-                      className="flex items-center gap-1 rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                      className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                     >
                       <PrivacyIcon className="h-3 w-3" />
                       <span>{privacyInfo.label}</span>
@@ -515,7 +513,7 @@ export function ProfileCreatePostModal({
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               placeholder={isGroupPost ? 'Bạn viết gì đi... (#hashtag giúp admin theo dõi xu hướng)' : 'Bạn đang nghĩ gì? Thêm #chủđề nếu muốn'}
-              className="min-h-[120px] w-full resize-none border-none bg-transparent text-2xl text-gray-900 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500"
+              className="min-h-[120px] w-full resize-none border-none bg-transparent text-2xl text-foreground outline-none placeholder:text-muted-foreground dark:text-white dark:placeholder:text-muted-foreground"
               autoFocus
             />
             {publicPolicy && (() => {
@@ -523,9 +521,7 @@ export function ProfileCreatePostModal({
               const len = postContent.length;
               const ratio = len / max;
               return (
-                <div className={`text-right text-xs ${
-                  ratio >= 1 ? 'text-red-500 font-medium' : ratio >= 0.9 ? 'text-orange-500' : 'text-gray-400 dark:text-gray-500'
-                }`}>
+                <div className={`text-right text-xs ${ ratio >= 1 ? 'text-red-500 font-medium' : ratio >= 0.9 ? 'text-orange-500' : 'text-muted-foreground' }`}>
                   {len} / {max}
                 </div>
               );
@@ -554,18 +550,18 @@ export function ProfileCreatePostModal({
             )}
 
             {showImagePicker && (
-              <div className="relative mb-4 rounded-lg bg-gray-50 border border-gray-200 p-2 group dark:bg-gray-700 dark:border-gray-600">
+              <div className="relative mb-4 rounded-lg bg-muted border border-border p-2 group">
                 <div className="absolute right-2 top-2 z-10 flex gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 rounded bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm dark:shadow-none hover:bg-gray-50 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
+                    className="flex items-center gap-2 rounded bg-card px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm dark:shadow-none hover:bg-muted dark:text-white dark:hover:bg-muted0"
                   >
-                    <Image className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    <Image className="h-4 w-4 text-muted-foreground" />
                     Thêm ảnh/video
                   </button>
                   <button
                     onClick={() => setShowImagePicker(false)}
-                    className="rounded-full bg-white p-1.5 text-gray-500 shadow-sm dark:shadow-none hover:bg-gray-50 border border-gray-200 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 dark:border-gray-500"
+                    className="rounded-full bg-card p-1.5 text-muted-foreground shadow-sm dark:shadow-none hover:bg-muted border border-border dark:text-white dark:hover:bg-muted0 dark:border-gray-500"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -574,13 +570,13 @@ export function ProfileCreatePostModal({
                 {selectedImages.length === 0 ? (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-md border-2 border-transparent hover:bg-gray-100 dark:bg-gray-900 transition-colors dark:hover:bg-gray-600"
+                    className="flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-md border-2 border-transparent hover:bg-background transition-colors"
                   >
-                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
+                    <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                       <Image className="h-6 w-6 text-green-600" />
                     </div>
-                    <p className="text-[17px] font-bold text-gray-900 dark:text-white">Thêm ảnh/video/tài liệu</p>
-                    <p className="text-[13px] text-gray-500 dark:text-gray-400">hoặc kéo và thả</p>
+                    <p className="text-[17px] font-bold text-foreground">Thêm ảnh/video/tài liệu</p>
+                    <p className="text-[13px] text-muted-foreground">hoặc kéo và thả</p>
                     {publicPolicy && (
                       <PostAllowedFormatsHint
                         allowedFileTypes={publicPolicy.postPolicy.allowedFileTypes}
@@ -594,7 +590,7 @@ export function ProfileCreatePostModal({
                     {selectedImages.map((img) => (
                       <div
                         key={img.id}
-                        className="relative aspect-square min-h-0 w-full overflow-hidden rounded-lg border border-gray-200 bg-black dark:border-gray-500"
+                        className="relative aspect-square min-h-0 w-full overflow-hidden rounded-lg border border-border bg-black dark:border-gray-500"
                       >
                         {img.type === 'video' ? (
                           <video
@@ -604,9 +600,9 @@ export function ProfileCreatePostModal({
                             playsInline
                           />
                         ) : img.type === 'document' ? (
-                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-100 p-3 dark:bg-gray-800">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted p-3">
                             <FileText className="h-10 w-10 text-slate-600 dark:text-slate-300" />
-                            <span className="line-clamp-2 text-center text-xs font-medium text-gray-700 dark:text-gray-200">
+                            <span className="line-clamp-2 text-center text-xs font-medium text-foreground">
                               {img.file.name}
                             </span>
                           </div>
@@ -632,7 +628,7 @@ export function ProfileCreatePostModal({
                         )}
                         <button
                           onClick={() => removeImage(img.id)}
-                          className="absolute right-1 top-1 z-10 rounded-full border border-gray-200 bg-white p-1 text-gray-500 shadow-sm dark:shadow-none hover:bg-gray-50 dark:border-gray-500 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500"
+                          className="absolute right-1 top-1 z-10 rounded-full border border-border bg-card p-1 text-muted-foreground shadow-sm dark:shadow-none hover:bg-muted dark:border-gray-500 dark:text-white dark:hover:bg-muted0"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -641,13 +637,13 @@ export function ProfileCreatePostModal({
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex aspect-square min-h-0 w-full items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:border-gray-500 dark:hover:bg-gray-600"
+                      className="flex aspect-square min-h-0 w-full items-center justify-center rounded-lg border-2 border-dashed border-border transition-colors hover:bg-background dark:border-gray-500"
                     >
                       <div className="flex flex-col items-center">
-                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600 mb-1">
-                            <span className="text-2xl text-gray-600 dark:text-gray-400">+</span>
+                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted mb-1">
+                            <span className="text-2xl text-muted-foreground">+</span>
                          </div>
-                         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Thêm ảnh</span>
+                         <span className="text-xs font-semibold text-muted-foreground">Thêm ảnh</span>
                       </div>
                     </button>
                   </div>
@@ -689,21 +685,21 @@ export function ProfileCreatePostModal({
                   }}
                   className="rounded-full p-2 transition-colors hover:bg-muted"
                 >
-                  <Smile className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+                  <Smile className="h-6 w-6 text-muted-foreground" />
                 </button>
               </div>
             </div>
           </div>
 
           <div className="px-4 pb-3">
-            <div className="rounded-lg border border-gray-300 p-3 dark:border-gray-600">
+            <div className="rounded-lg border border-border p-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                  <span className="text-sm font-medium text-foreground">
                     Thêm vào bài viết của bạn
                   </span>
                   {publicPolicy && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    <p className="text-xs text-muted-foreground mt-0.5">
                       Tối đa {publicPolicy.postPolicy.maxImagesPerPost} ảnh/video
                     </p>
                   )}
@@ -730,7 +726,7 @@ export function ProfileCreatePostModal({
           </div>
           </div>
 
-          <div className="shrink-0 border-t border-gray-200 bg-white px-4 pb-4 pt-3 dark:border-gray-700 dark:bg-gray-800">
+          <div className="shrink-0 border-t border-border bg-card px-4 pb-4 pt-3">
             {(() => {
               const trimmedPollOptions = pollOptions.map((item) => item.trim()).filter(Boolean);
               const pollNeedsText = showPoll && !postContent.trim();
@@ -753,11 +749,7 @@ export function ProfileCreatePostModal({
                     type="button"
                     onClick={useDirectPost ? () => void handlePost() : handleNext}
                     disabled={disabled}
-                    className={`w-full rounded-lg py-2.5 font-semibold transition-colors ${
-                      !disabled
-                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                        : 'cursor-not-allowed bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'
-                    }`}
+                    className={`w-full rounded-lg py-2.5 font-semibold transition-colors ${ !disabled ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'cursor-not-allowed bg-muted text-muted-foreground dark:text-muted-foreground' }`}
                   >
                     {isPosting ? (
                       <span className="flex items-center justify-center gap-2">
@@ -778,9 +770,7 @@ export function ProfileCreatePostModal({
                   )}
                   {rateLimitMessage && (
                     <p
-                      className={`mt-2 text-center text-xs ${
-                        rateLimitBlocked ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'
-                      }`}
+                      className={`mt-2 text-center text-xs ${ rateLimitBlocked ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-muted-foreground' }`}
                     >
                       {rateLimitMessage}
                     </p>

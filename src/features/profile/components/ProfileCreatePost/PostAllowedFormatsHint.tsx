@@ -10,8 +10,8 @@ export function PostAllowedFormatsHint({ allowedFileTypes, className = '' }: Pos
   if (!label) return null;
 
   return (
-    <p className={`text-xs text-gray-500 dark:text-gray-400 ${className}`.trim()}>
-      Định dạng được phép: <span className="font-medium text-gray-600 dark:text-gray-300">{label}</span>
+    <p className={`text-xs text-muted-foreground ${className}`.trim()}>
+      Định dạng được phép: <span className="font-medium text-muted-foreground">{label}</span>
     </p>
   );
 }

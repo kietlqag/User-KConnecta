@@ -31,7 +31,7 @@ export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {
   };
 
   return (
-    <div className="sticky top-14 z-40 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+    <div className="sticky top-14 z-40 border-b border-border bg-card">
       <div className="mx-auto max-w-[1100px] px-4">
         <div className="flex items-center justify-between">
           <nav className="-mb-px flex items-center gap-2 overflow-x-auto scrollbar-none">
@@ -40,11 +40,7 @@ export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {
                 key={tab.path}
                 to={tab.path}
                 onClick={() => logProfileTabClick(tab.labelKey, tab.path, currentPath)}
-                className={`whitespace-nowrap px-4 py-4 font-medium transition-colors ${
-                  isActive(tab.path)
-                    ? 'border-b-4 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400'
-                    : 'rounded-t-lg text-gray-600 hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-400 dark:hover:bg-gray-700'
-                }`}
+                className={`whitespace-nowrap border-b-4 px-4 py-4 font-medium transition-colors ${ isActive(tab.path) ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-muted-foreground hover:bg-muted dark:text-muted-foreground' }`}
               >
                 {t(`profileTabs.${tab.labelKey}`)}
               </Link>

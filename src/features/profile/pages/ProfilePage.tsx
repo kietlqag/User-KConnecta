@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigationType } from 'react-router-dom';
 import { authService } from '@/services/authService';
 import { postService } from '@/services/postService';
 import { friendService } from '@/services/friendService';
@@ -9,7 +9,8 @@ import {
   ProfileCreatePost,
   ProfilePosts,
 } from '../components';
-import { mapApiPost, type FeedPost } from '@/utils/postUtils';
+import { mapApiPost, type FeedPost, isProfileVisiblePost, mergeProfilePostList } from '@/utils/postUtils';
+import type { PostResponse } from '@/services/postService';
 import { POST_DELETED_EVENT } from '@/features/home/hooks/usePosts';
 import { buildProfileDisplay, getProfileHeaderName } from '../utils/profileDisplayUtils';
 import {
@@ -19,11 +20,17 @@ import {
 } from '../utils/profilePhotoUtils';
 import { useProfileLayoutContext } from './ProfileLayout';
 import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogger';
+import {
+  getProfilePageCache,
+  setProfilePageCache,
+  updateProfilePageScroll,
+} from '../utils/profileSessionCache';
 
 export function ProfilePage() {
   const { profile, resolvedId, isOwnProfile, friendsCount, loading: profileLoading } =
     useProfileLayoutContext();
   useProfileTabDebug('all', resolvedId);
+  const navigationType = useNavigationType();
   const [searchParams] = useSearchParams();
   const highlightPostId = searchParams.get('post');
   const currentUser = React.useMemo(() => authService.getCurrentUser(), []);
@@ -52,31 +59,97 @@ export function ProfilePage() {
   }, [currentUser?.id]);
 
   const fetchPosts = React.useCallback(
-    async (authorId: string, page = 0) => {
+    async (authorId: string, page = 0, options?: { silent?: boolean }) => {
       if (!authorId) return;
-      setPostsLoading(true);
+      if (!options?.silent) setPostsLoading(true);
       try {
         const res = await postService.getAllPosts(currentUser?.id, authorId, page, PAGE_SIZE);
         const mapped = res.content
-          .filter((p: any) => !p.status || p.status === 'PUBLISHED')
-          .sort(
-            (a: any, b: any) =>
-              new Date(b.publishedAt || b.createdAt).getTime() -
-              new Date(a.publishedAt || a.createdAt).getTime(),
-          )
+          .filter((p) => isProfileVisiblePost(p, isOwnProfile))
           .map(mapApiPost);
         setPosts(mapped);
         setPostsPage(0);
         setHasMorePosts(res.number + 1 < res.totalPages);
       } catch (err) {
         logProfileTabError('all', 'load-posts', err, { resolvedId: authorId, page });
-        setPosts([]);
+        if (!options?.silent) setPosts([]);
       } finally {
-        setPostsLoading(false);
+        if (!options?.silent) setPostsLoading(false);
       }
     },
-    [currentUser?.id],
+    [currentUser?.id, isOwnProfile],
   );
+
+  const pageStateRef = React.useRef({
+    posts,
+    friends,
+    profilePhotos,
+    postsPage,
+    hasMorePosts,
+  });
+  pageStateRef.current = { posts, friends, profilePhotos, postsPage, hasMorePosts };
+
+  React.useLayoutEffect(() => {
+    if (!resolvedId || navigationType !== 'POP') return;
+    const cached = getProfilePageCache(resolvedId);
+    if (cached?.scrollY == null) return;
+    requestAnimationFrame(() => window.scrollTo(0, cached.scrollY));
+  }, [resolvedId, navigationType]);
+
+  React.useEffect(() => {
+    if (!resolvedId) return;
+    return () => {
+      const state = pageStateRef.current;
+      if (state.posts.length === 0 && state.friends.length === 0 && state.profilePhotos.length === 0) {
+        return;
+      }
+      setProfilePageCache(resolvedId, {
+        ...state,
+        scrollY: window.scrollY,
+      });
+    };
+  }, [resolvedId]);
+
+  React.useEffect(() => {
+    if (!resolvedId || postsLoading) return;
+    setProfilePageCache(resolvedId, {
+      posts,
+      friends,
+      profilePhotos,
+      postsPage,
+      hasMorePosts,
+      scrollY: window.scrollY,
+    });
+  }, [resolvedId, posts, friends, profilePhotos, postsPage, hasMorePosts, postsLoading]);
+
+  React.useEffect(() => {
+    const onScroll = () => {
+      if (resolvedId) updateProfilePageScroll(resolvedId, window.scrollY);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [resolvedId]);
+
+  React.useEffect(() => {
+    if (!isOwnProfile || !resolvedId) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchPosts(resolvedId, 0, { silent: true });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [isOwnProfile, resolvedId, fetchPosts]);
+
+  React.useEffect(() => {
+    if (!isOwnProfile || !resolvedId) return;
+    const hasUpcomingScheduled = posts.some(
+      (p) => p.status === 'SCHEDULED' && p.scheduledAt && new Date(p.scheduledAt).getTime() > Date.now() - 60_000,
+    );
+    if (!hasUpcomingScheduled) return;
+    const timer = window.setInterval(() => void fetchPosts(resolvedId, 0, { silent: true }), 60_000);
+    return () => window.clearInterval(timer);
+  }, [isOwnProfile, resolvedId, posts, fetchPosts]);
 
   React.useEffect(() => {
     if (!resolvedId) {
@@ -89,14 +162,25 @@ export function ProfilePage() {
       return;
     }
 
-    setPosts([]);
-    setFriends([]);
-    setProfilePhotos([]);
-    setPostsPage(0);
-    setHasMorePosts(false);
+    const cached = getProfilePageCache(resolvedId);
+    const usedCache = Boolean(cached);
+    if (cached) {
+      setPosts(cached.posts);
+      setFriends(cached.friends);
+      setProfilePhotos(cached.profilePhotos);
+      setPostsPage(cached.postsPage);
+      setHasMorePosts(cached.hasMorePosts);
+      setPostsLoading(false);
+    } else {
+      setPosts([]);
+      setFriends([]);
+      setProfilePhotos([]);
+      setPostsPage(0);
+      setHasMorePosts(false);
+    }
 
     const controller = new AbortController();
-    void fetchPosts(resolvedId);
+    void fetchPosts(resolvedId, 0, { silent: usedCache });
     void refreshProfilePhotos(resolvedId, controller.signal);
     friendService
       .getFriends(resolvedId)
@@ -112,7 +196,7 @@ export function ProfilePage() {
       )
       .catch((err) => {
         logProfileTabError('all', 'load-friends-preview', err, { resolvedId });
-        setFriends([]);
+        if (!usedCache) setFriends([]);
       });
     return () => controller.abort();
   }, [resolvedId, fetchPosts, refreshProfilePhotos]);
@@ -124,12 +208,7 @@ export function ProfilePage() {
       const nextPage = postsPage + 1;
       const res = await postService.getAllPosts(currentUser?.id, resolvedId, nextPage, PAGE_SIZE);
       const mapped = res.content
-        .filter((p: any) => !p.status || p.status === 'PUBLISHED')
-        .sort(
-          (a: any, b: any) =>
-            new Date(b.publishedAt || b.createdAt).getTime() -
-            new Date(a.publishedAt || a.createdAt).getTime(),
-        )
+        .filter((p) => isProfileVisiblePost(p, isOwnProfile))
         .map(mapApiPost);
       setPosts(prev => [...prev, ...mapped]);
       setPostsPage(nextPage);
@@ -139,7 +218,24 @@ export function ProfilePage() {
     } finally {
       setLoadingMorePosts(false);
     }
-  }, [resolvedId, loadingMorePosts, postsPage, currentUser?.id]);
+  }, [resolvedId, loadingMorePosts, postsPage, currentUser?.id, isOwnProfile]);
+
+  const handlePostCreated = React.useCallback(
+    (post: PostResponse) => {
+      const mapped = mapApiPost(post);
+      setPosts((prev) => mergeProfilePostList(prev, mapped));
+      void refreshProfilePhotos(resolvedId);
+    },
+    [resolvedId, refreshProfilePhotos],
+  );
+
+  const handlePostUpdated = React.useCallback((updated: PostResponse) => {
+    const mapped = mapApiPost(updated);
+    setPosts((prev) => mergeProfilePostList(prev, mapped));
+    if (updated.status === 'PUBLISHED') {
+      void refreshProfilePhotos(resolvedId);
+    }
+  }, [resolvedId, refreshProfilePhotos]);
 
   const handleDeletePost = React.useCallback((postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
@@ -190,7 +286,7 @@ export function ProfilePage() {
   return (
     <div className="max-w-[1320px] mx-auto px-4 py-4 lg:py-6">
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.55fr)] gap-4 lg:gap-6 items-start">
-        <div className="space-y-4 lg:sticky lg:top-[136px] lg:max-h-[calc(100vh-136px)] lg:overflow-y-auto lg:pb-4 sidebar-scrollbar">
+        <div className="space-y-4 lg:sticky lg:top-[136px] lg:max-h-[calc(100vh-136px)] lg:overflow-y-auto lg:overflow-x-hidden lg:pb-4 lg:pr-0.5 sidebar-scrollbar">
           <FriendsPreview userId={profilePathKey} friendsCount={friendsCount} friends={friends} />
           <PhotosPreview userId={profilePathKey} photos={profilePhotos.slice(0, 9)} />
         </div>
@@ -199,10 +295,7 @@ export function ProfilePage() {
           {isOwnProfile && (
             <ProfileCreatePost
               username={getProfileHeaderName(userProfile)}
-              onPostCreated={() => {
-                void fetchPosts(resolvedId);
-                void refreshProfilePhotos(resolvedId);
-              }}
+              onPostCreated={handlePostCreated}
             />
           )}
           <ProfilePosts
@@ -212,6 +305,7 @@ export function ProfilePage() {
             loadingMore={loadingMorePosts}
             onLoadMore={handleLoadMorePosts}
             onDeletePost={handleDeletePost}
+            onPostUpdated={handlePostUpdated}
           />
         </div>
       </div>

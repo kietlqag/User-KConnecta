@@ -150,7 +150,7 @@ export default function LiveViewerPage() {
     setSourceStream(null);
   }, [setSourceStream, useHlsPlayback]);
 
-  useLiveSessionSocket(sessionId, currentUser?.token, handleLiveEvent);
+  useLiveSessionSocket(sessionId, Boolean(currentUser), handleLiveEvent);
 
   useEffect(() => {
     if (!sessionId || !currentUserId) {
@@ -239,7 +239,7 @@ export default function LiveViewerPage() {
         void liveService.leaveSession(sessionId).catch(() => undefined);
       }
     };
-  }, [currentUser?.token, currentUserId, isViewerPreview, navigate, sessionId, syncDvrStream]);
+  }, [currentUserId, isViewerPreview, navigate, sessionId, syncDvrStream]);
 
   useEffect(() => {
     if (!sessionId || !currentUserId || isLiveEnded || isViewerPreview) return;
@@ -511,7 +511,7 @@ export default function LiveViewerPage() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-100 dark:bg-background">
+    <div className="h-screen overflow-hidden bg-background">
       <Header />
 
       <div className="mt-14 grid h-[calc(100vh-3.5rem)] grid-cols-1 gap-0 overflow-hidden xl:grid-cols-[1.35fr_380px]">
@@ -528,9 +528,7 @@ export default function LiveViewerPage() {
         >
           <button
             onClick={handleCloseLive}
-            className={`absolute left-4 top-4 z-10 rounded-full bg-black/30 p-1 text-white/90 transition-opacity duration-200 hover:bg-black/50 hover:text-white ${
-              showControls ? 'opacity-100' : 'pointer-events-none opacity-0'
-            }`}
+            className={`absolute left-4 top-4 z-10 rounded-full bg-black/30 p-1 text-white/90 transition-opacity duration-200 hover:bg-black/50 hover:text-white ${ showControls ? 'opacity-100' : 'pointer-events-none opacity-0' }`}
             aria-label="Đóng"
           >
             <X className="w-8 h-8" />
@@ -540,7 +538,7 @@ export default function LiveViewerPage() {
             <div className="absolute top-4 right-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</div>
           )}
           {!isLiveEnded && !isAtLiveEdge && canScrub && (
-            <div className="absolute top-4 right-4 rounded-md bg-white dark:bg-gray-800/15 text-white text-sm font-semibold px-2 py-1 backdrop-blur-sm">
+            <div className="absolute top-4 right-4 rounded-md bg-card/15 text-white text-sm font-semibold px-2 py-1 backdrop-blur-sm">
               TUA LẠI
             </div>
           )}
@@ -630,16 +628,14 @@ export default function LiveViewerPage() {
             )}
             {!isActiveLiveSession && (
               <div
-                className={`mb-2 flex items-center gap-3 text-sm text-white transition-opacity duration-200 ${
-                  showControls ? 'opacity-100' : 'pointer-events-none opacity-0'
-                }`}
+                className={`mb-2 flex items-center gap-3 text-sm text-white transition-opacity duration-200 ${ showControls ? 'opacity-100' : 'pointer-events-none opacity-0' }`}
               >
                 <span>{status}</span>
                 <span className="min-w-[44px] text-right text-xs text-white/80">{liveElapsed}</span>
                 <button
                   type="button"
                   onClick={handleToggleMute}
-                  className="rounded-full p-1 hover:bg-white dark:bg-gray-800/10"
+                  className="rounded-full p-1 hover:bg-card/10"
                   aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
                 >
                   {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
@@ -653,9 +649,7 @@ export default function LiveViewerPage() {
                   type="button"
                   disabled={isLiveEnded || isReacting}
                   onClick={() => void handleReaction(reaction.value)}
-                  className={`rounded-full px-1 transition-transform hover:scale-125 disabled:cursor-not-allowed disabled:opacity-40 ${
-                    activeReaction === reaction.value ? 'bg-white dark:bg-gray-800/25 ring-2 ring-white/60 scale-110' : ''
-                  }`}
+                  className={`rounded-full px-1 transition-transform hover:scale-125 disabled:cursor-not-allowed disabled:opacity-40 ${ activeReaction === reaction.value ? 'bg-card/25 ring-2 ring-white/60 scale-110' : '' }`}
                   aria-label={`Bày tỏ cảm xúc ${reaction.value}`}
                   aria-pressed={activeReaction === reaction.value}
                 >
@@ -667,18 +661,18 @@ export default function LiveViewerPage() {
           )}
         </section>
 
-        <aside className="relative flex h-full flex-col overflow-hidden border-l border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-          <div className="flex shrink-0 items-start gap-3 border-b border-gray-200 pb-4 dark:border-gray-700">
-            <div className="h-12 w-12 rounded-full bg-gray-200 dark:bg-gray-700" />
+        <aside className="relative flex h-full flex-col overflow-hidden border-l border-border bg-card p-4">
+          <div className="flex shrink-0 items-start gap-3 border-b border-border pb-4">
+            <div className="h-12 w-12 rounded-full bg-muted" />
             <div className="flex-1 min-w-0">
-              <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">{hostLabel}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-xl font-semibold text-foreground">{hostLabel}</p>
+              <p className="text-sm text-muted-foreground">
                 {session ? `${session.viewerCount} người đang xem · ${session.totalReactionCount} cảm xúc` : 'Đang tải...'}
               </p>
             </div>
             <button
               onClick={() => setIsMenuOpen((prev) => !prev)}
-              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 dark:text-gray-300"
+              className="text-muted-foreground hover:text-foreground"
               aria-label="Tùy chọn"
             >
               <MoreHorizontal className="w-6 h-6" />
@@ -686,12 +680,12 @@ export default function LiveViewerPage() {
           </div>
 
           {isMenuOpen && (
-            <div className="absolute right-4 top-20 z-20 w-[360px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 shadow-xl">
+            <div className="absolute right-4 top-20 z-20 w-[360px] rounded-xl border border-border bg-card p-2 shadow-xl">
               <button onClick={() => void handleCopyLiveLink()} className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted">
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Sao chép liên kết</p>
+                <p className="font-semibold text-foreground">Sao chép liên kết</p>
               </button>
               <button className="w-full rounded-lg px-3 py-2 text-left hover:bg-muted">
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Tắt thông báo về bài viết này</p>
+                <p className="font-semibold text-foreground">Tắt thông báo về bài viết này</p>
               </button>
             </div>
           )}
@@ -704,13 +698,13 @@ export default function LiveViewerPage() {
                 </div>
               )}
               {toolState.featuredLinkUrl && (
-                <a href={toolState.featuredLinkUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-gray-100 dark:bg-gray-900 p-3 text-sm font-semibold text-emerald-700">
+                <a href={toolState.featuredLinkUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-background p-3 text-sm font-semibold text-emerald-700">
                   {toolState.featuredLinkTitle || toolState.featuredLinkUrl}
                 </a>
               )}
               {toolState.pollEnabled && toolState.pollQuestion && (
-                <div className="rounded-xl bg-gray-100 dark:bg-gray-900 p-3">
-                  <p className="font-semibold text-gray-900 dark:text-gray-100">{toolState.pollQuestion}</p>
+                <div className="rounded-xl bg-background p-3">
+                  <p className="font-semibold text-foreground">{toolState.pollQuestion}</p>
                   <div className="mt-2 space-y-2">
                     {toolState.pollOptions.map((option, index) => {
                       const count = toolState.pollOptionCounts?.[index] ?? 0;
@@ -724,24 +718,20 @@ export default function LiveViewerPage() {
                           type="button"
                           disabled={!canVote || isVotingPoll}
                           onClick={() => void handleVotePoll(index)}
-                          className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
-                            isSelected
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 hover:bg-emerald-50'
-                          } ${!canVote ? 'cursor-default' : ''}`}
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${ isSelected ? 'bg-emerald-600 text-white' : 'bg-card text-foreground hover:bg-emerald-50' } ${!canVote ? 'cursor-default' : ''}`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span>{option}</span>
                             {totalVotes > 0 && (
-                              <span className={isSelected ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'}>
+                              <span className={isSelected ? 'text-emerald-100' : 'text-muted-foreground'}>
                                 {percent}% ({count})
                               </span>
                             )}
                           </div>
                           {totalVotes > 0 && (
-                            <div className={`mt-1 h-1.5 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                            <div className={`mt-1 h-1.5 rounded-full ${isSelected ? 'bg-emerald-400' : 'bg-muted'}`}>
                               <div
-                                className={`h-1.5 rounded-full ${isSelected ? 'bg-white dark:bg-gray-800' : 'bg-emerald-600'}`}
+                                className={`h-1.5 rounded-full ${isSelected ? 'bg-card' : 'bg-emerald-600'}`}
                                 style={{ width: `${percent}%` }}
                               />
                             </div>
@@ -751,13 +741,13 @@ export default function LiveViewerPage() {
                     })}
                   </div>
                   {isLiveEnded && !isViewerPreview && (
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Thăm dò đã đóng cùng phiên live.</p>
+                    <p className="mt-2 text-xs text-muted-foreground">Thăm dò đã đóng cùng phiên live.</p>
                   )}
                   {isViewerPreview && (
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Chế độ xem trước — không thể bình chọn.</p>
+                    <p className="mt-2 text-xs text-muted-foreground">Chế độ xem trước — không thể bình chọn.</p>
                   )}
                   {!currentUserId && !isViewerPreview && !isLiveEnded && (
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Đăng nhập để tham gia bình chọn.</p>
+                    <p className="mt-2 text-xs text-muted-foreground">Đăng nhập để tham gia bình chọn.</p>
                   )}
                 </div>
               )}

@@ -9,6 +9,7 @@ import {
   formatAllowedFileTypes,
   formatPolicyUpdatedAt,
 } from '../constants/postPolicyDefaults';
+import { formatRateLimitRule } from '@/utils/rateLimitWindow';
 
 type RuleItem = {
   icon: LucideIcon;
@@ -45,20 +46,34 @@ const buildRules = (policy: PublicPostPolicy): RuleItem[] => [
   {
     icon: Gauge,
     label: 'Tần suất đăng bài',
-    value: `Tối đa ${policy.postsPerMinute} bài / phút`,
+    value: formatRateLimitRule(
+      policy.postsPerMinute,
+      policy.postRateLimitWindowValue ?? 1,
+      policy.postRateLimitWindowUnit ?? 'minute',
+    ),
     hint: 'Giới hạn chống spam; vượt mức có thể bị từ chối tạm thời.',
+  },
+  {
+    icon: Gauge,
+    label: 'Tần suất sửa bài',
+    value: formatRateLimitRule(
+      policy.editsPerMinute ?? policy.postsPerMinute,
+      policy.editRateLimitWindowValue ?? 1,
+      policy.editRateLimitWindowUnit ?? 'minute',
+    ),
+    hint: 'Giới hạn số lần chỉnh sửa bài viết trong khung thời gian cấu hình.',
   },
 ];
 
 function PolicyRuleCard({ icon: Icon, label, value, hint }: RuleItem) {
   return (
-    <article className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-900/60">
+    <article className="rounded-xl border border-border bg-card p-5 shadow-sm/60">
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
         <Icon className="h-5 w-5" />
       </div>
-      <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{label}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{label}</h2>
       <p className="mt-1 text-lg font-bold text-emerald-700 dark:text-emerald-400">{value}</p>
-      <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">{hint}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{hint}</p>
     </article>
   );
 }
@@ -78,14 +93,14 @@ export default function PostPolicyPage() {
       icon={AlignLeft}
     >
       <div className="mt-8 space-y-6">
-        <p className="max-w-3xl text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+        <p className="max-w-3xl text-sm leading-relaxed text-foreground">
           Các quy định dưới đây được áp dụng khi bạn đăng bài trên trang cá nhân, bảng tin hoặc
           nhóm. Hệ thống kiểm tra tự động trước khi đăng; nếu vi phạm, bài viết sẽ không được
           xuất bản và bạn sẽ nhận thông báo lỗi cụ thể.
         </p>
 
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-16 text-sm text-gray-500 dark:text-gray-400">
+          <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
             Đang tải quy định…
           </div>
@@ -103,11 +118,11 @@ export default function PostPolicyPage() {
               ))}
             </div>
 
-            <section className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900/60">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <section className="rounded-xl border border-border bg-card p-5/60">
+              <h2 className="text-sm font-semibold text-foreground">
                 Nội dung không được phép
               </h2>
-              <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 Ngoài giới hạn kỹ thuật, bài viết còn phải tuân thủ{' '}
                 <Link
                   to="/terms"

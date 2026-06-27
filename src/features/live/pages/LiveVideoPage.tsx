@@ -140,7 +140,7 @@ export default function LiveVideoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background">
+    <div className="min-h-screen bg-muted dark:bg-background">
       <Header />
 
       <div className="pt-14 flex">
@@ -150,7 +150,7 @@ export default function LiveVideoPage() {
           <div className="max-w-5xl mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold mb-2">Chào mừng bạn quay lại!</h1>
-              <p className="text-gray-600 dark:text-gray-400">Chọn cách bạn muốn phát trực tiếp</p>
+              <p className="text-muted-foreground">Chọn cách bạn muốn phát trực tiếp</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -177,32 +177,28 @@ export default function LiveVideoPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('live')}
-                className={`font-medium hover:underline ${
-                  activeTab === 'live' ? 'text-green-600' : 'text-gray-500 dark:text-gray-400'
-                }`}
+                className={`font-medium hover:underline ${ activeTab === 'live' ? 'text-green-600' : 'text-muted-foreground' }`}
               >
                 Đang phát trực tiếp
               </button>
-              <span className="text-gray-300">•</span>
+              <span className="text-muted-foreground">•</span>
               <button
                 type="button"
                 onClick={() => setActiveTab('scheduled')}
-                className={`font-medium hover:underline ${
-                  activeTab === 'scheduled' ? 'text-green-600' : 'text-gray-500 dark:text-gray-400'
-                }`}
+                className={`font-medium hover:underline ${ activeTab === 'scheduled' ? 'text-green-600' : 'text-muted-foreground' }`}
               >
                 Buổi phát trực tiếp theo lịch
               </button>
             </div>
 
-            <div className="mt-12 bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-none p-6">
+            <div className="mt-12 bg-card rounded-lg shadow-sm dark:shadow-none p-6">
               <h3 className="font-semibold mb-4">
                 {activeTab === 'live' ? 'Đang phát trực tiếp' : 'Buổi phát trực tiếp theo lịch'}
               </h3>
               {isLoading && sessions.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">Đang tải...</p>
+                <p className="text-sm text-muted-foreground">Đang tải...</p>
               ) : sessions.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   {activeTab === 'live'
                     ? 'Chưa có phiên live nào đang phát.'
                     : 'Chưa có buổi live nào được lên lịch.'}
@@ -231,12 +227,12 @@ export default function LiveVideoPage() {
                           toast.error(error instanceof Error ? error.message : 'Không thể mở phiên live');
                         });
                       }}
-                      className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 text-left hover:border-green-400 hover:bg-green-50"
+                      className="rounded-lg border border-border p-4 text-left hover:border-green-400 hover:bg-green-50"
                     >
                       <div className="mb-2 inline-flex rounded bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">LIVE</div>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{session.title}</p>
-                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{session.description || 'Video trực tiếp'}</p>
-                      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">{session.viewerCount} người đang xem</p>
+                      <p className="font-semibold text-foreground">{session.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{session.description || 'Video trực tiếp'}</p>
+                      <p className="mt-3 text-xs text-muted-foreground">{session.viewerCount} người đang xem</p>
                     </button>
                   ))}
                 </div>

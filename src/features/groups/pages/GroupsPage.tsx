@@ -55,24 +55,24 @@ export const GroupsPage = () => {
     >
       <div className="space-y-4">
         {isLoading && (
-          <div className="rounded-lg bg-white p-6 text-center text-sm text-gray-500 shadow dark:bg-gray-800 dark:text-gray-400">
+          <div className="rounded-lg bg-card p-6 text-center text-sm text-muted-foreground shadow dark:text-muted-foreground">
             Đang tải bảng tin nhóm...
           </div>
         )}
 
         {!isLoading && error && (
-          <div className="rounded-lg bg-white p-6 text-center text-sm text-red-500 shadow dark:bg-gray-800">
+          <div className="rounded-lg bg-card p-6 text-center text-sm text-red-500 shadow">
             {error instanceof Error ? error.message : 'Không thể tải bảng tin nhóm'}
           </div>
         )}
 
         {!isLoading && !error && posts.length === 0 && (
-          <div className="rounded-lg bg-white p-12 text-center shadow dark:bg-gray-800">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-900">
+          <div className="rounded-lg bg-card p-12 text-center shadow">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-background">
               <span className="text-2xl">👥</span>
             </div>
-            <h3 className="mb-2 text-lg font-bold text-gray-900 dark:text-gray-100">Chưa có bài viết nào</h3>
-            <p className="mx-auto max-w-[300px] text-sm text-gray-500 dark:text-gray-400">
+            <h3 className="mb-2 text-lg font-bold text-foreground">Chưa có bài viết nào</h3>
+            <p className="mx-auto max-w-[300px] text-sm text-muted-foreground">
               Hãy tham gia thêm các nhóm hoặc mời bạn bè đăng bài để bảng tin của bạn phong phú hơn.
             </p>
           </div>
@@ -89,12 +89,12 @@ export const GroupsPage = () => {
       {isFetchingNextPage && (
         <div className="p-4 text-center">
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-emerald-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Đang tải thêm...</span>
+          <span className="ml-2 text-sm text-muted-foreground">Đang tải thêm...</span>
         </div>
       )}
 
       {!isLoading && !error && !hasNextPage && posts.length > 0 && (
-        <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="py-8 text-center text-sm text-muted-foreground">
           Bạn đã xem hết tất cả bài viết.
         </div>
       )}

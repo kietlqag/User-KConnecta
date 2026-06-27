@@ -1,4 +1,4 @@
-import { Settings, HelpCircle, LogOut, ChevronRight } from 'lucide-react';
+import { Settings, HelpCircle, LogOut, ChevronRight, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -51,6 +52,8 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
   }, []);
 
   const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
     try {
       await authService.logout();
     } finally {
@@ -81,39 +84,50 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
             rounded="full"
             className="w-9 h-9"
           />
-          <span className="font-semibold text-gray-900 dark:text-white">{fullName}</span>
+          <span className="font-semibold text-foreground">{fullName}</span>
         </Link>
 
-        <div className="border-t border-gray-200 dark:border-gray-700 my-2" />
+        <div className="border-t border-border my-2" />
 
         <div className="space-y-1">
           <button
             onClick={() => { navigate('/settings'); onClose(); }}
             className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
           >
-            <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-              <Settings className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+            <div className="w-9 h-9 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
+              <Settings className="w-5 h-5 text-foreground" />
             </div>
-            <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">{t('account.settings')}</span>
-            <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-          </button>
-
-          <button className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer">
-            <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-              <HelpCircle className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            </div>
-            <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">Trợ giúp và hỗ trợ</span>
-            <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+            <span className="flex-1 text-left font-medium text-foreground">{t('account.settings')}</span>
+            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </button>
 
           <button
-            onClick={handleLogout}
+            onClick={() => { navigate('/support'); onClose(); }}
             className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer"
           >
-            <div className="w-9 h-9 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-              <LogOut className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+            <div className="w-9 h-9 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
+              <HelpCircle className="w-5 h-5 text-foreground" />
             </div>
-            <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">{t('account.logout')}</span>
+            <span className="flex-1 text-left font-medium text-foreground">Trợ giúp và hỗ trợ</span>
+            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+          >
+            <div className="w-9 h-9 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
+              {loggingOut ? (
+                <Loader2 className="w-5 h-5 text-foreground animate-spin" />
+              ) : (
+                <LogOut className="w-5 h-5 text-foreground" />
+              )}
+            </div>
+            <span className="flex-1 text-left font-medium text-foreground">
+              {loggingOut ? 'Đang đăng xuất...' : t('account.logout')}
+            </span>
           </button>
         </div>
       </div>

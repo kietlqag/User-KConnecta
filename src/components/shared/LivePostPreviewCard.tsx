@@ -279,11 +279,7 @@ export function LivePostPreviewCard({
           type="button"
           disabled={!canStartScheduledLive}
           onClick={() => void handleOpenLive()}
-          className={`shrink-0 rounded-lg font-semibold text-white ${sizeClass} ${
-            canStartScheduledLive
-              ? 'bg-emerald-600 hover:bg-emerald-700'
-              : 'cursor-not-allowed bg-gray-400'
-          }`}
+          className={`shrink-0 rounded-lg font-semibold text-white ${sizeClass} ${ canStartScheduledLive ? 'bg-emerald-600 hover:bg-emerald-700' : 'cursor-not-allowed bg-gray-400' }`}
         >
           {canStartScheduledLive ? 'Bắt đầu phát' : 'Chưa đến giờ'}
         </button>
@@ -296,11 +292,7 @@ export function LivePostPreviewCard({
           type="button"
           disabled={isSubscribeLoading}
           onClick={() => void handleToggleLiveSubscription()}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg font-semibold ${sizeClass} ${
-            isLiveSubscribed
-              ? 'border border-green-600 bg-green-50 text-green-700 hover:bg-green-100'
-              : 'bg-green-600 text-white hover:bg-green-700'
-          } disabled:cursor-not-allowed disabled:opacity-60`}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg font-semibold ${sizeClass} ${ isLiveSubscribed ? 'border border-green-600 bg-green-50 text-green-700 hover:bg-green-100' : 'bg-green-600 text-white hover:bg-green-700' } disabled:cursor-not-allowed disabled:opacity-60`}
         >
           <Bell className={size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
           {isSubscribeLoading ? 'Đang lưu...' : isLiveSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
@@ -313,13 +305,7 @@ export function LivePostPreviewCard({
         type="button"
         disabled={isPrimaryActionDisabled}
         onClick={() => void handleOpenLive()}
-        className={`shrink-0 rounded-lg font-semibold text-white ${sizeClass} ${
-          isPrimaryActionDisabled
-            ? 'cursor-not-allowed bg-gray-700 opacity-80'
-            : isLiveEnded
-              ? 'bg-gray-700 hover:bg-gray-800'
-              : 'bg-red-600 hover:bg-red-700'
-        }`}
+        className={`shrink-0 rounded-lg font-semibold text-white ${sizeClass} ${ isPrimaryActionDisabled ? 'cursor-not-allowed bg-gray-700 opacity-80' : isLiveEnded ? 'bg-gray-700 hover:bg-card' : 'bg-red-600 hover:bg-red-700' }`}
       >
         {liveReplayUrl
           ? 'Xem lại'
@@ -371,17 +357,17 @@ export function LivePostPreviewCard({
     return (
       <>
         <div className={className}>
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40">
+          <div className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 text-left">
                 <div className="mb-2 inline-flex rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
                   {scheduledLiveAt ? 'Đã lên lịch' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
                 </div>
-                <p className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">{liveTitle}</p>
+                <p className="font-semibold text-foreground line-clamp-1">{liveTitle}</p>
                 {liveDescription && (
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">{liveDescription}</p>
+                  <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{liveDescription}</p>
                 )}
-                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-2 text-xs text-muted-foreground">
                   {scheduledLiveAt
                     ? `Bắt đầu lúc ${scheduledLiveAt}`
                     : liveReplayUrl
@@ -416,9 +402,9 @@ export function LivePostPreviewCard({
               <DialogDescription className="sr-only">Danh sách người đăng ký nhắc nhở trước khi live bắt đầu</DialogDescription>
             </DialogHeader>
             {isSubscribersLoading ? (
-              <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">Đang tải...</p>
             ) : eventSubscribers.length === 0 ? (
-              <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Chưa có ai đăng ký nhắc nhở.</p>
+              <p className="py-6 text-center text-sm text-muted-foreground">Chưa có ai đăng ký nhắc nhở.</p>
             ) : (
               <div className="max-h-80 space-y-2 overflow-y-auto">
                 {eventSubscribers.map((subscriber) => (
@@ -437,10 +423,10 @@ export function LivePostPreviewCard({
                       className="h-10 w-10 rounded-full object-cover"
                     />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <p className="truncate text-sm font-semibold text-foreground">
                         {subscriber.fullName || subscriber.username}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">@{subscriber.username}</p>
+                      <p className="text-xs text-muted-foreground">@{subscriber.username}</p>
                     </div>
                   </button>
                 ))}
@@ -455,7 +441,7 @@ export function LivePostPreviewCard({
   return (
     <>
       <div className={className}>
-        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-zinc-950 shadow-sm dark:shadow-none">
+        <div className="overflow-hidden rounded-xl border border-border bg-zinc-950 shadow-sm dark:shadow-none">
           <div
             ref={livePreviewRootRef}
             className="group relative block aspect-video w-full overflow-hidden bg-black"
@@ -468,21 +454,17 @@ export function LivePostPreviewCard({
                 autoPlay
                 playsInline
                 loop={Boolean(liveReplayUrl)}
-                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-                  isLivePreviewReady || liveReplayUrl ? 'opacity-100' : 'opacity-0'
-                }`}
+                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${ isLivePreviewReady || liveReplayUrl ? 'opacity-100' : 'opacity-0' }`}
               />
             )}
             {showLivePlaceholder && (
               <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-slate-800" />
             )}
             <div
-              className={`absolute inset-0 transition-opacity duration-300 ${
-                showLiveVideo ? 'opacity-0 group-hover:opacity-100' : 'opacity-40'
-              } [background:radial-gradient(circle_at_25%_25%,rgba(239,68,68,.45),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(37,99,235,.38),transparent_30%),linear-gradient(135deg,rgba(15,23,42,.2),rgba(0,0,0,.9))]`}
+              className={`absolute inset-0 transition-opacity duration-300 ${ showLiveVideo ? 'opacity-0 group-hover:opacity-100' : 'opacity-40' } [background:radial-gradient(circle_at_25%_25%,rgba(239,68,68,.45),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(37,99,235,.38),transparent_30%),linear-gradient(135deg,rgba(15,23,42,.2),rgba(0,0,0,.9))]`}
             />
             <div className={`absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow ${isLiveEnded ? 'bg-gray-700' : 'bg-red-600'}`}>
-              <span className={`h-2 w-2 rounded-full bg-white dark:bg-gray-800 ${isLiveEnded ? '' : 'animate-pulse'}`} />
+              <span className={`h-2 w-2 rounded-full bg-card ${isLiveEnded ? '' : 'animate-pulse'}`} />
               {scheduledLiveAt ? 'Đã lên lịch' : liveReplayUrl ? 'Phát lại' : isRecordingProcessing ? 'Đang xử lý' : isRecordingFailed ? 'Lỗi bản ghi' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
             </div>
             {isLivePreviewConnecting && (
@@ -497,9 +479,7 @@ export function LivePostPreviewCard({
                 <Loader2 className="h-10 w-10 animate-spin text-white/70" aria-hidden />
               </div>
             )}
-            <div className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/80 to-transparent p-4 text-white transition-opacity duration-300 ${
-              showLiveVideo ? 'opacity-100 group-hover:opacity-100' : 'opacity-100'
-            }`}>
+            <div className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/80 to-transparent p-4 text-white transition-opacity duration-300 ${ showLiveVideo ? 'opacity-100 group-hover:opacity-100' : 'opacity-100' }`}>
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-red-100">
                 <Radio className="h-4 w-4" />
                 {scheduledLiveAt
@@ -531,8 +511,8 @@ export function LivePostPreviewCard({
           {!compact && (
             <div className="flex items-center justify-between gap-3 bg-surface px-4 py-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{liveTitle}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="truncate text-sm font-semibold text-foreground">{liveTitle}</p>
+                <p className="text-xs text-muted-foreground">
                   {scheduledLiveAt
                     ? isOwner && !canStartScheduledLive
                       ? `Có thể bắt đầu phát lúc ${scheduledLiveAt}`
@@ -557,7 +537,7 @@ export function LivePostPreviewCard({
                   </button>
                 )}
                 {scheduledLiveAt && isOwner && liveSubscriptionCount === 0 && (
-                  <p className="mt-1 text-xs text-gray-400">Chưa có người quan tâm</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Chưa có người quan tâm</p>
                 )}
               </div>
               {renderPrimaryActionButton()}
@@ -573,9 +553,9 @@ export function LivePostPreviewCard({
             <DialogDescription className="sr-only">Danh sách người đăng ký nhắc nhở trước khi live bắt đầu</DialogDescription>
           </DialogHeader>
           {isSubscribersLoading ? (
-            <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">Đang tải...</p>
           ) : eventSubscribers.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Chưa có ai đăng ký nhắc nhở.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">Chưa có ai đăng ký nhắc nhở.</p>
           ) : (
             <div className="max-h-80 space-y-2 overflow-y-auto">
               {eventSubscribers.map((subscriber) => (
@@ -594,10 +574,10 @@ export function LivePostPreviewCard({
                     className="h-10 w-10 rounded-full object-cover"
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    <p className="truncate text-sm font-semibold text-foreground">
                       {subscriber.fullName || subscriber.username}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">@{subscriber.username}</p>
+                    <p className="text-xs text-muted-foreground">@{subscriber.username}</p>
                   </div>
                 </button>
               ))}

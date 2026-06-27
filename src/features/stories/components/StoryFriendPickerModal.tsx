@@ -69,41 +69,41 @@ export function StoryFriendPickerModal({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-white shadow-xl dark:bg-gray-800">
-        <div className="relative flex shrink-0 items-center border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+      <div className="flex max-h-[90vh] w-full max-w-[500px] flex-col overflow-hidden rounded-lg bg-card shadow-xl">
+        <div className="relative flex shrink-0 items-center border-b border-border bg-card p-4">
           <button
             type="button"
             onClick={onClose}
             className="rounded-full p-2 transition-colors hover:bg-muted"
           >
-            <ArrowLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
+            <ArrowLeft className="h-6 w-6 text-foreground" />
           </button>
-          <h2 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="absolute left-1/2 -translate-x-1/2 text-xl font-bold text-foreground">
             Chọn bạn bè
           </h2>
         </div>
 
-        <div className="shrink-0 border-b border-gray-200 p-4 dark:border-gray-700">
-          <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+        <div className="shrink-0 border-b border-border p-4">
+          <p className="mb-3 text-sm text-muted-foreground">
             Chọn một hoặc nhiều bạn bè có thể xem tin này. Bỏ trống để tất cả bạn bè đều xem được.
           </p>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Tìm kiếm bạn bè"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              className="w-full rounded-full bg-gray-100 py-2 pl-9 pr-4 text-sm outline-none dark:bg-gray-700 dark:text-white dark:placeholder:text-gray-400"
+              className="w-full rounded-full bg-muted py-2 pl-9 pr-4 text-sm outline-none dark:text-white dark:placeholder:text-muted-foreground"
             />
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {loading ? (
-            <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải danh sách bạn bè...</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">Đang tải danh sách bạn bè...</p>
           ) : filteredFriends.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               {friends.length === 0 ? 'Bạn chưa có bạn bè nào' : 'Không tìm thấy bạn bè'}
             </p>
           ) : (
@@ -122,15 +122,11 @@ export function StoryFriendPickerModal({
                       alt={friend.fullName}
                       className="h-10 w-10 rounded-full object-cover"
                     />
-                    <span className="flex-1 text-left font-medium text-gray-900 dark:text-white">
+                    <span className="flex-1 text-left font-medium text-foreground">
                       {friend.fullName}
                     </span>
                     <div
-                      className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
-                        isSelected
-                          ? 'border-emerald-600 bg-emerald-600'
-                          : 'border-gray-400 dark:border-gray-500'
-                      }`}
+                      className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${ isSelected ? 'border-emerald-600 bg-emerald-600' : 'border-gray-400 dark:border-gray-500' }`}
                     >
                       {isSelected && <Check className="h-3 w-3 text-white" />}
                     </div>
@@ -141,11 +137,11 @@ export function StoryFriendPickerModal({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border bg-card p-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-gray-100 dark:text-emerald-400 dark:hover:bg-gray-700"
+            className="rounded-lg px-6 py-2 font-semibold text-emerald-600 transition-colors hover:bg-muted dark:text-emerald-400"
           >
             Hủy
           </button>

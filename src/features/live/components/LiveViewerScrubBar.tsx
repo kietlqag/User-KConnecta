@@ -45,9 +45,7 @@ export function LiveViewerScrubBar({
 
   return (
     <div
-      className={`mb-3 space-y-1 transition-opacity duration-200 ${
-        showControls ? 'opacity-100' : 'pointer-events-none opacity-0'
-      }`}
+      className={`mb-3 space-y-1 transition-opacity duration-200 ${ showControls ? 'opacity-100' : 'pointer-events-none opacity-0' }`}
     >
       <div className="flex items-center gap-3">
         <span className="w-11 shrink-0 text-xs tabular-nums text-white/90">
@@ -55,9 +53,9 @@ export function LiveViewerScrubBar({
         </span>
 
         <div className="relative h-4 flex-1 touch-none">
-          <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white dark:bg-gray-800/25" />
+          <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-card/25" />
           <div
-            className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white dark:bg-gray-800 transition-[width] duration-300 ease-linear"
+            className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-card transition-[width] duration-300 ease-linear"
             style={{ width: `${progressPercent}%` }}
           />
           {isAtLiveEdge && bufferedSeconds > 0 && (
@@ -82,7 +80,7 @@ export function LiveViewerScrubBar({
             onPointerDown={onSeekStart}
             onChange={(event) => onSeek(Number(event.target.value))}
             onPointerUp={(event) => onSeekEnd(Number(event.currentTarget.value))}
-            className="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-default [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white dark:bg-gray-800 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white dark:bg-gray-800"
+            className="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-default [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-card [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-card"
           />
         </div>
 
@@ -99,7 +97,7 @@ export function LiveViewerScrubBar({
         <button
           type="button"
           onClick={onToggleMute}
-          className="shrink-0 rounded-full p-1 hover:bg-white dark:bg-gray-800/10"
+          className="shrink-0 rounded-full p-1 hover:bg-card/10"
           aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
         >
           {isMuted ? <VolumeX className="h-5 w-5 text-white" /> : <Volume2 className="h-5 w-5 text-white" />}

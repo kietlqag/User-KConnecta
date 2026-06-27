@@ -59,7 +59,7 @@ function extractMedia(posts: PostResponse[]): MediaItem[] {
 }
 
 function MediaSkeleton() {
-  return <div className="aspect-square rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />;
+  return <div className="aspect-square rounded-lg bg-muted animate-pulse" />;
 }
 
 interface GroupMediaTabProps {
@@ -104,13 +104,13 @@ export function GroupMediaTab({ groupId }: GroupMediaTabProps) {
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-5">
+      <div className="bg-card rounded-2xl shadow-sm dark:shadow-none border border-border p-5">
         <div className="flex items-center gap-3 mb-5">
           <Images className="w-6 h-6 text-emerald-600" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          <h2 className="text-xl font-bold text-foreground">
             Ảnh và video
             {!loading && (
-              <span className="ml-2 text-base font-normal text-gray-500 dark:text-gray-400">· {items.length}</span>
+              <span className="ml-2 text-base font-normal text-muted-foreground">· {items.length}</span>
             )}
           </h2>
         </div>
@@ -122,20 +122,20 @@ export function GroupMediaTab({ groupId }: GroupMediaTabProps) {
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="relative mb-4 h-20 w-20">
-              <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
-              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
-                <Images className="h-10 w-10 text-gray-400" />
+              <div className="absolute inset-0 rotate-6 rounded-xl bg-muted" />
+              <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background border border-border">
+                <Images className="h-10 w-10 text-muted-foreground" />
               </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">Chưa có ảnh hoặc video</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Ảnh và video đăng trong nhóm sẽ hiển thị tại đây.</p>
+            <h3 className="text-lg font-semibold text-foreground mb-1">Chưa có ảnh hoặc video</h3>
+            <p className="text-sm text-muted-foreground">Ảnh và video đăng trong nhóm sẽ hiển thị tại đây.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
             {items.map((item, index) => (
               <div
                 key={item.id}
-                className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-900"
+                className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer bg-background"
                 onClick={() => setLbIndex(index)}
               >
                 {item.type === 'VIDEO' ? (

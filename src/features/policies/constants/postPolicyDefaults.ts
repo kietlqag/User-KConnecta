@@ -1,11 +1,15 @@
 import type { PublicPostPolicy } from '@/types/policy';
-
 export const DEFAULT_POST_POLICY: PublicPostPolicy = {
   maxPostLength: 5000,
   maxImagesPerPost: 10,
   maxVideoMb: 100,
   allowedFileTypes: 'jpg,jpeg,png,gif,webp,mp4,mov',
   postsPerMinute: 3,
+  postRateLimitWindowValue: 1,
+  postRateLimitWindowUnit: 'minute',
+  editsPerMinute: 3,
+  editRateLimitWindowValue: 1,
+  editRateLimitWindowUnit: 'minute',
 };
 
 export const formatAllowedFileTypes = (raw: string): string =>

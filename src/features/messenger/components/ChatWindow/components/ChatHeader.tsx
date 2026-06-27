@@ -43,7 +43,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const presenceLabel = formatLastActiveLabel(user.isOnline, user.lastActiveAt);
 
   return (
-    <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+    <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
         {fullScreen && (
           <button
@@ -51,7 +51,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             className="-ml-2 cursor-pointer rounded-full p-2 transition-colors hover:bg-muted"
             title="Quay lại danh sách chat"
           >
-            <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+            <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
         )}
         <div className="relative">
@@ -66,8 +66,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           {user.isOnline && <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white bg-green-500" />}
         </div>
         <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{user.name}</h3>
-          {presenceLabel ? <p className="truncate text-xs text-gray-500 dark:text-gray-400">{presenceLabel}</p> : null}
+          <h3 className="truncate text-sm font-semibold text-foreground">{user.name}</h3>
+          {presenceLabel ? <p className="truncate text-xs text-muted-foreground">{presenceLabel}</p> : null}
         </div>
       </div>
 
@@ -96,12 +96,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleChatInfo}
-            className={`cursor-pointer rounded-full p-2.5 transition-colors hover:bg-muted ${
-              isChatInfoOpen ? 'bg-emerald-50 dark:bg-emerald-900/30' : ''
-            }`}
+            className={`cursor-pointer rounded-full p-2.5 transition-colors hover:bg-muted ${ isChatInfoOpen ? 'bg-emerald-50 dark:bg-emerald-900/30' : '' }`}
             title={isChatInfoOpen ? 'Ẩn thông tin' : 'Hiện thông tin'}
           >
-            <Info className={`h-5 w-5 ${isChatInfoOpen ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`} />
+            <Info className={`h-5 w-5 ${isChatInfoOpen ? 'text-emerald-600' : 'text-muted-foreground'}`} />
           </button>
         )}
       </div>

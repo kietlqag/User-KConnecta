@@ -34,9 +34,9 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
   };
 
   return (
-    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm [contain:paint] dark:border-gray-700 dark:bg-gray-800 dark:shadow-none">
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-border bg-card shadow-sm [contain:paint] dark:shadow-none">
       <div className="relative shrink-0">
-        <Link to={`/profile/${request.userId}`} className="block aspect-square overflow-hidden bg-gray-100 dark:bg-background">
+        <Link to={`/profile/${request.userId}`} className="block aspect-square overflow-hidden bg-background">
           <UserAvatar
             name={request.name}
             avatarUrl={request.avatar}
@@ -46,28 +46,28 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
         <button
           onClick={handleDelete}
           disabled={loading !== null}
-          className="absolute right-2 top-2 rounded-full bg-white dark:bg-gray-800/95 p-2 shadow-md transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+          className="absolute right-2 top-2 rounded-full bg-card/95 p-2 shadow-md transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
           aria-label={t('friendRequestCard.deleteAria')}
         >
           {loading === 'delete' ? (
-            <Loader2 className="h-4 w-4 animate-spin text-gray-600 dark:text-gray-400" />
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           ) : (
-            <X className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+            <X className="h-4 w-4 text-muted-foreground" />
           )}
         </button>
       </div>
 
       <div className="flex min-h-[172px] flex-1 flex-col p-3">
         <Link to={`/profile/${request.userId}`}>
-          <h3 className="truncate text-[15px] font-bold leading-6 text-gray-900 dark:text-gray-100">
+          <h3 className="truncate text-[15px] font-bold leading-6 text-foreground">
             {request.name}
           </h3>
         </Link>
 
-        <p className="mt-1 h-5 truncate text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-1 h-5 truncate text-sm text-muted-foreground">
           {t('friendRequestCard.mutualFriends', { count: request.mutualFriends })}
         </p>
-        <p className="mt-1 h-4 truncate text-xs text-gray-500 dark:text-gray-400">{request.timestamp}</p>
+        <p className="mt-1 h-4 truncate text-xs text-muted-foreground">{request.timestamp}</p>
 
         <div className="mt-auto flex flex-col gap-2 pt-4">
           <button

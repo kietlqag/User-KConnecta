@@ -30,13 +30,13 @@ export function GroupPollComposer({
   };
 
   return (
-    <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-600 dark:bg-gray-700/50">
+    <div className="mb-4 rounded-lg border border-border bg-muted p-3/50">
       <div className="mb-3 flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Thêm cuộc thăm dò ý kiến</h4>
+        <h4 className="text-sm font-semibold text-foreground">Thêm cuộc thăm dò ý kiến</h4>
         <button
           type="button"
           onClick={onRemove}
-          className="rounded-full p-1 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
+          className="rounded-full p-1 text-muted-foreground hover:bg-muted"
         >
           <X className="h-5 w-5" />
         </button>
@@ -50,13 +50,13 @@ export function GroupPollComposer({
               value={option}
               onChange={(e) => updateOption(index, e.target.value)}
               placeholder={`Lựa chọn ${index + 1}`}
-              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-[15px] outline-none focus:border-emerald-500 dark:border-gray-500 dark:bg-gray-800 dark:text-white"
+              className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-[15px] outline-none focus:border-emerald-500 dark:border-gray-500 dark:text-white"
             />
             {options.length > 2 && (
               <button
                 type="button"
                 onClick={() => removeOption(index)}
-                className="rounded-full p-1.5 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -76,14 +76,14 @@ export function GroupPollComposer({
             Thêm lựa chọn
           </button>
         )}
-        <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+        <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
           <Settings className="h-4 w-4" />
           <span>Cho phép thành viên thêm lựa chọn</span>
           <input
             type="checkbox"
             checked={allowAddOptions}
             onChange={(e) => onAllowAddOptionsChange(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300"
+            className="h-4 w-4 rounded border-border"
           />
         </label>
       </div>

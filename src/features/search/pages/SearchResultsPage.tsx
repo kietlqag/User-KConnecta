@@ -44,7 +44,7 @@ interface SectionHeaderProps {
 
 const SectionHeader = ({ title, count, onSeeAll }: SectionHeaderProps) => (
   <div className="flex items-center justify-between mb-3">
-    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">{title}</h3>
+    <h3 className="text-lg font-bold text-foreground">{title}</h3>
     {count > 2 && (
       <button
         onClick={onSeeAll}
@@ -249,12 +249,12 @@ export default function SearchResultsPage() {
 
   const EmptyState = ({ message }: { message: string }) => (
     <div className="text-center py-16">
-      <p className="text-gray-400 dark:text-gray-500 text-lg">{message}</p>
+      <p className="text-muted-foreground text-lg">{message}</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background">
+    <div className="min-h-screen bg-muted dark:bg-background">
       <Header />
 
       <div className="flex w-full pt-14">
@@ -283,7 +283,7 @@ export default function SearchResultsPage() {
           {/* ── Tab: TẤT CẢ ── */}
           {query.trim() && !loading && !error && activeFilter === 'all' && (
             <div className="space-y-8">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+              <h2 className="text-xl font-semibold text-foreground">
                 Tìm thấy {totalCount} kết quả{query ? ` cho "${query}"` : ''}
               </h2>
 
@@ -344,7 +344,7 @@ export default function SearchResultsPage() {
           {/* ── Other Tabs ── */}
           {query.trim() && !loading && !error && activeFilter !== 'all' && (
             <div className="space-y-4">
-              <h2 className="mb-2 text-xl font-semibold text-gray-800 dark:text-gray-200">
+              <h2 className="mb-2 text-xl font-semibold text-foreground">
                 {activeFilter === 'people'  && `${people.length} người`}
                 {activeFilter === 'groups'  && `${groups.length} nhóm`}
                 {activeFilter === 'posts'   && `${posts.length} bài viết`}

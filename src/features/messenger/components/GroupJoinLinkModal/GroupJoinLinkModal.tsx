@@ -95,13 +95,13 @@ export function GroupJoinLinkModal({ token, onClose, onJoined, onOpenGroup }: Gr
 
   return (
     <div className="fixed inset-0 z-[240] flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Tham gia nhóm chat</h3>
+      <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h3 className="text-lg font-bold text-foreground">Tham gia nhóm chat</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-1.5 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 cursor-pointer"
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-muted dark:text-muted-foreground cursor-pointer"
             aria-label="Đóng"
           >
             <X className="h-5 w-5" />
@@ -110,14 +110,14 @@ export function GroupJoinLinkModal({ token, onClose, onJoined, onOpenGroup }: Gr
 
         <div className="px-5 py-6 text-center">
           {loading ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">Đang tải thông tin nhóm...</p>
+            <p className="text-sm text-muted-foreground">Đang tải thông tin nhóm...</p>
           ) : error && !preview ? (
             <p className="text-sm text-red-500">{error}</p>
           ) : preview ? (
             <>
               <UserAvatar name={groupName} avatarUrl={groupAvatar} variant="group" rounded="full" className="mx-auto h-20 w-20" />
-              <h4 className="mt-4 text-xl font-bold text-gray-900 dark:text-gray-100">{preview.conversationName}</h4>
-              <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+              <h4 className="mt-4 text-xl font-bold text-foreground">{preview.conversationName}</h4>
+              <p className="mt-2 flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
                 <Users className="h-4 w-4" />
                 {preview.memberCount} thành viên
               </p>
@@ -127,24 +127,24 @@ export function GroupJoinLinkModal({ token, onClose, onJoined, onOpenGroup }: Gr
                 </p>
               )}
               {preview.membershipStatus === 'PENDING' && (
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                <p className="mt-3 text-sm text-muted-foreground">
                   Yêu cầu tham gia của bạn đang chờ quản trị viên duyệt.
                 </p>
               )}
               {preview.membershipStatus === 'MEMBER' && (
-                <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">Bạn đã là thành viên của nhóm này.</p>
+                <p className="mt-3 text-sm text-muted-foreground">Bạn đã là thành viên của nhóm này.</p>
               )}
               {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
             </>
           ) : null}
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-4 dark:border-gray-700">
+        <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-muted dark:text-gray-300 cursor-pointer"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-foreground hover:bg-muted cursor-pointer"
           >
             Hủy
           </button>
@@ -152,7 +152,7 @@ export function GroupJoinLinkModal({ token, onClose, onJoined, onOpenGroup }: Gr
             type="button"
             disabled={primaryDisabled}
             onClick={() => void handlePrimaryAction()}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600 cursor-pointer"
+            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-muted dark:disabled:bg-gray-600 cursor-pointer"
           >
             {submitting ? 'Đang xử lý...' : primaryLabel}
           </button>

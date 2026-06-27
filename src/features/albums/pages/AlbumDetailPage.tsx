@@ -145,7 +145,7 @@ export function AlbumDetailPage() {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="text-center py-20 text-gray-500">Đang tải album...</div>
+        <div className="text-center py-20 text-muted-foreground">Đang tải album...</div>
       </MainLayout>
     );
   }
@@ -154,7 +154,7 @@ export function AlbumDetailPage() {
     return (
       <MainLayout>
         <div className="text-center py-20">
-          <p className="text-gray-500 mb-4">Không tìm thấy album hoặc bạn không có quyền xem.</p>
+          <p className="text-muted-foreground mb-4">Không tìm thấy album hoặc bạn không có quyền xem.</p>
           <button type="button" onClick={() => navigate('/albums')} className="text-emerald-600 hover:underline text-sm">
             Quay lại danh sách
           </button>
@@ -173,24 +173,24 @@ export function AlbumDetailPage() {
         <button
           type="button"
           onClick={() => (album.groupId ? navigate(`/groups/${album.groupId}?tab=albums`) : navigate('/albums'))}
-          className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-4"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground dark:hover:text-gray-100 mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
           {album.groupId ? 'Album nhóm' : 'Album của bạn'}
         </button>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm mb-6">
+        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm mb-6">
           {album.coverUrl && (
-            <div className="h-48 sm:h-64 bg-gray-100 dark:bg-gray-800">
+            <div className="h-48 sm:h-64 bg-muted">
               <ImageWithFallback src={album.coverUrl} alt={album.title} className="w-full h-full object-cover" />
             </div>
           )}
           <div className="p-5">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 break-words">{album.title}</h1>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                <h1 className="text-2xl font-bold text-foreground break-words">{album.title}</h1>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 font-medium text-foreground">
                     <PrivacyIcon className="h-3.5 w-3.5" />
                     {album.groupId ? 'Công khai · Album nhóm' : privacyMeta.label}
                   </span>
@@ -201,7 +201,7 @@ export function AlbumDetailPage() {
                 <button
                   type="button"
                   onClick={() => setSettingsOpen(true)}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-2 text-sm font-medium text-gray-700 hover:bg-muted/80 dark:text-gray-200"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/80"
                   aria-label="Cài đặt album"
                 >
                   <Settings className="h-4 w-4" />
@@ -210,13 +210,13 @@ export function AlbumDetailPage() {
               )}
             </div>
             {album.description && (
-              <p className="mt-3 text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words">{album.description}</p>
+              <p className="mt-3 text-muted-foreground whitespace-pre-wrap break-words">{album.description}</p>
             )}
             {!album.description && album.canEdit && (
               <button
                 type="button"
                 onClick={() => setSettingsOpen(true)}
-                className="mt-3 text-sm italic text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="mt-3 text-sm italic text-muted-foreground hover:text-muted-foreground"
               >
                 Thêm mô tả...
               </button>
@@ -225,7 +225,7 @@ export function AlbumDetailPage() {
               <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">Nhóm: {album.groupName}</p>
             )}
             {album.createdAt && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Tạo ngày {formatAlbumDateTime(album.createdAt)}
               </p>
             )}
@@ -242,7 +242,7 @@ export function AlbumDetailPage() {
                   <button
                     type="button"
                     onClick={() => setReactionSummaryOpen(true)}
-                    className="text-sm font-medium text-gray-600 dark:text-gray-300 pl-1 pr-3 tabular-nums hover:underline cursor-pointer"
+                    className="text-sm font-medium text-muted-foreground pl-1 pr-3 tabular-nums hover:underline cursor-pointer"
                   >
                     {reactionCount}
                   </button>
@@ -251,7 +251,7 @@ export function AlbumDetailPage() {
               <button
                 type="button"
                 onClick={() => setShareOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-muted/80"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm font-medium text-muted-foreground hover:bg-muted/80"
               >
                 <Share2 className="w-4 h-4" />
                 Chia sẻ
@@ -279,14 +279,14 @@ export function AlbumDetailPage() {
               )}
             </div>
             {album.canEdit && media.length > 1 && (
-              <p className="text-xs text-gray-500 mt-3">Kéo thả ảnh để sắp xếp thứ tự</p>
+              <p className="text-xs text-muted-foreground mt-3">Kéo thả ảnh để sắp xếp thứ tự</p>
             )}
           </div>
         </div>
 
         {media.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-            <p className="text-gray-500 mb-4">Album chưa có ảnh hoặc video</p>
+          <div className="rounded-xl border border-dashed border-border p-12 text-center">
+            <p className="text-muted-foreground mb-4">Album chưa có ảnh hoặc video</p>
             {album.canEdit && (
               <button
                 type="button"
@@ -343,15 +343,15 @@ export function AlbumDetailPage() {
           if (!open) setMediaToDelete(null);
         }}
       >
-        <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800">
+        <AlertDialogContent className="border border-border bg-card sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-white">Xóa ảnh/video</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
+            <AlertDialogTitle className="text-foreground">Xóa ảnh/video</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Xóa ảnh/video này khỏi album?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer border-gray-300 dark:border-gray-600">Không</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer border-border">Không</AlertDialogCancel>
             <AlertDialogAction
               className="cursor-pointer bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700"
               disabled={deleteMedia.isPending}
@@ -370,13 +370,13 @@ export function AlbumDetailPage() {
         <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
           <div className="flex items-center justify-between p-4 text-white">
             <span className="text-sm">{lightboxIndex + 1} / {media.length}</span>
-            <button type="button" onClick={closeLightbox} className="p-2 rounded-full hover:bg-white/10">
+            <button type="button" onClick={closeLightbox} className="p-2 rounded-full hover:bg-card/10">
               <X className="w-6 h-6" />
             </button>
           </div>
           <div className="flex-1 flex items-center justify-center relative px-4">
             {lightboxIndex > 0 && (
-              <button type="button" onClick={prevMedia} className="absolute left-2 sm:left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white">
+              <button type="button" onClick={prevMedia} className="absolute left-2 sm:left-4 p-2 rounded-full bg-card/10 hover:bg-card/20 text-white">
                 <ChevronLeft className="w-8 h-8" />
               </button>
             )}
@@ -386,7 +386,7 @@ export function AlbumDetailPage() {
               <img src={currentMedia.url} alt={currentMedia.caption ?? ''} className="max-h-[75vh] max-w-full object-contain rounded-lg" />
             )}
             {lightboxIndex < media.length - 1 && (
-              <button type="button" onClick={nextMedia} className="absolute right-2 sm:right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white">
+              <button type="button" onClick={nextMedia} className="absolute right-2 sm:right-4 p-2 rounded-full bg-card/10 hover:bg-card/20 text-white">
                 <ChevronRight className="w-8 h-8" />
               </button>
             )}

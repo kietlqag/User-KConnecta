@@ -42,6 +42,8 @@ export interface FeedPost {
     mediaCount: number;
     ownerName: string;
   };
+  status?: PostResponse['status'];
+  scheduledAt?: string | null;
 }
 
 export type PostSourceTab = 'feed' | 'group';
@@ -72,6 +74,50 @@ export function formatPostTimestamp(dateString?: string | null): string {
   }).format(date);
 }
 
+export function formatScheduledPostLabel(scheduledAt?: string | null): string {
+  if (!scheduledAt) return 'Đã lên lịch';
+  const date = new Date(scheduledAt);
+  if (Number.isNaN(date.getTime())) return 'Đã lên lịch';
+  const formatted = new Intl.DateTimeFormat('vi-VN', {
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date);
+  return `Sẽ đăng lúc ${formatted}`;
+}
+
+export function isProfileVisiblePost(post: PostResponse, isOwnProfile: boolean): boolean {
+  if (!post.status || post.status === 'PUBLISHED') return true;
+  return isOwnProfile && post.status === 'SCHEDULED';
+}
+
+export function sortProfilePosts(a: PostResponse, b: PostResponse): number {
+  const aScheduled = a.status === 'SCHEDULED';
+  const bScheduled = b.status === 'SCHEDULED';
+  if (aScheduled !== bScheduled) return aScheduled ? -1 : 1;
+  if (aScheduled) {
+    return new Date(a.scheduledAt || a.createdAt).getTime() - new Date(b.scheduledAt || b.createdAt).getTime();
+  }
+  return new Date(b.publishedAt || b.createdAt).getTime() - new Date(a.publishedAt || a.createdAt).getTime();
+}
+
+export function mergeProfilePostList(posts: FeedPost[], incoming: FeedPost): FeedPost[] {
+  const rest = posts.filter((post) => post.id !== incoming.id);
+  if (incoming.status === 'SCHEDULED') {
+    const scheduled = [incoming, ...rest.filter((post) => post.status === 'SCHEDULED')].sort(
+      (a, b) => new Date(a.scheduledAt || 0).getTime() - new Date(b.scheduledAt || 0).getTime(),
+    );
+    const published = rest.filter((post) => post.status !== 'SCHEDULED');
+    return [...scheduled, ...published];
+  }
+  const scheduled = rest.filter((post) => post.status === 'SCHEDULED');
+  const published = [incoming, ...rest.filter((post) => post.status !== 'SCHEDULED')];
+  return [...scheduled, ...published];
+}
+
 function isVideoUrl(url?: string | null): boolean {
   if (!url) return false;
   return url.includes('/video/') || /\.(mp4|mov|webm|ogg)(\?.*)?$/i.test(url);
@@ -95,7 +141,10 @@ export function mapApiPost(item: PostResponse): FeedPost {
       name: item.authorFullName,
       avatar: item.authorAvatarUrl || '',
     },
-    timestamp: formatPostTimestamp(item.publishedAt || item.createdAt),
+    timestamp:
+      item.status === 'SCHEDULED'
+        ? formatScheduledPostLabel(item.scheduledAt)
+        : formatPostTimestamp(item.publishedAt || item.createdAt),
     content: item.content || '',
     image: imageUrl,
     media: videoUrl
@@ -151,5 +200,7 @@ export function mapApiPost(item: PostResponse): FeedPost {
           ownerName: item.sharedAlbum.ownerName,
         }
       : undefined,
+    status: item.status,
+    scheduledAt: item.scheduledAt ?? undefined,
   };
 }

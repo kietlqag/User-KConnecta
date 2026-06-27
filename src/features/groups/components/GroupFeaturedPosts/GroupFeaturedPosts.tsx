@@ -59,8 +59,8 @@ export function GroupFeaturedPosts({ groupId, isAdmin }: GroupFeaturedPostsProps
     <section className="mb-4" aria-label="Bài viết nổi bật">
       <div className="flex items-center gap-2 mb-3 px-1">
         <Pin className="w-[18px] h-[18px] text-emerald-600 dark:text-emerald-400" style={{ fill: 'currentColor', fillOpacity: 0.2 }} />
-        <h2 className="text-[17px] font-bold text-gray-900 dark:text-gray-100">Bài viết nổi bật</h2>
-        <span className="text-sm font-medium text-gray-400 dark:text-gray-500">· {pins.length}</span>
+        <h2 className="text-[17px] font-bold text-foreground">Bài viết nổi bật</h2>
+        <span className="text-sm font-medium text-muted-foreground">· {pins.length}</span>
         {unreadCount > 0 && (
           <span className="ml-1 inline-flex items-center gap-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold px-2 py-0.5 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -85,11 +85,7 @@ export function GroupFeaturedPosts({ groupId, isAdmin }: GroupFeaturedPostsProps
                   {meta.label} · Nổi bật
                 </span>
                 {(pin.priority === 'HIGH' || pin.priority === 'CRITICAL') && (
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                    pin.priority === 'CRITICAL'
-                      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                      : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
-                  }`}>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${ pin.priority === 'CRITICAL' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' }`}>
                     {pin.priority === 'CRITICAL' ? 'Khẩn cấp' : 'Ưu tiên cao'}
                   </span>
                 )}
@@ -108,7 +104,7 @@ export function GroupFeaturedPosts({ groupId, isAdmin }: GroupFeaturedPostsProps
                     type="button"
                     onClick={() => handleUnpin(pin)}
                     disabled={unpinMutation.isPending}
-                    className="ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800 hover:text-red-600 disabled:opacity-50 transition-colors cursor-pointer"
+                    className="ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-card hover:text-red-600 disabled:opacity-50 transition-colors cursor-pointer"
                     title="Bỏ ghim"
                   >
                     <X className="w-3.5 h-3.5" /> Bỏ ghim

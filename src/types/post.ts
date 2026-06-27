@@ -3,4 +3,5 @@ export interface PostRateLimitStatus {
   usedInWindow: number;
   remaining: number;
   retryAfterSeconds: number;
+  windowSeconds?: number;
 }

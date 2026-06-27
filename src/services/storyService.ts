@@ -38,7 +38,6 @@ export const storyService = {
     textSize?: number;
     textPosX?: number;
     textPosY?: number;
-    musicTrackId?: string;
     altText?: string;
     backgroundColor?: string;
     sharedImageUrl?: string;
@@ -55,7 +54,6 @@ export const storyService = {
     if (params.textSize != null) formData.append('textSize', String(params.textSize));
     if (params.textPosX != null) formData.append('textPosX', String(params.textPosX));
     if (params.textPosY != null) formData.append('textPosY', String(params.textPosY));
-    if (params.musicTrackId) formData.append('musicTrackId', params.musicTrackId);
     if (params.altText) formData.append('altText', params.altText);
     if (params.backgroundColor) formData.append('backgroundColor', params.backgroundColor);
     if (params.sharedImageUrl) formData.append('sharedImageUrl', params.sharedImageUrl);

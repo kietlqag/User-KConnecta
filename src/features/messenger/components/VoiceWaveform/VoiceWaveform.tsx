@@ -56,19 +56,17 @@ export function VoiceWaveform({
 
         let barClass = '';
         if (variant === 'recording') {
-          barClass = isLive ? 'bg-white' : 'bg-white/55';
+          barClass = isLive ? 'bg-card' : 'bg-card/55';
         } else if (variant === 'own') {
-          barClass = isPlayed ? 'bg-white' : isLive ? 'bg-white/75' : 'bg-white/40';
+          barClass = isPlayed ? 'bg-card' : isLive ? 'bg-card/75' : 'bg-card/40';
         } else {
-          barClass = isPlayed ? 'bg-emerald-600' : isLive ? 'bg-emerald-500/70' : 'bg-gray-400/55 dark:bg-gray-500/55';
+          barClass = isPlayed ? 'bg-emerald-600' : isLive ? 'bg-emerald-500/70' : 'bg-gray-400/55 dark:bg-muted0/55';
         }
 
         return (
           <span
             key={index}
-            className={`w-[3px] shrink-0 rounded-full transition-[height,opacity] duration-150 ${barClass} ${
-              isLive ? 'animate-voice-bar' : ''
-            }`}
+            className={`w-[3px] shrink-0 rounded-full transition-[height,opacity] duration-150 ${barClass} ${ isLive ? 'animate-voice-bar' : '' }`}
             style={{
               height: `${Math.round(6 + height * 22)}px`,
               animationDelay: isLive ? `${(index % 7) * 70}ms` : undefined,

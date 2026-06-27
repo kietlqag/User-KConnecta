@@ -33,14 +33,14 @@ export const LiveOptionCard = ({
   const styles = toneStyles[tone];
 
   return (
-    <div className="flex flex-col items-center rounded-lg bg-white p-8 text-center shadow-md transition-shadow hover:shadow-lg dark:bg-gray-800">
+    <div className="flex flex-col items-center rounded-lg bg-card p-8 text-center shadow-md transition-shadow hover:shadow-lg">
       <div className={`mb-6 flex h-20 w-20 items-center justify-center rounded-full ${styles.iconWrap}`}>
         {icon}
       </div>
 
       <h3 className="mb-3 text-xl font-semibold">{title}</h3>
 
-      <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">{description}</p>
+      <p className="mb-6 text-sm text-muted-foreground">{description}</p>
 
       <button
         type="button"

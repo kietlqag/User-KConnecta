@@ -26,16 +26,16 @@ export function GroupSearchDropdown({
   const empty = !loading && !hasLocal && !hasSuggested;
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden max-h-[min(420px,60vh)] flex flex-col">
-      <div className="px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
-        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+    <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-xl shadow-xl border border-border z-50 overflow-hidden max-h-[min(420px,60vh)] flex flex-col">
+      <div className="px-4 py-2.5 border-b border-border bg-background">
+        <p className="text-xs font-medium text-muted-foreground">
           Kết quả cho &quot;{query}&quot;
         </p>
       </div>
 
       <div className="overflow-y-auto flex-1 py-1">
         {loading && (
-          <div className="flex items-center justify-center gap-2 py-8 text-gray-500 dark:text-gray-400 text-sm">
+          <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-sm">
             <Loader2 className="w-4 h-4 animate-spin" />
             Đang tìm...
           </div>
@@ -43,7 +43,7 @@ export function GroupSearchDropdown({
 
         {hasLocal && (
           <div className="px-2 pb-1">
-            <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Nhóm của bạn
             </p>
             {localGroups.slice(0, 5).map(group => (
@@ -60,7 +60,7 @@ export function GroupSearchDropdown({
                     <Users className="w-4 h-4 text-emerald-600" />
                   </div>
                 )}
-                <span className="font-medium text-[15px] text-gray-900 dark:text-gray-100 truncate">{group.name}</span>
+                <span className="font-medium text-[15px] text-foreground truncate">{group.name}</span>
               </button>
             ))}
           </div>
@@ -68,7 +68,7 @@ export function GroupSearchDropdown({
 
         {hasSuggested && (
           <div className="px-2 pb-1">
-            <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Khám phá thêm
             </p>
             {suggestedGroups.map(group => (
@@ -81,11 +81,11 @@ export function GroupSearchDropdown({
                 {group.coverImage ? (
                   <img src={group.coverImage} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
                 ) : (
-                  <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                    <Users className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <Users className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
-                <span className="font-medium text-[15px] text-gray-900 dark:text-gray-100 truncate">{group.name}</span>
+                <span className="font-medium text-[15px] text-foreground truncate">{group.name}</span>
               </button>
             ))}
           </div>
@@ -93,8 +93,8 @@ export function GroupSearchDropdown({
 
         {empty && (
           <div className="px-4 py-8 text-center">
-            <Search className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">Không tìm thấy nhóm phù hợp</p>
+            <Search className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Không tìm thấy nhóm phù hợp</p>
           </div>
         )}
       </div>
@@ -103,7 +103,7 @@ export function GroupSearchDropdown({
         <button
           type="button"
           onClick={onViewAll}
-          className="w-full px-4 py-3 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 border-t border-gray-100 dark:border-gray-800 transition-colors"
+          className="w-full px-4 py-3 text-sm font-semibold text-emerald-600 hover:bg-emerald-50 border-t border-border transition-colors"
         >
           Xem tất cả kết quả
         </button>

@@ -244,12 +244,12 @@ export function NewsFeed() {
       {isFetchingNextPage && (
         <div className="p-4 text-center">
           <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-emerald-600 border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
-          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Đang tải thêm...</span>
+          <span className="ml-2 text-sm text-muted-foreground">Đang tải thêm...</span>
         </div>
       )}
 
       {!isLoading && !error && !hasNextPage && posts.length > 0 && (
-        <div className="p-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="p-8 text-center text-sm text-muted-foreground">
           Bạn đã xem hết tất cả bài viết.
         </div>
       )}

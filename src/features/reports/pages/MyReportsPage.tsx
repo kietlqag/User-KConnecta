@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<ReportStatus, { label: string; className: string; ic
 };
 
 const SEVERITY_CONFIG: Record<string, { label: string; className: string }> = {
-  NONE:   { label: 'Không vi phạm', className: 'bg-gray-100 dark:bg-gray-900 text-gray-600 dark:text-gray-400' },
+  NONE:   { label: 'Không vi phạm', className: 'bg-background text-muted-foreground' },
   LOW:    { label: 'Vi phạm nhẹ',   className: 'bg-yellow-100 text-yellow-700' },
   MEDIUM: { label: 'Vi phạm rõ',    className: 'bg-orange-100 text-orange-700' },
   HIGH:   { label: 'Vi phạm nặng',  className: 'bg-red-100 text-red-700' },
@@ -53,14 +53,14 @@ export default function MyReportsPage() {
       {loading && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 rounded-xl bg-gray-100 dark:bg-gray-900 animate-pulse" />
+            <div key={i} className="h-28 rounded-xl bg-background animate-pulse" />
           ))}
         </div>
       )}
 
       {!loading && reports.length === 0 && (
-        <div className="text-center py-16 text-gray-500 dark:text-gray-400">
-          <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+        <div className="text-center py-16 text-muted-foreground">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium">Bạn chưa gửi báo cáo nào</p>
         </div>
       )}
@@ -72,7 +72,7 @@ export default function MyReportsPage() {
             const severity = report.aiSeverity ? SEVERITY_CONFIG[report.aiSeverity] : null;
 
             return (
-              <div key={report.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 space-y-3">
+              <div key={report.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex flex-wrap gap-2">
                     {report.category && (
@@ -90,19 +90,19 @@ export default function MyReportsPage() {
                       </span>
                     )}
                   </div>
-                  <span className="text-xs text-gray-400 shrink-0">{formatDate(report.createdAt)}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{formatDate(report.createdAt)}</span>
                 </div>
 
                 {report.reason && (
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                  <p className="text-sm text-foreground">
                     <span className="font-medium">Lý do: </span>{report.reason}
                   </p>
                 )}
 
                 {report.aiAnalysis && (
-                  <div className="text-sm bg-gray-50 dark:bg-gray-900 rounded-lg p-3 border border-gray-100 dark:border-gray-800">
-                    <span className="font-medium text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wide">Phân tích AI</span>
-                    <p className="mt-1 text-gray-700 dark:text-gray-300">{report.aiAnalysis}</p>
+                  <div className="text-sm bg-background rounded-lg p-3 border border-border">
+                    <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">Phân tích AI</span>
+                    <p className="mt-1 text-foreground">{report.aiAnalysis}</p>
                   </div>
                 )}
               </div>

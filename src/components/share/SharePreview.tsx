@@ -9,7 +9,7 @@ interface SharePreviewProps {
 export function SharePreview({ target }: SharePreviewProps) {
   if (target.type === 'album') {
     return (
-      <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+      <div className="overflow-hidden rounded-xl border border-border">
         {target.coverUrl ? (
           <img src={target.coverUrl} alt={target.title} className="aspect-[16/9] w-full object-cover" />
         ) : (
@@ -18,10 +18,10 @@ export function SharePreview({ target }: SharePreviewProps) {
           </div>
         )}
         <div className="p-3">
-          <p className="text-sm font-semibold leading-snug text-gray-900 break-words dark:text-gray-100">
+          <p className="text-sm font-semibold leading-snug text-foreground break-words">
             {target.title}
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-gray-500 break-words dark:text-gray-400">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground break-words dark:text-muted-foreground">
             {target.mediaCount ?? 0} ảnh/video{target.ownerName ? ` · ${target.ownerName}` : ''}
           </p>
         </div>
@@ -31,7 +31,7 @@ export function SharePreview({ target }: SharePreviewProps) {
 
   if (target.type === 'group') {
     return (
-      <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+      <div className="overflow-hidden rounded-xl border border-border">
         {target.coverUrl ? (
           <img src={target.coverUrl} alt={target.name} className="h-28 w-full object-cover" />
         ) : (
@@ -40,8 +40,8 @@ export function SharePreview({ target }: SharePreviewProps) {
           </div>
         )}
         <div className="p-3">
-          <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{target.name}</p>
-          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+          <p className="truncate text-sm font-semibold text-foreground">{target.name}</p>
+          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
             {target.privacy === 'PRIVATE' ? (
               <Lock className="h-3.5 w-3.5" />
             ) : (
@@ -60,7 +60,7 @@ export function SharePreview({ target }: SharePreviewProps) {
   if (!image && !content) return null;
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700">
+    <div className="overflow-hidden rounded-xl border border-border">
       {image ? (
         isVideoUrl(image) ? (
           <video
@@ -76,12 +76,12 @@ export function SharePreview({ target }: SharePreviewProps) {
       ) : null}
       <div className="p-3">
         {content ? (
-          <p className="line-clamp-3 text-sm leading-snug text-gray-900 break-words dark:text-gray-100">
+          <p className="line-clamp-3 text-sm leading-snug text-foreground break-words">
             {content}
           </p>
         ) : null}
         {authorName ? (
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{authorName}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{authorName}</p>
         ) : null}
       </div>
     </div>

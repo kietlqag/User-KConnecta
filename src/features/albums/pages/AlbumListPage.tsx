@@ -79,11 +79,11 @@ export function AlbumListPage() {
       <div className="mx-auto max-w-5xl px-4 py-6">
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
               <Images className="h-7 w-7 text-emerald-600" />
               Album của bạn
             </h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               Quản lý ảnh và video kỷ niệm của bạn
             </p>
           </div>
@@ -98,11 +98,11 @@ export function AlbumListPage() {
         </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-gray-500">Đang tải album...</div>
+          <div className="py-12 text-center text-muted-foreground">Đang tải album...</div>
         ) : items.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white p-12 text-center dark:border-gray-600 dark:bg-gray-900">
-            <Images className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-            <p className="mb-4 text-gray-600 dark:text-gray-400">Bạn chưa có album nào</p>
+          <div className="rounded-xl border border-dashed border-border bg-card p-12 text-center">
+            <Images className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+            <p className="mb-4 text-muted-foreground">Bạn chưa có album nào</p>
             <button
               type="button"
               onClick={() => navigate('/albums/create')}
@@ -114,7 +114,7 @@ export function AlbumListPage() {
           </div>
         ) : (
           <>
-            <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mb-3 text-xs text-muted-foreground">
               Kéo thả album để sắp xếp thứ tự
             </p>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -138,15 +138,15 @@ export function AlbumListPage() {
       </div>
 
       <AlertDialog open={Boolean(albumToDelete)} onOpenChange={(open) => !open && setAlbumToDelete(null)}>
-        <AlertDialogContent className="border border-gray-200 bg-white sm:max-w-md dark:border-gray-600 dark:bg-gray-800">
+        <AlertDialogContent className="border border-border bg-card sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-gray-900 dark:text-white">Xóa album</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-600 dark:text-gray-300">
+            <AlertDialogTitle className="text-foreground">Xóa album</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
               Xóa album &quot;{albumToDelete?.title}&quot;? Toàn bộ ảnh và video trong album sẽ bị xóa.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="cursor-pointer border-gray-300 dark:border-gray-600">Hủy</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer border-border">Hủy</AlertDialogCancel>
             <AlertDialogAction
               className="cursor-pointer bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 dark:bg-red-600 dark:hover:bg-red-700"
               disabled={deleteAlbum.isPending}

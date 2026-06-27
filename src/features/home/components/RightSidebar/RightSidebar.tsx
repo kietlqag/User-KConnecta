@@ -70,7 +70,7 @@ export function RightSidebar() {
       <div className="flex-1 min-h-0 flex flex-col px-4 pb-4">
         <div className="shrink-0 pt-2">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-gray-600 dark:text-gray-400 font-semibold">Người liên hệ</h3>
+            <h3 className="text-muted-foreground font-semibold">Người liên hệ</h3>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -82,13 +82,9 @@ export function RightSidebar() {
                 }}
                 aria-label={searchOpen ? 'Đóng tìm kiếm người liên hệ' : 'Tìm kiếm người liên hệ'}
                 aria-expanded={searchOpen}
-                className={`p-2 rounded-full transition-colors ${
-                  searchOpen
-                    ? 'bg-gray-200 dark:bg-gray-700'
-                    : 'hover:bg-muted'
-                }`}
+                className={`p-2 rounded-full transition-colors ${ searchOpen ? 'bg-muted' : 'hover:bg-muted' }`}
               >
-                <Search className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                <Search className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
           </div>
@@ -98,7 +94,7 @@ export function RightSidebar() {
               <label htmlFor="contact-search" className="sr-only">
                 Tìm người liên hệ
               </label>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" aria-hidden />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden />
               <input
                 id="contact-search"
                 ref={searchInputRef}
@@ -114,7 +110,7 @@ export function RightSidebar() {
                   type="button"
                   onClick={() => setQuery('')}
                   aria-label="Xóa tìm kiếm"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -125,14 +121,14 @@ export function RightSidebar() {
 
         <div className="flex-1 min-h-0 overflow-y-auto sidebar-scrollbar space-y-1 pr-0.5">
           {loading && contacts.length === 0 ? (
-            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">Đang tải...</div>
+            <div className="p-4 text-center text-sm text-muted-foreground">Đang tải...</div>
           ) : filteredContacts.length > 0 ? (
             filteredContacts.map((contact) => (
               <button
                 type="button"
                 key={contact.id}
                 onClick={() => navigate(`/messages?with=${contact.id}`)}
-                className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 transition-colors cursor-pointer group text-left"
+                className="flex w-full items-center gap-3 p-2 rounded-lg hover:bg-background transition-colors cursor-pointer group text-left"
               >
                 <div className="relative">
                   <UserAvatar
@@ -146,15 +142,15 @@ export function RightSidebar() {
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-gray-900 rounded-full" />
                   )}
                 </div>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:underline">
+                <span className="text-sm font-medium text-foreground group-hover:underline">
                   {contact.name}
                 </span>
               </button>
             ))
           ) : query.trim() ? (
-            <div className="p-2 text-sm text-gray-500 dark:text-gray-400">Không tìm thấy người liên hệ</div>
+            <div className="p-2 text-sm text-muted-foreground">Không tìm thấy người liên hệ</div>
           ) : (
-            <div className="p-2 text-sm text-gray-500 dark:text-gray-400">Không có người liên hệ</div>
+            <div className="p-2 text-sm text-muted-foreground">Không có người liên hệ</div>
           )}
         </div>
       </div>

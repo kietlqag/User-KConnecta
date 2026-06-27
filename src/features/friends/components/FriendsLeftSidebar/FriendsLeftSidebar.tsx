@@ -27,26 +27,22 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
   ];
 
   return (
-    <div className="hidden h-full w-[clamp(280px,23vw,360px)] shrink-0 overflow-hidden border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 md:block">
+    <div className="hidden h-full w-[clamp(280px,23vw,360px)] shrink-0 overflow-hidden border-r border-border bg-card md:block">
       <div className="p-4">
-        <h1 className="mb-4 text-2xl font-bold text-gray-900 dark:text-gray-100">{t('friendsPage.title')}</h1>
+        <h1 className="mb-4 text-2xl font-bold text-foreground">{t('friendsPage.title')}</h1>
 
         <div className="space-y-1">
           {sidebarItems.map((item) => (
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors cursor-pointer group ${
-                activeTab === item.id
-                  ? 'bg-emerald-50 text-emerald-600'
-                  : 'hover:bg-muted'
-              }`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors cursor-pointer group ${ activeTab === item.id ? 'bg-emerald-50 text-emerald-600' : 'hover:bg-muted' }`}
             >
               <div className="flex items-center gap-3">
-                <div className={activeTab === item.id ? 'text-emerald-600' : 'text-gray-600 dark:text-gray-400 group-hover:text-emerald-600 transition-colors'}>
+                <div className={activeTab === item.id ? 'text-emerald-600' : 'text-muted-foreground group-hover:text-emerald-600 transition-colors'}>
                   {item.icon}
                 </div>
-                <span className={`font-medium ${activeTab === item.id ? 'text-emerald-600' : 'text-gray-900 dark:text-gray-100'}`}>
+                <span className={`font-medium ${activeTab === item.id ? 'text-emerald-600' : 'text-foreground'}`}>
                   {t(`friendsPage.${item.labelKey}`)}
                 </span>
               </div>

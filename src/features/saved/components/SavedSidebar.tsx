@@ -19,21 +19,17 @@ export const SavedSidebar = ({
   const { t } = useTranslation();
 
   return (
-    <aside className="w-[360px] h-[calc(100vh-56px)] bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col fixed left-0 top-14 z-20">
+    <aside className="w-[360px] h-[calc(100vh-56px)] bg-card border-r border-border flex flex-col fixed left-0 top-14 z-20">
       <div className="p-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{t('saved.title')}</h1>
+        <h1 className="text-2xl font-bold text-foreground">{t('saved.title')}</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 py-2">
         <button
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left group ${
-            activeCollection === 'all' ? 'bg-emerald-50 text-emerald-600' : 'hover:bg-muted'
-          }`}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left group ${ activeCollection === 'all' ? 'bg-emerald-50 text-emerald-600' : 'hover:bg-muted' }`}
           onClick={() => onSelectCollection?.('all')}
         >
-          <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
-            activeCollection === 'all' ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-          }`}>
+          <div className={`w-9 h-9 rounded-full flex items-center justify-center ${ activeCollection === 'all' ? 'bg-emerald-600 text-white' : 'bg-muted text-foreground' }`}>
             <Bookmark className="w-5 h-5" />
           </div>
           <span className="font-semibold text-[15px]">{t('saved.allItems')}</span>
@@ -42,28 +38,26 @@ export const SavedSidebar = ({
         {collections.length > 0 && (
           <>
             <div className="mt-4 px-3 mb-2">
-              <h3 className="text-[17px] font-bold text-gray-900 dark:text-gray-100">{t('saved.myCollections')}</h3>
+              <h3 className="text-[17px] font-bold text-foreground">{t('saved.myCollections')}</h3>
             </div>
 
             <div className="space-y-1">
               {collections.map((col) => (
                 <button
                   key={col.id}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left group relative ${
-                    activeCollection === col.id ? 'bg-emerald-50' : 'hover:bg-muted'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left group relative ${ activeCollection === col.id ? 'bg-emerald-50' : 'hover:bg-muted' }`}
                   onClick={() => onSelectCollection?.(col.id)}
                 >
-                  <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
+                  <div className="w-9 h-9 rounded-lg bg-muted overflow-hidden shrink-0">
                     {col.thumbnail ? (
                       <img src={col.thumbnail} alt={col.name} className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full bg-gray-200 dark:bg-gray-700" />
+                      <div className="w-full h-full bg-muted" />
                     )}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="font-semibold text-[15px] text-gray-900 dark:text-gray-100 truncate">{col.name}</span>
-                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="font-semibold text-[15px] text-foreground truncate">{col.name}</span>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Lock className="w-3 h-3" />
                       <span>{t('saved.onlyMe')}</span>
                     </div>

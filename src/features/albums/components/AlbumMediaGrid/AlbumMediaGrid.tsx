@@ -64,9 +64,7 @@ export function AlbumMediaGrid({
           onDragOver={(e) => e.preventDefault()}
           onDrop={() => handleDrop(index)}
           onDragEnd={() => setDragIndex(null)}
-          className={`relative group aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 ${
-            dragIndex === index ? 'ring-2 ring-emerald-500 opacity-70' : ''
-          } ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          className={`relative group aspect-square rounded-lg overflow-hidden bg-muted ${ dragIndex === index ? 'ring-2 ring-emerald-500 opacity-70' : '' } ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
         >
           <button type="button" onClick={() => onOpenLightbox(index)} className="w-full h-full">
             {item.mediaType === 'VIDEO' ? (

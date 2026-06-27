@@ -148,7 +148,7 @@ export const GroupDetailPage = () => {
   // so member avatars and the count update live for everyone viewing the group.
   useGroupSocket(
     groupId,
-    currentUser?.token,
+    Boolean(currentUser),
     useCallback(() => {
       queryClient.invalidateQueries({ queryKey: ['groups', 'members', groupId] });
       queryClient.invalidateQueries({ queryKey: ['groups', 'detail', groupId] });
@@ -246,12 +246,12 @@ export const GroupDetailPage = () => {
     group?.privacy === 'private' && group.role !== 'ADMIN' && group.role !== 'MEMBER';
 
   const privateLockScreen = (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-12 flex flex-col items-center justify-center min-h-[350px] text-center">
-      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mb-4">
-        <Lock className="w-8 h-8 text-gray-400" />
+    <div className="bg-card rounded-xl shadow-sm dark:shadow-none border border-border p-12 flex flex-col items-center justify-center min-h-[350px] text-center">
+      <div className="w-16 h-16 bg-background rounded-full flex items-center justify-center mb-4">
+        <Lock className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Nhóm riêng tư</h3>
-      <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm leading-relaxed">
+      <h3 className="text-lg font-bold text-foreground mb-2">Nhóm riêng tư</h3>
+      <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
         {group?.role === 'PENDING'
           ? 'Yêu cầu tham gia của bạn đang chờ quản trị viên phê duyệt.'
           : 'Chỉ thành viên được phê duyệt mới xem được nội dung nhóm này.'}
@@ -260,7 +260,7 @@ export const GroupDetailPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
       <div className="flex min-w-0 flex-1 items-start pt-14">
@@ -272,7 +272,7 @@ export const GroupDetailPage = () => {
         />
 
         <main className="min-w-0 flex-1">
-          <div className="bg-white dark:bg-gray-800 shadow-sm dark:shadow-none border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-card shadow-sm dark:shadow-none border-b border-border">
             <div className="max-w-[940px] mx-auto px-4 sm:px-6">
               {/* Banner */}
               <div className="relative w-full h-[200px] sm:h-[280px] md:h-[350px] rounded-b-xl overflow-hidden bg-[#fdf0e6]">
@@ -299,7 +299,7 @@ export const GroupDetailPage = () => {
                       <circle cx="900" cy="250" r="70" fill="#fff" opacity="0.15" />
                     </svg>
                     <div className="absolute inset-0 flex flex-wrap items-center justify-center gap-12 p-8">
-                      <div className="w-24 h-24 rounded-full bg-white dark:bg-gray-800/20 backdrop-blur" />
+                      <div className="w-24 h-24 rounded-full bg-card/20 backdrop-blur" />
                       <div className="w-32 h-32 bg-yellow-400/30 rotate-12" />
                       <div className="w-40 h-40 rounded-full bg-emerald-500/20 backdrop-blur" />
                     </div>
@@ -320,7 +320,7 @@ export const GroupDetailPage = () => {
                   <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 flex gap-2">
                     <button
                       onClick={cancelPreview}
-                      className="bg-white dark:bg-gray-800 hover:bg-muted text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold shadow-sm dark:shadow-none transition-colors"
+                      className="bg-card hover:bg-muted text-foreground px-4 py-2 rounded-lg font-semibold shadow-sm dark:shadow-none transition-colors"
                     >
                       Hủy
                     </button>
@@ -336,7 +336,7 @@ export const GroupDetailPage = () => {
                   <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6">
                     <button
                       onClick={() => setShowCoverMenu(v => !v)}
-                      className="bg-white dark:bg-gray-800 hover:bg-muted text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 shadow-sm dark:shadow-none transition-colors"
+                      className="bg-card hover:bg-muted text-foreground px-4 py-2 rounded-lg font-semibold flex items-center gap-2 shadow-sm dark:shadow-none transition-colors"
                     >
                       <Edit3 className="w-4 h-4" />
                       Chỉnh sửa
@@ -344,21 +344,21 @@ export const GroupDetailPage = () => {
                     {showCoverMenu && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowCoverMenu(false)} />
-                        <div className="absolute bottom-full right-0 mb-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-20 py-1 min-w-[220px]">
+                        <div className="absolute bottom-full right-0 mb-2 bg-card rounded-xl shadow-lg border border-border z-20 py-1 min-w-[220px]">
                           <button
                             onClick={() => { fileInputRef.current?.click(); setShowCoverMenu(false); }}
-                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-gray-900 dark:text-gray-100 font-medium text-[15px] text-left"
+                            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-foreground font-medium text-[15px] text-left"
                           >
-                            <ImageIcon className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" />
+                            <ImageIcon className="w-5 h-5 text-muted-foreground shrink-0" />
                             Tải ảnh bìa lên
                           </button>
                           {group?.icon && (
                             <button
                               onClick={() => { removeCoverMutation.mutate(); setShowCoverMenu(false); }}
                               disabled={removeCoverMutation.isPending}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-gray-900 dark:text-gray-100 font-medium text-[15px] text-left disabled:opacity-50"
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted text-foreground font-medium text-[15px] text-left disabled:opacity-50"
                             >
-                              <X className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" />
+                              <X className="w-5 h-5 text-muted-foreground shrink-0" />
                               Xóa ảnh bìa
                             </button>
                           )}
@@ -380,27 +380,27 @@ export const GroupDetailPage = () => {
               {/* Group Header Info */}
               <div className="pt-4 pb-2 sm:pt-6">
                 <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">{group?.name}</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">{group?.name}</h1>
                   {isAdmin && (
                     <button
                       type="button"
                       onClick={() => setNameModalOpen(true)}
-                      className="rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors"
+                      className="rounded-full p-2 text-muted-foreground hover:bg-muted dark:text-muted-foreground transition-colors"
                       title="Đổi tên nhóm"
                     >
                       <Edit3 className="w-5 h-5" />
                     </button>
                   )}
                 </div>
-                <div className="flex items-center text-[15px] text-gray-500 dark:text-gray-400 gap-1.5 font-medium mb-4">
+                <div className="flex items-center text-[15px] text-muted-foreground gap-1.5 font-medium mb-4">
                   {group?.privacy === 'private' ? <Lock className="w-4 h-4" /> : <Users className="w-4 h-4" />}
                   <span>Nhóm {group?.privacy === 'private' ? 'Riêng tư' : 'Công khai'}</span>
                   <span>·</span>
-                  <span className="font-semibold text-gray-900 dark:text-gray-100">{group?.members ?? 0} thành viên</span>
+                  <span className="font-semibold text-foreground">{group?.members ?? 0} thành viên</span>
                 </div>
                 
                 {/* Action buttons row */}
-                <div className="flex flex-wrap items-center justify-between border-b border-gray-300 dark:border-gray-700 pb-4">
+                <div className="flex flex-wrap items-center justify-between border-b border-border pb-4">
                   {/* Avatars */}
                   <div className="flex items-center mb-2 sm:mb-0">
                     <div className="flex -space-x-2 overflow-hidden">
@@ -416,7 +416,7 @@ export const GroupDetailPage = () => {
                         />
                       ))}
                       {members.length > 8 && (
-                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-900 border-2 border-white flex items-center justify-center text-gray-500 dark:text-gray-400 text-xs font-semibold ring-2 ring-white">
+                        <div className="w-10 h-10 rounded-full bg-background border-2 border-white flex items-center justify-center text-muted-foreground text-xs font-semibold ring-2 ring-white">
                           +{members.length - 8}
                         </div>
                       )}
@@ -451,7 +451,7 @@ export const GroupDetailPage = () => {
                     {group?.role === 'PENDING' && (
                       <button
                         disabled
-                        className="bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-not-allowed"
+                        className="bg-muted text-muted-foreground px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-not-allowed"
                       >
                         Đang chờ duyệt...
                       </button>
@@ -466,7 +466,7 @@ export const GroupDetailPage = () => {
                         </button>
                         <button
                           onClick={() => setShowSettings(true)}
-                          className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
+                          className="bg-muted hover:bg-muted text-foreground px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 transition-colors"
                           title="Cài đặt nhóm"
                         >
                           <Settings className="w-5 h-5" />
@@ -476,7 +476,7 @@ export const GroupDetailPage = () => {
                     )}
                     <button
                       onClick={() => setIsShareModalOpen(true)}
-                      className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors"
+                      className="bg-muted hover:bg-muted text-foreground px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors"
                     >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>
                       Chia sẻ
@@ -643,15 +643,15 @@ export const GroupDetailPage = () => {
       {/* Group Settings Modal */}
       {showSettings && group && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="flex w-full max-w-md max-h-[min(90vh,100%)] flex-col bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <div className="flex w-full max-w-md max-h-[min(90vh,100%)] flex-col bg-card rounded-xl shadow-2xl border border-border overflow-hidden">
+            <div className="flex shrink-0 items-center justify-between px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <Settings className="w-5 h-5" />
                 Cài đặt nhóm
               </h3>
               <button
                 onClick={() => setShowSettings(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                className="text-muted-foreground hover:text-muted-foreground dark:hover:text-gray-200 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -659,14 +659,14 @@ export const GroupDetailPage = () => {
             <div className="overflow-y-auto p-6 space-y-5">
               {isAdmin && (
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100">Tên nhóm</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3">
-                    Hiện tại: <span className="font-medium text-gray-800 dark:text-gray-200">{group.name}</span>
+                  <p className="font-semibold text-foreground">Tên nhóm</p>
+                  <p className="text-sm text-muted-foreground mt-1 mb-3">
+                    Hiện tại: <span className="font-medium text-foreground">{group.name}</span>
                   </p>
                   <button
                     type="button"
                     onClick={() => { setShowSettings(false); setNameModalOpen(true); }}
-                    className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 text-sm font-semibold transition-colors"
+                    className="px-4 py-2 rounded-lg bg-muted hover:bg-muted text-foreground text-sm font-semibold transition-colors"
                   >
                     Đổi tên nhóm
                   </button>
@@ -674,9 +674,9 @@ export const GroupDetailPage = () => {
               )}
 
               {isAdmin && (
-                <div className="pt-5 border-t border-gray-200 dark:border-gray-700">
-                  <p className="font-semibold text-gray-900 dark:text-gray-100">Quyền riêng tư</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3">
+                <div className="pt-5 border-t border-border">
+                  <p className="font-semibold text-foreground">Quyền riêng tư</p>
+                  <p className="text-sm text-muted-foreground mt-1 mb-3">
                     Chọn ai có thể tìm thấy nhóm và xem nội dung.
                   </p>
                   <div className="space-y-2">
@@ -720,20 +720,16 @@ export const GroupDetailPage = () => {
                               },
                             );
                           }}
-                          className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors disabled:cursor-default ${
-                            selected
-                              ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
-                              : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/50'
-                          }`}
+                          className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors disabled:cursor-default ${ selected ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20' : 'border-border hover:bg-muted/50' }`}
                         >
-                          <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${selected ? 'text-emerald-600' : 'text-gray-500'}`} />
+                          <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${selected ? 'text-emerald-600' : 'text-muted-foreground'}`} />
                           <div className="min-w-0">
-                            <p className={`text-sm font-semibold ${selected ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-900 dark:text-gray-100'}`}>
+                            <p className={`text-sm font-semibold ${selected ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'}`}>
                               {option.label}
                             </p>
-                            <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{option.description}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">{option.description}</p>
                           </div>
-                          <div className={`ml-auto mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center ${selected ? 'border-emerald-600' : 'border-gray-300 dark:border-gray-600'}`}>
+                          <div className={`ml-auto mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center ${selected ? 'border-emerald-600' : 'border-border'}`}>
                             {selected && <div className="h-2.5 w-2.5 rounded-full bg-emerald-600" />}
                           </div>
                         </button>
@@ -744,10 +740,10 @@ export const GroupDetailPage = () => {
               )}
 
               {isAdmin && (
-                <div className="flex items-start justify-between gap-4 pt-5 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-start justify-between gap-4 pt-5 border-t border-border">
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">Duyệt thành viên</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="font-semibold text-foreground">Duyệt thành viên</p>
+                    <p className="text-sm text-muted-foreground mt-1">
                       Khi bật, yêu cầu tham gia cần quản trị viên phê duyệt. Khi tắt, thành viên mới được tham gia ngay.
                     </p>
                   </div>
@@ -770,24 +766,20 @@ export const GroupDetailPage = () => {
                         }
                       )
                     }
-                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
-                      group.memberApprovalRequired ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${ group.memberApprovalRequired ? 'bg-emerald-600' : 'bg-muted' }`}
                   >
                     <span
-                      className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
-                        group.memberApprovalRequired ? 'translate-x-5' : 'translate-x-0.5'
-                      }`}
+                      className={`inline-block h-5 w-5 transform rounded-full bg-card transition-transform ${ group.memberApprovalRequired ? 'translate-x-5' : 'translate-x-0.5' }`}
                     />
                   </button>
                 </div>
               )}
 
-              <div className={isAdmin ? 'pt-5 border-t border-gray-200 dark:border-gray-700' : ''}>
+              <div className={isAdmin ? 'pt-5 border-t border-border' : ''}>
                 {isAdmin ? (
                   <>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">Giải tán nhóm</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3">
+                    <p className="font-semibold text-foreground">Giải tán nhóm</p>
+                    <p className="text-sm text-muted-foreground mt-1 mb-3">
                       Xóa nhóm vĩnh viễn và gỡ tất cả thành viên. Hành động này không thể hoàn tác.
                     </p>
                     <button
@@ -799,13 +791,13 @@ export const GroupDetailPage = () => {
                   </>
                 ) : (
                   <>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">Rời nhóm</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-3">
+                    <p className="font-semibold text-foreground">Rời nhóm</p>
+                    <p className="text-sm text-muted-foreground mt-1 mb-3">
                       Bạn sẽ không còn là thành viên của nhóm này.
                     </p>
                     <button
                       onClick={() => { setShowSettings(false); setShowLeaveConfirm(true); }}
-                      className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-900 dark:text-gray-100 text-sm font-semibold transition-colors"
+                      className="px-4 py-2 rounded-lg bg-muted hover:bg-muted text-foreground text-sm font-semibold transition-colors"
                     >
                       Rời nhóm
                     </button>
@@ -820,21 +812,21 @@ export const GroupDetailPage = () => {
       {/* Leave Group Confirmation Modal */}
       {showLeaveConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="w-full max-w-sm bg-card rounded-xl shadow-2xl border border-border overflow-hidden">
             <div className="p-6 text-center">
               <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-7 h-7 text-red-500" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Rời nhóm</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Bạn có chắc chắn muốn rời khỏi nhóm <strong className="text-gray-900 dark:text-gray-100">{group?.name}</strong> không?
+              <h3 className="text-lg font-bold text-foreground mb-2">Rời nhóm</h3>
+              <p className="text-muted-foreground text-sm">
+                Bạn có chắc chắn muốn rời khỏi nhóm <strong className="text-foreground">{group?.name}</strong> không?
               </p>
             </div>
             <div className="flex gap-2 px-6 pb-6">
               <button
                 onClick={() => setShowLeaveConfirm(false)}
                 disabled={leaveGroupMutation.isPending}
-                className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-lg bg-background text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60 transition-colors cursor-pointer"
               >
                 Hủy
               </button>
@@ -865,21 +857,21 @@ export const GroupDetailPage = () => {
       {/* Disband Group Confirmation Modal */}
       {showDisbandConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="w-full max-w-sm bg-card rounded-xl shadow-2xl border border-border overflow-hidden">
             <div className="p-6 text-center">
               <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-7 h-7 text-red-500" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Giải tán nhóm</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Bạn có chắc chắn muốn giải tán nhóm <strong className="text-gray-900 dark:text-gray-100">{group?.name}</strong> không? Toàn bộ thành viên sẽ bị gỡ và nội dung nhóm sẽ bị xóa vĩnh viễn.
+              <h3 className="text-lg font-bold text-foreground mb-2">Giải tán nhóm</h3>
+              <p className="text-muted-foreground text-sm">
+                Bạn có chắc chắn muốn giải tán nhóm <strong className="text-foreground">{group?.name}</strong> không? Toàn bộ thành viên sẽ bị gỡ và nội dung nhóm sẽ bị xóa vĩnh viễn.
               </p>
             </div>
             <div className="flex gap-2 px-6 pb-6">
               <button
                 onClick={() => setShowDisbandConfirm(false)}
                 disabled={disbandGroupMutation.isPending}
-                className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-60 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-lg bg-background text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60 transition-colors cursor-pointer"
               >
                 Hủy
               </button>
@@ -910,20 +902,20 @@ export const GroupDetailPage = () => {
       {/* Remove Member Confirmation Modal */}
       {removingMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-sm bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="w-full max-w-sm bg-card rounded-xl shadow-2xl border border-border overflow-hidden">
             <div className="p-6 text-center">
               <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <AlertTriangle className="w-7 h-7 text-red-500" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Xóa thành viên</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Bạn có chắc chắn muốn xóa <strong className="text-gray-900 dark:text-gray-100">{removingMember.fullName}</strong> khỏi nhóm không?
+              <h3 className="text-lg font-bold text-foreground mb-2">Xóa thành viên</h3>
+              <p className="text-muted-foreground text-sm">
+                Bạn có chắc chắn muốn xóa <strong className="text-foreground">{removingMember.fullName}</strong> khỏi nhóm không?
               </p>
             </div>
             <div className="flex gap-2 px-6 pb-6">
               <button
                 onClick={() => setRemovingMember(null)}
-                className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-900 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-lg bg-background text-sm font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer"
               >
                 Hủy
               </button>

@@ -12,7 +12,7 @@ import {
 import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogger';
 
 function PhotoSkeleton() {
-  return <div className="aspect-square rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse" />;
+  return <div className="aspect-square rounded-lg bg-muted animate-pulse" />;
 }
 
 export function ProfilePhotosPage() {
@@ -72,13 +72,13 @@ export function ProfilePhotosPage() {
   return (
     <>
       <div className="max-w-[1100px] mx-auto px-4 py-6">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-200 dark:border-gray-700 p-5">
+        <div className="bg-card rounded-2xl shadow-sm dark:shadow-none border border-border p-5">
           <div className="flex items-center gap-3 mb-5">
             <Images className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-bold text-foreground">
               Ảnh
               {!isLoadingContent && (
-                <span className="ml-2 text-base font-normal text-gray-500 dark:text-gray-400">
+                <span className="ml-2 text-base font-normal text-muted-foreground">
                   · {photos.length}
                 </span>
               )}
@@ -92,13 +92,13 @@ export function ProfilePhotosPage() {
           ) : photos.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="relative mb-4 h-20 w-20">
-                <div className="absolute inset-0 rotate-6 rounded-xl bg-gray-200 dark:bg-gray-700" />
-                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                  <Images className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                <div className="absolute inset-0 rotate-6 rounded-xl bg-muted" />
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-muted border border-border">
+                  <Images className="h-10 w-10 text-muted-foreground" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">Chưa có ảnh nào</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Các ảnh từ bài viết sẽ xuất hiện ở đây.</p>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Chưa có ảnh nào</h3>
+              <p className="text-sm text-muted-foreground">Các ảnh từ bài viết sẽ xuất hiện ở đây.</p>
             </div>
           ) : (
             <>
@@ -106,7 +106,7 @@ export function ProfilePhotosPage() {
                 {photos.map((photo, index) => (
                   <div
                     key={photo.id}
-                    className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer bg-gray-100 dark:bg-gray-700"
+                    className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer bg-muted"
                     onClick={() => openLightbox(index)}
                   >
                     <ImageWithFallback
