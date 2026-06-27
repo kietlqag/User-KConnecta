@@ -23,6 +23,7 @@ public class CreateStoryRequest {
     private Integer textSize;
     private Double textPosX;
     private Double textPosY;
+    private String stickers;
     private String musicTrackId;
     private String altText;
     private String sharedImageUrl;

@@ -23,6 +23,7 @@ public class StoryResponse {
     private Integer textSize;
     private Double textPosX;
     private Double textPosY;
+    private String stickers;
     private String musicTrackId;
     private String altText;
     private UUID linkedPostId;

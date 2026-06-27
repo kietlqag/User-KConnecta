@@ -80,6 +80,7 @@ public class StoryServiceImpl implements StoryService {
                 .textSize(request.getTextSize())
                 .textPosX(request.getTextPosX())
                 .textPosY(request.getTextPosY())
+                .stickers(normalizeStickersJson(request.getStickers()))
                 .musicTrackId(request.getMusicTrackId())
                 .altText(request.getAltText())
                 .linkedPostId(request.getLinkedPostId())
@@ -189,6 +190,7 @@ public class StoryServiceImpl implements StoryService {
                 .textSize(story.getTextSize())
                 .textPosX(story.getTextPosX())
                 .textPosY(story.getTextPosY())
+                .stickers(story.getStickers())
                 .musicTrackId(story.getMusicTrackId())
                 .altText(story.getAltText())
                 .linkedPostId(story.getLinkedPostId())
@@ -200,6 +202,17 @@ public class StoryServiceImpl implements StoryService {
     }
 
     private static final Set<String> STORY_IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
+
+    private String normalizeStickersJson(String stickers) {
+        if (stickers == null || stickers.isBlank()) {
+            return null;
+        }
+        String trimmed = stickers.trim();
+        if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
+            throw new ValidationException("Stickers must be a JSON array");
+        }
+        return trimmed;
+    }
 
     private void validateStoryImage(org.springframework.web.multipart.MultipartFile file) {
         if (!MediaFileSniffer.isAllowedImage(file, STORY_IMAGE_EXTENSIONS)) {

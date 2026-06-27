@@ -48,6 +48,9 @@ public class Story {
     @Column(name = "text_pos_y")
     private Double textPosY;
 
+    @Column(name = "stickers", columnDefinition = "TEXT")
+    private String stickers;
+
     @Column(name = "music_track_id", length = 50)
     private String musicTrackId;
 
