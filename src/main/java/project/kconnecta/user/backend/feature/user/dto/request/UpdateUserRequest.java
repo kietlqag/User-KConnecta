@@ -12,6 +12,8 @@ public class UpdateUserRequest {
     @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers, and underscore")
     private String username;
     private String email;
+    @Size(max = 120, message = "Full name must be at most 120 characters")
+    @Pattern(regexp = "^$|^[^<>&\"']+$", message = "Full name contains invalid characters")
     private String fullName;
     private String bio;
     private String gender;

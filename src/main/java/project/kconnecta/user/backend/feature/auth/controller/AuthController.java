@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.feature.auth.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -8,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import project.kconnecta.user.backend.config.security.AuthCookieService;
 import project.kconnecta.user.backend.config.security.RateLimitService;
 import project.kconnecta.user.backend.config.security.UserPrincipal;
 import project.kconnecta.user.backend.feature.auth.dto.request.*;
@@ -28,6 +30,7 @@ public class AuthController {
     private final OtpService otpService;
     private final AuthService authService;
     private final RateLimitService rateLimitService;
+    private final AuthCookieService authCookieService;
 
     @Value("${app.trusted-proxy-ips:}")
     private String trustedProxyIps;
@@ -53,19 +56,23 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
+    public ResponseEntity<?> register(
+            @Valid @RequestBody RegisterRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
         String ip = resolveClientIp(httpRequest);
         if (rateLimitService.isRateLimited("register", ip, 10, Duration.ofHours(1))) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
         }
-        return ResponseEntity.ok(authService.register(request));
+        return authSuccess(authService.register(request), httpResponse, true);
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(
             @Valid @RequestBody LoginRequest request,
-            HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
         String ip = resolveClientIp(httpRequest);
         if (rateLimitService.isRateLimited("login:ip", ip, 5, Duration.ofMinutes(15))) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
@@ -75,14 +82,16 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
         }
-        return ResponseEntity.ok(authService.login(request, httpRequest));
+        boolean rememberMe = Boolean.TRUE.equals(request.getRememberMe());
+        return authSuccess(authService.login(request, httpRequest), httpResponse, rememberMe);
     }
 
     @PostMapping("/verify-2fa-login")
     public ResponseEntity<?> verifyTwoFactorLogin(
             @Valid @RequestBody VerifyTwoFactorLoginRequest request,
-            HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(authService.verifyTwoFactorLogin(request, httpRequest));
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        return authSuccess(authService.verifyTwoFactorLogin(request, httpRequest), httpResponse, false);
     }
 
     @PostMapping("/resend-2fa-login")
@@ -97,38 +106,49 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(
-            @RequestHeader(value = "Authorization", required = false) String authHeader
-    ) {
-        authService.logout(authHeader);
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        authCookieService.resolveAccessToken(authHeader, httpRequest).ifPresent(token ->
+                authService.logout("Bearer " + token));
+        authCookieService.clearAuthCookies(httpResponse);
         return ResponseEntity.ok(Map.of("message", "Dang xuat thanh cong"));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refresh(@RequestBody Map<String, String> body, HttpServletRequest httpRequest) {
+    public ResponseEntity<?> refresh(
+            @RequestBody(required = false) Map<String, String> body,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
         String ip = resolveClientIp(httpRequest);
         if (rateLimitService.isRateLimited("refresh", ip, 30, Duration.ofMinutes(1))) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Qua nhieu yeu cau. Vui long thu lai sau."));
         }
-        String refreshToken = body.get("refreshToken");
+        String refreshToken = authCookieService.readRefreshToken(httpRequest)
+                .orElse(body != null ? body.get("refreshToken") : null);
         if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Thieu refresh token"));
         }
-        return ResponseEntity.ok(authService.refresh(refreshToken));
+        AuthResponse refreshed = authService.refresh(refreshToken);
+        authCookieService.writeAuthCookies(httpResponse, refreshed.getToken(), refreshed.getRefreshToken(), true);
+        return ResponseEntity.ok(refreshed.withoutTokens());
     }
 
     @PostMapping("/google-login")
     public ResponseEntity<AuthResponse> googleLogin(
             @Valid @RequestBody GoogleLoginRequest request,
-            HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(authService.googleLogin(request, httpRequest));
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        return authSuccess(authService.googleLogin(request, httpRequest), httpResponse, true);
     }
 
     @PostMapping("/google-complete-register")
     public ResponseEntity<AuthResponse> googleCompleteRegister(
             @Valid @RequestBody GoogleCompleteRegisterRequest request,
-            HttpServletRequest httpRequest) {
-        return ResponseEntity.ok(authService.googleCompleteRegister(request, httpRequest));
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        return authSuccess(authService.googleCompleteRegister(request, httpRequest), httpResponse, true);
     }
 
     @GetMapping("/check-email")
@@ -193,6 +213,13 @@ public class AuthController {
         }
         authService.setPassword(principal.getUserId(), newPassword);
         return ResponseEntity.ok(Map.of("message", "Dat mat khau thanh cong"));
+    }
+
+    private ResponseEntity<AuthResponse> authSuccess(AuthResponse auth, HttpServletResponse response, boolean rememberMe) {
+        if (auth.getToken() != null && !auth.getToken().isBlank()) {
+            authCookieService.writeAuthCookies(response, auth.getToken(), auth.getRefreshToken(), rememberMe);
+        }
+        return ResponseEntity.ok(auth.withoutTokens());
     }
 
     private String resolveClientIp(HttpServletRequest request) {

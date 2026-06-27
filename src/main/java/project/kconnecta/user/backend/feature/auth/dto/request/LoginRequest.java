@@ -11,4 +11,7 @@ public class LoginRequest {
 
     @NotBlank
     private String password;
+
+    /** When true, refresh token cookie persists across browser restarts. */
+    private Boolean rememberMe;
 }

@@ -90,6 +90,7 @@ public class PostController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(required = false) UUID authorId,
             @RequestParam(required = false) UUID groupId,
+            @RequestParam(required = false) project.kconnecta.user.backend.feature.post.entity.enums.PostStatus status,
             @RequestParam(required = false, defaultValue = "false") boolean isGroupFeed,
             @PageableDefault(size = 10) Pageable pageable) {
         UUID currentUserId = principal.getUserId();
@@ -97,7 +98,7 @@ public class PostController {
             return ResponseEntity.ok(postService.getPostsByGroupId(groupId, currentUserId));
         }
         if (authorId != null) {
-            return ResponseEntity.ok(postService.getPostsByUserId(authorId, currentUserId, pageable));
+            return ResponseEntity.ok(postService.getPostsByUserId(authorId, currentUserId, status, pageable));
         }
         if (isGroupFeed) {
             return ResponseEntity.ok(postService.getGroupFeedPosts(currentUserId, pageable));
@@ -109,6 +110,12 @@ public class PostController {
     public ResponseEntity<PostRateLimitStatus> getPostRateLimit(
             @AuthenticationPrincipal UserPrincipal principal) {
         return ResponseEntity.ok(postService.getPostRateLimitStatus(principal.getUserId()));
+    }
+
+    @GetMapping("/edit-rate-limit")
+    public ResponseEntity<PostRateLimitStatus> getPostEditRateLimit(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(postService.getPostEditRateLimitStatus(principal.getUserId()));
     }
 
     @GetMapping("/{id}")

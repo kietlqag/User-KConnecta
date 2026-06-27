@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.exception.ChatValidationException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.post.dto.response.PostRateLimitStatus;
@@ -47,6 +49,7 @@ public class PolicyContentValidator {
     private final PolicyService policyService;
 
     private final Map<UUID, Deque<Instant>> postTimestamps = new ConcurrentHashMap<>();
+    private final Map<UUID, Deque<Instant>> postEditTimestamps = new ConcurrentHashMap<>();
     private final Map<String, ConsecutiveMessageState> consecutiveMessageStates = new ConcurrentHashMap<>();
 
     private static final class ConsecutiveMessageState {
@@ -61,6 +64,7 @@ public class PolicyContentValidator {
         int maxLength = postPolicy.path("maxPostLength").asInt(5000);
         int maxImages = postPolicy.path("maxImagesPerPost").asInt(10);
         int postsPerMinute = postPolicy.path("postsPerMinute").asInt(3);
+        long postWindowSeconds = resolvePostWindowSeconds(postPolicy);
 
         String text = content == null ? "" : content;
         if (text.length() > maxLength) {
@@ -72,24 +76,40 @@ public class PolicyContentValidator {
 
         // Watchlist (vùng xám) không chặn cứng — PostServiceImpl chỉ gọi Gemini khi isSuspect.
         checkKeywords(text, config, false, "đăng bài viết");
-        checkRateLimit(authorId, postsPerMinute, postTimestamps, "đăng bài");
+        checkRateLimit(authorId, postsPerMinute, postWindowSeconds, postTimestamps, "đăng bài");
     }
 
     public PostRateLimitStatus getPostRateLimitStatus(UUID userId) {
         JsonNode postPolicy = policyService.getConfigJson().path("postPolicy");
         int limit = postPolicy.path("postsPerMinute").asInt(3);
+        long windowSeconds = resolvePostWindowSeconds(postPolicy);
+        return buildRateLimitStatus(userId, limit, windowSeconds, postTimestamps);
+    }
+
+    public PostRateLimitStatus getPostEditRateLimitStatus(UUID userId) {
+        JsonNode postPolicy = policyService.getConfigJson().path("postPolicy");
+        int limit = resolveEditsPerMinute(postPolicy);
+        long windowSeconds = resolveEditWindowSeconds(postPolicy);
+        return buildRateLimitStatus(userId, limit, windowSeconds, postEditTimestamps);
+    }
+
+    private PostRateLimitStatus buildRateLimitStatus(
+            UUID userId,
+            int limit,
+            long windowSeconds,
+            Map<UUID, Deque<Instant>> store) {
         if (limit <= 0) {
-            return new PostRateLimitStatus(0, 0, Integer.MAX_VALUE, 0);
+            return new PostRateLimitStatus(0, 0, Integer.MAX_VALUE, 0, windowSeconds);
         }
         if (userId == null) {
-            return new PostRateLimitStatus(limit, 0, limit, 0);
+            return new PostRateLimitStatus(limit, 0, limit, 0, windowSeconds);
         }
 
         Instant now = Instant.now();
-        Instant cutoff = now.minusSeconds(60);
-        Deque<Instant> deque = postTimestamps.get(userId);
+        Instant cutoff = now.minusSeconds(windowSeconds);
+        Deque<Instant> deque = store.get(userId);
         if (deque == null) {
-            return new PostRateLimitStatus(limit, 0, limit, 0);
+            return new PostRateLimitStatus(limit, 0, limit, 0, windowSeconds);
         }
 
         while (!deque.isEmpty() && deque.peekFirst().isBefore(cutoff)) {
@@ -101,11 +121,51 @@ public class PolicyContentValidator {
         long retryAfter = 0;
         if (remaining == 0 && !deque.isEmpty()) {
             Instant oldest = deque.peekFirst();
-            retryAfter = Math.max(0, Duration.between(now, oldest.plusSeconds(60)).getSeconds());
+            retryAfter = Math.max(0, Duration.between(now, oldest.plusSeconds(windowSeconds)).getSeconds());
         }
-        return new PostRateLimitStatus(limit, used, remaining, retryAfter);
+        return new PostRateLimitStatus(limit, used, remaining, retryAfter, windowSeconds);
     }
 
+    private int resolveEditsPerMinute(JsonNode postPolicy) {
+        if (postPolicy != null && postPolicy.hasNonNull("editsPerMinute")) {
+            return postPolicy.path("editsPerMinute").asInt(3);
+        }
+        return postPolicy == null ? 3 : postPolicy.path("postsPerMinute").asInt(3);
+    }
+
+    public void validatePostMediaUpload(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ValidationException("File không hợp lệ");
+        }
+        JsonNode postPolicy = policyService.getConfigJson().path("postPolicy");
+        String allowedRaw = postPolicy.path("allowedFileTypes").asText("jpg,jpeg,png,gif,webp,mp4,mov");
+
+        String sniffedExt = MediaFileSniffer.sniffExtension(file);
+        if (sniffedExt.isBlank()) {
+            String declaredExt = resolveMediaExtension(file.getOriginalFilename(), file.getContentType());
+            if ("txt".equals(declaredExt) && MediaFileSniffer.isLikelyPlainText(file)
+                    && isMediaExtensionAllowed("txt", allowedRaw)) {
+                return;
+            }
+            throw new ValidationException(
+                    "Không nhận dạng được nội dung file — file có thể bị đổi tên giả hoặc định dạng không được phép");
+        }
+        if (!isMediaExtensionAllowed(sniffedExt, allowedRaw)) {
+            throw new ValidationException(
+                    "Định dạng thực tế ." + sniffedExt.toUpperCase(Locale.ROOT)
+                            + " không được phép. Chỉ chấp nhận: "
+                            + formatAllowedExtensions(allowedRaw));
+        }
+
+        String declaredExt = resolveMediaExtension(file.getOriginalFilename(), file.getContentType());
+        if (!declaredExt.isBlank() && !MediaFileSniffer.extensionsCompatible(sniffedExt, declaredExt)) {
+            throw new ValidationException(
+                    "Tên file hoặc loại MIME không khớp nội dung thực tế của file");
+        }
+    }
+
+    /** @deprecated Chỉ dùng trong test — production phải gọi {@link #validatePostMediaUpload(MultipartFile)}. */
+    @Deprecated
     public void validatePostMediaUpload(String originalFilename, String contentType) {
         JsonNode postPolicy = policyService.getConfigJson().path("postPolicy");
         String allowedRaw = postPolicy.path("allowedFileTypes").asText("jpg,jpeg,png,gif,webp,mp4,mov");
@@ -139,6 +199,9 @@ public class PolicyContentValidator {
         }
 
         checkKeywords(text, config, false, "lưu thay đổi bài viết");
+        int editsPerMinute = resolveEditsPerMinute(postPolicy);
+        long editWindowSeconds = resolveEditWindowSeconds(postPolicy);
+        checkRateLimit(authorId, editsPerMinute, editWindowSeconds, postEditTimestamps, "chỉnh sửa bài");
     }
 
     /**
@@ -393,19 +456,46 @@ public class PolicyContentValidator {
         }
     }
 
-    private void checkRateLimit(UUID userId, int limitPerMinute, Map<UUID, Deque<Instant>> store, String action) {
-        if (userId == null || limitPerMinute <= 0) {
+    private void checkRateLimit(
+            UUID userId,
+            int limit,
+            long windowSeconds,
+            Map<UUID, Deque<Instant>> store,
+            String action) {
+        if (userId == null || limit <= 0 || windowSeconds <= 0) {
             return;
         }
-        Instant cutoff = Instant.now().minusSeconds(60);
+        Instant cutoff = Instant.now().minusSeconds(windowSeconds);
         Deque<Instant> deque = store.computeIfAbsent(userId, k -> new ConcurrentLinkedDeque<>());
         while (!deque.isEmpty() && deque.peekFirst().isBefore(cutoff)) {
             deque.pollFirst();
         }
-        if (deque.size() >= limitPerMinute) {
+        if (deque.size() >= limit) {
             throw new ValidationException("Bạn đang " + action + " quá nhanh. Vui lòng thử lại sau.");
         }
         deque.addLast(Instant.now());
+    }
+
+    private long resolvePostWindowSeconds(JsonNode postPolicy) {
+        return resolveWindowSeconds(
+                postPolicy.path("postRateLimitWindowValue").asInt(1),
+                postPolicy.path("postRateLimitWindowUnit").asText("minute"));
+    }
+
+    private long resolveEditWindowSeconds(JsonNode postPolicy) {
+        return resolveWindowSeconds(
+                postPolicy.path("editRateLimitWindowValue").asInt(1),
+                postPolicy.path("editRateLimitWindowUnit").asText("minute"));
+    }
+
+    private static long resolveWindowSeconds(int value, String unit) {
+        int safeValue = Math.max(1, value);
+        String normalized = unit == null ? "minute" : unit.toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "hour" -> (long) safeValue * 3600L;
+            case "day" -> (long) safeValue * 86400L;
+            default -> (long) safeValue * 60L;
+        };
     }
 
     private void checkDuplicateMessageSpam(UUID userId, String content, int maxConsecutive, String conversationId, String messageClientId) {

@@ -4,6 +4,7 @@ public record PostRateLimitStatus(
         int limitPerMinute,
         int usedInWindow,
         int remaining,
-        long retryAfterSeconds
+        long retryAfterSeconds,
+        long windowSeconds
 ) {
 }

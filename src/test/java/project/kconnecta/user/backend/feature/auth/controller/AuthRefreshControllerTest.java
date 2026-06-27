@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import project.kconnecta.user.backend.config.security.AuthCookieService;
 import project.kconnecta.user.backend.config.security.RateLimitService;
 import project.kconnecta.user.backend.exception.GlobalExceptionHandler;
 import project.kconnecta.user.backend.exception.InvalidRefreshTokenException;
@@ -27,11 +28,12 @@ class AuthRefreshControllerTest {
     private final AuthService authService = mock(AuthService.class);
     private final OtpService otpService = mock(OtpService.class);
     private final RateLimitService rateLimitService = mock(RateLimitService.class);
+    private final AuthCookieService authCookieService = mock(AuthCookieService.class);
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
-        AuthController controller = new AuthController(otpService, authService, rateLimitService);
+        AuthController controller = new AuthController(otpService, authService, rateLimitService, authCookieService);
         mvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
@@ -39,15 +41,15 @@ class AuthRefreshControllerTest {
     }
 
     @Test
-    void refresh_valid_returnsNewTokens() throws Exception {
+    void refresh_valid_setsCookiesAndOmitsTokensFromBody() throws Exception {
         when(authService.refresh("good"))
                 .thenReturn(AuthResponse.builder().token("newAccess").refreshToken("newRefresh").build());
 
         mvc.perform(post("/api/auth/refresh").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"refreshToken\":\"good\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("newAccess"))
-                .andExpect(jsonPath("$.refreshToken").value("newRefresh"));
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(jsonPath("$.refreshToken").doesNotExist());
     }
 
     @Test

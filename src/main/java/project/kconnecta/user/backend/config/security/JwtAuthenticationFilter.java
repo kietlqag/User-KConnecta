@@ -37,6 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final SettingsServiceImpl settingsServiceImpl;
     private final ObjectMapper objectMapper;
+    private final AuthCookieService authCookieService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -44,9 +45,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull FilterChain chain) throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
-
+        String token = null;
         if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
+            token = header.substring(7);
+        } else {
+            token = authCookieService.readAccessToken(request).orElse(null);
+        }
+
+        if (token != null && !token.isBlank()) {
 
             if (!jwtUtil.isTokenValid(token) || tokenBlacklistService.isBlacklisted(token)) {
                 sendUnauthorizedResponse(response, "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.");

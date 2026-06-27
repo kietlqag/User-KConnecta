@@ -23,6 +23,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostReportRespon
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostPollResponse;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,12 +34,15 @@ import java.util.UUID;
 public interface PostService {
     PostResponse createPost(CreatePostRequest request);
     PostRateLimitStatus getPostRateLimitStatus(UUID userId);
+    PostRateLimitStatus getPostEditRateLimitStatus(UUID userId);
     PostResponse updatePost(UUID postId, UUID userId, UpdatePostRequest request);
     String uploadPostImage(UUID uploaderId, MultipartFile file);
     void deleteMedia(String url, UUID userId);
     Page<PostResponse> getAllPosts(UUID currentUserId, Pageable pageable);
     Page<PostResponse> getWatchPosts(UUID currentUserId, Pageable pageable);
     Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable);
+
+    Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, PostStatus statusFilter, Pageable pageable);
     List<PostResponse> getPostsByGroupId(UUID groupId, UUID currentUserId);
     Page<PostResponse> getGroupFeedPosts(UUID currentUserId, Pageable pageable);
     PostResponse getPostById(UUID id, UUID currentUserId);

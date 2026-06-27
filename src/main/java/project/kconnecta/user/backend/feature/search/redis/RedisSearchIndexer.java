@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import project.kconnecta.user.backend.feature.group.entity.Group;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
@@ -46,6 +48,8 @@ public class RedisSearchIndexer {
     public static final String USER_PFX   = "user:";
     public static final String GROUP_PFX  = "group:";
     public static final String POST_PFX   = "post:";
+
+    private static final int REINDEX_BATCH_SIZE = 500;
 
     private final JedisPooled jedis;
     private final UserRepository userRepository;
@@ -203,15 +207,27 @@ public class RedisSearchIndexer {
         List<UserRepository.UserSearchProjection> users = userRepository.findAllSearchProjections();
         users.forEach(this::indexUser);
 
-        List<Group> groups = groupRepository.findAll();
-        groups.forEach(this::indexGroup);
+        long groupCount = reindexGroupsInBatches();
 
         List<Post> posts = postRepository.findAllPublishedPublicWithAuthorAndGroup();
         posts.forEach(this::indexPost);
 
         log.info("[RedisSearch] Reindexed {} users, {} groups, {} posts in {}ms",
-                users.size(), groups.size(), posts.size(),
+                users.size(), groupCount, posts.size(),
                 System.currentTimeMillis() - start);
+    }
+
+    private long reindexGroupsInBatches() {
+        long count = 0;
+        Pageable pageable = Pageable.ofSize(REINDEX_BATCH_SIZE);
+        Slice<GroupRepository.GroupSearchProjection> batch;
+        do {
+            batch = groupRepository.findSearchProjections(pageable);
+            batch.forEach(this::indexGroup);
+            count += batch.getNumberOfElements();
+            pageable = batch.nextPageable();
+        } while (batch.hasNext());
+        return count;
     }
 
     // ── Index single document ─────────────────────────────────────────────────
@@ -253,16 +269,41 @@ public class RedisSearchIndexer {
     }
 
     public void indexGroup(Group group) {
+        indexGroup(
+                group.getId(),
+                group.getName(),
+                group.getDescription(),
+                group.getCoverPhotoUrl(),
+                group.getPrivacy()
+        );
+    }
+
+    public void indexGroup(GroupRepository.GroupSearchProjection group) {
+        indexGroup(
+                group.getId(),
+                group.getName(),
+                group.getDescription(),
+                group.getCoverPhotoUrl(),
+                group.getPrivacy()
+        );
+    }
+
+    private void indexGroup(
+            UUID groupId,
+            String name,
+            String description,
+            String coverPhotoUrl,
+            GroupPrivacy privacy) {
         try {
             Map<String, String> h = new HashMap<>();
-            h.put("name",          safe(group.getName()));
-            h.put("coverPhotoUrl", safe(group.getCoverPhotoUrl()));
-            h.put("privacy",       group.getPrivacy().name().toLowerCase());
-            h.put("s_name",        normalize(group.getName()));
-            h.put("s_description", normalize(group.getDescription()));
-            jedis.hset(GROUP_PFX + group.getId(), h);
+            h.put("name",          safe(name));
+            h.put("coverPhotoUrl", safe(coverPhotoUrl));
+            h.put("privacy",       privacy.name().toLowerCase());
+            h.put("s_name",        normalize(name));
+            h.put("s_description", normalize(description));
+            jedis.hset(GROUP_PFX + groupId, h);
         } catch (Exception e) {
-            log.debug("[RedisSearch] indexGroup {} failed: {}", group.getId(), e.getMessage());
+            log.debug("[RedisSearch] indexGroup {} failed: {}", groupId, e.getMessage());
         }
     }
 

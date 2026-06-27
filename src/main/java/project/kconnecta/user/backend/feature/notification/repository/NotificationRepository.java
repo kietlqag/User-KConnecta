@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.feature.notification.entity.Notification;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     int countUnreadByRecipientId(@Param("recipientId") UUID recipientId);
 
     @Modifying
+    @Transactional
     @Query(value = "INSERT INTO notifications (id, recipient_id, sender_id, type, content, related_id, is_read, is_actioned, created_at, updated_at) " +
                    "SELECT gen_random_uuid(), u.id, NULL, :type, :content, NULL, false, false, NOW(), NOW() FROM users u",
            nativeQuery = true)

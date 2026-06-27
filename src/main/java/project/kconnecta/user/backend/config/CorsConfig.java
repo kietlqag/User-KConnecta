@@ -41,6 +41,7 @@ public class CorsConfig {
                 var mapping = registry.addMapping("/api/**")
                         .allowedMethods(configuration.getAllowedMethods().toArray(String[]::new))
                         .allowedHeaders(configuration.getAllowedHeaders().toArray(String[]::new))
+                        .allowCredentials(true)
                         .maxAge(configuration.getMaxAge());
 
                 if (configuration.getAllowedOriginPatterns() != null && !configuration.getAllowedOriginPatterns().isEmpty()) {
@@ -63,7 +64,8 @@ public class CorsConfig {
             configuration.setAllowedOrigins(Arrays.asList(origins));
         }
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With", "Cookie"));
+        configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
         return configuration;
     }

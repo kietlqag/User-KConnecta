@@ -1,8 +1,11 @@
 package project.kconnecta.user.backend.feature.notification.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.feature.notification.dto.response.NotificationResponse;
@@ -23,6 +26,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional
 public class NotificationServiceImpl implements NotificationService {
+
+    private static final int BROADCAST_PUSH_BATCH_SIZE = 500;
+    private static final Map<String, String> NEW_SYSTEM_NOTIFICATION_EVENT =
+            Map.of("event", "NEW_SYSTEM_NOTIFICATION");
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
@@ -107,6 +114,27 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setRead(true);
         notificationRepository.save(notification);
         pushUnreadCountUpdate(notification.getRecipient());
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void broadcastSystemNotification(String content) {
+        notificationRepository.broadcastToAll(content, NotificationType.SYSTEM.name());
+        pushSystemBroadcastWebSocketEvents();
+    }
+
+    private void pushSystemBroadcastWebSocketEvents() {
+        Pageable pageable = Pageable.ofSize(BROADCAST_PUSH_BATCH_SIZE);
+        Slice<String> batch;
+        do {
+            batch = userRepository.findUsernamesForBroadcast(pageable);
+            batch.forEach(username -> messagingTemplate.convertAndSendToUser(
+                    username,
+                    "/queue/notifications",
+                    NEW_SYSTEM_NOTIFICATION_EVENT
+            ));
+            pageable = batch.nextPageable();
+        } while (batch.hasNext());
     }
 
     private void pushUnreadCountUpdate(User recipient) {

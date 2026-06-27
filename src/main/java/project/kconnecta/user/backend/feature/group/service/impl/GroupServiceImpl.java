@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.feature.group.dto.request.CreateGroupRequest;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupMemberResponse;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
@@ -29,6 +30,7 @@ import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -385,19 +387,17 @@ public class GroupServiceImpl implements GroupService {
         groupRepository.save(group);
     }
 
+    private static final Set<String> COVER_IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
+
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ValidationException("File is empty");
         }
-        String contentType = file.getContentType();
-        if (contentType == null ||
-                (!contentType.equals("image/jpeg")
-                        && !contentType.equals("image/png")
-                        && !contentType.equals("image/webp"))) {
-            throw new ValidationException("Only JPG, PNG, WEBP are allowed");
-        }
         if (file.getSize() > 5 * 1024 * 1024) {
             throw new ValidationException("File size must be less than 5MB");
+        }
+        if (!MediaFileSniffer.isAllowedImage(file, COVER_IMAGE_EXTENSIONS)) {
+            throw new ValidationException("Only JPG, PNG, WEBP are allowed");
         }
     }
 

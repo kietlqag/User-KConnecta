@@ -11,8 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.servlet.http.HttpServletRequest;
 import project.kconnecta.user.backend.common.enums.AccountStatus;
 import project.kconnecta.user.backend.common.enums.OtpType;
+import project.kconnecta.user.backend.common.util.DisplayNameValidator;
 import project.kconnecta.user.backend.common.util.JwtUtil;
 import project.kconnecta.user.backend.config.security.TokenBlacklistService;
+import project.kconnecta.user.backend.exception.AccountLockedException;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.InvalidRefreshTokenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
@@ -69,6 +71,7 @@ public class AuthService {
     private final SettingsServiceImpl settingsServiceImpl;
     private final TwoFactorPendingService twoFactorPendingService;
     private final RefreshTokenService refreshTokenService;
+    private final AccountSessionRevocationService accountSessionRevocationService;
 
     @Value("${google.oauth.client-id:}")
     private String googleClientId;
@@ -111,7 +114,7 @@ public class AuthService {
         User user = User.builder()
                 .account(account)
                 .username(request.getUsername())
-                .fullName(request.getFullName())
+                .fullName(DisplayNameValidator.requireSafe(request.getFullName()))
                 .gender(request.getGender() == null ? null : request.getGender().trim())
                 .dateOfBirth(request.getDateOfBirth())
                 .location(request.getLocation())
@@ -235,6 +238,20 @@ public class AuthService {
         RefreshTokenService.RotationResult r = refreshTokenService.rotate(rawRefreshToken);
         User user = userRepository.findById(r.userId())
                 .orElseThrow(() -> new InvalidRefreshTokenException("Nguoi dung khong ton tai"));
+        Account account = user.getAccount();
+
+        AuthResponse blocked = resolveLockState(account, user,
+                "{\"reason\":\"Tai khoan bi khoa khi lam moi phien\"}");
+        if (blocked != null) {
+            accountSessionRevocationService.revokeAllForUser(user.getId());
+            throw new AccountLockedException(user, account);
+        }
+        if (account.getStatus() == AccountStatus.DELETED
+                || account.getStatus() != AccountStatus.ACTIVE) {
+            accountSessionRevocationService.revokeAllForUser(user.getId());
+            throw new InvalidRefreshTokenException("Tai khoan khong kha dung");
+        }
+
         String access = jwtUtil.generateToken(user.getId(), user.getUsername(), r.sid());
         return AuthResponse.builder()
                 .token(access)
@@ -298,7 +315,7 @@ public class AuthService {
         User user = User.builder()
                 .account(account)
                 .username(request.getUsername())
-                .fullName(request.getFullName())
+                .fullName(DisplayNameValidator.requireSafe(request.getFullName()))
                 .gender(request.getGender() == null ? null : request.getGender().trim())
                 .dateOfBirth(request.getDateOfBirth())
                 .location(request.getLocation())

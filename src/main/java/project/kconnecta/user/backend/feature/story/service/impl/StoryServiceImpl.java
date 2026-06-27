@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
+import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.friend.entity.Friendship;
@@ -45,6 +46,7 @@ public class StoryServiceImpl implements StoryService {
 
         String imageUrl = null;
         if (request.getImage() != null && !request.getImage().isEmpty()) {
+            validateStoryImage(request.getImage());
             imageUrl = cloudinaryService.uploadStory(request.getImage());
         } else if (request.getSharedImageUrl() != null && !request.getSharedImageUrl().isBlank()) {
             imageUrl = request.getSharedImageUrl();
@@ -195,5 +197,13 @@ public class StoryServiceImpl implements StoryService {
                 .privacy(story.getPrivacy())
                 .active(story.isActive())
                 .build();
+    }
+
+    private static final Set<String> STORY_IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
+
+    private void validateStoryImage(org.springframework.web.multipart.MultipartFile file) {
+        if (!MediaFileSniffer.isAllowedImage(file, STORY_IMAGE_EXTENSIONS)) {
+            throw new ValidationException("Story image must be JPG, PNG, GIF, or WebP");
+        }
     }
 }

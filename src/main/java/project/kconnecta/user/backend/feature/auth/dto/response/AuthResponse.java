@@ -23,4 +23,39 @@ public class AuthResponse {
     private AccountStatus accountStatus;
     private String blockedReason;
     private LocalDateTime lockedUntil;
+
+    /** API response without JWT secrets (tokens live in HttpOnly cookies). */
+    public AuthResponse withoutTokens() {
+        return AuthResponse.builder()
+                .id(id)
+                .email(email)
+                .fullName(fullName)
+                .username(username)
+                .hasPassword(hasPassword)
+                .requiresProfileSetup(requiresProfileSetup)
+                .requiresTwoFactor(requiresTwoFactor)
+                .twoFactorToken(twoFactorToken)
+                .accountStatus(accountStatus)
+                .blockedReason(blockedReason)
+                .lockedUntil(lockedUntil)
+                .build();
+    }
+
+    public AuthResponse withTokens(String accessToken, String refreshTokenValue) {
+        return AuthResponse.builder()
+                .id(id)
+                .email(email)
+                .fullName(fullName)
+                .username(username)
+                .hasPassword(hasPassword)
+                .requiresProfileSetup(requiresProfileSetup)
+                .requiresTwoFactor(requiresTwoFactor)
+                .twoFactorToken(twoFactorToken)
+                .token(accessToken)
+                .refreshToken(refreshTokenValue)
+                .accountStatus(accountStatus)
+                .blockedReason(blockedReason)
+                .lockedUntil(lockedUntil)
+                .build();
+    }
 }

@@ -74,7 +74,7 @@
   "violationPolicies": [{"id":"default","label":"Mặc định","steps":[{"offense":1,"action":"warning"},{"offense":2,"action":"lock_temp","lockDays":3},{"offense":3,"action":"ban_permanent"}]}],
   "aiModeration": {"enabled":true,"sensitivity":72,"detect":{"toxic":true,"spam":true,"nsfw":true,"hateSpeech":true,"scam":true},"autoHidePost":true,"autoWarning":true,"autoBan":false},
   "privacy": {"storeProfile":true,"storePosts":true,"storeChat":true,"storeActivityLog":true,"logRetentionDays":90,"chatRetentionDays":30,"allowDataExport":true,"allowAccountDeletion":true,"cookiePolicyEnabled":true,"sessionMaxHours":168},
-  "postPolicy": {"maxPostLength":5000,"maxImagesPerPost":10,"maxVideoMb":100,"allowedFileTypes":"jpg,jpeg,png,gif,webp,mp4,mov","postsPerMinute":3},
+  "postPolicy": {"maxPostLength":5000,"maxImagesPerPost":10,"maxVideoMb":100,"allowedFileTypes":"jpg,jpeg,png,gif,webp,mp4,mov","postsPerMinute":3,"postRateLimitWindowValue":1,"postRateLimitWindowUnit":"minute","editsPerMinute":3,"editRateLimitWindowValue":1,"editRateLimitWindowUnit":"minute"},
   "chatPolicy": {"antiSpamEnabled":false,"blockMaliciousLinks":false,"messagesPerMinute":10,"aiScanEnabled":false},
   "recommendation": {"prioritizeHot":true,"prioritizeFriends":true,"prioritizeTopics":true,"reduceToxicContent":true,"weights":{"engagement":40,"friends":30,"trending":20,"newContent":10}},
   "ruleEngine": [],

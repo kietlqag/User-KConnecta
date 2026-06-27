@@ -261,7 +261,8 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         value =
         "SELECT p.* FROM posts p " +
         "WHERE p.author_id = CAST(:authorId AS uuid) " +
-        "  AND p.status = 'PUBLISHED' " +
+        "  AND (p.status = 'PUBLISHED' " +
+        "    OR (p.status = 'SCHEDULED' AND :currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid))) " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
         "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
@@ -277,7 +278,8 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         countQuery =
         "SELECT COUNT(*) FROM posts p " +
         "WHERE p.author_id = CAST(:authorId AS uuid) " +
-        "  AND p.status = 'PUBLISHED' " +
+        "  AND (p.status = 'PUBLISHED' " +
+        "    OR (p.status = 'SCHEDULED' AND :currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid))) " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
         "    OR (:currentUserId IS NOT NULL AND p.author_id = CAST(:currentUserId AS uuid)) " +
@@ -291,6 +293,13 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         @org.springframework.data.repository.query.Param("currentUserId") UUID currentUserId,
         org.springframework.data.domain.Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT p FROM Post p JOIN FETCH p.author LEFT JOIN FETCH p.group " +
+        "WHERE p.author.id = :authorId AND p.status = 'SCHEDULED' " +
+        "ORDER BY p.scheduledAt ASC, p.createdAt ASC"
+    )
+    List<Post> findScheduledByAuthorId(@org.springframework.data.repository.query.Param("authorId") UUID authorId);
 
     @org.springframework.data.jpa.repository.Query(
         "SELECT p FROM Post p JOIN FETCH p.author JOIN FETCH p.group " +

@@ -755,3 +755,20 @@ ALTER TABLE public.posts
     ADD COLUMN IF NOT EXISTS shared_album_id UUID NULL REFERENCES public.albums(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_posts_shared_album_id ON public.posts(shared_album_id);
+
+-- -------------------------
+-- Support / help requests (người dùng gửi cho admin; Admin app đọc chung DB)
+-- -------------------------
+CREATE TABLE IF NOT EXISTS public.support_requests (
+    id            UUID PRIMARY KEY,
+    user_id       UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    contact_email VARCHAR(255) NULL,
+    category      VARCHAR(30) NOT NULL,
+    subject       VARCHAR(150) NOT NULL,
+    message       TEXT NOT NULL,
+    status        VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_support_requests_user ON public.support_requests(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_support_requests_status ON public.support_requests(status, created_at DESC);

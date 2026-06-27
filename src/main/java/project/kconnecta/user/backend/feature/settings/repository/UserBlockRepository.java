@@ -12,6 +12,8 @@ import java.util.UUID;
 public interface UserBlockRepository extends JpaRepository<UserBlock, UUID> {
     List<UserBlock> findAllByBlockerIdOrderByCreatedAtDesc(UUID blockerId);
 
+    List<UserBlock> findAllByBlockedIdOrderByCreatedAtDesc(UUID blockedId);
+
     Optional<UserBlock> findByBlockerIdAndBlockedId(UUID blockerId, UUID blockedId);
 
     boolean existsByBlockerIdAndBlockedId(UUID blockerId, UUID blockedId);

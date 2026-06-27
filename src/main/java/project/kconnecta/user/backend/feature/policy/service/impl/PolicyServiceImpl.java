@@ -212,7 +212,17 @@ public class PolicyServiceImpl implements PolicyService {
 
                         post.path("allowedFileTypes").asText("jpg,png"),
 
-                        post.path("postsPerMinute").asInt(3)
+                        post.path("postsPerMinute").asInt(3),
+
+                        post.path("postRateLimitWindowValue").asInt(1),
+
+                        post.path("postRateLimitWindowUnit").asText("minute"),
+
+                        post.path("editsPerMinute").asInt(3),
+
+                        post.path("editRateLimitWindowValue").asInt(1),
+
+                        post.path("editRateLimitWindowUnit").asText("minute")
 
                 ),
 

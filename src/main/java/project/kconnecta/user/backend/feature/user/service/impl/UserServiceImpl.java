@@ -12,10 +12,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.common.util.DisplayNameValidator;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
 import project.kconnecta.user.backend.feature.auth.service.RefreshTokenService;
@@ -25,7 +27,7 @@ import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 import project.kconnecta.user.backend.feature.user.service.UserService;
 
-import java.io.IOException;
+import java.util.Set;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -135,7 +137,7 @@ public class UserServiceImpl implements UserService {
 
         if (request.getUsername()           != null) user.setUsername(request.getUsername());
         if (request.getEmail()              != null) user.getAccount().setEmail(request.getEmail());
-        if (request.getFullName()           != null) user.setFullName(request.getFullName());
+        if (request.getFullName()           != null) user.setFullName(DisplayNameValidator.requireSafe(request.getFullName()));
         if (request.getBio()                != null) user.setBio(request.getBio());
         if (request.getGender()             != null) user.setGender(normalizedGender);
         if (request.getLocation()           != null) user.setLocation(request.getLocation());
@@ -266,6 +268,8 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    private static final Set<String> AVATAR_IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
+
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new RuntimeException("File is empty");
@@ -273,26 +277,8 @@ public class UserServiceImpl implements UserService {
         if (file.getSize() > 5 * 1024 * 1024) {
             throw new RuntimeException("File size must be less than 5MB");
         }
-        if (!hasValidImageMagicBytes(file)) {
+        if (!MediaFileSniffer.isAllowedImage(file, AVATAR_IMAGE_EXTENSIONS)) {
             throw new RuntimeException("Only JPG, PNG, WEBP are allowed");
-        }
-    }
-
-    private static boolean hasValidImageMagicBytes(MultipartFile file) {
-        try {
-            byte[] header = new byte[12];
-            int read = file.getInputStream().read(header);
-            if (read < 3) return false;
-            // JPEG: FF D8 FF
-            if ((header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF) return true;
-            // PNG: 89 50 4E 47
-            if ((header[0] & 0xFF) == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) return true;
-            // WebP: RIFF....WEBP
-            if (read >= 12 && header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
-                    && header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50) return true;
-            return false;
-        } catch (IOException e) {
-            return false;
         }
     }
 

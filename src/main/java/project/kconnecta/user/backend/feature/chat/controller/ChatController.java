@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
+import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRequest;
@@ -38,7 +39,6 @@ import project.kconnecta.user.backend.feature.chat.dto.response.VideoMessageUplo
 import project.kconnecta.user.backend.feature.chat.dto.response.VoiceMessageUploadResponse;
 import project.kconnecta.user.backend.feature.chat.service.ChatService;
 
-import java.io.IOException;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -389,6 +389,9 @@ public class ChatController {
         if (contentType == null || !contentType.startsWith("audio/")) {
             throw new ValidationException("Unsupported voice message content type");
         }
+        if (!isAllowedAudioFile(file)) {
+            throw new ValidationException("Voice message content does not match a supported audio format");
+        }
 
         String audioUrl = cloudinaryService.uploadVoiceMessage(file);
         Integer safeDurationSec = durationSec == null ? null : Math.max(0, durationSec);
@@ -423,6 +426,9 @@ public class ChatController {
         if (contentType == null || !contentType.startsWith("video/")) {
             throw new ValidationException("Unsupported video message content type");
         }
+        if (!isAllowedVideoFile(file)) {
+            throw new ValidationException("Video content does not match a supported video format");
+        }
 
         String videoUrl = cloudinaryService.uploadChatVideo(file);
         Integer safeDurationSec = durationSec == null ? null : Math.max(0, durationSec);
@@ -452,7 +458,7 @@ public class ChatController {
             throw new ValidationException("Image file is too large");
         }
 
-        if (!hasValidImageMagicBytes(file)) {
+        if (!MediaFileSniffer.isAllowedImage(file, Set.of("jpg", "jpeg", "png", "gif", "webp"))) {
             throw new ValidationException("Unsupported image content type");
         }
 
@@ -549,24 +555,17 @@ public class ChatController {
         return ResponseEntity.ok().build();
     }
 
-    private static boolean hasValidImageMagicBytes(MultipartFile file) {
-        try {
-            byte[] header = new byte[12];
-            int read = file.getInputStream().read(header);
-            if (read < 3) return false;
-            // JPEG: FF D8 FF
-            if ((header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF) return true;
-            // PNG: 89 50 4E 47
-            if ((header[0] & 0xFF) == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) return true;
-            // WebP: RIFF....WEBP
-            if (read >= 12 && header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
-                    && header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50) return true;
-            // GIF: 47 49 46 38
-            if (header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38) return true;
-            return false;
-        } catch (IOException e) {
-            return false;
-        }
+    private static final Set<String> CHAT_AUDIO_EXTENSIONS = Set.of("mp3", "ogg", "wav", "webm", "mp4");
+    private static final Set<String> CHAT_VIDEO_EXTENSIONS = Set.of("mp4", "mov", "webm");
+
+    private static boolean isAllowedAudioFile(MultipartFile file) {
+        String sniffed = MediaFileSniffer.sniffExtension(file);
+        return CHAT_AUDIO_EXTENSIONS.contains(sniffed);
+    }
+
+    private static boolean isAllowedVideoFile(MultipartFile file) {
+        String sniffed = MediaFileSniffer.sniffExtension(file);
+        return CHAT_VIDEO_EXTENSIONS.contains(sniffed);
     }
 
     private static String getExtension(String filename) {

@@ -11,6 +11,7 @@ import project.kconnecta.user.backend.common.util.CloudinaryService;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
+import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.feature.album.dto.request.*;
 import project.kconnecta.user.backend.feature.album.dto.response.*;
 import project.kconnecta.user.backend.feature.album.entity.*;
@@ -46,8 +47,8 @@ import java.util.stream.Collectors;
 public class AlbumServiceImpl implements AlbumService {
 
     private static final int SIDEBAR_LIMIT = 4;
-    private static final Set<String> IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/gif");
-    private static final Set<String> VIDEO_TYPES = Set.of("video/mp4", "video/webm", "video/quicktime");
+    private static final Set<String> ALBUM_IMAGE_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
+    private static final Set<String> ALBUM_VIDEO_EXTENSIONS = Set.of("mp4", "mov", "webm");
 
     private final AlbumRepository albumRepository;
     private final AlbumMediaRepository albumMediaRepository;
@@ -221,11 +222,11 @@ public class AlbumServiceImpl implements AlbumService {
         User uploader = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        String contentType = file.getContentType() != null ? file.getContentType().toLowerCase() : "";
+        String sniffedExt = MediaFileSniffer.sniffExtension(file);
         AlbumMediaType mediaType;
-        if (IMAGE_TYPES.contains(contentType) || contentType.startsWith("image/")) {
+        if (ALBUM_IMAGE_EXTENSIONS.contains(sniffedExt)) {
             mediaType = AlbumMediaType.IMAGE;
-        } else if (VIDEO_TYPES.contains(contentType) || contentType.startsWith("video/")) {
+        } else if (ALBUM_VIDEO_EXTENSIONS.contains(sniffedExt)) {
             mediaType = AlbumMediaType.VIDEO;
         } else {
             throw new ValidationException("Unsupported media type. Only images and videos are allowed.");

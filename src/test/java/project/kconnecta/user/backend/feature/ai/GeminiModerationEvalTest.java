@@ -30,6 +30,34 @@ import static org.assertj.core.api.Assertions.assertThat;
  * con số có giá trị bảo vệ KLTN, hãy MỞ RỘNG bằng dữ liệu THẬT do người gán nhãn. Mọi con
  * số đi kèm cỡ mẫu N (in trong báo cáo) — N nhỏ thì mỗi mẫu sai làm lệch chỉ số vài điểm %.
  *
+ * <h3>GIẢI THÍCH 4 KÝ HIỆU TP/FN/FP/TN &amp; CÁC CÔNG THỨC (đọc trước khi xem báo cáo)</h3>
+ * Lớp dương (positive) = VI PHẠM. Mỗi bài rơi vào ĐÚNG 1 trong 4 ô, tùy đáp án người gán
+ * nhãn (hàng) so với phán quyết của AI (cột):
+ * <pre>
+ *                          AI nói "VI PHẠM"     AI nói "SẠCH"
+ *   Người gán: VI PHẠM        TP (đúng)           FN (bỏ lọt)   ← FN nguy hiểm nhất
+ *   Người gán: SẠCH           FP (chặn nhầm)      TN (đúng)
+ * </pre>
+ * <ul>
+ *   <li><b>TP</b> (True Positive)  – bài vi phạm và AI bắt ĐÚNG.</li>
+ *   <li><b>FN</b> (False Negative) – bài vi phạm nhưng AI cho qua → <b>BỎ LỌT</b> nội dung
+ *       độc hại (rủi ro an toàn — đáng lo nhất).</li>
+ *   <li><b>FP</b> (False Positive) – bài sạch nhưng AI chặn → <b>CHẶN NHẦM</b> (làm phiền
+ *       người dùng).</li>
+ *   <li><b>TN</b> (True Negative)  – bài sạch và AI cho qua ĐÚNG.</li>
+ * </ul>
+ * Từ 4 ô đó tính ra các điểm số (giá trị 0..1, càng gần 1 càng tốt):
+ * <ul>
+ *   <li><b>Precision</b> = TP / (TP + FP) — trong các bài AI GẮN CỜ, bao nhiêu thực sự vi phạm.</li>
+ *   <li><b>Recall</b>    = TP / (TP + FN) — trong các bài THỰC SỰ vi phạm, AI bắt được bao nhiêu.</li>
+ *   <li><b>F1</b>        = 2·P·R / (P + R) — trung bình hài hòa của Precision &amp; Recall (1 số gọn).</li>
+ *   <li><b>Accuracy</b>  = (TP + TN) / tổng đã chấm — tỉ lệ chấm đúng nói chung.</li>
+ *   <li><b>FPR</b>       = FP / (FP + TN) — tỉ lệ bài sạch bị chặn nhầm.</li>
+ * </ul>
+ * <b>Ví dụ:</b> TP=22, FN=0, FP=0, TN=23 → Precision = 22/(22+0) = 1.000;
+ * Recall = 22/(22+0) = 1.000; F1 = 1.000. Nếu AI bỏ lọt 2 bài (FN=2 thay vì 0) thì
+ * Recall tụt còn 22/(22+2) = 0.917 — đó là lý do "cỡ mẫu nhỏ, mỗi mẫu sai lệch vài %".
+ *
  * <p><b>Quota free tier Gemini = 10 request/phút/model.</b> Vì vậy harness mặc định nghỉ
  * {@code EVAL_DELAY_MS=7000} (~8.5 req/phút, dưới ngưỡng) và tự RETRY các mẫu bị 429 sau
  * cooldown. Cấu hình qua biến môi trường:
@@ -97,18 +125,19 @@ class GeminiModerationEvalTest {
                     }
                 } else {
                     consecFails = 0;
-                    boolean predictedViolation = !result.get().safe();
+                    boolean predictedViolation = !result.get().safe(); // AI nói "không safe" = vi phạm
                     String reason = result.get().reason();
+                    // Đối chiếu đáp án người (s.expectedViolation) với phán quyết AI → 1 trong 4 ô:
                     if (s.expectedViolation() && predictedViolation) {
-                        tp++;
+                        tp++;                                   // người: vi phạm | AI: vi phạm  → TP (bắt đúng)
                     } else if (s.expectedViolation()) {
-                        fn++;
-                        falseNegatives.add(new Miss(s, reason));
+                        fn++;                                   // người: vi phạm | AI: sạch     → FN (BỎ LỌT)
+                        falseNegatives.add(new Miss(s, reason)); // lưu lại để in ra phân tích điểm yếu
                     } else if (predictedViolation) {
-                        fp++;
+                        fp++;                                   // người: sạch    | AI: vi phạm  → FP (CHẶN NHẦM)
                         falsePositives.add(new Miss(s, reason));
                     } else {
-                        tn++;
+                        tn++;                                   // người: sạch    | AI: sạch     → TN (đúng)
                     }
                 }
                 if (delayMs > 0) {
@@ -119,12 +148,14 @@ class GeminiModerationEvalTest {
         }
         List<Sample> aiFailed = pending; // không bao giờ trả verdict (hết quota/lỗi)
 
-        int evaluated = tp + fn + fp + tn;
-        double precision = safeDiv(tp, tp + fp);
-        double recall = safeDiv(tp, tp + fn);
-        double f1 = (precision + recall) == 0 ? 0 : 2 * precision * recall / (precision + recall);
-        double accuracy = safeDiv(tp + tn, evaluated);
-        double fpr = safeDiv(fp, fp + tn);
+        // ── Tính các chỉ số từ 4 ô (xem bảng giải thích ở Javadoc đầu lớp) ──
+        int evaluated = tp + fn + fp + tn;                  // tổng số bài thực sự chấm được (loại AI_FAILED)
+        double precision = safeDiv(tp, tp + fp);            // TP / (TP+FP): bài AI gắn cờ có bao nhiêu là đúng
+        double recall = safeDiv(tp, tp + fn);               // TP / (TP+FN): vi phạm thật bắt được bao nhiêu
+        double f1 = (precision + recall) == 0 ? 0 : 2 * precision * recall / (precision + recall); // hài hòa P & R
+        double accuracy = safeDiv(tp + tn, evaluated);      // (TP+TN) / tổng: tỉ lệ chấm đúng nói chung
+        double fpr = safeDiv(fp, fp + tn);                  // FP / (FP+TN): tỉ lệ bài sạch bị chặn nhầm
+        // safeDiv = chia an toàn, mẫu số 0 thì trả 0 (tránh lỗi chia cho 0 khi chưa có mẫu nào).
         double violationRate = dataset.isEmpty() ? 0
                 : 100.0 * (tp + fn + countExpected(aiFailed, true)) / dataset.size();
         double recallSwingPerMiss = (tp + fn) == 0 ? 0 : 100.0 / (tp + fn);

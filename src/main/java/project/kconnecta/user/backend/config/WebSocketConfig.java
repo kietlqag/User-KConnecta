@@ -10,6 +10,7 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 import project.kconnecta.user.backend.config.websocket.LiveTopicSubscribeInterceptor;
 import project.kconnecta.user.backend.config.websocket.WebSocketAuthInterceptor;
+import project.kconnecta.user.backend.config.websocket.WebSocketCookieHandshakeInterceptor;
 
 import java.util.Arrays;
 
@@ -20,6 +21,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final WebSocketAuthInterceptor webSocketAuthInterceptor;
     private final LiveTopicSubscribeInterceptor liveTopicSubscribeInterceptor;
+    private final WebSocketCookieHandshakeInterceptor webSocketCookieHandshakeInterceptor;
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://127.0.0.1:3000,https://user-k-connecta.vercel.app}")
     private String allowedOrigins;
@@ -29,7 +31,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         String[] origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new);
         boolean hasPattern = Arrays.stream(origins).anyMatch(o -> o.contains("*"));
-        var endpoint = registry.addEndpoint("/ws");
+        var endpoint = registry.addEndpoint("/ws")
+                .addInterceptors(webSocketCookieHandshakeInterceptor);
         if (hasPattern) {
             endpoint.setAllowedOriginPatterns(origins);
         } else {

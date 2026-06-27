@@ -13,4 +13,6 @@ public interface NotificationService {
     void markAsRead(UUID notificationId);
     void markAllAsRead(UUID userId);
     void markAsActioned(UUID notificationId);
+
+    void broadcastSystemNotification(String content);
 }

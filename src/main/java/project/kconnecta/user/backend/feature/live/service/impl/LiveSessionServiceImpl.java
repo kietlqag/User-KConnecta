@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
+import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.exception.BadRequestException;
 import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
@@ -50,6 +51,7 @@ import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -589,12 +591,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         if (file.getSize() > MAX_RECORDING_SIZE_BYTES) {
             throw new BadRequestException("Recording file is too large");
         }
-        String contentType = file.getContentType();
-        if (contentType != null
-                && !contentType.startsWith("video/")
-                && !"application/octet-stream".equalsIgnoreCase(contentType)
-                && !"application/webm".equalsIgnoreCase(contentType)) {
-            throw new BadRequestException("Unsupported recording content type");
+        String sniffed = MediaFileSniffer.sniffExtension(file);
+        if (!Set.of("mp4", "mov", "webm").contains(sniffed)) {
+            throw new BadRequestException("Unsupported recording format");
         }
     }
 

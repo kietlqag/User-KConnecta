@@ -30,9 +30,37 @@ import static org.assertj.core.api.Assertions.assertThat;
  * teencode/bỏ dấu/làm mờ so với tiếng Việt chuẩn / tiếng Anh = BẰNG CHỨNG ĐỊNH LƯỢNG của
  * điểm mù ngôn ngữ (đúng thứ Q87 yêu cầu chứng minh).
  *
+ * <h3>HAI KHÁI NIỆM CỐT LÕI (đọc trước khi xem báo cáo)</h3>
+ * <ul>
+ *   <li><b>Recall theo kiểu</b> = (số bài AI BẮT được) / (số bài đã chấm) <i>riêng cho mỗi kiểu viết</i>.
+ *       Vì MỌI bài trong tập này đều là vi phạm nên không có khái niệm precision ở đây —
+ *       AI lý tưởng phải bắt 100% (recall = 1.000) ở mọi kiểu. Recall của 1 kiểu mà thấp
+ *       nghĩa là AI hay BỎ LỌT vi phạm khi nó được viết theo kiểu đó.</li>
+ *   <li><b>Bias gap</b> (độ lệch thiên vị) = recall(kiểu cao nhất) − recall(kiểu thấp nhất).
+ *       Ví dụ english=1.000 còn obfuscated=0.750 → bias gap = 0.250. Gap CÀNG LỚN =
+ *       điểm mù ngôn ngữ CÀNG RÕ (AI giỏi tiếng Anh/Việt chuẩn nhưng yếu với teencode/bỏ
+ *       dấu/làm mờ chữ). Gap = 0 nghĩa là AI đối xử đồng đều mọi kiểu (trên tập này).</li>
+ * </ul>
+ * <pre>
+ *   Ví dụ một bảng kết quả:
+ *     Kiểu            N   Bắt  Bỏ lọt  Recall
+ *     english         8    8     0     1.000   ← cao nhất
+ *     plain_vi        8    8     0     1.000
+ *     teencode        8    7     1     0.875
+ *     obfuscated      8    6     2     0.750   ← thấp nhất
+ *   → bias gap = 1.000 − 0.750 = 0.250  (đây là số liệu trả lời trực tiếp Q87)
+ * </pre>
+ *
  * <p>Giới hạn, cấu hình env (quota / throttle / retry) và cách đọc: xem README cùng thư mục
  * và {@link GeminiModerationEvalTest}. Báo cáo UTF-8 ghi ra
  * {@code target/moderation-eval-robustness.txt}; console chỉ in tóm tắt ASCII.
+ *
+ * <p><b>Chạy nhanh (PowerShell):</b>
+ * <pre>
+ *   $env:GEMINI_API_KEY="khoa-cua-ban"
+ *   $env:GEMINI_MODELS="gemini-3.1-flash-lite"
+ *   ./mvnw "-Dtest=GeminiModerationRobustnessEvalTest" test
+ * </pre>
  */
 @EnabledIfEnvironmentVariable(named = "GEMINI_API_KEY", matches = ".+")
 class GeminiModerationRobustnessEvalTest {
@@ -92,11 +120,11 @@ class GeminiModerationRobustnessEvalTest {
                     }
                 } else if (!result.get().safe()) {
                     consecFails = 0;
-                    st.caught++;
+                    st.caught++;                 // AI nói "vi phạm" → BẮT ĐÚNG (mọi bài ở đây đều là vi phạm)
                 } else {
                     consecFails = 0;
-                    st.missed++;
-                    st.slipped.add(row);
+                    st.missed++;                 // AI nói "sạch" cho một bài vi phạm → BỎ LỌT
+                    st.slipped.add(row);         // lưu lại để in danh sách "vi phạm bị bỏ lọt theo kiểu"
                 }
                 if (delayMs > 0) {
                     Thread.sleep(delayMs);
@@ -124,8 +152,8 @@ class GeminiModerationRobustnessEvalTest {
         for (Map.Entry<String, StyleStat> e : byStyle.entrySet()) {
             StyleStat st = e.getValue();
             totalAiFailed += st.aiFailed;
-            int scored = st.caught + st.missed;
-            double recall = scored == 0 ? 0 : (double) st.caught / scored;
+            int scored = st.caught + st.missed;                            // số bài thực sự chấm được cho kiểu này
+            double recall = scored == 0 ? 0 : (double) st.caught / scored; // recall của kiểu = bắt được / đã chấm
             r.append(String.format("%-16s %4d %7d %8d %9.3f%s%n",
                     e.getKey(), st.total, st.caught, st.missed, recall,
                     st.aiFailed > 0 ? "  (AI_FAILED=" + st.aiFailed + ")" : ""));

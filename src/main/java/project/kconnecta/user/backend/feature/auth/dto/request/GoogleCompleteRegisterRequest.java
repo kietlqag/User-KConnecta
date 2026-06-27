@@ -13,6 +13,8 @@ public class GoogleCompleteRegisterRequest {
     private String accessToken;
 
     @NotBlank
+    @Size(max = 120)
+    @Pattern(regexp = "^[^<>&\"']+$", message = "Full name contains invalid characters")
     private String fullName;
 
     @NotBlank

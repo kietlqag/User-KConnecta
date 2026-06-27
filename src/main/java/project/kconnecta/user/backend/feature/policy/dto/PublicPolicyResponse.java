@@ -21,7 +21,12 @@ public record PublicPolicyResponse(
             int maxImagesPerPost,
             int maxVideoMb,
             String allowedFileTypes,
-            int postsPerMinute
+            int postsPerMinute,
+            int postRateLimitWindowValue,
+            String postRateLimitWindowUnit,
+            int editsPerMinute,
+            int editRateLimitWindowValue,
+            String editRateLimitWindowUnit
     ) {
     }
 

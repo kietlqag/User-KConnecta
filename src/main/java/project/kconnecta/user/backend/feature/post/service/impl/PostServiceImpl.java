@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import project.kconnecta.user.backend.common.util.CloudinaryService;
+import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.post.dto.request.AddReactionRequest;
@@ -37,6 +38,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.SharedAlbumRespo
 import project.kconnecta.user.backend.feature.post.dto.response.SharedGroupResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
 import project.kconnecta.user.backend.feature.post.entity.*;
+import project.kconnecta.user.backend.feature.post.entity.enums.MediaType;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
 import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
@@ -133,6 +135,11 @@ public class PostServiceImpl implements PostService {
     @Override
     public PostRateLimitStatus getPostRateLimitStatus(UUID userId) {
         return policyContentValidator.getPostRateLimitStatus(userId);
+    }
+
+    @Override
+    public PostRateLimitStatus getPostEditRateLimitStatus(UUID userId) {
+        return policyContentValidator.getPostEditRateLimitStatus(userId);
     }
 
     @Override
@@ -414,8 +421,51 @@ public class PostServiceImpl implements PostService {
             attachTaggedUsers(post, request.getTaggedUserIds());
         }
 
+        applyScheduleChanges(post, request);
+
         Post saved = postRepository.save(post);
         return mapToResponse(saved, userId);
+    }
+
+    private void applyScheduleChanges(Post post, UpdatePostRequest request) {
+        if (request.getStatus() == null && request.getScheduledAt() == null) {
+            return;
+        }
+
+        if (post.getStatus() != PostStatus.SCHEDULED && post.getStatus() != PostStatus.PUBLISHED) {
+            if (request.getStatus() != null || request.getScheduledAt() != null) {
+                throw new ValidationException("Chỉ có thể đổi lịch đăng với bài viết đã lên lịch hoặc đã đăng");
+            }
+            return;
+        }
+
+        if (request.getStatus() == PostStatus.PUBLISHED) {
+            if (post.getStatus() == PostStatus.SCHEDULED) {
+                post.setStatus(PostStatus.PUBLISHED);
+                post.setPublishedAt(LocalDateTime.now());
+                post.setScheduledAt(null);
+            }
+            return;
+        }
+
+        if (post.getStatus() != PostStatus.SCHEDULED) {
+            if (request.getScheduledAt() != null || request.getStatus() == PostStatus.SCHEDULED) {
+                throw new ValidationException("Không thể chuyển bài đã đăng sang trạng thái lên lịch");
+            }
+            return;
+        }
+
+        LocalDateTime nextScheduledAt = request.getScheduledAt() != null
+                ? request.getScheduledAt()
+                : post.getScheduledAt();
+        if (nextScheduledAt == null) {
+            throw new ValidationException("scheduledAt is required when status is SCHEDULED");
+        }
+        if (!nextScheduledAt.isAfter(LocalDateTime.now())) {
+            throw new ValidationException("scheduledAt must be in the future");
+        }
+        post.setStatus(PostStatus.SCHEDULED);
+        post.setScheduledAt(nextScheduledAt);
     }
 
     @Override
@@ -550,6 +600,9 @@ public class PostServiceImpl implements PostService {
     public void approveComment(UUID commentId) {
         PostComment comment = postCommentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        if (comment.getStatus() != CommentStatus.PENDING) {
+            throw new DuplicateResourceException("Bình luận đã được xử lý trước đó");
+        }
         boolean wasHidden = comment.getStatus() != CommentStatus.APPROVED;
         comment.setStatus(CommentStatus.APPROVED);
         comment.setModerationFailReason(null);
@@ -563,6 +616,9 @@ public class PostServiceImpl implements PostService {
     public void rejectComment(UUID commentId, String reason) {
         PostComment comment = postCommentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found"));
+        if (comment.getStatus() != CommentStatus.PENDING) {
+            throw new DuplicateResourceException("Bình luận đã được xử lý trước đó");
+        }
         comment.setStatus(CommentStatus.REJECTED);
         comment.setModerationFailReason(reason);
         postCommentRepository.save(comment);
@@ -576,7 +632,7 @@ public class PostServiceImpl implements PostService {
         if (file == null || file.isEmpty()) {
             throw new ValidationException("Image file is required");
         }
-        policyContentValidator.validatePostMediaUpload(file.getOriginalFilename(), file.getContentType());
+        policyContentValidator.validatePostMediaUpload(file);
         String url = cloudinaryService.uploadPostImage(file);
         try {
             redisTemplate.opsForValue().set(
@@ -595,7 +651,7 @@ public class PostServiceImpl implements PostService {
             throw new ForbiddenException("You do not have permission to delete this media");
         }
         redisTemplate.delete(UPLOAD_OWNERSHIP_PREFIX + userId + ":" + url);
-        cloudinaryService.deleteImageByUrl(url);
+        cloudinaryService.deleteAssetByUrl(url, inferMediaTypeFromUrl(url));
     }
 
     @Override
@@ -674,9 +730,26 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, Pageable pageable) {
+        return getPostsByUserId(authorId, currentUserId, null, pageable);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PostResponse> getPostsByUserId(UUID authorId, UUID currentUserId, PostStatus statusFilter, Pageable pageable) {
         if (!authorId.equals(currentUserId) && !settingsService.canViewProfile(currentUserId, authorId)) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
         }
+
+        if (PostStatus.SCHEDULED.equals(statusFilter)) {
+            if (currentUserId == null || !authorId.equals(currentUserId)) {
+                return new PageImpl<>(Collections.emptyList(), pageable, 0);
+            }
+            List<Post> scheduledPosts = postRepository.findScheduledByAuthorId(authorId);
+            hydratePostAssociations(scheduledPosts);
+            List<PostResponse> responses = processPostsBulk(scheduledPosts, currentUserId);
+            return paginateMergedList(responses, pageable);
+        }
+
         // Load all accessible posts for this author (privacy-filtered), then merge with shares in memory.
         // Native SQL avoids heavy JPQL parsing that can OOM on small Render instances.
         List<Post> allPosts = postRepository
@@ -684,20 +757,62 @@ public class PostServiceImpl implements PostService {
                 .getContent();
         hydratePostAssociations(allPosts);
         List<PostResponse> postResponses = processPostsBulk(allPosts, currentUserId);
+        if (PostStatus.PUBLISHED.equals(statusFilter)) {
+            postResponses = postResponses.stream()
+                    .filter(r -> PostStatus.PUBLISHED.equals(r.getStatus()))
+                    .toList();
+        }
 
         List<PostShare> shares = postShareRepository.findSharesWithPostByUserId(authorId);
         List<PostResponse> shareWrappers = toShareWrappers(shares, currentUserId);
 
         List<PostResponse> merged = Stream.concat(postResponses.stream(), shareWrappers.stream())
-                .sorted(Comparator.comparing(
-                        r -> r.getCreatedAt() != null ? r.getCreatedAt() : LocalDateTime.MIN,
-                        Comparator.reverseOrder()))
+                .sorted(profilePostSortComparator())
                 .toList();
 
+        return paginateMergedList(merged, pageable);
+    }
+
+    private static Comparator<PostResponse> profilePostSortComparator() {
+        return (a, b) -> {
+            boolean aScheduled = PostStatus.SCHEDULED.equals(a.getStatus());
+            boolean bScheduled = PostStatus.SCHEDULED.equals(b.getStatus());
+            if (aScheduled != bScheduled) {
+                return aScheduled ? -1 : 1;
+            }
+            if (aScheduled) {
+                LocalDateTime aTime = a.getScheduledAt() != null ? a.getScheduledAt() : a.getCreatedAt();
+                LocalDateTime bTime = b.getScheduledAt() != null ? b.getScheduledAt() : b.getCreatedAt();
+                if (aTime == null && bTime == null) {
+                    return 0;
+                }
+                if (aTime == null) {
+                    return 1;
+                }
+                if (bTime == null) {
+                    return -1;
+                }
+                return aTime.compareTo(bTime);
+            }
+            LocalDateTime aTime = a.getPublishedAt() != null ? a.getPublishedAt() : a.getCreatedAt();
+            LocalDateTime bTime = b.getPublishedAt() != null ? b.getPublishedAt() : b.getCreatedAt();
+            if (aTime == null && bTime == null) {
+                return 0;
+            }
+            if (aTime == null) {
+                return 1;
+            }
+            if (bTime == null) {
+                return -1;
+            }
+            return bTime.compareTo(aTime);
+        };
+    }
+
+    private static Page<PostResponse> paginateMergedList(List<PostResponse> merged, Pageable pageable) {
         int start = (int) pageable.getOffset();
         int end = Math.min(start + pageable.getPageSize(), merged.size());
         List<PostResponse> page = start >= merged.size() ? Collections.emptyList() : new ArrayList<>(merged.subList(start, end));
-
         return new PageImpl<>(page, pageable, merged.size());
     }
 
@@ -1268,9 +1383,15 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional(readOnly = true)
     public List<PostResponse> getSavedPosts(UUID userId) {
-        List<UUID> postIds = postSavedRepository.findPostIdsByUserId(userId);
+        List<UUID> postIds = postSavedRepository.findPostIdsByUserId(userId); // đã sắp xếp mới-lưu-trước
         if (postIds.isEmpty()) return Collections.emptyList();
-        List<Post> posts = postRepository.findAllById(postIds);
+        // findAllById KHÔNG giữ thứ tự của postIds → sắp lại theo đúng thứ tự đã lưu (mới nhất lên đầu).
+        Map<UUID, Post> postById = postRepository.findAllById(postIds).stream()
+                .collect(Collectors.toMap(Post::getId, p -> p));
+        List<Post> posts = postIds.stream()
+                .map(postById::get)
+                .filter(Objects::nonNull)
+                .toList();
         return processPostsBulk(posts, userId);
     }
 
@@ -1508,10 +1629,58 @@ public class PostServiceImpl implements PostService {
         if (!post.getAuthor().getId().equals(userId)) {
             throw new ValidationException("Bạn không có quyền xóa bài viết này");
         }
+        deletePostCloudinaryAssets(post);
         String username = post.getAuthor().getUsername();
         postRepository.delete(post);
         activityLogService.log(userId, username, ActivityLogType.POST_DELETED,
                 "{\"postId\":\"" + postId + "\"}");
+    }
+
+    private void deletePostCloudinaryAssets(Post post) {
+        Set<String> seen = new HashSet<>();
+        for (PostMedia item : post.getMedia()) {
+            deleteCloudinaryAssetIfOwned(item.getFileUrl(), item.getMediaType(), seen);
+            deleteCloudinaryAssetIfOwned(item.getThumbnailUrl(), MediaType.IMAGE, seen);
+        }
+
+        String legacyImageUrl = post.getImageUrl();
+        if (legacyImageUrl != null
+                && post.getMedia().stream().noneMatch(m -> legacyImageUrl.equals(m.getFileUrl()))) {
+            deleteCloudinaryAssetIfOwned(legacyImageUrl, MediaType.IMAGE, seen);
+        }
+    }
+
+    private void deleteCloudinaryAssetIfOwned(String url, MediaType mediaType, Set<String> seen) {
+        if (url == null) {
+            return;
+        }
+        String trimmed = url.trim();
+        if (trimmed.isBlank() || !seen.add(trimmed)) {
+            return;
+        }
+        if (!isManagedPostMediaUrl(trimmed)) {
+            return;
+        }
+        cloudinaryService.deleteAssetByUrlSafely(trimmed, mediaType);
+    }
+
+    private static boolean isManagedPostMediaUrl(String url) {
+        return url.contains("/kconnecta/post-images/")
+                || url.contains("/kconnecta/post-files/")
+                || url.contains("post-media-");
+    }
+
+    private static MediaType inferMediaTypeFromUrl(String url) {
+        if (url == null) {
+            return MediaType.IMAGE;
+        }
+        if (url.contains("/raw/upload/") || url.contains("/kconnecta/post-files/")) {
+            return MediaType.DOCUMENT;
+        }
+        if (url.contains("/video/upload/")) {
+            return MediaType.VIDEO;
+        }
+        return MediaType.IMAGE;
     }
 
     private void deleteShare(PostShare share, UUID userId) {

@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
@@ -54,6 +55,26 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
+    // 401 tài khoản bị khóa (refresh / login) — body giống JwtAuthenticationFilter để frontend hiện màn hình khóa
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<?> handleAccountLocked(AccountLockedException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", ex.getMessage());
+        body.put("accountStatus", "BLOCKED");
+        var account = ex.getAccount();
+        body.put("blockedReason", account.getLockReason() != null && !account.getLockReason().isBlank()
+                ? account.getLockReason()
+                : "Tài khoản của bạn đang bị khóa do vi phạm hoặc cần admin xem xét.");
+        body.put("lockedUntil", account.getLockedUntil());
+        body.put("email", account.getEmail());
+        var user = ex.getUser();
+        if (user != null) {
+            body.put("fullName", user.getFullName());
+            body.put("username", user.getUsername());
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
     // 400 domain bad request
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<?> handleBadRequest(BadRequestException ex) {
@@ -76,6 +97,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CallStateException.class)
     public ResponseEntity<?> handleCallState(CallStateException ex) {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    // 405 wrong HTTP method
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<?> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        log.debug("HTTP method not supported: {}", ex.getMessage());
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, ex.getMessage());
     }
 
     // 400 invalid path/query parameter type (e.g. username passed where UUID expected)

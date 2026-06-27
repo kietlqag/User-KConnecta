@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import project.kconnecta.user.backend.feature.post.entity.enums.MediaType;
 
 import java.io.File;
 import java.io.IOException;
@@ -202,20 +203,49 @@ public class CloudinaryService {
     }
 
     public void deleteImageByUrl(String imageUrl) {
-        if (imageUrl == null || imageUrl.isBlank()) {
+        deleteAssetByUrl(imageUrl, null);
+    }
+
+    public void deleteAssetByUrl(String assetUrl, MediaType mediaType) {
+        if (assetUrl == null || assetUrl.isBlank()) {
             return;
         }
 
-        String publicId = extractPublicId(imageUrl);
+        String publicId = extractPublicId(assetUrl);
         if (publicId == null || publicId.isBlank()) {
             return;
         }
 
+        String resourceType = resolveResourceType(assetUrl, mediaType);
         try {
-            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            cloudinary.uploader().destroy(publicId, ObjectUtils.asMap("resource_type", resourceType));
         } catch (IOException e) {
-            throw new RuntimeException("Delete old image failed", e);
+            throw new RuntimeException("Delete Cloudinary asset failed", e);
         }
+    }
+
+    public void deleteAssetByUrlSafely(String assetUrl, MediaType mediaType) {
+        try {
+            deleteAssetByUrl(assetUrl, mediaType);
+        } catch (RuntimeException e) {
+            log.warn("Failed to delete Cloudinary asset {}: {}", assetUrl, e.getMessage());
+        }
+    }
+
+    private static String resolveResourceType(String assetUrl, MediaType mediaType) {
+        if (assetUrl.contains("/video/upload/")) {
+            return "video";
+        }
+        if (assetUrl.contains("/raw/upload/")) {
+            return "raw";
+        }
+        if (mediaType == MediaType.VIDEO) {
+            return "video";
+        }
+        if (mediaType == MediaType.DOCUMENT) {
+            return "raw";
+        }
+        return "image";
     }
 
     private String extractPublicId(String imageUrl) {

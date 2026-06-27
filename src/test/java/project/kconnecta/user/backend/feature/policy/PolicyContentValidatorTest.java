@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import project.kconnecta.user.backend.exception.ChatValidationException;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.policy.service.PolicyService;
@@ -213,6 +214,28 @@ class PolicyContentValidatorTest {
             .isInstanceOf(ValidationException.class);
     }
 
+    @Test
+    void validatePostUpdate_rateLimit_blocksAfterLimit() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWith(20, false, false));
+        assertThatNoException().isThrownBy(() -> validator.validatePostUpdate(userId, "edit 1", 0));
+        assertThatNoException().isThrownBy(() -> validator.validatePostUpdate(userId, "edit 2", 0));
+        assertThatNoException().isThrownBy(() -> validator.validatePostUpdate(userId, "edit 3", 0));
+        assertThatThrownBy(() -> validator.validatePostUpdate(userId, "edit 4", 0))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("chỉnh sửa bài");
+    }
+
+    @Test
+    void getPostEditRateLimitStatus_reflectsUsage() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWith(20, false, false));
+        validator.validatePostUpdate(userId, "edit 1", 0);
+        validator.validatePostUpdate(userId, "edit 2", 0);
+        var status = validator.getPostEditRateLimitStatus(userId);
+        assertThat(status.limitPerMinute()).isEqualTo(3);
+        assertThat(status.usedInWindow()).isEqualTo(2);
+        assertThat(status.remaining()).isEqualTo(1);
+    }
+
     private JsonNode configWithAllowedTypes(String allowed) throws Exception {
         String json = """
                 {
@@ -226,6 +249,26 @@ class PolicyContentValidatorTest {
                 }
                 """.formatted(allowed);
         return mapper.readTree(json);
+    }
+
+    @Test
+    void validatePostMediaUpload_rejectsSpoofedImageFilename() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("jpg,png,pdf"));
+        byte[] pdfHeader = new byte[]{'%', 'P', 'D', 'F', '-', '1', '.', '4'};
+        MockMultipartFile file = new MockMultipartFile("file", "photo.jpg", "image/jpeg", pdfHeader);
+        assertThatThrownBy(() -> validator.validatePostMediaUpload(file))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("không khớp");
+    }
+
+    @Test
+    void validatePostMediaUpload_allowsRealPng() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("png"));
+        byte[] pngHeader = new byte[]{
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
+        };
+        MockMultipartFile file = new MockMultipartFile("file", "photo.png", "image/png", pngHeader);
+        assertThatNoException().isThrownBy(() -> validator.validatePostMediaUpload(file));
     }
 
     @Test

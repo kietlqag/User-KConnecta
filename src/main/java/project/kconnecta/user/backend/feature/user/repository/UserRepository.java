@@ -1,6 +1,7 @@
 package project.kconnecta.user.backend.feature.user.repository;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -75,4 +76,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
               AND EXTRACT(DAY FROM u.date_of_birth) = :day
             """, nativeQuery = true)
     List<User> findUsersWithBirthdayOn(@Param("month") int month, @Param("day") int day);
+
+    @Query("""
+            SELECT u.username FROM User u
+            WHERE u.username IS NOT NULL AND u.username <> ''
+            """)
+    Slice<String> findUsernamesForBroadcast(Pageable pageable);
 }
