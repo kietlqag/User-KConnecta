@@ -22,6 +22,7 @@ function mapSuggestion(s: FriendApiResponse): Friend {
     name: s.fullName,
     avatar: s.avatarUrl || '',
     mutualFriends: s.mutualFriends,
+    suggestionReason: s.suggestionReason,
     isFriend: false,
   };
 }

@@ -169,7 +169,7 @@ export function AlbumDetailPage() {
 
   return (
     <MainLayout>
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
         <button
           type="button"
           onClick={() => (album.groupId ? navigate(`/groups/${album.groupId}?tab=albums`) : navigate('/albums'))}
@@ -179,6 +179,8 @@ export function AlbumDetailPage() {
           {album.groupId ? 'Album nhóm' : 'Album của bạn'}
         </button>
 
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-w-0">
         <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm mb-6">
           {album.coverUrl && (
             <div className="h-48 sm:h-64 bg-muted">
@@ -307,8 +309,12 @@ export function AlbumDetailPage() {
             onDeleteMedia={(id) => void handleDeleteMedia(id)}
           />
         )}
+          </div>
 
-        <AlbumCommentsSection albumId={album.id} />
+          <aside className="lg:sticky lg:top-20 lg:h-[calc(100vh-7rem)] lg:self-start">
+            <AlbumCommentsSection albumId={album.id} className="mt-0 lg:h-full" />
+          </aside>
+        </div>
       </div>
 
       <AlbumShareModal

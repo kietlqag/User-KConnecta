@@ -17,11 +17,14 @@ export default {
   nav: {
     home: 'Trang chủ',
     friends: 'Bạn bè',
+    birthdays: 'Sinh nhật',
     watch: 'Watch',
     groups: 'Nhóm',
+    messages: 'Tin nhắn',
     live: 'Live',
     saved: 'Đã lưu',
     video: 'Video',
+    createEvent: 'Tạo sự kiện',
     navMenu: 'Menu điều hướng',
     closeNav: 'Đóng menu điều hướng',
     mainNav: 'Điều hướng chính',
@@ -30,6 +33,8 @@ export default {
     copyright: 'KConnecta © {{year}}',
   },
   sidebar: {
+    shortcuts: 'Lối tắt',
+    seeAllGroups: 'Xem tất cả',
     birthdays: 'Sinh nhật',
     birthdayToday: 'Hôm nay là sinh nhật của <strong>{{name}}</strong>',
     birthdayAge: ' ({{age}} tuổi)',

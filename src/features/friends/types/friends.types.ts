@@ -4,6 +4,7 @@ export interface Friend {
   name: string;
   avatar: string;
   mutualFriends: number;
+  suggestionReason?: string | null;
   isFriend: boolean;
 }
 

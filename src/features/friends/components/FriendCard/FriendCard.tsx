@@ -90,9 +90,10 @@ export const FriendCard = ({
             </h3>
           </Link>
           <p className="mt-1 h-5 truncate text-sm text-muted-foreground">
-            {friend.mutualFriends > 0
-              ? t('friendCard.mutualFriends', { count: friend.mutualFriends })
-              : t('friendCard.noMutualFriends')}
+            {friend.suggestionReason
+              ?? (friend.mutualFriends > 0
+                ? t('friendCard.mutualFriends', { count: friend.mutualFriends })
+                : t('friendCard.noMutualFriends'))}
           </p>
         </div>
 

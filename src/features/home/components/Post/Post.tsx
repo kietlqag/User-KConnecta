@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MoreHorizontal, MessageCircle, Share2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
+import { interestService } from '@/services/interestService';
 import { postService, type PostReactionCountResponse, type ReactionType } from '@/services/postService';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { UserAvatar } from '@/components/shared/UserAvatar';
@@ -91,6 +92,55 @@ export function Post({
   );
   const activeReactions = getActiveReactions(reactionCounts);
   const totalReactionCount = getTotalReactionCount(reactionCounts);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const viewRecordedRef = useRef(false);
+
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    const element = cardRef.current;
+    if (!element) {
+      return;
+    }
+
+    let dwellTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          if (viewRecordedRef.current || dwellTimer) {
+            return;
+          }
+          dwellTimer = setTimeout(() => {
+            dwellTimer = null;
+            if (viewRecordedRef.current) {
+              return;
+            }
+            viewRecordedRef.current = true;
+            void interestService.recordEvent(id, 'VIEW').catch(() => undefined);
+          }, 3000);
+          return;
+        }
+
+        if (dwellTimer) {
+          clearTimeout(dwellTimer);
+          dwellTimer = null;
+        }
+      },
+      { threshold: 0.5 },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+      if (dwellTimer) {
+        clearTimeout(dwellTimer);
+      }
+    };
+  }, [currentUser, id]);
 
   const postData = useMemo(
     () => ({
@@ -173,7 +223,7 @@ export function Post({
 
   return (
     <>
-      <div className="bg-card rounded-lg shadow mb-4">
+      <div ref={cardRef} className="bg-card rounded-lg shadow mb-4">
         <div className="p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3 group">

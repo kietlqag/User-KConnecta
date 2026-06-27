@@ -125,9 +125,10 @@ const SuggestionItem = ({
           {friend.name}
         </p>
         <p className="truncate text-[11px] leading-tight text-muted-foreground">
-          {friend.mutualFriends > 0
-            ? `${friend.mutualFriends} bạn chung`
-            : 'Gợi ý cho bạn'}
+          {friend.suggestionReason
+            ?? (friend.mutualFriends > 0
+              ? `${friend.mutualFriends} bạn chung`
+              : 'Gợi ý cho bạn')}
         </p>
 
         <div className="mt-1.5 flex gap-1.5">

@@ -39,6 +39,7 @@ import { useGroupById, useJoinedGroups, useManagedGroups, useJoinGroup, useGroup
 import { useGroupSocket } from '../hooks/useGroupSocket';
 import { groupService, GROUP_MEMBERSHIP_CHANGED_EVENT } from '@/services/groupService';
 import { authService } from '@/services/authService';
+import { recordGroupVisit } from '../utils/recentGroupVisitsStorage';
 import { UserAvatar } from '@/components/shared';
 import { GroupShareModal } from '@/components/posts/GroupShareModal';
 import { toast } from 'sonner';
@@ -133,6 +134,15 @@ export const GroupDetailPage = () => {
     if (!groupId) return;
     setSetupDismissed(isSetupDismissed(groupId));
   }, [groupId]);
+
+  useEffect(() => {
+    if (!groupId || !group || !currentUser?.id) return;
+    recordGroupVisit(currentUser.id, {
+      id: group.id,
+      name: group.name,
+      icon: group.icon,
+    });
+  }, [groupId, group, currentUser?.id]);
 
   // Realtime: when a group membership notification arrives (e.g. an admin approves a join
   // request), refetch group data so the view updates without a manual reload.

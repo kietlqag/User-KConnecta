@@ -45,6 +45,7 @@ import { buildPostMediaAcceptAttribute, getPostMediaKind, toApiMediaType, type P
 
 import { toApiScheduledAt, debugScheduleLog } from './postScheduleUtils';
 import { GroupPollComposer } from '@/features/groups/components/GroupPollComposer/GroupPollComposer';
+import { HashtagSuggestions } from '@/components/posts/HashtagSuggestions';
 import { computeEmojiPickerPosition, type EmojiPickerPosition } from '@/utils/emojiPickerPosition';
 import { PostAllowedFormatsHint } from './PostAllowedFormatsHint';
 
@@ -512,9 +513,14 @@ export function ProfileCreatePostModal({
               ref={textareaRef}
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
-              placeholder={isGroupPost ? 'Bạn viết gì đi... (#hashtag giúp admin theo dõi xu hướng)' : 'Bạn đang nghĩ gì? Thêm #chủđề nếu muốn'}
+              placeholder={isGroupPost ? 'Bạn viết gì đi... (#hashtag giúp bài được đề xuất đúng chủ đề)' : 'Bạn đang nghĩ gì? Thêm #chủđề nếu muốn'}
               className="min-h-[120px] w-full resize-none border-none bg-transparent text-2xl text-foreground outline-none placeholder:text-muted-foreground dark:text-white dark:placeholder:text-muted-foreground"
               autoFocus
+            />
+            <HashtagSuggestions
+              content={postContent}
+              textareaRef={textareaRef}
+              onContentChange={setPostContent}
             />
             {publicPolicy && (() => {
               const max = publicPolicy.postPolicy.maxPostLength;

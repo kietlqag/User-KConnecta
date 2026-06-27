@@ -9,6 +9,7 @@ export interface FriendApiResponse {
   fullName: string;
   avatarUrl: string | null;
   mutualFriends: number;
+  suggestionReason?: string | null;
   status: 'PENDING' | 'ACCEPTED' | null;
   createdAt: string | null;
 }

@@ -14,6 +14,7 @@ import { PostAllowedFormatsHint } from '@/features/profile/components/ProfileCre
 import { validatePostAgainstPolicy, checkKeywords, validatePostMediaFiles } from '@/utils/policyValidation';
 import { buildPostMediaAcceptAttribute, getPostMediaKind, toApiMediaType, type PostMediaKind } from '@/utils/allowedFileTypes';
 import { POSTS_FEED_KEY } from '@/features/home/hooks/usePosts';
+import { HashtagSuggestions } from '@/components/posts/HashtagSuggestions';
 import { ProfilePostAudienceModal } from '@/features/profile/components/ProfileCreatePost/ProfilePostAudienceModal';
 import {
   ProfilePostScheduleModal,
@@ -93,6 +94,7 @@ export function EditPostModal({
   const [scheduledAtLocal, setScheduledAtLocal] = useState(defaultScheduledDatetimeLocal());
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const uploadPromisesRef = useRef<Map<string, Promise<string>>>(new Map());
   const uploadControllersRef = useRef<Map<string, AbortController>>(new Map());
   const { data: publicPolicy, isLoading: policyLoading } = usePublicPolicies();
@@ -454,6 +456,7 @@ export function EditPostModal({
           </div>
 
           <textarea
+            ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={isShareWrapper ? 'Thêm ghi chú khi chia sẻ...' : 'Bạn đang nghĩ gì?'}
@@ -461,6 +464,13 @@ export function EditPostModal({
             className="min-h-[120px] w-full resize-none border-none bg-transparent text-xl text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60 dark:text-white dark:placeholder:text-muted-foreground"
             autoFocus
           />
+          {!isShareWrapper && (
+            <HashtagSuggestions
+              content={content}
+              textareaRef={textareaRef}
+              onContentChange={setContent}
+            />
+          )}
 
           {publicPolicy && (() => {
             const max = publicPolicy.postPolicy.maxPostLength;

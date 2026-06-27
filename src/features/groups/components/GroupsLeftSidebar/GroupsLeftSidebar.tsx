@@ -78,8 +78,8 @@ export const GroupsLeftSidebar = ({
   ];
 
   return (
-    <div className="sidebar-scrollbar sticky top-14 z-10 hidden h-[calc(100vh-56px)] w-[300px] shrink-0 self-start overflow-y-auto border-r border-border bg-card md:block">
-      <div className="p-4">
+    <div className="sticky top-14 z-10 hidden h-[calc(100vh-56px)] w-[300px] shrink-0 flex-col self-start overflow-hidden border-r border-border bg-card md:flex">
+      <div className="sidebar-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
         <h1 className="text-2xl font-bold text-foreground mb-4">{t('groups.title')}</h1>
 
         <div className="relative mb-4" ref={searchWrapRef}>
@@ -153,23 +153,25 @@ export const GroupsLeftSidebar = ({
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={() => navigate('/groups/create')}
-          className="mb-4 flex w-full items-center gap-3 rounded-lg bg-muted px-3 py-2.5 transition-colors hover:bg-muted"
-        >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-            <Plus className="h-5 w-5 text-foreground" />
-          </div>
-          <span className="font-semibold text-foreground">{t('groups.createGroup')}</span>
-        </button>
-
         {showGroupLists && (
           <>
             <div className="my-4 border-t border-border" />
             <GroupsListsPanel joinedGroups={joinedGroups} managedGroups={managedGroups} />
           </>
         )}
+      </div>
+
+      <div className="shrink-0 border-t border-border p-4">
+        <button
+          type="button"
+          onClick={() => navigate('/groups/create')}
+          className="flex w-full items-center gap-3 rounded-lg bg-muted px-3 py-2.5 transition-colors hover:bg-muted"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
+            <Plus className="h-5 w-5 text-foreground" />
+          </div>
+          <span className="font-semibold text-foreground">{t('groups.createGroup')}</span>
+        </button>
       </div>
     </div>
   );

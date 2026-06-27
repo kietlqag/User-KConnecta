@@ -50,7 +50,7 @@ function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWi
     : t('birthdays.daysUntil', { count: friend.daysUntil });
 
   return (
-    <div className="rounded-xl border border-border bg-muted p-4/50">
+    <div className="rounded-xl border border-border bg-muted/50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <Link to={`/profile/${friend.userId}`}>
@@ -194,7 +194,7 @@ export function BirthdayPage() {
                 {byMonth.map((group) => (
                   <div
                     key={group.month}
-                    className="rounded-xl border border-border bg-muted p-4/50"
+                    className="rounded-xl border border-border bg-muted/50 p-4"
                   >
                     <h3 className="text-base font-bold text-foreground">
                       {t('birthdays.month', { month: group.month })}

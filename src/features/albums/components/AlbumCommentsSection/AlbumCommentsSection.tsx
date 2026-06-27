@@ -7,9 +7,10 @@ import { useAddAlbumComment, useAlbumComments } from '../../hooks/useAlbums';
 
 interface AlbumCommentsSectionProps {
   albumId: string;
+  className?: string;
 }
 
-export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
+export function AlbumCommentsSection({ albumId, className = 'mt-6' }: AlbumCommentsSectionProps) {
   const currentUser = authService.getCurrentUser();
   const { data: comments = [], isLoading } = useAlbumComments(albumId);
   const addComment = useAddAlbumComment(albumId);
@@ -28,12 +29,12 @@ export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border p-5 mt-6">
-      <h2 className="text-lg font-bold text-foreground mb-4">
+    <div className={`flex min-h-0 flex-col overflow-hidden bg-card rounded-xl border border-border p-5 ${className}`}>
+      <h2 className="text-lg font-bold text-foreground mb-4 shrink-0">
         Bình luận {comments.length > 0 && `(${comments.length})`}
       </h2>
 
-      <div className="flex gap-3 mb-5">
+      <div className="flex gap-3 mb-5 shrink-0">
         <UserAvatar
           avatarUrl={currentUser?.avatarUrl}
           name={currentUser?.fullName ?? 'Bạn'}
@@ -68,7 +69,7 @@ export function AlbumCommentsSection({ albumId }: AlbumCommentsSectionProps) {
       ) : comments.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-4">Chưa có bình luận nào</p>
       ) : (
-        <div className="space-y-4">
+        <div className="sidebar-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           {comments.map((comment) => (
             <div key={comment.id} className="flex gap-3">
               <UserAvatar

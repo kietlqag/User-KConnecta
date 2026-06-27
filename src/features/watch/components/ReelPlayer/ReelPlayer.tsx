@@ -6,6 +6,7 @@ import { ReelInteractionPanel } from '../ReelInteractionPanel';
 import { CommentsPanel } from '../CommentsPanel';
 import { PostShareModal } from '@/components/posts/PostShareModal';
 import { authService } from '@/services/authService';
+import { interestService } from '@/services/interestService';
 import { postService, SAVED_POSTS_CHANGED_EVENT, type ReactionType } from '@/services/postService';
 import { reactions, type ReactionOption } from '@/components/reactions';
 import { toast } from 'sonner';
@@ -55,6 +56,32 @@ export const ReelPlayer = ({
   const [shareCount, setShareCount] = useState(reel.shares);
   const [commentCount, setCommentCount] = useState(reel.comments);
   const [isSaved, setIsSaved] = useState(reel.isSaved ?? false);
+  const viewRecordedRef = useRef(false);
+
+  useEffect(() => {
+    viewRecordedRef.current = false;
+  }, [reel.id]);
+
+  useEffect(() => {
+    if (!isActive) {
+      return;
+    }
+
+    const currentUser = authService.getCurrentUser();
+    if (!currentUser) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      if (viewRecordedRef.current) {
+        return;
+      }
+      viewRecordedRef.current = true;
+      void interestService.recordEvent(reel.id, 'VIEW').catch(() => undefined);
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [isActive, reel.id]);
 
   useEffect(() => {
     setLikeCount(reel.likes);

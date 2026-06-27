@@ -130,9 +130,10 @@ export const FriendSuggestions = () => {
                         {user.fullName}
                       </button>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {user.mutualFriends > 0
-                          ? `${user.mutualFriends} bạn chung`
-                          : 'Gợi ý cho bạn'}
+                        {user.suggestionReason
+                          ?? (user.mutualFriends > 0
+                            ? `${user.mutualFriends} bạn chung`
+                            : 'Gợi ý cho bạn')}
                       </p>
                     </div>
 
