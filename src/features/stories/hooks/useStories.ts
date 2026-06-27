@@ -84,6 +84,7 @@ export function useCreateStoryMutation() {
         textSize: variables.textSize ?? null,
         textPosX: variables.textPosX ?? null,
         textPosY: variables.textPosY ?? null,
+        stickers: variables.stickers?.length ? JSON.stringify(variables.stickers) : null,
         musicTrackId: null,
         altText: variables.altText ?? null,
         privacy: variables.privacy,

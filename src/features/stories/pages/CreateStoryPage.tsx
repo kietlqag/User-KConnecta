@@ -32,7 +32,40 @@ type FilterId = typeof COLOR_FILTERS[number]['id'];
 
 interface StickerItem { id: string; emoji: string; x: number; y: number; size: number; }
 
-const textColorPalette = ['#FFFFFF', '#000000', '#F43F5E', '#F59E0B', '#22C55E', '#3B82F6', '#8B5CF6', '#F97316'];
+const textColorPalette = [
+  '#FFFFFF',
+  '#000000',
+  '#374151',
+  '#9CA3AF',
+  '#FECACA',
+  '#F43F5E',
+  '#EF4444',
+  '#DC2626',
+  '#FDA4AF',
+  '#EC4899',
+  '#F472B6',
+  '#FDE68A',
+  '#FBBF24',
+  '#F59E0B',
+  '#F97316',
+  '#FED7AA',
+  '#A3E635',
+  '#22C55E',
+  '#4ADE80',
+  '#6EE7B7',
+  '#5EEAD4',
+  '#22D3EE',
+  '#38BDF8',
+  '#3B82F6',
+  '#60A5FA',
+  '#818CF8',
+  '#8B5CF6',
+  '#C084FC',
+  '#E879F9',
+  '#F0ABFC',
+  '#E7C6A8',
+  '#A8A29E',
+];
 
 const STORY_DURATION_OPTIONS: Array<{ value: StoryDurationHours; label: string; sub: string }> = [
   { value: 3, label: '3 giờ', sub: 'Tin biến mất sau 3 giờ' },
@@ -263,6 +296,9 @@ export function CreateStoryPage() {
       textSize: hasText ? textSize : undefined,
       textPosX: hasText ? textPosition.x : undefined,
       textPosY: hasText ? textPosition.y : undefined,
+      stickers: stickers.length > 0
+        ? stickers.map(({ emoji, x, y, size }) => ({ emoji, x, y, size }))
+        : undefined,
       altText: altText.trim() || undefined,
       backgroundColor: isTextStoryMode ? selectedBg.value : undefined,
       linkedPostId: linkedPostId ?? undefined,

@@ -12,8 +12,6 @@ import {
   Zap,
   ThumbsUp,
   MoreHorizontal,
-  Volume2,
-  VolumeX,
   Pause,
   Play,
   Plus,
@@ -21,9 +19,12 @@ import {
   Link2,
   Flag,
   Trash2,
+  Globe,
+  Users,
+  Lock,
 } from 'lucide-react';
 import { authService } from '@/services/authService';
-import { storyService, type StoryResponse } from '@/services/storyService';
+import { storyService, type StoryPrivacy, type StoryResponse, type StorySticker, parseStoryStickers } from '@/services/storyService';
 import { useDeleteStoryMutation } from '@/features/stories/hooks/useStories';
 import { resolveStoryTextSize } from '@/lib/storyShareText';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
@@ -44,6 +45,19 @@ interface StorySlide {
   linkedPostId: string | null;
   durationMs: number;
   createdAt: string;
+  privacy?: StoryPrivacy;
+  stickers: StorySticker[];
+}
+
+const STORY_PRIVACY_META: Record<StoryPrivacy, { label: string; Icon: typeof Globe }> = {
+  PUBLIC: { label: 'Công khai', Icon: Globe },
+  FRIENDS: { label: 'Bạn bè', Icon: Users },
+  SPECIFIC_FRIENDS: { label: 'Bạn bè cụ thể', Icon: Users },
+  ONLY_ME: { label: 'Chỉ mình tôi', Icon: Lock },
+};
+
+function getStoryPrivacyMeta(privacy?: StoryPrivacy) {
+  return STORY_PRIVACY_META[privacy ?? 'PUBLIC'];
 }
 
 interface StoryAuthor {
@@ -86,6 +100,8 @@ function groupStoriesByUser(stories: StoryResponse[]): StoryAuthor[] {
       linkedPostId: s.linkedPostId ?? null,
       durationMs: 5000,
       createdAt: s.createdAt,
+      privacy: s.privacy,
+      stickers: parseStoryStickers(s.stickers),
     });
   }
   return Array.from(map.values());
@@ -131,7 +147,6 @@ export function StoryViewerPage() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [floatingEmojis, setFloatingEmojis] = useState<Array<{ id: number; emoji: string; x: number }>>([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -176,6 +191,8 @@ export function StoryViewerPage() {
   const slide = author?.slides[currentSlideIndex];
   const totalSlides = author?.slides.length ?? 0;
   const isOwnStory = author?.userId === currentUser?.id;
+  const storyPrivacyMeta = slide ? getStoryPrivacyMeta(slide.privacy) : null;
+  const StoryPrivacyIcon = storyPrivacyMeta?.Icon;
 
   const handleSendReply = useCallback(() => {
     if (!replyText.trim() || !author || !slide) return;
@@ -531,6 +548,22 @@ export function StoryViewerPage() {
             </div>
           )}
 
+          {/* Stickers */}
+          {slide.stickers.map((sticker, index) => (
+            <div
+              key={`sticker-${index}`}
+              className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-1/2 select-none"
+              style={{
+                left: `${sticker.x}%`,
+                top: `${sticker.y}%`,
+                fontSize: `${sticker.size}px`,
+                lineHeight: 1,
+              }}
+            >
+              {sticker.emoji}
+            </div>
+          ))}
+
           {/* Progress Bars */}
           <div className="absolute top-3 left-3 right-3 z-30 flex gap-1">
             {author.slides.map((s, i) => (
@@ -559,15 +592,22 @@ export function StoryViewerPage() {
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white drop-shadow truncate">{author.name}</p>
-              <p className="text-xs text-white/80 drop-shadow">{timeAgo(slide.createdAt)}</p>
+              <div className="flex items-center gap-1 text-xs text-white/80 drop-shadow">
+                <span>{timeAgo(slide.createdAt)}</span>
+                {isOwnStory && StoryPrivacyIcon && storyPrivacyMeta ? (
+                  <>
+                    <span aria-hidden>·</span>
+                    <StoryPrivacyIcon
+                      className="h-3 w-3 shrink-0"
+                      aria-label={storyPrivacyMeta.label}
+                    >
+                      <title>{storyPrivacyMeta.label}</title>
+                    </StoryPrivacyIcon>
+                  </>
+                ) : null}
+              </div>
             </div>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => setIsMuted((m) => !m)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition cursor-pointer"
-              >
-                {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-              </button>
               <button
                 onClick={() => setIsPaused((p) => !p)}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white hover:bg-black/60 transition cursor-pointer"

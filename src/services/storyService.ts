@@ -3,6 +3,32 @@ import { api } from './api';
 export type StoryDurationHours = 3 | 6 | 12 | 24;
 export type StoryPrivacy = 'PUBLIC' | 'FRIENDS' | 'SPECIFIC_FRIENDS' | 'ONLY_ME';
 
+export interface StorySticker {
+  emoji: string;
+  x: number;
+  y: number;
+  size: number;
+}
+
+export function parseStoryStickers(raw?: string | null): StorySticker[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is StorySticker =>
+        typeof item === 'object'
+        && item !== null
+        && typeof (item as StorySticker).emoji === 'string'
+        && typeof (item as StorySticker).x === 'number'
+        && typeof (item as StorySticker).y === 'number'
+        && typeof (item as StorySticker).size === 'number',
+    );
+  } catch {
+    return [];
+  }
+}
+
 export interface StoryResponse {
   id: string;
   userId: string;
@@ -16,6 +42,7 @@ export interface StoryResponse {
   textSize: number | null;
   textPosX: number | null;
   textPosY: number | null;
+  stickers?: string | null;
   musicTrackId: string | null;
   altText: string | null;
   linkedPostId: string | null;
@@ -38,6 +65,7 @@ export const storyService = {
     textSize?: number;
     textPosX?: number;
     textPosY?: number;
+    stickers?: StorySticker[];
     altText?: string;
     backgroundColor?: string;
     sharedImageUrl?: string;
@@ -54,6 +82,7 @@ export const storyService = {
     if (params.textSize != null) formData.append('textSize', String(params.textSize));
     if (params.textPosX != null) formData.append('textPosX', String(params.textPosX));
     if (params.textPosY != null) formData.append('textPosY', String(params.textPosY));
+    if (params.stickers?.length) formData.append('stickers', JSON.stringify(params.stickers));
     if (params.altText) formData.append('altText', params.altText);
     if (params.backgroundColor) formData.append('backgroundColor', params.backgroundColor);
     if (params.sharedImageUrl) formData.append('sharedImageUrl', params.sharedImageUrl);
