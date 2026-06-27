@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
@@ -135,20 +136,36 @@ public class CloudinaryService {
     }
 
     public String uploadLiveRecording(MultipartFile file, String sessionId) {
+        File temp = null;
         try {
-            Map<?, ?> result = cloudinary.uploader().upload(
-                    file.getBytes(),
+            // Video must be uploaded with the chunked endpoint (upload_large). The synchronous
+            // upload() endpoint times out / rejects large video blobs, which made every recording fail.
+            temp = File.createTempFile("live-" + sessionId + "-", ".webm");
+            file.transferTo(temp);
+
+            Map<?, ?> result = cloudinary.uploader().uploadLarge(
+                    temp,
                     ObjectUtils.asMap(
                             "folder", "kconnecta/live-recordings",
                             "resource_type", "video",
-                            "public_id", "live-" + sessionId + "-" + System.currentTimeMillis()
+                            "public_id", "live-" + sessionId + "-" + System.currentTimeMillis(),
+                            "chunk_size", 20_000_000,
+                            "timeout", 600_000
                     )
             );
-            return result.get("secure_url").toString();
+            Object secureUrl = result.get("secure_url");
+            if (secureUrl == null) {
+                throw new IllegalStateException("Cloudinary did not return a secure_url: " + result);
+            }
+            return secureUrl.toString();
         } catch (Exception e) {
             log.error("Upload live recording failed for session {} (size={} bytes, type={})",
                     sessionId, file.getSize(), file.getContentType(), e);
             throw new RuntimeException("Upload live recording failed: " + e.getMessage(), e);
+        } finally {
+            if (temp != null && temp.exists() && !temp.delete()) {
+                temp.deleteOnExit();
+            }
         }
     }
 

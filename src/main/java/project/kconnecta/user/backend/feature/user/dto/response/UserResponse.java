@@ -41,4 +41,6 @@ public class UserResponse implements Serializable {
     private LocalDateTime updatedAt;
     /** True when the viewer may only see basic header info, not profile content. */
     private Boolean profileContentRestricted;
+    /** True when there is a block relationship (either direction) between viewer and this user. */
+    private Boolean blocked;
 }

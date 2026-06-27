@@ -19,6 +19,7 @@ import project.kconnecta.user.backend.feature.friend.repository.FriendshipReposi
 import project.kconnecta.user.backend.feature.friend.service.FriendService;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
 import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
+import project.kconnecta.user.backend.feature.settings.repository.UserBlockRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 
@@ -42,6 +43,7 @@ public class FriendServiceImpl implements FriendService {
     private final ActivityLogService activityLogService;
     private final NotificationEventPublisher notificationEventPublisher;
     private final SettingsService settingsService;
+    private final UserBlockRepository userBlockRepository;
 
     @Override
     public List<FriendResponse> getFriends(UUID userId) {
@@ -88,10 +90,11 @@ public class FriendServiceImpl implements FriendService {
         Set<UUID> myFriendIds = new HashSet<>(
                 friendshipRepository.findFriendIdsByUserIdAndStatus(userId, FriendshipStatus.ACCEPTED));
 
-        // All IDs to exclude: friends, pending sent/received, and self
+        // All IDs to exclude: friends, pending sent/received, self, and blocked (either direction)
         Set<UUID> excluded = new HashSet<>(myFriendIds);
         excluded.addAll(friendshipRepository.findAddresseeIdsByRequesterId(userId));
         excluded.addAll(friendshipRepository.findRequesterIdsByAddresseeId(userId));
+        excluded.addAll(userBlockRepository.findRelatedUserIds(userId));
         excluded.add(userId);
 
         // Friends-of-friends: one query for all edges touching my friends, then count mutuals in memory

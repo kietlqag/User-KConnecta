@@ -203,19 +203,12 @@ public class PostServiceImpl implements PostService {
             throw new ValidationException("Cannot post to both a group and a page");
         }
 
-        if (privacy != PostPrivacy.FRIENDS_EXCEPT && request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
-            throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
+        assertSupportedPostPrivacy(privacy);
+        if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
+            throw new ValidationException("excludedUserIds is no longer supported");
         }
-
-        if (privacy != PostPrivacy.SPECIFIC_FRIENDS && request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
-            throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
-        }
-
-        if (privacy == PostPrivacy.SPECIFIC_FRIENDS) {
-            List<UUID> allowed = request.getAllowedUserIds() == null ? List.of() : request.getAllowedUserIds();
-            if (allowed.isEmpty()) {
-                throw new ValidationException("Bạn bè cụ thể cần chọn ít nhất một người");
-            }
+        if (request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
+            throw new ValidationException("allowedUserIds is no longer supported");
         }
 
         Group group = null;
@@ -372,20 +365,12 @@ public class PostServiceImpl implements PostService {
             privacy = PostPrivacy.PUBLIC;
         }
 
-        if (privacy != PostPrivacy.FRIENDS_EXCEPT
-                && request.getExcludedUserIds() != null
-                && !request.getExcludedUserIds().isEmpty()) {
-            throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
+        assertSupportedPostPrivacy(privacy);
+        if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
+            throw new ValidationException("excludedUserIds is no longer supported");
         }
-        if (privacy != PostPrivacy.SPECIFIC_FRIENDS
-                && request.getAllowedUserIds() != null
-                && !request.getAllowedUserIds().isEmpty()) {
-            throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
-        }
-        if (privacy == PostPrivacy.SPECIFIC_FRIENDS
-                && request.getAllowedUserIds() != null
-                && request.getAllowedUserIds().isEmpty()) {
-            throw new ValidationException("Bạn bè cụ thể cần chọn ít nhất một người");
+        if (request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
+            throw new ValidationException("allowedUserIds is no longer supported");
         }
         if (post.getGroup() != null) {
             if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
@@ -1332,31 +1317,17 @@ public class PostServiceImpl implements PostService {
         }
 
         PostPrivacy privacy = request.getPrivacy();
-        if (privacy != PostPrivacy.FRIENDS_EXCEPT
-                && request.getExcludedUserIds() != null
-                && !request.getExcludedUserIds().isEmpty()) {
-            throw new ValidationException("excludedUserIds is only supported for FRIENDS_EXCEPT privacy");
+        assertSupportedPostPrivacy(privacy);
+        if (request.getExcludedUserIds() != null && !request.getExcludedUserIds().isEmpty()) {
+            throw new ValidationException("excludedUserIds is no longer supported");
         }
-        if (privacy != PostPrivacy.SPECIFIC_FRIENDS
-                && request.getAllowedUserIds() != null
-                && !request.getAllowedUserIds().isEmpty()) {
-            throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
-        }
-        if (privacy == PostPrivacy.SPECIFIC_FRIENDS) {
-            List<UUID> allowed = request.getAllowedUserIds() == null ? List.of() : request.getAllowedUserIds();
-            if (allowed.isEmpty()) {
-                throw new ValidationException("Bạn bè cụ thể cần chọn ít nhất một người");
-            }
+        if (request.getAllowedUserIds() != null && !request.getAllowedUserIds().isEmpty()) {
+            throw new ValidationException("allowedUserIds is no longer supported");
         }
 
         post.setPrivacy(privacy);
         post.getAudienceExclusions().clear();
         post.getAudienceAllowances().clear();
-        if (privacy == PostPrivacy.FRIENDS_EXCEPT) {
-            attachExcludedUsers(post, request.getExcludedUserIds());
-        } else if (privacy == PostPrivacy.SPECIFIC_FRIENDS) {
-            attachAllowedUsers(post, request.getAllowedUserIds());
-        }
 
         return mapToResponse(postRepository.save(post), userId);
     }
@@ -1591,6 +1562,12 @@ public class PostServiceImpl implements PostService {
                     .thumbnailUrl(trimToNull(mediaRequest.getThumbnailUrl()))
                     .sortOrder(mediaRequest.getSortOrder() == null ? i : mediaRequest.getSortOrder())
                     .build());
+        }
+    }
+
+    private void assertSupportedPostPrivacy(PostPrivacy privacy) {
+        if (privacy == PostPrivacy.FRIENDS_EXCEPT || privacy == PostPrivacy.SPECIFIC_FRIENDS) {
+            throw new ValidationException("Chỉ hỗ trợ quyền riêng tư: Công khai, Bạn bè hoặc Chỉ mình tôi");
         }
     }
 

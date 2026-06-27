@@ -202,7 +202,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             playbackUrl = cloudinaryService.uploadLiveRecording(file, sessionId.toString());
         } catch (Exception ex) {
             log.error("Failed to upload live recording for session {}", sessionId, ex);
-            throw new BadRequestException("Không thể tải bản ghi live lên Cloudinary. Kiểm tra cấu hình CLOUDINARY_* trên server.");
+            String detail = ex.getMessage() == null ? "" : " (" + trimToLength(ex.getMessage(), 200) + ")";
+            throw new BadRequestException(
+                    "Không thể tải bản ghi live lên Cloudinary. Kiểm tra cấu hình CLOUDINARY_* trên server." + detail);
         }
         session.setPlaybackUrl(playbackUrl);
         session.setRecordingStatus(LiveRecordingStatus.READY);

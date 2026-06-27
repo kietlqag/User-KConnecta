@@ -34,8 +34,10 @@ public class SearchController {
     /** Autocomplete suggestions (debounced from the header search bar). */
     @GetMapping("/suggest")
     public ResponseEntity<List<SearchSuggestionResponse>> suggest(
-            @RequestParam @NotBlank @Size(min = 1, max = 100) String q) {
-        return ResponseEntity.ok(searchService.suggest(q.trim()));
+            @RequestParam @NotBlank @Size(min = 1, max = 100) String q,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(
+                searchService.suggest(q.trim(), principal == null ? null : principal.getUserId()));
     }
 
     /** Full search — returns people, groups, posts matching the query. */

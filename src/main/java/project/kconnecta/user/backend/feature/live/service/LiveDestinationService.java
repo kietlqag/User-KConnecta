@@ -31,6 +31,7 @@ public class LiveDestinationService {
                         .id(page.getId())
                         .name(page.getName())
                         .description(page.getDescription())
+                        .coverPhotoUrl(page.getAvatarUrl())
                         .build())
                 .toList();
 
@@ -41,6 +42,7 @@ public class LiveDestinationService {
                         .id(gm.getGroup().getId())
                         .name(gm.getGroup().getName())
                         .description(gm.getGroup().getDescription())
+                        .coverPhotoUrl(gm.getGroup().getCoverPhotoUrl())
                         .build())
                 .toList();
 

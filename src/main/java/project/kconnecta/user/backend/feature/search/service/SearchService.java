@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface SearchService {
-    List<SearchSuggestionResponse> suggest(String query);
+    List<SearchSuggestionResponse> suggest(String query, UUID currentUserId);
     SearchResultsResponse search(String query, UUID currentUserId);
 }

@@ -36,6 +36,9 @@ public interface SettingsService {
 
     boolean isBlockedByMe(UUID blockerId, UUID blockedId);
 
+    /** User IDs with a block relationship (either direction) — hide from search, etc. */
+    List<UUID> getRelatedBlockedUserIds(UUID userId);
+
     List<LoginSessionResponse> getLoginSessions(UUID userId, UUID currentSessionId);
 
     void revokeSession(UUID userId, UUID sessionId);

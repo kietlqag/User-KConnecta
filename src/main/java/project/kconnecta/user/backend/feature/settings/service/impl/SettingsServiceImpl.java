@@ -186,6 +186,15 @@ public class SettingsServiceImpl implements SettingsService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<UUID> getRelatedBlockedUserIds(UUID userId) {
+        if (userId == null) {
+            return List.of();
+        }
+        return userBlockRepository.findRelatedUserIds(userId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<LoginSessionResponse> getLoginSessions(UUID userId, UUID currentSessionId) {
         return userLoginSessionRepository.findAllByUserIdAndRevokedAtIsNullOrderByLastSeenAtDesc(userId).stream()
                 .filter(UserLoginSession::isActive)

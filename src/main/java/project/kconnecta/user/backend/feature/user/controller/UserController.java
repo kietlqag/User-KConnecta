@@ -76,6 +76,11 @@ public class UserController {
         UserResponse user = userService.getUserByIdOrUsername(identifier);
         UUID viewerId = principal != null ? principal.getUserId() : null;
         if (viewerId == null || !viewerId.equals(user.getId())) {
+            boolean blocked = viewerId != null
+                    && settingsService.isBlockedEitherDirection(viewerId, user.getId());
+            if (blocked) {
+                return ResponseEntity.ok(toBlockedProfilePreview(user));
+            }
             if (!settingsService.canViewProfile(viewerId, user.getId())) {
                 return ResponseEntity.ok(toRestrictedProfilePreview(user));
             }
@@ -91,6 +96,16 @@ public class UserController {
                 .avatarUrl(full.getAvatarUrl())
                 .coverPhotoUrl(full.getCoverPhotoUrl())
                 .profileContentRestricted(true)
+                .build();
+    }
+
+    /** Hard block: hide all identifying info — the profile must look unavailable. */
+    private static UserResponse toBlockedProfilePreview(UserResponse full) {
+        return UserResponse.builder()
+                .id(full.getId())
+                .username(full.getUsername())
+                .profileContentRestricted(true)
+                .blocked(true)
                 .build();
     }
 

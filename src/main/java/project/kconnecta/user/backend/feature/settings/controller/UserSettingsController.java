@@ -14,6 +14,7 @@ import project.kconnecta.user.backend.feature.settings.service.impl.SettingsServ
 import project.kconnecta.user.backend.feature.user.dto.request.DeleteAccountRequest;
 import project.kconnecta.user.backend.feature.user.service.UserService;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,6 +42,16 @@ public class UserSettingsController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody UpdateUserSettingsRequest request) {
         return ResponseEntity.ok(settingsService.updateSettings(principal.getUserId(), request));
+    }
+
+    /** IDs of users in a block relationship with the current user (either direction). */
+    @GetMapping("/blocks/related-ids")
+    public ResponseEntity<List<String>> getRelatedBlockedUserIds(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        List<String> ids = settingsService.getRelatedBlockedUserIds(principal.getUserId()).stream()
+                .map(UUID::toString)
+                .toList();
+        return ResponseEntity.ok(ids);
     }
 
     @PostMapping("/blocks/{blockedUserId}")

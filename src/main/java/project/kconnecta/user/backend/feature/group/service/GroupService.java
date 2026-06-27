@@ -4,16 +4,17 @@ import project.kconnecta.user.backend.feature.group.dto.request.CreateGroupReque
 import project.kconnecta.user.backend.feature.group.dto.response.GroupMemberResponse;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupSort;
 
 import java.util.List;
 import java.util.UUID;
 
 public interface GroupService {
-    List<GroupResponse> getJoinedGroups(UUID userId);
-    List<GroupResponse> getManagedGroups(UUID userId);
+    List<GroupResponse> getJoinedGroups(UUID userId, GroupSort sort);
+    List<GroupResponse> getManagedGroups(UUID userId, GroupSort sort);
     GroupResponse getGroupById(UUID groupId, UUID currentUserId);
     List<GroupMemberResponse> getGroupMembers(UUID groupId);
-    List<GroupResponse> getDiscoverGroups(UUID userId);
+    List<GroupResponse> getDiscoverGroups(UUID userId, GroupSort sort);
     GroupResponse joinGroup(UUID groupId, UUID userId);
     void inviteFriends(UUID groupId, UUID senderId, List<UUID> userIds);
     GroupResponse acceptInvite(UUID groupId, UUID notificationId, UUID userId);

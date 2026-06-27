@@ -15,9 +15,11 @@ import project.kconnecta.user.backend.feature.group.entity.GroupMember;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberRole;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupMemberStatus;
 import project.kconnecta.user.backend.feature.group.entity.enums.GroupPrivacy;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupSort;
 import project.kconnecta.user.backend.feature.group.repository.GroupMemberRepository;
 import project.kconnecta.user.backend.feature.group.repository.GroupRepository;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
+import project.kconnecta.user.backend.feature.group.util.GroupSortSupport;
 import project.kconnecta.user.backend.feature.notification.entity.Notification;
 import project.kconnecta.user.backend.feature.notification.entity.enums.NotificationType;
 import project.kconnecta.user.backend.feature.notification.repository.NotificationRepository;
@@ -45,18 +47,20 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<GroupResponse> getJoinedGroups(UUID userId) {
-        return groupMemberRepository.findAllByUserId(userId).stream()
+    public List<GroupResponse> getJoinedGroups(UUID userId, GroupSort sort) {
+        List<GroupResponse> groups = groupMemberRepository.findAllByUserId(userId).stream()
                 .map(gm -> toResponse(gm.getGroup(), gm.getRole(), gm.getStatus()))
                 .toList();
+        return GroupSortSupport.sort(groups, sort);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<GroupResponse> getManagedGroups(UUID userId) {
-        return groupMemberRepository.findAllByUserIdAndRole(userId, GroupMemberRole.ADMIN).stream()
+    public List<GroupResponse> getManagedGroups(UUID userId, GroupSort sort) {
+        List<GroupResponse> groups = groupMemberRepository.findAllByUserIdAndRole(userId, GroupMemberRole.ADMIN).stream()
                 .map(gm -> toResponse(gm.getGroup(), gm.getRole(), gm.getStatus()))
                 .toList();
+        return GroupSortSupport.sort(groups, sort);
     }
 
     @Override
@@ -91,10 +95,11 @@ public class GroupServiceImpl implements GroupService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<GroupResponse> getDiscoverGroups(UUID userId) {
-        return groupRepository.findGroupsNotJoinedByUser(userId).stream()
+    public List<GroupResponse> getDiscoverGroups(UUID userId, GroupSort sort) {
+        List<GroupResponse> groups = groupRepository.findGroupsNotJoinedByUser(userId).stream()
                 .map(g -> toResponse(g, null, null))
                 .toList();
+        return GroupSortSupport.sort(groups, sort);
     }
 
     @Override
@@ -484,6 +489,7 @@ public class GroupServiceImpl implements GroupService {
                 .memberCount(memberCount)
                 .role(role)
                 .status(status)
+                .createdAt(group.getCreatedAt())
                 .updatedAt(group.getUpdatedAt())
                 .build();
     }

@@ -55,15 +55,15 @@ public class StoryServiceImpl implements StoryService {
         }
 
         StoryPrivacy privacy = request.getPrivacy() == null ? StoryPrivacy.PUBLIC : request.getPrivacy();
+        if (privacy == StoryPrivacy.SPECIFIC_FRIENDS) {
+            throw new ValidationException("Chỉ hỗ trợ quyền riêng tư: Công khai, Bạn bè hoặc Chỉ mình tôi");
+        }
         List<UUID> allowedUserIds = request.getAllowedUserIds() == null
                 ? List.of()
                 : request.getAllowedUserIds().stream().filter(Objects::nonNull).distinct().toList();
 
-        if (privacy != StoryPrivacy.SPECIFIC_FRIENDS && !allowedUserIds.isEmpty()) {
-            throw new ValidationException("allowedUserIds is only supported for SPECIFIC_FRIENDS privacy");
-        }
-        if (privacy == StoryPrivacy.SPECIFIC_FRIENDS && allowedUserIds.isEmpty()) {
-            throw new ValidationException("SPECIFIC_FRIENDS privacy requires at least one allowed user");
+        if (!allowedUserIds.isEmpty()) {
+            throw new ValidationException("allowedUserIds is no longer supported");
         }
 
         int durationHours = resolveDurationHours(request.getDurationHours());
@@ -85,8 +85,6 @@ public class StoryServiceImpl implements StoryService {
                 .expiresAt(now.plusHours(durationHours))
                 .privacy(privacy)
                 .build();
-
-        attachAllowedUsers(story, user, allowedUserIds);
 
         story = storyRepository.save(story);
         return mapToResponse(story);

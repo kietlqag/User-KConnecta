@@ -15,6 +15,7 @@ import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupMembe
 import project.kconnecta.user.backend.feature.group.dto.request.UpdateGroupPrivacyRequest;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupMemberResponse;
 import project.kconnecta.user.backend.feature.group.dto.response.GroupResponse;
+import project.kconnecta.user.backend.feature.group.entity.enums.GroupSort;
 import project.kconnecta.user.backend.feature.group.service.GroupService;
 
 import java.util.List;
@@ -29,20 +30,26 @@ public class GroupController {
 
     @GetMapping("/joined")
     public ResponseEntity<List<GroupResponse>> getJoinedGroups(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(groupService.getJoinedGroups(principal.getUserId()));
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(value = "sort", defaultValue = "recent") String sort) {
+        return ResponseEntity.ok(groupService.getJoinedGroups(
+                principal.getUserId(), GroupSort.fromParam(sort)));
     }
 
     @GetMapping("/managed")
     public ResponseEntity<List<GroupResponse>> getManagedGroups(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(groupService.getManagedGroups(principal.getUserId()));
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(value = "sort", defaultValue = "recent") String sort) {
+        return ResponseEntity.ok(groupService.getManagedGroups(
+                principal.getUserId(), GroupSort.fromParam(sort)));
     }
 
     @GetMapping("/discover")
     public ResponseEntity<List<GroupResponse>> getDiscoverGroups(
-            @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.ok(groupService.getDiscoverGroups(principal.getUserId()));
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(value = "sort", defaultValue = "recent") String sort) {
+        return ResponseEntity.ok(groupService.getDiscoverGroups(
+                principal.getUserId(), GroupSort.fromParam(sort)));
     }
 
     @PostMapping("/{id}/join")

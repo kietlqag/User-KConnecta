@@ -11,5 +11,6 @@ public class LiveDestinationItem {
     private UUID id;
     private String name;
     private String description;
+    private String coverPhotoUrl;
 }
 

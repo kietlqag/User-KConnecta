@@ -38,6 +38,7 @@ public class SearchPostDto implements Serializable {
     @AllArgsConstructor
     public static class AuthorDto implements Serializable {
         private static final long serialVersionUID = 2L;
+        private String id;
         private String name;
         private String avatar;
         private String type; // "person" | "group"

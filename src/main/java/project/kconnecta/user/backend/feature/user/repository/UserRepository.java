@@ -63,6 +63,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query(value = """
             SELECT * FROM public.users u
+            WHERE unaccent(LOWER(u.full_name)) LIKE unaccent(LOWER(CONCAT('%', :q, '%')))
+               OR unaccent(LOWER(u.username)) LIKE unaccent(LOWER(CONCAT('%', :q, '%')))
+            """, nativeQuery = true)
+    List<User> searchByFullNameOrUsername(@Param("q") String q, Pageable pageable);
+
+    @Query(value = """
+            SELECT * FROM public.users u
             WHERE u.date_of_birth IS NOT NULL
               AND EXTRACT(MONTH FROM u.date_of_birth) = :month
               AND EXTRACT(DAY FROM u.date_of_birth) = :day

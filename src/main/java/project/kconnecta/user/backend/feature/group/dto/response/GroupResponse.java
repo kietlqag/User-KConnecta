@@ -21,5 +21,6 @@ public class GroupResponse {
     private int memberCount;
     private GroupMemberRole role;
     private GroupMemberStatus status;
+    private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

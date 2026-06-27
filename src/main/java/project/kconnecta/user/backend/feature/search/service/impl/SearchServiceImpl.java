@@ -25,6 +25,7 @@ import project.kconnecta.user.backend.feature.search.dto.response.SearchResultsR
 import project.kconnecta.user.backend.feature.search.dto.response.SearchSuggestionResponse;
 import project.kconnecta.user.backend.feature.search.redis.RedisSearchIndexer;
 import project.kconnecta.user.backend.feature.search.service.SearchService;
+import project.kconnecta.user.backend.feature.settings.repository.UserBlockRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 import redis.clients.jedis.search.Document;
@@ -55,22 +56,35 @@ public class SearchServiceImpl implements SearchService {
     private final PostCommentRepository postCommentRepository;
     private final PostShareRepository postShareRepository;
     private final PostSavedRepository postSavedRepository;
+    private final UserBlockRepository userBlockRepository;
+
+    private Set<UUID> blockedUserIds(UUID currentUserId) {
+        if (currentUserId == null) {
+            return Set.of();
+        }
+        return new HashSet<>(userBlockRepository.findRelatedUserIds(currentUserId));
+    }
 
     // ── Suggest ───────────────────────────────────────────────────────────────
     // Redis Search is already sub-millisecond — no @Cacheable layer needed.
 
     @Override
-    public List<SearchSuggestionResponse> suggest(String query) {
+    public List<SearchSuggestionResponse> suggest(String query, UUID currentUserId) {
+        Set<UUID> blocked = blockedUserIds(currentUserId);
         List<SearchSuggestionResponse> results = new ArrayList<>();
 
         try {
-            for (Document doc : redisSearch.searchUsers(query, 5)) {
+            int fetchLimit = Math.min(50, 10 + blocked.size());
+            for (Document doc : redisSearch.searchUsers(query, fetchLimit)) {
+                String idStr = stripPrefix(doc.getId(), RedisSearchIndexer.USER_PFX);
+                if (isBlockedId(idStr, blocked)) continue;
                 results.add(SearchSuggestionResponse.builder()
-                        .id(stripPrefix(doc.getId(), RedisSearchIndexer.USER_PFX))
+                        .id(idStr)
                         .type("person")
                         .text(str(doc, "fullName"))
                         .avatarUrl(str(doc, "avatarUrl"))
                         .build());
+                if (results.size() == 5) break;
             }
             for (Document doc : redisSearch.searchGroups(query, 3)) {
                 results.add(SearchSuggestionResponse.builder()
@@ -82,15 +96,17 @@ public class SearchServiceImpl implements SearchService {
             }
         } catch (Exception e) {
             log.warn("[Search] Redis Search unavailable for suggest, falling back to DB: {}", e.getMessage());
-            return suggestFromDb(query);
+            return suggestFromDb(query, blocked);
         }
 
         return results;
     }
 
-    private List<SearchSuggestionResponse> suggestFromDb(String query) {
+    private List<SearchSuggestionResponse> suggestFromDb(String query, Set<UUID> blocked) {
         List<SearchSuggestionResponse> results = new ArrayList<>();
-        userRepository.searchByFullName(query, PageRequest.of(0, 5))
+        userRepository.searchByFullNameOrUsername(query, PageRequest.of(0, 20)).stream()
+                .filter(u -> !blocked.contains(u.getId()))
+                .limit(5)
                 .forEach(u -> results.add(SearchSuggestionResponse.builder()
                         .id(u.getId().toString()).type("person")
                         .text(u.getFullName()).avatarUrl(u.getAvatarUrl()).build()));
@@ -101,6 +117,15 @@ public class SearchServiceImpl implements SearchService {
         return results;
     }
 
+    private static boolean isBlockedId(String idStr, Set<UUID> blocked) {
+        if (blocked.isEmpty()) return false;
+        try {
+            return blocked.contains(UUID.fromString(idStr));
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
+    }
+
     // ── Full search ───────────────────────────────────────────────────────────
 
     @Override
@@ -108,18 +133,19 @@ public class SearchServiceImpl implements SearchService {
     public SearchResultsResponse search(String query, UUID currentUserId) {
         Set<UUID> myFriendIds = new HashSet<>(
                 friendshipRepository.findFriendIdsByUserIdAndStatus(currentUserId, FriendshipStatus.ACCEPTED));
+        Set<UUID> blocked = blockedUserIds(currentUserId);
 
         List<SearchPersonDto> people;
         List<SearchGroupDto> groups;
         List<SearchPostDto> posts;
 
         try {
-            people = searchPeople(query, currentUserId, myFriendIds);
+            people = searchPeople(query, currentUserId, myFriendIds, blocked);
             groups = searchGroups(query, currentUserId);
-            posts  = searchPosts(query, currentUserId);
+            posts  = searchPosts(query, currentUserId, blocked);
         } catch (Exception e) {
             log.warn("[Search] Redis Search unavailable, falling back to DB: {}", e.getMessage());
-            return searchFromDb(query, currentUserId, myFriendIds);
+            return searchFromDb(query, currentUserId, myFriendIds, blocked);
         }
 
         return SearchResultsResponse.builder()
@@ -131,14 +157,16 @@ public class SearchServiceImpl implements SearchService {
 
     // ── People ────────────────────────────────────────────────────────────────
 
-    private List<SearchPersonDto> searchPeople(String query, UUID currentUserId, Set<UUID> myFriendIds) {
-        List<Document> docs = redisSearch.searchUsers(query, 11);
+    private List<SearchPersonDto> searchPeople(String query, UUID currentUserId, Set<UUID> myFriendIds,
+                                               Set<UUID> blocked) {
+        List<Document> docs = redisSearch.searchUsers(query, 11 + blocked.size());
         List<SearchPersonDto> people = new ArrayList<>();
 
         for (Document doc : docs) {
             String idStr = stripPrefix(doc.getId(), RedisSearchIndexer.USER_PFX);
             UUID uid = UUID.fromString(idStr);
             if (uid.equals(currentUserId)) continue;
+            if (blocked.contains(uid)) continue;
 
             Set<UUID> theirFriendIds = new HashSet<>(
                     friendshipRepository.findFriendIdsByUserIdAndStatus(uid, FriendshipStatus.ACCEPTED));
@@ -193,24 +221,30 @@ public class SearchServiceImpl implements SearchService {
 
     // ── Posts ─────────────────────────────────────────────────────────────────
 
-    private List<SearchPostDto> searchPosts(String query, UUID currentUserId) {
-        List<UUID> postIds = redisSearch.searchPosts(query, 10).stream()
+    private List<SearchPostDto> searchPosts(String query, UUID currentUserId, Set<UUID> blocked) {
+        List<UUID> postIds = redisSearch.searchPosts(query, 10 + blocked.size()).stream()
                 .map(doc -> UUID.fromString(stripPrefix(doc.getId(), RedisSearchIndexer.POST_PFX)))
                 .toList();
 
         if (postIds.isEmpty()) return List.of();
 
         // Load full Post entities (with author + group JOIN FETCH)
-        List<Post> matchedPosts = postRepository.findAllByIdIn(postIds);
+        List<Post> matchedPosts = postRepository.findAllByIdIn(postIds).stream()
+                .filter(p -> p.getAuthor() == null || !blocked.contains(p.getAuthor().getId()))
+                .limit(10)
+                .toList();
         return enrichPosts(matchedPosts, currentUserId);
     }
 
     // ── DB fallback (used when Redis Search is unavailable) ───────────────────
 
-    private SearchResultsResponse searchFromDb(String query, UUID currentUserId, Set<UUID> myFriendIds) {
+    private SearchResultsResponse searchFromDb(String query, UUID currentUserId, Set<UUID> myFriendIds,
+                                               Set<UUID> blocked) {
         List<SearchPersonDto> people = userRepository
-                .searchByFullName(query, PageRequest.of(0, 10)).stream()
+                .searchByFullNameOrUsername(query, PageRequest.of(0, 20 + blocked.size())).stream()
                 .filter(u -> !u.getId().equals(currentUserId))
+                .filter(u -> !blocked.contains(u.getId()))
+                .limit(10)
                 .map(u -> {
                     Set<UUID> theirFriendIds = new HashSet<>(
                             friendshipRepository.findFriendIdsByUserIdAndStatus(u.getId(), FriendshipStatus.ACCEPTED));
@@ -240,7 +274,11 @@ public class SearchServiceImpl implements SearchService {
                         .isMember(joinedGroupIds.contains(g.getId()))
                         .build()).toList();
 
-        List<Post> matchedPosts = postRepository.searchByContent(query, PageRequest.of(0, 10));
+        List<Post> matchedPosts = postRepository.searchByContent(query, PageRequest.of(0, 10 + blocked.size()))
+                .stream()
+                .filter(p -> p.getAuthor() == null || !blocked.contains(p.getAuthor().getId()))
+                .limit(10)
+                .toList();
         List<SearchPostDto> posts = enrichPosts(matchedPosts, currentUserId);
 
         return SearchResultsResponse.builder().people(people).groups(groups).posts(posts).build();
@@ -296,6 +334,7 @@ public class SearchServiceImpl implements SearchService {
             return SearchPostDto.builder()
                     .id(p.getId().toString()).type("post")
                     .author(SearchPostDto.AuthorDto.builder()
+                            .id(p.getAuthor().getId().toString())
                             .name(p.getAuthor().getFullName())
                             .avatar(p.getAuthor().getAvatarUrl())
                             .type(p.getGroup() != null ? "group" : "person")
