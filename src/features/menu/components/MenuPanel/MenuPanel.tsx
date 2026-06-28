@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Calendar, Users, Flag, Rss, FileText, Gamepad2, Video, Play, Edit, BookOpen, Image as ImageIcon, Film, PlusCircle, Store, TrendingUp, UserPlus, CalendarPlus, Radio } from 'lucide-react';
+import { Search, Calendar, Users, Flag, Rss, FileText, Gamepad2, Video, Play, Edit, BookOpen, Image as ImageIcon, Film, PlusCircle, TrendingUp, UserPlus, CalendarPlus, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { MenuItemCard } from '../MenuItemCard';
 import { CreateItemCard } from '../CreateItemCard';
@@ -142,11 +142,6 @@ export const MenuPanel = ({ onClose }: MenuPanelProps) => {
       id: 'event',
       icon: <CalendarPlus className="w-5 h-5 text-foreground" />,
       title: 'Sự kiện',
-    },
-    {
-      id: 'marketplace',
-      icon: <Store className="w-5 h-5 text-foreground" />,
-      title: 'Bài niệm yết trên Marketplace',
     },
   ];
 

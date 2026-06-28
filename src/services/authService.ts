@@ -119,11 +119,6 @@ function stripLegacyTokensFromStorage() {
 }
 
 export const authService = {
-  /** @deprecated Tokens are HttpOnly cookies; kept as no-op for compatibility. */
-  updateTokens(_tokens: { token: string; refreshToken?: string }) {
-    /* no-op */
-  },
-
   updateProfile: (id: string, data: Partial<RegisterData>) => {
     if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
     return api.put<AuthUser>(`/users/${id}`, data);

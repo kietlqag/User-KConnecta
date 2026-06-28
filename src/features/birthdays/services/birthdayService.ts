@@ -11,12 +11,6 @@ export interface BirthdayFriendApi {
   daysUntil: number;
 }
 
-export interface BirthdayMonthGroupApi {
-  month: number;
-  monthLabel: string;
-  friends: BirthdayFriendApi[];
-}
-
 export interface BirthdayWishApi {
   id: string;
   senderId: string;
@@ -39,18 +33,6 @@ export const QUICK_BIRTHDAY_WISHES = [
 export const birthdayService = {
   getAllFriends: () => api.get<BirthdayFriendApi[]>('/birthdays/friends'),
 
-  getToday: () => api.get<BirthdayFriendApi[]>('/birthdays/today'),
-
-  getUpcoming: (days = 7) => api.get<BirthdayFriendApi[]>(`/birthdays/upcoming?days=${days}`),
-
-  getByMonth: () => api.get<BirthdayMonthGroupApi[]>('/birthdays/by-month'),
-
-  search: (query: string) =>
-    api.get<BirthdayFriendApi[]>(`/birthdays/search?q=${encodeURIComponent(query)}`),
-
   sendWish: (recipientId: string, message: string) =>
     api.post<BirthdayWishApi>('/birthdays/wishes', { recipientId, message }),
-
-  getWishHistory: (direction: 'all' | 'sent' | 'received' = 'all', limit = 50) =>
-    api.get<BirthdayWishApi[]>(`/birthdays/wishes?direction=${direction}&limit=${limit}`),
 };

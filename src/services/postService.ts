@@ -93,20 +93,6 @@ export interface SharePostPayload {
 export type ReactionType = 'LIKE' | 'LOVE' | 'HAHA' | 'WOW' | 'SAD' | 'ANGRY';
 
 export type ReportCategory = 'SPAM' | 'VIOLENCE' | 'HATE_SPEECH' | 'NUDITY' | 'MISINFORMATION' | 'OTHER';
-export type ReportStatus = 'PENDING' | 'REVIEWED' | 'RESOLVED';
-
-export interface PostReportResponse {
-  id: string;
-  postId: string;
-  reporterId: string;
-  reporterUsername: string;
-  category?: ReportCategory | null;
-  reason?: string | null;
-  status: ReportStatus;
-  aiAnalysis?: string | null;
-  aiSeverity?: string | null;
-  createdAt: string;
-}
 
 export interface PostReactionCountResponse {
   reactionType: ReactionType;
@@ -269,11 +255,6 @@ export interface PostShareResponse {
   wrapperShareCount?: number | null;
 }
 
-export interface CheckInSuggestionResponse {
-  locationText: string;
-  usageCount: number;
-}
-
 export interface AddReactionPayload {
   userId: string;
   reactionType: ReactionType;
@@ -387,13 +368,6 @@ export const postService = {
     if (currentUserId) params.append('currentUserId', currentUserId);
     return api.get<PostResponse>(`/posts/${postId}?${params.toString()}`);
   },
-  getCheckInSuggestions: (params: { currentUserId?: string; province?: string; ward?: string }) => {
-    const query = new URLSearchParams();
-    if (params.currentUserId) query.append('currentUserId', params.currentUserId);
-    if (params.province) query.append('province', params.province);
-    if (params.ward) query.append('ward', params.ward);
-    return api.get<CheckInSuggestionResponse[]>(`/posts/checkin-suggestions?${query.toString()}`);
-  },
   savePost: (_userId: string, postId: string) =>
     api.post<void>('/posts/saved', { postId }),
   getSavedPosts: (_userId: string) =>
@@ -402,14 +376,6 @@ export const postService = {
     api.delete<void>(`/posts/saved?postId=${encodeURIComponent(postId)}`),
   deletePost: (postId: string, userId: string) =>
     api.delete<void>(`/posts/${postId}?userId=${encodeURIComponent(userId)}`),
-  updatePrivacy: (
-    postId: string,
-    payload: {
-      privacy: PostResponse['privacy'];
-      excludedUserIds?: string[];
-      allowedUserIds?: string[];
-    },
-  ) => api.patch<PostResponse>(`/posts/${postId}/privacy`, payload),
   reportPost: (postId: string, reporterId: string, category?: ReportCategory, reason?: string) =>
     api.post<void>(`/posts/${postId}/reports`, {
       reporterId,
@@ -424,8 +390,6 @@ export const postService = {
       category: category ?? null,
       reason: reason?.trim() || null,
     }),
-  getMyReports: () =>
-    api.get<PostReportResponse[]>('/posts/reports/my'),
   votePoll: (postId: string, payload: VotePostPollPayload) =>
     api.put<PostPollResponse>(`/posts/${encodeURIComponent(postId)}/poll/vote`, payload),
   addPollOption: (postId: string, payload: AddPostPollOptionPayload) =>

@@ -1,11 +1,5 @@
 import axios from 'axios';
 
-export interface District {
-  code: string;
-  name: string;
-  wards?: Ward[];
-}
-
 export interface Province {
   code: string;
   name: string;
@@ -33,11 +27,6 @@ export const locationService = {
     const { data } = await locationAxios.get<CasProvinceResponse>('/provinces');
     const provinces = data.provinces ?? [];
     return provinces.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-  },
-
-  async getDistrictsByProvinceCode(provinceCode: string): Promise<District[]> {
-    const wards = await this.getWardsByProvinceCode(provinceCode);
-    return wards.map((ward) => ({ code: ward.code, name: ward.name }));
   },
 
   async getWardsByProvinceCode(provinceCode: string): Promise<Ward[]> {

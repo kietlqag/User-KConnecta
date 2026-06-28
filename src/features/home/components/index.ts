@@ -4,4 +4,3 @@ export { RightSidebar } from './RightSidebar';
 export { NewsFeed } from './NewsFeed';
 export { Stories } from './Stories';
 export { CreatePost } from './CreatePost';
-export { Post } from './Post';

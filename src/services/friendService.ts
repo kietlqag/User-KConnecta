@@ -20,20 +20,9 @@ export interface FriendshipStatusResponse {
   sentByMe: boolean;
 }
 
-export interface FriendBirthdayApiResponse {
-  friendshipId: string;
-  userId: string;
-  fullName: string;
-  avatarUrl: string | null;
-  dateOfBirth: string;
-}
-
 export const friendService = {
   getFriends: (userId: string) =>
     api.get<FriendApiResponse[]>(`/friends/${userId}`),
-
-  getFriendBirthdays: (userId: string) =>
-    api.get<FriendBirthdayApiResponse[]>(`/friends/${userId}/birthdays`),
 
   getFriendRequests: () =>
     api.get<FriendApiResponse[]>('/friends/requests'),

@@ -1,1 +1,0 @@
-export { BirthdayTab } from './BirthdayTab';

@@ -36,15 +36,6 @@ export const groupPinService = {
   unpin: (groupId: string, postId: string) =>
     api.delete<void>(`/groups/${groupId}/posts/${postId}/pin`),
 
-  reorder: (groupId: string, orderedPostIds: string[]) =>
-    api.patch<PinnedPostApiResponse[]>(`/groups/${groupId}/pinned-posts/reorder`, { orderedPostIds }),
-
-  setExpiration: (groupId: string, postId: string, expiresAt: string | null) =>
-    api.patch<PinnedPostApiResponse>(`/groups/${groupId}/posts/${postId}/pin-expiration`, { expiresAt }),
-
   markRead: (groupId: string, pinId: string) =>
     api.post<void>(`/groups/${groupId}/pinned-posts/${pinId}/read`, {}),
-
-  unreadCount: (groupId: string) =>
-    api.get<{ unreadCount: number }>(`/groups/${groupId}/pinned-posts/unread-count`),
 };

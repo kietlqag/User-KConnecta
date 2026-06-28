@@ -3,7 +3,6 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   birthdayService,
   type BirthdayFriendApi,
-  type BirthdayWishApi,
 } from '../services/birthdayService';
 
 export interface BirthdayFriend {
@@ -23,18 +22,6 @@ export interface BirthdayMonthGroup {
   friends: BirthdayFriend[];
 }
 
-export interface BirthdayWish {
-  id: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar: string;
-  recipientId: string;
-  recipientName: string;
-  recipientAvatar: string;
-  message: string;
-  createdAt: string;
-}
-
 function mapFriend(item: BirthdayFriendApi): BirthdayFriend {
   return {
     id: item.friendshipId,
@@ -45,20 +32,6 @@ function mapFriend(item: BirthdayFriendApi): BirthdayFriend {
     age: item.age,
     isToday: item.today,
     daysUntil: item.daysUntil,
-  };
-}
-
-function mapWish(item: BirthdayWishApi): BirthdayWish {
-  return {
-    id: item.id,
-    senderId: item.senderId,
-    senderName: item.senderName,
-    senderAvatar: item.senderAvatarUrl?.trim() || '',
-    recipientId: item.recipientId,
-    recipientName: item.recipientName,
-    recipientAvatar: item.recipientAvatarUrl?.trim() || '',
-    message: item.message,
-    createdAt: item.createdAt,
   };
 }
 
@@ -154,15 +127,6 @@ export function useBirthdays(searchQuery = '') {
     error: friendsQuery.error,
     refetch: friendsQuery.refetch,
   };
-}
-
-export function useBirthdayWishes(direction: 'all' | 'sent' | 'received' = 'received') {
-  return useQuery({
-    queryKey: ['birthdays', 'wishes', direction],
-    queryFn: () => birthdayService.getWishHistory(direction),
-    select: (data) => data.map(mapWish),
-    staleTime: 30_000,
-  });
 }
 
 export function useSendBirthdayWish() {

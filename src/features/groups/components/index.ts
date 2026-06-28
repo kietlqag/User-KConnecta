@@ -13,7 +13,6 @@ export { EditGroupNameModal } from './EditGroupNameModal/EditGroupNameModal';
 export { GroupTabBar } from './GroupTabBar/GroupTabBar';
 export { GroupMembersTab } from './GroupMembersTab/GroupMembersTab';
 export { GroupDescriptionTab } from './GroupDescriptionTab/GroupDescriptionTab';
-export { GroupPlaceholderTab } from './GroupPlaceholderTabs/GroupPlaceholderTabs';
 export { GroupMediaTab } from './GroupMediaTab/GroupMediaTab';
 export { GroupEventsTab } from './GroupEventsTab/GroupEventsTab';
 export { GroupAlbumsTab } from './GroupAlbumsTab/GroupAlbumsTab';

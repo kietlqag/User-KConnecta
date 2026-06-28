@@ -1,1 +1,0 @@
-export { SuggestionsSidebar } from './SuggestionsSidebar';

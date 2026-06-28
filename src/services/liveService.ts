@@ -14,21 +14,6 @@ export interface LiveDestinationsResponse {
 
 export type LiveStartMode = 'NOW' | 'SCHEDULED';
 
-export interface LiveScheduleResponse {
-  id: string | null;
-  userId: string;
-  startMode: LiveStartMode;
-  scheduledAt: string | null;
-  effectiveStartAt: string;
-  updatedAt: string | null;
-}
-
-export interface UpsertLiveScheduleRequest {
-  userId: string;
-  startMode: LiveStartMode;
-  scheduledAt?: string | null;
-}
-
 export interface LivePinnedCommentResponse {
   id: string | null;
   userId: string;
@@ -229,10 +214,6 @@ export interface LiveEventSubscribersResponse {
 export const liveService = {
   getDestinations: (userId: string) =>
     api.get<LiveDestinationsResponse>(`/live/destinations?userId=${encodeURIComponent(userId)}`),
-  getSchedule: (userId: string) =>
-    api.get<LiveScheduleResponse>(`/live/schedule?userId=${encodeURIComponent(userId)}`),
-  upsertSchedule: (payload: UpsertLiveScheduleRequest) =>
-    api.post<LiveScheduleResponse>('/live/schedule', payload),
   getPinnedComment: (userId: string) =>
     api.get<LivePinnedCommentResponse>(`/live/pinned-comment?userId=${encodeURIComponent(userId)}`),
   upsertPinnedComment: (payload: UpsertLivePinnedCommentRequest) =>
@@ -309,8 +290,6 @@ export const liveService = {
     api.post<LiveEventSubscriptionStatusResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/subscribe`, {}),
   unsubscribeFromEvent: (sessionId: string) =>
     api.delete<LiveEventSubscriptionStatusResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/subscribe`),
-  getEventSubscriptionStatus: (sessionId: string) =>
-    api.get<LiveEventSubscriptionStatusResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/subscription`),
   getEventSubscribers: (sessionId: string) =>
     api.get<LiveEventSubscribersResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/subscribers`),
 };

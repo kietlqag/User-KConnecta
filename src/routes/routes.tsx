@@ -68,8 +68,6 @@ export const router = createBrowserRouter([
                   { path: 'albums', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileAlbumsPage') },
                   { path: 'about', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileAboutPage') },
                   { path: 'reels', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileReelsPage') },
-                  { path: 'likes', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileLikesPage') },
-                  { path: 'scheduled', lazy: () => lazyNamed(() => import('../features/profile/pages'), 'ProfileScheduledPage') },
                 ],
               },
             ],
@@ -109,10 +107,6 @@ export const router = createBrowserRouter([
           {
             path: '/watch',
             lazy: () => lazyNamed(() => import('../features/watch/pages'), 'WatchPage'),
-          },
-          {
-            path: '/marketplace',
-            lazy: () => lazyNamed(() => import('../features/marketplace/pages'), 'MarketplacePage'),
           },
           {
             path: '/live',
@@ -165,10 +159,6 @@ export const router = createBrowserRouter([
           {
             path: '/settings',
             lazy: () => lazyDefault(() => import('../features/settings/pages/SettingsPage')),
-          },
-          {
-            path: '/my-reports',
-            lazy: () => lazyDefault(() => import('../features/reports/pages/MyReportsPage')),
           },
           {
             path: '/stories/create',
