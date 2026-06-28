@@ -108,14 +108,12 @@ export function LiveViewerScrubBar({
             className={`absolute h-1.5 rounded-full ${fillColor} ${isScrubbing ? '' : 'transition-[width] duration-200 ease-linear'}`}
             style={{ width: `${progressPercent}%` }}
           />
-          {/* Núm kéo */}
-          {canScrub && (
-            <span
-              className={`pointer-events-none absolute h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.25),0_1px_3px_rgba(0,0,0,0.5)] transition-transform ${ showBubble ? 'scale-110' : 'scale-100' }`}
-              style={{ left: `${progressPercent}%` }}
-              aria-hidden
-            />
-          )}
+          {/* Núm kéo (luôn hiển thị để thấy điểm chạy hiện tại) */}
+          <span
+            className={`pointer-events-none absolute h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.25),0_1px_3px_rgba(0,0,0,0.5)] transition-transform ${ showBubble ? 'scale-110' : 'scale-100' }`}
+            style={{ left: `${progressPercent}%` }}
+            aria-hidden
+          />
           {/* Bong bóng thời gian */}
           {showBubble && (
             <span

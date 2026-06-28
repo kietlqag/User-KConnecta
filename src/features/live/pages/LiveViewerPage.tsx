@@ -383,12 +383,29 @@ export default function LiveViewerPage() {
 
     let hls: Hls | null = null;
 
-    const syncDuration = () => {
+    const resolveDuration = () => {
+      // Ưu tiên duration chuẩn; nếu Infinity/NaN (blob MediaRecorder, HLS đang ghi)
+      // thì lấy mốc cuối của seekable/buffered làm thời lượng tạm.
       if (Number.isFinite(video.duration) && video.duration > 0) {
-        setReplayDurationSeconds(Math.floor(video.duration));
+        return video.duration;
+      }
+      if (video.seekable.length > 0) {
+        return video.seekable.end(video.seekable.length - 1);
+      }
+      if (video.buffered.length > 0) {
+        return video.buffered.end(video.buffered.length - 1);
+      }
+      return 0;
+    };
+    const syncDuration = () => {
+      const next = resolveDuration();
+      if (next > 0) {
+        // Chỉ tăng (không tụt) để thanh tua không nhảy lùi khi buffer chưa đủ.
+        setReplayDurationSeconds((prev) => Math.max(prev, Math.floor(next)));
       }
     };
     const onTimeUpdate = () => {
+      syncDuration();
       if (!replayScrubbingRef.current) {
         setReplayCurrentSeconds(Math.floor(video.currentTime));
       }
@@ -423,17 +440,54 @@ export default function LiveViewerPage() {
         video.removeEventListener('loadedmetadata', seekToStart);
       };
       video.addEventListener('loadedmetadata', seekToStart);
+    } else {
+      // mp4/webm (src gắn qua JSX). Bản ghi từ MediaRecorder thường có
+      // duration === Infinity nên không tính được tổng thời lượng. Seek tới cuối
+      // một lần để buộc trình duyệt tính duration hữu hạn rồi quay về đầu.
+      const fixDuration = () => {
+        if (Number.isFinite(video.duration) && video.duration > 0) {
+          syncDuration();
+          return;
+        }
+        replayScrubbingRef.current = true;
+        const onFixed = () => {
+          video.removeEventListener('durationchange', onFixed);
+          video.removeEventListener('timeupdate', onFixed);
+          syncDuration();
+          try {
+            video.currentTime = 0;
+          } catch {
+            /* bỏ qua */
+          }
+          replayScrubbingRef.current = false;
+          void video.play().catch(() => undefined);
+        };
+        video.addEventListener('durationchange', onFixed, { once: true });
+        video.addEventListener('timeupdate', onFixed, { once: true });
+        try {
+          video.currentTime = 1e101;
+        } catch {
+          /* bỏ qua */
+        }
+      };
+      if (video.readyState >= 1) {
+        fixDuration();
+      } else {
+        video.addEventListener('loadedmetadata', fixDuration, { once: true });
+      }
     }
 
     syncDuration();
     video.addEventListener('loadedmetadata', syncDuration);
     video.addEventListener('durationchange', syncDuration);
+    video.addEventListener('progress', syncDuration);
     video.addEventListener('timeupdate', onTimeUpdate);
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
     return () => {
       video.removeEventListener('loadedmetadata', syncDuration);
       video.removeEventListener('durationchange', syncDuration);
+      video.removeEventListener('progress', syncDuration);
       video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('play', onPlay);
       video.removeEventListener('pause', onPause);
@@ -690,19 +744,6 @@ export default function LiveViewerPage() {
                     />
                   </div>
                 </div>
-                <div className="flex w-full shrink-0 items-center justify-center gap-2 border-t border-white/10 bg-black/80 px-4 py-3 text-3xl">
-                  {reactions.map((reaction) => (
-                    <button
-                      key={reaction.value}
-                      type="button"
-                      disabled
-                      className="cursor-not-allowed rounded-full px-1 opacity-40"
-                      aria-label={`Cảm xúc ${reaction.value}`}
-                    >
-                      {reaction.label}
-                    </button>
-                  ))}
-                </div>
               </>
             ) : useHlsPlayback ? (
               <video
@@ -805,7 +846,11 @@ export default function LiveViewerPage() {
             <div className="flex-1 min-w-0">
               <p className="text-xl font-semibold text-foreground">{hostLabel}</p>
               <p className="text-sm text-muted-foreground">
-                {session ? `${session.viewerCount} người đang xem · ${session.totalReactionCount} cảm xúc` : 'Đang tải...'}
+                {!session
+                  ? 'Đang tải...'
+                  : isReplay
+                    ? `Phát lại livestream${session.totalReactionCount ? ` · ${session.totalReactionCount} cảm xúc` : ''}`
+                    : `${session.viewerCount} người đang xem · ${session.totalReactionCount} cảm xúc`}
               </p>
             </div>
             <button
