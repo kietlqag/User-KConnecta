@@ -77,6 +77,7 @@ public class CorsConfig {
 
         String[] parsed = Arrays.stream(value.split(","))
                 .map(String::trim)
+                .map(origin -> origin.replaceAll("/+$", ""))
                 .filter(item -> !item.isEmpty())
                 .toArray(String[]::new);
         if (parsed.length == 0) {

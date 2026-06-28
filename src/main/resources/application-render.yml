@@ -15,7 +15,12 @@ logging:
 
 app:
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://user-k-connecta.vercel.app}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://kconnecta.vercel.app}
+  auth:
+    cookies:
+      # FE (Vercel) và BE (Render) khác domain → cookie phải SameSite=None + Secure.
+      secure: true
+      same-site: None
 
 jwt:
   secret: ${JWT_SECRET}
