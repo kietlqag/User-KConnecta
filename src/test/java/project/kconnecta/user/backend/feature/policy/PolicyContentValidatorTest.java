@@ -82,9 +82,7 @@ class PolicyContentValidatorTest {
     // ── chat moderation disabled ────────────────────────────────────────────
 
     @Test
-    void validateChatMessage_isNoOp() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithKeyword("badword"));
-
+    void validateChatMessage_isNoOp() {
         assertThatNoException().isThrownBy(() -> {
             for (int i = 0; i < 20; i++) {
                 validator.validateChatMessage(userId, "hi", null, null);
@@ -269,35 +267,5 @@ class PolicyContentValidatorTest {
         };
         MockMultipartFile file = new MockMultipartFile("file", "photo.png", "image/png", pngHeader);
         assertThatNoException().isThrownBy(() -> validator.validatePostMediaUpload(file));
-    }
-
-    @Test
-    void validatePostMediaUpload_rejectsJpgWhenOnlyPngAllowed() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("png"));
-        assertThatThrownBy(() -> validator.validatePostMediaUpload("photo.jpg", "image/jpeg"))
-                .isInstanceOf(ValidationException.class)
-                .hasMessageContaining("JPG");
-    }
-
-    @Test
-    void validatePostMediaUpload_allowsPngWhenOnlyPngAllowed() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("png"));
-        assertThatNoException().isThrownBy(() ->
-                validator.validatePostMediaUpload("photo.png", "image/png"));
-    }
-
-    @Test
-    void validatePostMediaUpload_allowsPdfWhenListedInAllowedTypes() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("jpg,pdf"));
-        assertThatNoException().isThrownBy(() ->
-                validator.validatePostMediaUpload("doc.pdf", "application/pdf"));
-    }
-
-    @Test
-    void validatePostMediaUpload_rejectsPdfWhenNotInAllowedTypes() throws Exception {
-        when(policyService.getConfigJson()).thenReturn(configWithAllowedTypes("jpg,png"));
-        assertThatThrownBy(() -> validator.validatePostMediaUpload("doc.pdf", "application/pdf"))
-                .isInstanceOf(ValidationException.class)
-                .hasMessageContaining("PDF");
     }
 }

@@ -164,23 +164,6 @@ public class PolicyContentValidator {
         }
     }
 
-    /** @deprecated Chỉ dùng trong test — production phải gọi {@link #validatePostMediaUpload(MultipartFile)}. */
-    @Deprecated
-    public void validatePostMediaUpload(String originalFilename, String contentType) {
-        JsonNode postPolicy = policyService.getConfigJson().path("postPolicy");
-        String allowedRaw = postPolicy.path("allowedFileTypes").asText("jpg,jpeg,png,gif,webp,mp4,mov");
-        String ext = resolveMediaExtension(originalFilename, contentType);
-        if (ext.isBlank()) {
-            throw new ValidationException("Không xác định được định dạng file");
-        }
-        if (!isMediaExtensionAllowed(ext, allowedRaw)) {
-            throw new ValidationException(
-                    "Định dạng ." + ext.toUpperCase(Locale.ROOT)
-                            + " không được phép. Chỉ chấp nhận: "
-                            + formatAllowedExtensions(allowedRaw));
-        }
-    }
-
     public void validatePostUpdate(UUID authorId, String content, int mediaCount) {
         JsonNode config = policyService.getConfigJson();
         JsonNode postPolicy = config.path("postPolicy");
