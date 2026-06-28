@@ -85,6 +85,26 @@ export function LivePostPreviewCard({
     || isRecordingFailed
     || (isLiveEnded && !liveReplayUrl);
 
+  // Mỗi trạng thái buổi live có màu badge riêng để phân biệt nhanh bằng mắt.
+  const statusBadge = useMemo(() => {
+    if (scheduledLiveAt) {
+      return { label: 'Đã lên lịch', className: 'bg-blue-600', pulse: false };
+    }
+    if (liveReplayUrl) {
+      return { label: 'Phát lại', className: 'bg-emerald-600', pulse: false };
+    }
+    if (isRecordingProcessing) {
+      return { label: 'Đang xử lý', className: 'bg-amber-500', pulse: true };
+    }
+    if (isRecordingFailed) {
+      return { label: 'Lỗi bản ghi', className: 'bg-orange-600', pulse: false };
+    }
+    if (isLiveEnded) {
+      return { label: 'Đã kết thúc', className: 'bg-gray-600', pulse: false };
+    }
+    return { label: 'Live', className: 'bg-red-600', pulse: true };
+  }, [scheduledLiveAt, liveReplayUrl, isRecordingProcessing, isRecordingFailed, isLiveEnded]);
+
   useEffect(() => {
     let cancelled = false;
     const loadLiveStatus = async () => {
@@ -360,8 +380,8 @@ export function LivePostPreviewCard({
           <div className="rounded-lg border border-border bg-card p-4 transition-colors hover:border-emerald-300 hover:bg-emerald-50/40">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 text-left">
-                <div className="mb-2 inline-flex rounded bg-emerald-600 px-2 py-0.5 text-xs font-semibold text-white">
-                  {scheduledLiveAt ? 'Đã lên lịch' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
+                <div className={`mb-2 inline-flex rounded px-2 py-0.5 text-xs font-semibold text-white ${statusBadge.className}`}>
+                  {statusBadge.label}
                 </div>
                 <p className="font-semibold text-foreground line-clamp-1">{liveTitle}</p>
                 {liveDescription && (
@@ -463,9 +483,9 @@ export function LivePostPreviewCard({
             <div
               className={`absolute inset-0 transition-opacity duration-300 ${ showLiveVideo ? 'opacity-0 group-hover:opacity-100' : 'opacity-40' } [background:radial-gradient(circle_at_25%_25%,rgba(239,68,68,.45),transparent_28%),radial-gradient(circle_at_80%_20%,rgba(37,99,235,.38),transparent_30%),linear-gradient(135deg,rgba(15,23,42,.2),rgba(0,0,0,.9))]`}
             />
-            <div className={`absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow ${isLiveEnded ? 'bg-gray-700' : 'bg-red-600'}`}>
-              <span className={`h-2 w-2 rounded-full bg-card ${isLiveEnded ? '' : 'animate-pulse'}`} />
-              {scheduledLiveAt ? 'Đã lên lịch' : liveReplayUrl ? 'Phát lại' : isRecordingProcessing ? 'Đang xử lý' : isRecordingFailed ? 'Lỗi bản ghi' : isLiveEnded ? 'Đã kết thúc' : 'Live'}
+            <div className={`absolute left-4 top-4 z-10 inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white shadow ${statusBadge.className}`}>
+              <span className={`h-2 w-2 rounded-full bg-card ${statusBadge.pulse ? 'animate-pulse' : ''}`} />
+              {statusBadge.label}
             </div>
             {isLivePreviewConnecting && (
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/35">

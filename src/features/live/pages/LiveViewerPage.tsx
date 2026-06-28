@@ -62,8 +62,12 @@ export default function LiveViewerPage() {
   const videoTrackRef = useRef<RemoteTrack | null>(null);
   const audioTrackRef = useRef<RemoteTrack | null>(null);
   const dvrVideoRef = useRef<HTMLVideoElement | null>(null);
+  const replayVideoRef = useRef<HTMLVideoElement | null>(null);
+  const replayScrubbingRef = useRef(false);
   const dvrDurationFixedRef = useRef<string | null>(null);
   const useHlsPlaybackRef = useRef(false);
+  const [replayCurrentSeconds, setReplayCurrentSeconds] = useState(0);
+  const [replayDurationSeconds, setReplayDurationSeconds] = useState(0);
 
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
   const replayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() : '';
@@ -78,11 +82,14 @@ export default function LiveViewerPage() {
     startedAt: session?.startedAt,
   });
 
-  const clientDvr = useLiveViewerDvr(isActiveLiveSession && !useHlsPlayback);
+  const clientDvr = useLiveViewerDvr(isActiveLiveSession && !useHlsPlayback, session?.startedAt);
 
   const isAtLiveEdge = useHlsPlayback ? hlsPlayback.isAtLiveEdge : clientDvr.isAtLiveEdge;
   const playbackSeconds = useHlsPlayback ? hlsPlayback.playbackSeconds : clientDvr.playbackSeconds;
   const bufferedSeconds = useHlsPlayback ? hlsPlayback.bufferedSeconds : clientDvr.bufferedSeconds;
+  // HLS playlist đã bắt đầu từ đầu buổi live nên currentTime chính là giờ thật (offset 0).
+  // Client DVR ghi từ lúc viewer vào nên cần cộng offset để nhãn khớp đồng hồ buổi live.
+  const displayOffsetSeconds = useHlsPlayback ? 0 : clientDvr.displayOffsetSeconds;
   const canScrub = useHlsPlayback ? hlsPlayback.canScrub : clientDvr.canScrub;
   const seekTo = useHlsPlayback ? hlsPlayback.seekTo : clientDvr.seekTo;
   const goToLive = useHlsPlayback ? hlsPlayback.goToLive : clientDvr.goToLive;
@@ -361,7 +368,37 @@ export default function LiveViewerPage() {
     if (hlsPlayback.videoRef.current) {
       hlsPlayback.videoRef.current.muted = isMuted;
     }
+    if (replayVideoRef.current) {
+      replayVideoRef.current.muted = isMuted;
+    }
   }, [hlsPlayback.videoRef, isMuted, isAtLiveEdge, useHlsPlayback, dvrUrl]);
+
+  useEffect(() => {
+    if (!isReplay) return;
+    const video = replayVideoRef.current;
+    if (!video) return;
+
+    const syncDuration = () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        setReplayDurationSeconds(Math.floor(video.duration));
+      }
+    };
+    const onTimeUpdate = () => {
+      if (!replayScrubbingRef.current) {
+        setReplayCurrentSeconds(Math.floor(video.currentTime));
+      }
+    };
+
+    syncDuration();
+    video.addEventListener('loadedmetadata', syncDuration);
+    video.addEventListener('durationchange', syncDuration);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    return () => {
+      video.removeEventListener('loadedmetadata', syncDuration);
+      video.removeEventListener('durationchange', syncDuration);
+      video.removeEventListener('timeupdate', onTimeUpdate);
+    };
+  }, [isReplay, replayUrl]);
 
   useEffect(() => {
     if (useHlsPlayback || isAtLiveEdge || !dvrUrl) return;
@@ -487,6 +524,28 @@ export default function LiveViewerPage() {
     setIsMuted((prev) => !prev);
   };
 
+  const handleReplaySeek = useCallback((seconds: number) => {
+    const video = replayVideoRef.current;
+    const max = Math.max(replayDurationSeconds, video?.duration || 0, 1);
+    const clamped = Math.max(0, Math.min(seconds, max));
+    setReplayCurrentSeconds(clamped);
+    if (video && !replayScrubbingRef.current) {
+      video.currentTime = clamped;
+    }
+  }, [replayDurationSeconds]);
+
+  const handleReplaySeekEnd = useCallback((seconds: number) => {
+    replayScrubbingRef.current = false;
+    const video = replayVideoRef.current;
+    const max = Math.max(replayDurationSeconds, video?.duration || 0, 1);
+    const clamped = Math.max(0, Math.min(seconds, max));
+    if (video) {
+      video.currentTime = clamped;
+      void video.play().catch(() => undefined);
+    }
+    setReplayCurrentSeconds(clamped);
+  }, [replayDurationSeconds]);
+
   const handleCopyLiveLink = async () => {
     const url = window.location.href;
     try {
@@ -546,13 +605,41 @@ export default function LiveViewerPage() {
           <div className={`flex items-center justify-center ${isReplay ? 'h-[calc(100vh-56px)] flex-col' : 'h-[calc(100vh-160px)]'}`}>
             {isReplay ? (
               <>
-                <video
-                  src={replayUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  className="min-h-0 w-full flex-1 object-contain"
-                />
+                <div className="relative flex min-h-0 w-full flex-1 flex-col">
+                  <video
+                    ref={replayVideoRef}
+                    src={replayUrl}
+                    autoPlay
+                    playsInline
+                    muted={isMuted}
+                    className="min-h-0 w-full flex-1 object-contain"
+                    onClick={() => {
+                      const video = replayVideoRef.current;
+                      if (!video) return;
+                      if (video.paused) {
+                        void video.play().catch(() => undefined);
+                      } else {
+                        video.pause();
+                      }
+                    }}
+                  />
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+                    <LiveViewerScrubBar
+                      mode="replay"
+                      bufferedSeconds={replayDurationSeconds}
+                      playbackSeconds={replayCurrentSeconds}
+                      isAtLiveEdge={false}
+                      canScrub={replayDurationSeconds > 0}
+                      isMuted={isMuted}
+                      showControls
+                      onSeek={handleReplaySeek}
+                      onSeekStart={() => { replayScrubbingRef.current = true; }}
+                      onSeekEnd={handleReplaySeekEnd}
+                      onGoLive={() => undefined}
+                      onToggleMute={handleToggleMute}
+                    />
+                  </div>
+                </div>
                 <div className="flex w-full shrink-0 items-center justify-center gap-2 border-t border-white/10 bg-black/80 px-4 py-3 text-3xl">
                   {reactions.map((reaction) => (
                     <button
@@ -614,6 +701,7 @@ export default function LiveViewerPage() {
               <LiveViewerScrubBar
                 bufferedSeconds={bufferedSeconds}
                 playbackSeconds={playbackSeconds}
+                displayOffsetSeconds={displayOffsetSeconds}
                 isAtLiveEdge={isAtLiveEdge}
                 canScrub={canScrub}
                 isMuted={isMuted}

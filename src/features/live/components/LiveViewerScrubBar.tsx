@@ -14,6 +14,7 @@ function formatDuration(seconds: number) {
 type LiveViewerScrubBarProps = {
   bufferedSeconds: number;
   playbackSeconds: number;
+  displayOffsetSeconds?: number;
   isAtLiveEdge: boolean;
   canScrub: boolean;
   isMuted: boolean;
@@ -24,11 +25,13 @@ type LiveViewerScrubBarProps = {
   onGoLive: () => void;
   onToggleMute: () => void;
   fullSession?: boolean;
+  mode?: 'live' | 'replay';
 };
 
 export function LiveViewerScrubBar({
   bufferedSeconds,
   playbackSeconds,
+  displayOffsetSeconds = 0,
   isAtLiveEdge,
   canScrub,
   isMuted,
@@ -39,9 +42,15 @@ export function LiveViewerScrubBar({
   onGoLive,
   onToggleMute,
   fullSession = false,
+  mode = 'live',
 }: LiveViewerScrubBarProps) {
+  const isReplay = mode === 'replay';
   const max = Math.max(bufferedSeconds, 1);
   const progressPercent = bufferedSeconds > 0 ? Math.min(100, (playbackSeconds / max) * 100) : 0;
+  // Nhãn thời gian cộng offset để hiển thị giờ thật của buổi live; slider vẫn
+  // chạy theo toạ độ local (0..bufferedSeconds) nên logic seek không đổi.
+  const displayPlayback = playbackSeconds + displayOffsetSeconds;
+  const displayBuffered = bufferedSeconds + displayOffsetSeconds;
 
   return (
     <div
@@ -49,7 +58,7 @@ export function LiveViewerScrubBar({
     >
       <div className="flex items-center gap-3">
         <span className="w-11 shrink-0 text-xs tabular-nums text-white/90">
-          {formatDuration(playbackSeconds)}
+          {formatDuration(displayPlayback)}
         </span>
 
         <div className="relative h-4 flex-1 touch-none">
@@ -58,7 +67,7 @@ export function LiveViewerScrubBar({
             className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-card transition-[width] duration-300 ease-linear"
             style={{ width: `${progressPercent}%` }}
           />
-          {isAtLiveEdge && bufferedSeconds > 0 && (
+          {!isReplay && isAtLiveEdge && bufferedSeconds > 0 && (
             <span
               className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_0_2px_rgba(0,0,0,0.35)]"
               style={{ left: `calc(${progressPercent}% - 5px)` }}
@@ -72,11 +81,11 @@ export function LiveViewerScrubBar({
             step={0.25}
             value={Math.min(playbackSeconds, max)}
             disabled={!canScrub}
-            aria-label="Thanh tua live"
+            aria-label={isReplay ? 'Thanh tua phát lại live' : 'Thanh tua live'}
             aria-valuemin={0}
             aria-valuemax={bufferedSeconds}
             aria-valuenow={playbackSeconds}
-            aria-valuetext={`${formatDuration(playbackSeconds)} trên ${formatDuration(bufferedSeconds)}`}
+            aria-valuetext={`${formatDuration(displayPlayback)} trên ${formatDuration(displayBuffered)}`}
             onPointerDown={onSeekStart}
             onChange={(event) => onSeek(Number(event.target.value))}
             onPointerUp={(event) => onSeekEnd(Number(event.currentTarget.value))}
@@ -84,7 +93,13 @@ export function LiveViewerScrubBar({
           />
         </div>
 
-        {!isAtLiveEdge && canScrub && (
+        {isReplay && (
+          <span className="w-11 shrink-0 text-right text-xs tabular-nums text-white/90">
+            {formatDuration(displayBuffered)}
+          </span>
+        )}
+
+        {!isReplay && !isAtLiveEdge && canScrub && (
           <button
             type="button"
             onClick={onGoLive}
@@ -104,17 +119,19 @@ export function LiveViewerScrubBar({
         </button>
       </div>
 
+      {!isReplay && (
       <p className="text-[11px] text-white/55">
         {fullSession
           ? isAtLiveEdge
             ? 'Đang xem trực tiếp · kéo thanh để tua từ đầu buổi live'
-            : `Đang tua lại · ${formatDuration(bufferedSeconds)} buổi live`
+            : `Đang tua lại · ${formatDuration(displayBuffered)} buổi live`
           : isAtLiveEdge
             ? bufferedSeconds > 0
               ? 'Đang xem trực tiếp · kéo thanh để tua lại'
               : 'Đang ghi buffer để tua lại...'
-            : `Đang tua lại · ${formatDuration(bufferedSeconds)} đã ghi`}
+            : `Đang tua lại · ${formatDuration(displayBuffered)} đã ghi`}
       </p>
+      )}
     </div>
   );
 }

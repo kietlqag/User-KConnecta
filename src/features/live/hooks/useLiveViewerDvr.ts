@@ -13,11 +13,15 @@ const getSupportedRecordingMimeType = () => {
   ].find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
 };
 
-export function useLiveViewerDvr(enabled: boolean) {
+export function useLiveViewerDvr(enabled: boolean, liveStartedAt?: string | null) {
   const [isAtLiveEdge, setIsAtLiveEdge] = useState(true);
   const [playbackSeconds, setPlaybackSeconds] = useState(0);
   const [bufferedSeconds, setBufferedSeconds] = useState(0);
   const [dvrUrl, setDvrUrl] = useState<string | null>(null);
+  // Số giây buổi live đã trôi khi người xem này bắt đầu ghi (lúc bấm vào live).
+  // Cộng vào thời gian local của buffer để thanh tua hiển thị đúng đồng hồ buổi
+  // live (giống mọi người xem), thay vì đếm lại từ 0 theo từng người.
+  const [displayOffsetSeconds, setDisplayOffsetSeconds] = useState(0);
 
   const chunksRef = useRef<BlobPart[]>([]);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -26,6 +30,8 @@ export function useLiveViewerDvr(enabled: boolean) {
   const mimeTypeRef = useRef('video/webm');
   const dvrUrlRef = useRef<string | null>(null);
   const isScrubbingRef = useRef(false);
+  const liveStartedAtRef = useRef<string | null | undefined>(liveStartedAt);
+  liveStartedAtRef.current = liveStartedAt;
 
   const getElapsedSeconds = useCallback(() => {
     if (startedAtRef.current == null) return 0;
@@ -86,6 +92,13 @@ export function useLiveViewerDvr(enabled: boolean) {
         mimeTypeRef.current = recorder.mimeType || mimeType || 'video/webm';
         chunksRef.current = [];
         startedAtRef.current = Date.now();
+        const liveStartMs = liveStartedAtRef.current
+          ? new Date(liveStartedAtRef.current).getTime()
+          : startedAtRef.current;
+        const joinOffset = Number.isFinite(liveStartMs)
+          ? Math.max(0, Math.round((startedAtRef.current - liveStartMs) / 1000))
+          : 0;
+        setDisplayOffsetSeconds(joinOffset);
         setBufferedSeconds(0);
         setPlaybackSeconds(0);
         setIsAtLiveEdge(true);
@@ -182,6 +195,7 @@ export function useLiveViewerDvr(enabled: boolean) {
     isAtLiveEdge,
     playbackSeconds,
     bufferedSeconds,
+    displayOffsetSeconds,
     dvrUrl,
     canScrub,
     seekTo,
