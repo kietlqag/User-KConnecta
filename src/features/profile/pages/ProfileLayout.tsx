@@ -327,7 +327,7 @@ export function ProfileLayout() {
           friendsCount={friendsCount}
           isOwnProfile={isOwnProfile}
           loading={loading}
-          profileUserId={resolvedId || profile?.id || undefined}
+          profileUserId={profile?.id || resolvedId || undefined}
           friendshipStatus={friendshipStatus}
           onFriendshipStatusChange={setFriendshipStatus}
           onEditClick={isOwnProfile ? () => setIsEditOpen(true) : undefined}

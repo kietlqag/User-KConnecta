@@ -147,6 +147,8 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
           };
         });
 
+        // Người lạ = đã có tin nhắn riêng nhưng không còn trong danh sách bạn bè.
+        // Hủy kết bạn chỉ đổi tab; lịch sử chat giữ nguyên qua privatePeers + /chat/history.
         const strangerItems = privatePeers
           .filter((peer) => peer.peerUserId && !friendIds.has(peer.peerUserId))
           .map((peer) => {

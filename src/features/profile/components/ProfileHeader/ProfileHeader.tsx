@@ -102,6 +102,10 @@ export function ProfileHeader({
   const handleSendFriendRequest = async () => {
     const currentUser = authService.getCurrentUser();
     if (!currentUser || !profileUserId) return;
+    if (currentUser.id === profileUserId) {
+      toast.error('Không thể gửi lời mời kết bạn cho chính mình');
+      return;
+    }
     setFriendActionLoading(true);
     try {
       const res = await friendService.sendFriendRequest(currentUser.id, profileUserId);

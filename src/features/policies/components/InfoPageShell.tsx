@@ -20,8 +20,10 @@ export function InfoPageShell({ title, subtitle, updatedAt, icon: Icon, children
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] dark:bg-background">
-      <Header />
-      <div className="w-full px-4 pb-12 pt-20 sm:px-6 lg:px-8">
+      {isLoggedIn && <Header />}
+      <div
+        className={`w-full px-4 pb-12 sm:px-6 lg:px-8 ${isLoggedIn ? 'pt-20' : 'pt-8'}`}
+      >
         <Link
           to={backHref}
           className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-gray-100"

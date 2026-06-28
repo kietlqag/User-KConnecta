@@ -20,6 +20,10 @@ export interface FriendshipStatusResponse {
   sentByMe: boolean;
 }
 
+function notifyFriendshipChanged() {
+  window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
+}
+
 export const friendService = {
   getFriends: (userId: string) =>
     api.get<FriendApiResponse[]>(`/friends/${userId}`),
@@ -30,14 +34,23 @@ export const friendService = {
   getSuggestions: (userId: string) =>
     api.get<FriendApiResponse[]>(`/friends/${userId}/suggestions`),
 
-  sendFriendRequest: (requesterId: string, addresseeId: string) =>
-    api.post<FriendApiResponse>('/friends/request', { requesterId, addresseeId }),
+  sendFriendRequest: (requesterId: string, addresseeId: string) => {
+    if (requesterId === addresseeId) {
+      return Promise.reject(new Error('Không thể gửi lời mời kết bạn cho chính mình'));
+    }
+    return api.post<FriendApiResponse>('/friends/request', { requesterId, addresseeId });
+  },
 
-  acceptFriendRequest: (friendshipId: string) =>
-    api.put<FriendApiResponse>(`/friends/${friendshipId}/accept`, {}),
+  acceptFriendRequest: async (friendshipId: string) => {
+    const res = await api.put<FriendApiResponse>(`/friends/${friendshipId}/accept`, {});
+    notifyFriendshipChanged();
+    return res;
+  },
 
-  deleteFriendship: (friendshipId: string) =>
-    api.delete<void>(`/friends/${friendshipId}`),
+  deleteFriendship: async (friendshipId: string) => {
+    await api.delete<void>(`/friends/${friendshipId}`);
+    notifyFriendshipChanged();
+  },
 
   getStatus: (meId: string, targetId: string) =>
     api.get<FriendshipStatusResponse>(`/friends/status?me=${meId}&target=${targetId}`),
