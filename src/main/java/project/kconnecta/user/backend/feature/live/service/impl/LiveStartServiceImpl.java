@@ -91,11 +91,13 @@ public class LiveStartServiceImpl implements LiveStartService {
                 .build());
 
         if (status == LiveSessionStatus.LIVE) {
-            liveKitEgressService.startRoomHlsEgress(session).ifPresent(result -> {
-                session.setEgressId(result.getEgressId());
-                session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
-                liveSessionRepository.save(session);
-            });
+            if (liveKitEgressService.isEgressConfigured()) {
+                liveKitEgressService.startRoomHlsEgress(session).ifPresentOrElse(result -> {
+                    session.setEgressId(result.getEgressId());
+                    session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
+                }, () -> session.setRecordingError(
+                        "Khong khoi dong duoc HLS egress. Kiem tra LiveKit Cloud egress va cau hinh R2."));
+            }
         }
 
         if (status == LiveSessionStatus.LIVE) {

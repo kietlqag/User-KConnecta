@@ -10,6 +10,7 @@ import livekit.LivekitEgress;
 import retrofit2.Response;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -36,7 +37,7 @@ public class LiveKitEgressServiceImpl implements LiveKitEgressService {
     @Value("${livekit.egress.s3-secret:}")
     private String s3Secret;
 
-    @Value("${livekit.egress.s3-region:ap-southeast-1}")
+    @Value("${livekit.egress.s3-region:auto}")
     private String s3Region;
 
     @Value("${livekit.egress.s3-endpoint:}")
@@ -55,7 +56,7 @@ public class LiveKitEgressServiceImpl implements LiveKitEgressService {
         try {
             String apiUrl = toHttpApiUrl(livekitUrl);
             EgressServiceClient client = EgressServiceClient.createClient(apiUrl, apiKey, apiSecret);
-            String prefix = "kconnecta/live/" + session.getId();
+            String prefix = storagePrefix(session.getId());
 
             LivekitEgress.S3Upload.Builder s3Builder = LivekitEgress.S3Upload.newBuilder()
                     .setBucket(s3Bucket)
@@ -90,10 +91,9 @@ public class LiveKitEgressServiceImpl implements LiveKitEgressService {
                 return Optional.empty();
             }
 
-            String hlsUrl = buildPublicHlsUrl(prefix);
             return Optional.of(EgressStartResult.builder()
                     .egressId(response.body().getEgressId())
-                    .hlsPlaybackUrl(hlsUrl)
+                    .hlsPlaybackUrl(buildPublicHlsUrl(prefix, "live.m3u8"))
                     .build());
         } catch (Exception ex) {
             log.error("Failed to start LiveKit HLS egress for session {}", session.getId(), ex);
@@ -114,6 +114,21 @@ public class LiveKitEgressServiceImpl implements LiveKitEgressService {
         }
     }
 
+    @Override
+    public boolean isEgressConfigured() {
+        return enabled && isConfigured();
+    }
+
+    @Override
+    public String buildLivePlaylistUrl(UUID sessionId) {
+        return buildPublicHlsUrl(storagePrefix(sessionId), "live.m3u8");
+    }
+
+    @Override
+    public String buildVodPlaylistUrl(UUID sessionId) {
+        return buildPublicHlsUrl(storagePrefix(sessionId), "playback.m3u8");
+    }
+
     private boolean isConfigured() {
         return !isBlank(livekitUrl)
                 && !isBlank(apiKey)
@@ -124,9 +139,13 @@ public class LiveKitEgressServiceImpl implements LiveKitEgressService {
                 && !isBlank(publicBaseUrl);
     }
 
-    private String buildPublicHlsUrl(String prefix) {
+    private String storagePrefix(UUID sessionId) {
+        return "kconnecta/live/" + sessionId;
+    }
+
+    private String buildPublicHlsUrl(String prefix, String playlistFile) {
         String base = publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;
-        return base + "/" + prefix + "/live.m3u8";
+        return base + "/" + prefix + "/" + playlistFile;
     }
 
     private String toHttpApiUrl(String url) {

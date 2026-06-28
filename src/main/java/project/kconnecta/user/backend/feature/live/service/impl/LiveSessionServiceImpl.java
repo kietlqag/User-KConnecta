@@ -184,7 +184,13 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         session.setEndedAt(LocalDateTime.now());
         session.setViewerCount(0);
         liveSessionViewerRepository.deleteAllBySessionId(sessionId);
-        if (isBlank(session.getPlaybackUrl()) && session.getRecordingStatus() != LiveRecordingStatus.READY) {
+
+        if (!isBlank(session.getHlsPlaybackUrl())) {
+            session.setPlaybackUrl(liveKitEgressService.buildVodPlaylistUrl(sessionId));
+            session.setRecordingStatus(LiveRecordingStatus.READY);
+            session.setRecordingMimeType("application/vnd.apple.mpegurl");
+            session.setRecordingError(null);
+        } else if (isBlank(session.getPlaybackUrl()) && session.getRecordingStatus() != LiveRecordingStatus.READY) {
             session.setRecordingStatus(LiveRecordingStatus.PROCESSING);
         }
 
@@ -613,9 +619,17 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         if (!isBlank(session.getHlsPlaybackUrl()) && !isBlank(session.getEgressId())) {
             return;
         }
-        liveKitEgressService.startRoomHlsEgress(session).ifPresent(result -> {
+        if (!liveKitEgressService.isEgressConfigured()) {
+            return;
+        }
+        liveKitEgressService.startRoomHlsEgress(session).ifPresentOrElse(result -> {
             session.setEgressId(result.getEgressId());
             session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
+            session.setRecordingError(null);
+        }, () -> {
+            log.warn("LiveKit HLS egress failed to start for session {}", session.getId());
+            session.setRecordingError(trimToLength(
+                    "Khong khoi dong duoc HLS egress. Kiem tra LiveKit Cloud egress va cau hinh R2.", 500));
         });
     }
 
