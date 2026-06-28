@@ -1,4 +1,5 @@
-import { Volume2, VolumeX } from 'lucide-react';
+import { useState } from 'react';
+import { Pause, Play, Volume2, VolumeX } from 'lucide-react';
 
 function formatDuration(seconds: number) {
   const safe = Math.max(0, Math.floor(seconds));
@@ -26,6 +27,8 @@ type LiveViewerScrubBarProps = {
   onToggleMute: () => void;
   fullSession?: boolean;
   mode?: 'live' | 'replay';
+  isPaused?: boolean;
+  onTogglePlay?: () => void;
 };
 
 export function LiveViewerScrubBar({
@@ -43,36 +46,85 @@ export function LiveViewerScrubBar({
   onToggleMute,
   fullSession = false,
   mode = 'live',
+  isPaused = false,
+  onTogglePlay,
 }: LiveViewerScrubBarProps) {
   const isReplay = mode === 'replay';
+  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+
   const max = Math.max(bufferedSeconds, 1);
   const progressPercent = bufferedSeconds > 0 ? Math.min(100, (playbackSeconds / max) * 100) : 0;
   // Nhãn thời gian cộng offset để hiển thị giờ thật của buổi live; slider vẫn
   // chạy theo toạ độ local (0..bufferedSeconds) nên logic seek không đổi.
   const displayPlayback = playbackSeconds + displayOffsetSeconds;
   const displayBuffered = bufferedSeconds + displayOffsetSeconds;
+  // Live edge: vạch đỏ; đã tua / replay: vạch trắng.
+  const isLiveActive = !isReplay && isAtLiveEdge;
+  const fillColor = isLiveActive ? 'bg-red-500' : 'bg-white';
+  const showBubble = (isScrubbing || isHovering) && canScrub;
 
   return (
     <div
-      className={`mb-3 space-y-1 transition-opacity duration-200 ${ showControls ? 'opacity-100' : 'pointer-events-none opacity-0' }`}
+      className={`mb-2 transition-opacity duration-200 ${ showControls ? 'opacity-100' : 'pointer-events-none opacity-0' }`}
     >
       <div className="flex items-center gap-3">
-        <span className="w-11 shrink-0 text-xs tabular-nums text-white/90">
+        {(isReplay || onTogglePlay) && (
+          <button
+            type="button"
+            onClick={onTogglePlay}
+            className="shrink-0 rounded-full p-1.5 text-white transition hover:bg-white/15"
+            aria-label={isPaused ? 'Phát' : 'Tạm dừng'}
+          >
+            {isPaused ? <Play className="h-5 w-5 fill-current" /> : <Pause className="h-5 w-5 fill-current" />}
+          </button>
+        )}
+
+        {!isReplay && (
+          <button
+            type="button"
+            onClick={onGoLive}
+            className="flex shrink-0 items-center gap-1.5 rounded-full px-1.5 py-0.5 text-sm font-semibold text-white transition hover:bg-white/10"
+            aria-label="Về trực tiếp"
+          >
+            <span className={`h-2.5 w-2.5 rounded-full ${isLiveActive ? 'bg-red-500' : 'bg-white/50'} ${isLiveActive ? 'animate-pulse' : ''}`} />
+            Trực tiếp
+          </button>
+        )}
+
+        <span className="shrink-0 text-xs font-medium tabular-nums text-white/90">
           {formatDuration(displayPlayback)}
         </span>
 
-        <div className="relative h-4 flex-1 touch-none">
-          <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-card/25" />
+        <div
+          className="group relative flex h-5 flex-1 items-center"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+        >
+          {/* Track nền */}
+          <div className="absolute inset-x-0 h-1.5 rounded-full bg-white/25" />
+          {/* Phần đã phát */}
           <div
-            className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-card transition-[width] duration-300 ease-linear"
+            className={`absolute h-1.5 rounded-full ${fillColor} ${isScrubbing ? '' : 'transition-[width] duration-200 ease-linear'}`}
             style={{ width: `${progressPercent}%` }}
           />
-          {!isReplay && isAtLiveEdge && bufferedSeconds > 0 && (
+          {/* Núm kéo */}
+          {canScrub && (
             <span
-              className="absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_0_2px_rgba(0,0,0,0.35)]"
-              style={{ left: `calc(${progressPercent}% - 5px)` }}
+              className={`pointer-events-none absolute h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.25),0_1px_3px_rgba(0,0,0,0.5)] transition-transform ${ showBubble ? 'scale-110' : 'scale-100' }`}
+              style={{ left: `${progressPercent}%` }}
               aria-hidden
             />
+          )}
+          {/* Bong bóng thời gian */}
+          {showBubble && (
+            <span
+              className="pointer-events-none absolute -top-8 -translate-x-1/2 rounded-md bg-black/85 px-2 py-1 text-xs font-semibold tabular-nums text-white shadow-lg"
+              style={{ left: `${progressPercent}%` }}
+              aria-hidden
+            >
+              {formatDuration(displayPlayback)}
+            </span>
           )}
           <input
             type="range"
@@ -86,52 +138,26 @@ export function LiveViewerScrubBar({
             aria-valuemax={bufferedSeconds}
             aria-valuenow={playbackSeconds}
             aria-valuetext={`${formatDuration(displayPlayback)} trên ${formatDuration(displayBuffered)}`}
-            onPointerDown={onSeekStart}
+            onPointerDown={() => { setIsScrubbing(true); onSeekStart(); }}
             onChange={(event) => onSeek(Number(event.target.value))}
-            onPointerUp={(event) => onSeekEnd(Number(event.currentTarget.value))}
-            className="absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none bg-transparent disabled:cursor-default [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-card [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-card"
+            onPointerUp={(event) => { setIsScrubbing(false); onSeekEnd(Number(event.currentTarget.value)); }}
+            className="absolute inset-x-0 z-10 h-5 w-full cursor-pointer appearance-none bg-transparent disabled:cursor-default [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-transparent [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-transparent"
           />
         </div>
 
-        {(isReplay || fullSession) && (
-          <span className="w-11 shrink-0 text-right text-xs tabular-nums text-white/90">
-            {formatDuration(displayBuffered)}
-          </span>
-        )}
-
-        {!isReplay && !isAtLiveEdge && canScrub && (
-          <button
-            type="button"
-            onClick={onGoLive}
-            className="shrink-0 rounded bg-red-600 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white hover:bg-red-500"
-          >
-            Live
-          </button>
-        )}
+        <span className="shrink-0 text-xs font-medium tabular-nums text-white/70">
+          {isLiveActive ? formatDuration(displayBuffered) : `${formatDuration(displayBuffered)}`}
+        </span>
 
         <button
           type="button"
           onClick={onToggleMute}
-          className="shrink-0 rounded-full p-1 hover:bg-card/10"
+          className="shrink-0 rounded-full p-1.5 text-white transition hover:bg-white/15"
           aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
         >
-          {isMuted ? <VolumeX className="h-5 w-5 text-white" /> : <Volume2 className="h-5 w-5 text-white" />}
+          {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
         </button>
       </div>
-
-      {!isReplay && (
-      <p className="text-[11px] text-white/55">
-        {fullSession
-          ? isAtLiveEdge
-            ? 'Đang xem trực tiếp · kéo thanh để tua từ đầu buổi live'
-            : `Đang tua lại · ${formatDuration(displayBuffered)} buổi live`
-          : isAtLiveEdge
-            ? bufferedSeconds > 0
-              ? 'Đang xem trực tiếp · kéo thanh để tua lại'
-              : 'Đang ghi buffer để tua lại...'
-            : `Đang tua lại · ${formatDuration(displayBuffered)} đã ghi`}
-      </p>
-      )}
     </div>
   );
 }

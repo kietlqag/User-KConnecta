@@ -69,6 +69,7 @@ export default function LiveViewerPage() {
   const useHlsPlaybackRef = useRef(false);
   const [replayCurrentSeconds, setReplayCurrentSeconds] = useState(0);
   const [replayDurationSeconds, setReplayDurationSeconds] = useState(0);
+  const [isReplayPaused, setIsReplayPaused] = useState(false);
 
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
   const replayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() : '';
@@ -392,30 +393,63 @@ export default function LiveViewerPage() {
         setReplayCurrentSeconds(Math.floor(video.currentTime));
       }
     };
+    const onPlay = () => setIsReplayPaused(false);
+    const onPause = () => setIsReplayPaused(true);
 
     if (isHlsReplay && Hls.isSupported()) {
-      hls = new Hls({ enableWorker: true });
+      // startPosition: 0 buộc replay phát từ đầu thay vì nhảy về live edge
+      // (hls.js mặc định bắt đầu ở cuối nếu playlist chưa có #EXT-X-ENDLIST).
+      hls = new Hls({ enableWorker: true, startPosition: 0 });
       hls.loadSource(replayUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        try {
+          video.currentTime = 0;
+        } catch {
+          /* chưa seekable, bỏ qua */
+        }
         void video.play().catch(() => undefined);
         syncDuration();
       });
     } else if (isHlsReplay && video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari/native HLS: ép về đầu khi đã có metadata.
       video.src = replayUrl;
+      const seekToStart = () => {
+        try {
+          video.currentTime = 0;
+        } catch {
+          /* bỏ qua */
+        }
+        video.removeEventListener('loadedmetadata', seekToStart);
+      };
+      video.addEventListener('loadedmetadata', seekToStart);
     }
 
     syncDuration();
     video.addEventListener('loadedmetadata', syncDuration);
     video.addEventListener('durationchange', syncDuration);
     video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('play', onPlay);
+    video.addEventListener('pause', onPause);
     return () => {
       video.removeEventListener('loadedmetadata', syncDuration);
       video.removeEventListener('durationchange', syncDuration);
       video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('play', onPlay);
+      video.removeEventListener('pause', onPause);
       hls?.destroy();
     };
   }, [isHlsReplay, isReplay, replayUrl]);
+
+  const handleReplayTogglePlay = useCallback(() => {
+    const video = replayVideoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      void video.play().catch(() => undefined);
+    } else {
+      video.pause();
+    }
+  }, []);
 
   useEffect(() => {
     if (useHlsPlayback || isAtLiveEdge || !dvrUrl) return;
@@ -634,16 +668,8 @@ export default function LiveViewerPage() {
                     autoPlay
                     playsInline
                     muted={isMuted}
-                    className="min-h-0 w-full flex-1 object-contain"
-                    onClick={() => {
-                      const video = replayVideoRef.current;
-                      if (!video) return;
-                      if (video.paused) {
-                        void video.play().catch(() => undefined);
-                      } else {
-                        video.pause();
-                      }
-                    }}
+                    className="min-h-0 w-full flex-1 cursor-pointer object-contain"
+                    onClick={handleReplayTogglePlay}
                   />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
                     <LiveViewerScrubBar
@@ -654,6 +680,8 @@ export default function LiveViewerPage() {
                       canScrub={replayDurationSeconds > 0}
                       isMuted={isMuted}
                       showControls
+                      isPaused={isReplayPaused}
+                      onTogglePlay={handleReplayTogglePlay}
                       onSeek={handleReplaySeek}
                       onSeekStart={() => { replayScrubbingRef.current = true; }}
                       onSeekEnd={handleReplaySeekEnd}
