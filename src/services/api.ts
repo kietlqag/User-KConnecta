@@ -23,6 +23,11 @@ async function refreshAccessToken(): Promise<void> {
   }
 }
 
+type ApiRequestConfig = {
+  signal?: AbortSignal;
+  skipSessionRedirect?: boolean;
+};
+
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),
   headers: { 'Content-Type': 'application/json' },
@@ -38,12 +43,16 @@ axiosInstance.interceptors.response.use(
       const url = error.config?.url ?? '';
       const isAuthEndpoint = url.startsWith('/auth/');
 
-      const original = error.config as (typeof error.config & { _retried?: boolean }) | undefined;
+      const original = error.config as (typeof error.config & {
+        _retried?: boolean;
+        skipSessionRedirect?: boolean;
+      }) | undefined;
       const shouldTryRefresh =
         (status === 401 || status === 403)
         && !isAuthEndpoint
         && original
         && !original._retried
+        && !original.skipSessionRedirect
         && authService.getCurrentUser();
 
       if (shouldTryRefresh) {
@@ -62,7 +71,7 @@ axiosInstance.interceptors.response.use(
         }
       }
 
-      if ((status === 401 || status === 403) && !isAuthEndpoint) {
+      if ((status === 401 || status === 403) && !isAuthEndpoint && !original?.skipSessionRedirect) {
         const data = error.response?.data;
         const locked =
           typeof data === 'object' && data !== null &&
@@ -95,7 +104,7 @@ axiosInstance.interceptors.response.use(
 );
 
 export const api = {
-  get: <T>(path: string, options?: { signal?: AbortSignal }) =>
+  get: <T>(path: string, options?: ApiRequestConfig) =>
     axiosInstance.get<T>(path, options).then(r => r.data),
 
   post: <T>(path: string, body: unknown) =>

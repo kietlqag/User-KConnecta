@@ -123,9 +123,9 @@ export const authService = {
     if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
     return api.put<AuthUser>(`/users/${id}`, data);
   },
-  getUserById: (id: string) => {
+  getUserById: (id: string, options?: { skipSessionRedirect?: boolean }) => {
     if (!id || id === 'undefined') return Promise.reject(new Error('Invalid user ID'));
-    return api.get<AuthUser>(`/users/${id}`);
+    return api.get<AuthUser>(`/users/${id}`, options);
   },
   /** Resolves profile by UUID or username without a failed UUID request first. */
   getUser: (identifier: string) => {

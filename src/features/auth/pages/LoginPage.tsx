@@ -376,7 +376,7 @@ export function LoginPage() {
       return;
     }
     try {
-      const profile = await authService.getUserById(authUser.id);
+      const profile = await authService.getUserById(authUser.id, { skipSessionRedirect: true });
       authService.saveCurrentUser(
         {
           ...profile,
