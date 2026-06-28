@@ -205,6 +205,16 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         liveAccessService.requireHost(session, hostUserId);
         validateRecordingFile(file);
 
+        if (!isBlank(session.getPlaybackUrl()) && session.getPlaybackUrl().toLowerCase().contains(".m3u8")) {
+            log.info("Skipping Cloudinary upload for session {} — R2 HLS playback already set", sessionId);
+            if (session.getRecordingStatus() != LiveRecordingStatus.READY) {
+                session.setRecordingStatus(LiveRecordingStatus.READY);
+                session.setRecordingMimeType("application/vnd.apple.mpegurl");
+                session.setRecordingError(null);
+            }
+            return toResponse(liveSessionRepository.save(session));
+        }
+
         String playbackUrl;
         try {
             playbackUrl = cloudinaryService.uploadLiveRecording(file, sessionId.toString());
