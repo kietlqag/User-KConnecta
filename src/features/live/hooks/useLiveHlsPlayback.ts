@@ -9,6 +9,15 @@ type UseLiveHlsPlaybackOptions = {
   startedAt?: string | null;
 };
 
+function getSeekableRange(video: HTMLVideoElement) {
+  if (video.seekable.length === 0) {
+    return { start: 0, end: 0 };
+  }
+  const start = video.seekable.start(0);
+  const end = video.seekable.end(video.seekable.length - 1);
+  return { start, end: Math.max(start, end) };
+}
+
 export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt }: UseLiveHlsPlaybackOptions) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -24,14 +33,15 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt }: UseLiveHlsPla
   }, [startedAt]);
 
   const updateFromVideo = useCallback((video: HTMLVideoElement) => {
-    const seekableEnd = video.seekable.length > 0
-      ? video.seekable.end(video.seekable.length - 1)
-      : video.currentTime;
-    const buffer = Math.max(seekableEnd, getSessionElapsed());
+    const { start, end } = getSeekableRange(video);
+    const timelineDuration = Math.max(end - start, 0);
+    const relativeTime = Math.max(0, video.currentTime - start);
+    const buffer = Math.max(timelineDuration, getSessionElapsed());
+
     if (!isScrubbingRef.current) {
-      setPlaybackSeconds(Math.floor(video.currentTime));
+      setPlaybackSeconds(Math.floor(relativeTime));
       setBufferedSeconds(Math.floor(buffer));
-      setIsAtLiveEdge(buffer - video.currentTime <= LIVE_EDGE_THRESHOLD_SEC);
+      setIsAtLiveEdge(buffer - relativeTime <= LIVE_EDGE_THRESHOLD_SEC);
     } else {
       setBufferedSeconds(Math.floor(buffer));
     }
@@ -92,24 +102,25 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt }: UseLiveHlsPla
   const seekTo = useCallback((seconds: number) => {
     const video = videoRef.current;
     if (!video) return;
-    const max = Math.max(bufferedSeconds, getSessionElapsed(), video.duration || 0, 1);
-    const clamped = Math.max(0, Math.min(seconds, max));
-    video.currentTime = clamped;
+    const { start, end } = getSeekableRange(video);
+    const timelineDuration = Math.max(end - start, getSessionElapsed(), video.duration || 0, 1);
+    const clamped = Math.max(0, Math.min(seconds, timelineDuration));
+    video.currentTime = start + clamped;
     setPlaybackSeconds(Math.floor(clamped));
-    setIsAtLiveEdge(max - clamped <= LIVE_EDGE_THRESHOLD_SEC);
+    setIsAtLiveEdge(timelineDuration - clamped <= LIVE_EDGE_THRESHOLD_SEC);
     void video.play().catch(() => undefined);
-  }, [bufferedSeconds, getSessionElapsed]);
+  }, [getSessionElapsed]);
 
   const goToLive = useCallback(() => {
     isScrubbingRef.current = false;
     const video = videoRef.current;
     if (!video) return;
-    const end = video.seekable.length > 0
-      ? video.seekable.end(video.seekable.length - 1)
-      : Math.max(getSessionElapsed(), bufferedSeconds);
-    video.currentTime = end;
-    setPlaybackSeconds(Math.floor(end));
-    setBufferedSeconds(Math.floor(Math.max(end, getSessionElapsed())));
+    const { start, end } = getSeekableRange(video);
+    const timelineEnd = end > start ? end : Math.max(getSessionElapsed(), bufferedSeconds);
+    video.currentTime = timelineEnd;
+    const relative = Math.max(0, timelineEnd - start);
+    setPlaybackSeconds(Math.floor(relative));
+    setBufferedSeconds(Math.floor(Math.max(relative, getSessionElapsed())));
     setIsAtLiveEdge(true);
     void video.play().catch(() => undefined);
   }, [bufferedSeconds, getSessionElapsed]);

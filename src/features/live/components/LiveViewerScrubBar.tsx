@@ -93,7 +93,7 @@ export function LiveViewerScrubBar({
           />
         </div>
 
-        {isReplay && (
+        {(isReplay || fullSession) && (
           <span className="w-11 shrink-0 text-right text-xs tabular-nums text-white/90">
             {formatDuration(displayBuffered)}
           </span>

@@ -2,6 +2,7 @@ import { MoreHorizontal, Volume2, VolumeX, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Room, RoomEvent, Track, type RemoteTrack } from 'livekit-client';
+import Hls from 'hls.js';
 import { toast } from 'sonner';
 import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
@@ -72,6 +73,7 @@ export default function LiveViewerPage() {
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
   const replayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() : '';
   const isReplay = Boolean(replayUrl);
+  const isHlsReplay = useMemo(() => /\.m3u8(\?|$)/i.test(replayUrl), [replayUrl]);
   const isActiveLiveSession = Boolean(session && !isLiveEnded && !isReplay && session.status === 'LIVE');
   const hlsPlaybackUrl = isPlayableUrl(session?.hlsPlaybackUrl) ? session?.hlsPlaybackUrl?.trim() : '';
   const useHlsPlayback = isActiveLiveSession && Boolean(hlsPlaybackUrl);
@@ -378,6 +380,8 @@ export default function LiveViewerPage() {
     const video = replayVideoRef.current;
     if (!video) return;
 
+    let hls: Hls | null = null;
+
     const syncDuration = () => {
       if (Number.isFinite(video.duration) && video.duration > 0) {
         setReplayDurationSeconds(Math.floor(video.duration));
@@ -389,6 +393,18 @@ export default function LiveViewerPage() {
       }
     };
 
+    if (isHlsReplay && Hls.isSupported()) {
+      hls = new Hls({ enableWorker: true });
+      hls.loadSource(replayUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        void video.play().catch(() => undefined);
+        syncDuration();
+      });
+    } else if (isHlsReplay && video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = replayUrl;
+    }
+
     syncDuration();
     video.addEventListener('loadedmetadata', syncDuration);
     video.addEventListener('durationchange', syncDuration);
@@ -397,8 +413,9 @@ export default function LiveViewerPage() {
       video.removeEventListener('loadedmetadata', syncDuration);
       video.removeEventListener('durationchange', syncDuration);
       video.removeEventListener('timeupdate', onTimeUpdate);
+      hls?.destroy();
     };
-  }, [isReplay, replayUrl]);
+  }, [isHlsReplay, isReplay, replayUrl]);
 
   useEffect(() => {
     if (useHlsPlayback || isAtLiveEdge || !dvrUrl) return;
@@ -594,7 +611,12 @@ export default function LiveViewerPage() {
           </button>
 
           {!isLiveEnded && isAtLiveEdge && (
-            <div className="absolute top-4 right-4 rounded-md bg-red-600 text-white text-sm font-semibold px-2 py-1">TRỰC TIẾP</div>
+            <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+              <span className="rounded-md bg-black/70 px-2 py-1 font-mono text-xs tabular-nums text-white shadow">
+                {liveElapsed}
+              </span>
+              <span className="rounded-md bg-red-600 px-2 py-1 text-sm font-semibold text-white">TRỰC TIẾP</span>
+            </div>
           )}
           {!isLiveEnded && !isAtLiveEdge && canScrub && (
             <div className="absolute top-4 right-4 rounded-md bg-card/15 text-white text-sm font-semibold px-2 py-1 backdrop-blur-sm">
@@ -608,7 +630,7 @@ export default function LiveViewerPage() {
                 <div className="relative flex min-h-0 w-full flex-1 flex-col">
                   <video
                     ref={replayVideoRef}
-                    src={replayUrl}
+                    src={isHlsReplay ? undefined : replayUrl}
                     autoPlay
                     playsInline
                     muted={isMuted}
