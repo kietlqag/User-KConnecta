@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import project.kconnecta.user.backend.feature.settings.service.SettingsService;
+import project.kconnecta.user.backend.exception.BadRequestException;
 import project.kconnecta.user.backend.exception.DuplicateResourceException;
 import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
@@ -44,6 +45,7 @@ public class FriendServiceImpl implements FriendService {
     public List<FriendResponse> getFriends(UUID userId) {
         return friendshipRepository.findAllByUserIdAndStatusWithUsers(userId, FriendshipStatus.ACCEPTED)
                 .stream()
+                .filter(f -> !f.getRequester().getId().equals(f.getAddressee().getId()))
                 .map(f -> mapToResponse(f, userId))
                 .toList();
     }
@@ -52,6 +54,7 @@ public class FriendServiceImpl implements FriendService {
     public List<FriendBirthdayResponse> getFriendBirthdays(UUID userId) {
         return friendshipRepository.findAllByUserIdAndStatusWithUsers(userId, FriendshipStatus.ACCEPTED)
                 .stream()
+                .filter(f -> !f.getRequester().getId().equals(f.getAddressee().getId()))
                 .map(f -> {
                     User other = f.getRequester().getId().equals(userId)
                             ? f.getAddressee()
@@ -75,6 +78,7 @@ public class FriendServiceImpl implements FriendService {
     public List<FriendResponse> getFriendRequests(UUID userId) {
         return friendshipRepository.findAllByAddresseeIdAndStatusWithUsers(userId, FriendshipStatus.PENDING)
                 .stream()
+                .filter(f -> !f.getRequester().getId().equals(f.getAddressee().getId()))
                 .map(f -> mapToResponse(f, userId))
                 .toList();
     }
@@ -87,7 +91,7 @@ public class FriendServiceImpl implements FriendService {
     @Override
     public FriendResponse sendFriendRequest(UUID requesterId, UUID addresseeId) {
         if (requesterId.equals(addresseeId)) {
-            throw new IllegalArgumentException("Cannot send friend request to yourself");
+            throw new BadRequestException("Khong the gui loi moi ket ban cho chinh minh");
         }
 
         if (settingsService.isBlockedEitherDirection(requesterId, addresseeId)) {
@@ -116,7 +120,7 @@ public class FriendServiceImpl implements FriendService {
                 requesterId,
                 addresseeId,
                 NotificationType.FRIEND_REQUEST,
-                requester.getFullName() + " đã gửi cho bạn lời mời kết bạn",
+                "đã gửi cho bạn lời mời kết bạn",
                 saved.getId()
         );
         return mapToResponse(saved, requesterId);
@@ -137,7 +141,7 @@ public class FriendServiceImpl implements FriendService {
                 addressee.getId(),
                 requester.getId(),
                 NotificationType.FRIEND_ACCEPTED,
-                addressee.getFullName() + " đã chấp nhận lời mời kết bạn của bạn",
+                "đã chấp nhận lời mời kết bạn của bạn",
                 saved.getId()
         );
         return mapToResponse(saved, addressee.getId());
