@@ -786,9 +786,12 @@ export default function LiveProducerPage() {
         roomRef.current?.disconnect();
         localStreamRef.current?.getTracks().forEach((track) => track.stop());
 
-        await liveService.endSession(sessionId);
+        const ended = await liveService.endSession(sessionId);
+        const hasR2Replay = /\.m3u8(\?|$)/i.test(ended.playbackUrl ?? '');
 
-        if (recording && recording.size > 0 && currentUser?.id) {
+        if (hasR2Replay) {
+          toast.success('Live đã kết thúc. Bản ghi HLS trên R2 sẵn sàng phát lại.');
+        } else if (recording && recording.size > 0 && currentUser?.id) {
           const startedAt = recordingStartedAtRef.current;
           const durationSec = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : undefined;
           try {
