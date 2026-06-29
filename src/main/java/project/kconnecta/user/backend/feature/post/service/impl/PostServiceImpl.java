@@ -1215,7 +1215,6 @@ public class PostServiceImpl implements PostService {
 
         CommentStatus status = aiModerationPolicyReader.isEnabled()
                 && !content.isBlank()
-                && policyContentValidator.isSuspect(content)
                 ? CommentStatus.PENDING : CommentStatus.APPROVED;
 
         PostComment saved = postCommentRepository.save(PostComment.builder()
