@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.kconnecta.user.backend.feature.policy.service.AiModerationPolicyReader;
+import project.kconnecta.user.backend.feature.interest.service.UserInterestService;
 import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.exception.ValidationException;
@@ -71,6 +72,8 @@ class PostServiceImplCommentTest {
     private AiModerationPolicyReader aiModerationPolicyReader;
     @Mock
     private CommentViolationService commentViolationService;
+    @Mock
+    private UserInterestService userInterestService;
 
     @InjectMocks
     private PostServiceImpl service;

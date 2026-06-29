@@ -15,6 +15,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.entity.Post;
 import project.kconnecta.user.backend.feature.post.entity.PostShare;
 import project.kconnecta.user.backend.feature.post.repository.PostCommentRepository;
+import project.kconnecta.user.backend.feature.post.repository.PostPollRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostReactionRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostSavedRepository;
@@ -45,6 +46,8 @@ class PostServiceImplShareTest {
     @Mock
     private PostSavedRepository postSavedRepository;
     @Mock
+    private PostPollRepository postPollRepository;
+    @Mock
     private RecommendationPolicyReader recommendationPolicyReader;
 
     @InjectMocks
@@ -70,6 +73,7 @@ class PostServiceImplShareTest {
         when(postShareRepository.countByPostIdIn(anyList())).thenReturn(Collections.emptyList());
         when(postReactionRepository.findAllByUserIdAndPostIdIn(eq(currentUserId), anyList())).thenReturn(Collections.emptyList());
         when(postSavedRepository.findSavedPostIdsByUserIdAndPostIdIn(eq(currentUserId), anyList())).thenReturn(Collections.emptySet());
+        when(postPollRepository.findAllByPostIdIn(anyList())).thenReturn(Collections.emptyList());
 
         // 2. Mock friends for sharing query
         UUID friendId = UUID.randomUUID();

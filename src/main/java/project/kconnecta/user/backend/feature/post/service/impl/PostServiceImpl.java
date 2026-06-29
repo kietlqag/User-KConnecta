@@ -177,10 +177,11 @@ public class PostServiceImpl implements PostService {
                 mediaRequests.size()
         );
 
+        // AI duyệt MỌI bài có text (không còn cổng lọc từ khóa isSuspect), để bắt cả
+        // nội dung lách luật bằng tiếng lóng/ghép chữ mà danh sách từ khóa không phủ được.
         if (aiModerationPolicyReader.isEnabled()
                 && request.getContent() != null
-                && !request.getContent().isBlank()
-                && policyContentValidator.isSuspect(request.getContent())) {
+                && !request.getContent().isBlank()) {
             geminiModerationService.moderate(request.getContent()).ifPresent(moderation -> {
                 if (!moderation.safe()) {
                     throw new ValidationException(
@@ -358,11 +359,12 @@ public class PostServiceImpl implements PostService {
 
         boolean contentChanged = request.getContent() != null
                 && !Objects.equals(newContent, post.getContent());
+        // Duyệt AI mọi nội dung mới khi text thay đổi — chặn lách bằng cách tạo bài
+        // sạch rồi sửa thành nội dung vi phạm.
         if (contentChanged
                 && aiModerationPolicyReader.isEnabled()
                 && newContent != null
-                && !newContent.isBlank()
-                && policyContentValidator.isSuspect(newContent)) {
+                && !newContent.isBlank()) {
             geminiModerationService.moderate(newContent).ifPresent(moderation -> {
                 if (!moderation.safe()) {
                     throw new ValidationException(
@@ -496,8 +498,7 @@ public class PostServiceImpl implements PostService {
             // was missing at creation time or policy has since changed.
             if (aiModerationPolicyReader.isEnabled()
                     && post.getContent() != null
-                    && !post.getContent().isBlank()
-                    && policyContentValidator.isSuspect(post.getContent())) {
+                    && !post.getContent().isBlank()) {
                 var moderation = geminiModerationService.moderate(post.getContent());
                 if (moderation.isPresent() && !moderation.get().safe()) {
                     post.setStatus(PostStatus.REJECTED);

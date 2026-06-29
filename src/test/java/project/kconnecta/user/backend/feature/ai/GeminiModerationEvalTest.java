@@ -3,6 +3,8 @@ package project.kconnecta.user.backend.feature.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import project.kconnecta.user.backend.feature.policy.service.AiModerationPolicyReader;
+import project.kconnecta.user.backend.feature.policy.service.PolicyService;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -88,7 +90,12 @@ class GeminiModerationEvalTest {
         long cooldownMs = parseLong(System.getenv("EVAL_RETRY_COOLDOWN_MS"), 65000L);
         int maxConsecFails = (int) parseLong(System.getenv("EVAL_MAX_CONSECUTIVE_FAILS"), 5L);
 
-        GeminiModerationService service = new GeminiModerationService(new ObjectMapper(), apiKey, models);
+        // Reader cấu hình mặc định (config rỗng → detect bật hết, sensitivity 72 → ngưỡng 0.28),
+        // đo bộ phân loại theo đúng cấu hình production mặc định.
+        PolicyService policyService = org.mockito.Mockito.mock(PolicyService.class);
+        org.mockito.Mockito.when(policyService.getConfigJson()).thenReturn(new ObjectMapper().createObjectNode());
+        AiModerationPolicyReader policyReader = new AiModerationPolicyReader(policyService);
+        GeminiModerationService service = new GeminiModerationService(new ObjectMapper(), policyReader, apiKey, models);
         // Đổi tập test qua EVAL_DATASET (vd "/moderation-eval/dataset-hard.csv" để chạy tập biên).
         String datasetPath = Optional.ofNullable(System.getenv("EVAL_DATASET")).orElse("/moderation-eval/dataset.csv");
         List<Sample> dataset = loadDataset(datasetPath);

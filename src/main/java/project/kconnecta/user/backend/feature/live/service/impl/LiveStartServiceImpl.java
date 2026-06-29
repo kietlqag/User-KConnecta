@@ -125,6 +125,7 @@ public class LiveStartServiceImpl implements LiveStartService {
         }
         if (safeTitle.isBlank()) return safeDescription;
         if (safeDescription.isBlank()) return safeTitle;
+        if (safeTitle.equals(safeDescription)) return safeTitle;
         return safeTitle + "\n\n" + safeDescription;
     }
 

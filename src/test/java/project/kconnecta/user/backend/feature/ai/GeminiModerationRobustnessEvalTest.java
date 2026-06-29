@@ -3,6 +3,8 @@ package project.kconnecta.user.backend.feature.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import project.kconnecta.user.backend.feature.policy.service.AiModerationPolicyReader;
+import project.kconnecta.user.backend.feature.policy.service.PolicyService;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -84,7 +86,11 @@ class GeminiModerationRobustnessEvalTest {
         long cooldownMs = parseLong(System.getenv("EVAL_RETRY_COOLDOWN_MS"), 65000L);
         int maxConsecFails = (int) parseLong(System.getenv("EVAL_MAX_CONSECUTIVE_FAILS"), 5L);
 
-        GeminiModerationService service = new GeminiModerationService(new ObjectMapper(), apiKey, models);
+        // Reader cấu hình mặc định (config rỗng → detect bật hết, sensitivity 72 → ngưỡng 0.28).
+        PolicyService policyService = org.mockito.Mockito.mock(PolicyService.class);
+        org.mockito.Mockito.when(policyService.getConfigJson()).thenReturn(new ObjectMapper().createObjectNode());
+        AiModerationPolicyReader policyReader = new AiModerationPolicyReader(policyService);
+        GeminiModerationService service = new GeminiModerationService(new ObjectMapper(), policyReader, apiKey, models);
         List<Row> dataset = loadDataset("/moderation-eval/dataset-robustness.csv");
 
         Map<String, StyleStat> byStyle = new LinkedHashMap<>();

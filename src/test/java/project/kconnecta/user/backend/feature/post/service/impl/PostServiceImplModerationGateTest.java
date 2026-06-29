@@ -8,9 +8,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import project.kconnecta.user.backend.exception.ValidationException;
 import project.kconnecta.user.backend.feature.ai.GeminiModerationService;
+import project.kconnecta.user.backend.feature.interest.service.PostTopicService;
 import project.kconnecta.user.backend.feature.notification.event.NotificationEventPublisher;
 import project.kconnecta.user.backend.feature.policy.service.AiModerationPolicyReader;
 import project.kconnecta.user.backend.feature.policy.service.PolicyContentValidator;
+import project.kconnecta.user.backend.feature.settings.service.SettingsService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -72,6 +74,10 @@ class PostServiceImplModerationGateTest {
     private AiModerationPolicyReader aiModerationPolicyReader;
     @Mock
     private NotificationEventPublisher notificationEventPublisher;
+    @Mock
+    private SettingsService settingsService;
+    @Mock
+    private PostTopicService postTopicService;
 
     @InjectMocks
     private PostServiceImpl service;
@@ -84,6 +90,8 @@ class PostServiceImplModerationGateTest {
         lenient().when(postShareRepository.countByPostId(any())).thenReturn(0L);
         lenient().when(postSavedRepository.existsByPostIdAndUserId(any(), any())).thenReturn(false);
         lenient().when(postRepository.save(any(Post.class))).thenAnswer(inv -> inv.getArgument(0));
+        // privacy mặc định khi request không set — để createPost chạy tới các bước sau khối kiểm duyệt.
+        lenient().when(settingsService.getDefaultPostPrivacy(any())).thenReturn(PostPrivacy.PUBLIC);
     }
 
     private Post publishedPost(UUID postId, UUID authorId, String content) {
@@ -104,12 +112,12 @@ class PostServiceImplModerationGateTest {
     }
 
     @Test
-    void createPost_whenAiEnabledAndSuspectContentUnsafe_invokesGeminiAndRejects() {
+    void createPost_whenAiEnabledAndContentUnsafe_invokesGeminiAndRejects() {
         UUID authorId = UUID.randomUUID();
         when(userRepository.findById(authorId))
                 .thenReturn(Optional.of(User.builder().id(authorId).username("author").build()));
         when(aiModerationPolicyReader.isEnabled()).thenReturn(true);
-        when(policyContentValidator.isSuspect("bad content")).thenReturn(true);
+        // Không còn cổng isSuspect — AI duyệt mọi bài có text.
         when(geminiModerationService.moderate("bad content"))
                 .thenReturn(Optional.of(new GeminiModerationService.ModerationResult(false, "toxic")));
 
@@ -121,13 +129,14 @@ class PostServiceImplModerationGateTest {
     }
 
     @Test
-    void createPost_cleanContent_skipsGemini() {
+    void createPost_whenAiEnabledAndContentNonBlank_invokesGemini() {
         UUID authorId = UUID.randomUUID();
         when(userRepository.findById(authorId))
                 .thenReturn(Optional.of(User.builder().id(authorId).username("author").build()));
         when(aiModerationPolicyReader.isEnabled()).thenReturn(true);
-        when(policyContentValidator.isSuspect("nice post")).thenReturn(false);
 
+        // AI giờ duyệt MỌI bài có text (không còn cổng isSuspect). Ép lỗi validate *sau* khối
+        // kiểm duyệt (group + page cùng set) để dừng sớm nhưng vẫn chứng minh Gemini được gọi.
         CreatePostRequest req = createRequest(authorId, "nice post");
         req.setGroupId(UUID.randomUUID());
         req.setPageId(UUID.randomUUID());
@@ -136,7 +145,7 @@ class PostServiceImplModerationGateTest {
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("both a group and a page");
 
-        verify(geminiModerationService, never()).moderate(anyString());
+        verify(geminiModerationService).moderate("nice post");
     }
 
     @Test
@@ -202,49 +211,57 @@ class PostServiceImplModerationGateTest {
         Post post = publishedPost(postId, authorId, "hello world");
         UpdatePostRequest req = new UpdatePostRequest();
         req.setContent("hello world");
+        // Dừng sớm sau khối kiểm duyệt (excludedUserIds không còn hỗ trợ) để khỏi chạm happy-path nặng.
+        req.setExcludedUserIds(List.of(UUID.randomUUID()));
 
         when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
-        service.updatePost(postId, authorId, req);
+        assertThatThrownBy(() -> service.updatePost(postId, authorId, req))
+                .isInstanceOf(ValidationException.class);
 
         verify(geminiModerationService, never()).moderate(anyString());
-        verify(policyContentValidator, never()).isSuspect(anyString());
     }
 
     @Test
-    void updatePost_cleanContentChange_skipsGemini() {
+    void updatePost_contentChange_invokesGeminiAndRejectsWhenUnsafe() {
+        UUID postId = UUID.randomUUID();
+        UUID authorId = UUID.randomUUID();
+        Post post = publishedPost(postId, authorId, "old text");
+        UpdatePostRequest req = new UpdatePostRequest();
+        req.setContent("new bad text");
+
+        when(postRepository.findById(postId)).thenReturn(Optional.of(post));
+        when(aiModerationPolicyReader.isEnabled()).thenReturn(true);
+        // Không còn cổng isSuspect — mọi thay đổi nội dung đều được AI duyệt; unsafe → chặn ngay.
+        when(geminiModerationService.moderate("new bad text"))
+                .thenReturn(Optional.of(new GeminiModerationService.ModerationResult(false, "toxic")));
+
+        assertThatThrownBy(() -> service.updatePost(postId, authorId, req))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("vi phạm");
+
+        verify(geminiModerationService).moderate("new bad text");
+    }
+
+    @Test
+    void updatePost_contentChange_invokesGeminiAndProceedsWhenSafe() {
         UUID postId = UUID.randomUUID();
         UUID authorId = UUID.randomUUID();
         Post post = publishedPost(postId, authorId, "old text");
         UpdatePostRequest req = new UpdatePostRequest();
         req.setContent("new clean text");
+        // Safe → vượt qua khối kiểm duyệt; dừng sớm sau đó bằng excludedUserIds.
+        req.setExcludedUserIds(List.of(UUID.randomUUID()));
 
         when(postRepository.findById(postId)).thenReturn(Optional.of(post));
         when(aiModerationPolicyReader.isEnabled()).thenReturn(true);
-        when(policyContentValidator.isSuspect("new clean text")).thenReturn(false);
-
-        service.updatePost(postId, authorId, req);
-
-        verify(geminiModerationService, never()).moderate(anyString());
-    }
-
-    @Test
-    void updatePost_suspectContentChange_invokesGemini() {
-        UUID postId = UUID.randomUUID();
-        UUID authorId = UUID.randomUUID();
-        Post post = publishedPost(postId, authorId, "old text");
-        UpdatePostRequest req = new UpdatePostRequest();
-        req.setContent("suspicious text");
-
-        when(postRepository.findById(postId)).thenReturn(Optional.of(post));
-        when(aiModerationPolicyReader.isEnabled()).thenReturn(true);
-        when(policyContentValidator.isSuspect("suspicious text")).thenReturn(true);
-        when(geminiModerationService.moderate("suspicious text"))
+        when(geminiModerationService.moderate("new clean text"))
                 .thenReturn(Optional.of(new GeminiModerationService.ModerationResult(true, "")));
 
-        service.updatePost(postId, authorId, req);
+        assertThatThrownBy(() -> service.updatePost(postId, authorId, req))
+                .isInstanceOf(ValidationException.class);
 
-        verify(geminiModerationService).moderate("suspicious text");
+        verify(geminiModerationService).moderate("new clean text");
     }
 
     @Test
@@ -254,12 +271,13 @@ class PostServiceImplModerationGateTest {
         Post post = publishedPost(postId, authorId, "unchanged text");
         UpdatePostRequest req = new UpdatePostRequest();
         req.setMedia(List.of());
+        req.setExcludedUserIds(List.of(UUID.randomUUID())); // dừng sớm sau khối kiểm duyệt
 
         when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
-        service.updatePost(postId, authorId, req);
+        assertThatThrownBy(() -> service.updatePost(postId, authorId, req))
+                .isInstanceOf(ValidationException.class);
 
         verify(geminiModerationService, never()).moderate(anyString());
-        verify(policyContentValidator, never()).isSuspect(anyString());
     }
 }
