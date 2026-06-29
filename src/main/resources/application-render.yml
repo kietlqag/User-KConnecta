@@ -4,7 +4,11 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: validate
+      # KHÔNG dùng update/validate trên Render PostgreSQL: việc Hibernate quét
+      # metadata khóa ngoại (getImportedKeys) sinh truy vấn rất nặng làm server
+      # Postgres đóng kết nối giữa chừng (EOFException khi khởi động). Schema được
+      # quản lý thủ công qua các *SchemaMigrator/*SchemaFix chạy lúc boot.
+      ddl-auto: none
   cache:
     type: none
 
