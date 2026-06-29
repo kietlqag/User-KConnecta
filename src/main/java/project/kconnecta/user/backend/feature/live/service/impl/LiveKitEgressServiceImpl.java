@@ -99,10 +99,10 @@ public class LiveKitEgressServiceImpl implements LiveKitEgressService {
                 return Optional.empty();
             }
 
-            // Người xem live dùng playlist DVR đầy đủ (playback.m3u8) để tua lại được
-            // toàn bộ buổi live. live.m3u8 chỉ là cửa sổ trượt low-latency, tua về
-            // quá khứ sẽ đứng hình vì segment đã rớt khỏi playlist.
-            String liveUrl = buildPublicHlsUrl(prefix, "playback.m3u8");
+            // Live edge: live.m3u8 (cửa sổ trượt low-latency). Tua lại khi đang live
+            // dùng DVR ghi trên client (WebRTC), không seek HLS. playback.m3u8 dùng sau
+            // khi kết thúc live (VOD đầy đủ).
+            String liveUrl = buildPublicHlsUrl(prefix, "live.m3u8");
             log.info("LiveKit HLS egress started for session {}: egressId={}, liveUrl={}",
                     session.getId(), response.body().getEgressId(), liveUrl);
             return Optional.of(EgressStartResult.builder()
