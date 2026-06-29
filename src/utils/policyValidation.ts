@@ -78,6 +78,27 @@ export function checkKeywords(
   return validateTextKeywords(text, policy, action);
 }
 
+export function checkWatchlistKeywords(
+  text: string,
+  policy: PublicPolicyResponse | undefined,
+): string | null {
+  if (!policy) return null;
+  const keywords = policy.fullConfig?.keywords;
+  if (!Array.isArray(keywords)) return null;
+
+  const normalized = text.toLowerCase();
+  for (const kw of keywords as { value?: string; category?: string }[]) {
+    const value = (kw.value ?? '').toLowerCase();
+    const category = normalizeCategory(kw.category ?? '');
+    if (!value) continue;
+    if (category !== 'watchlist' && category !== 'sensitive') continue;
+    if (normalized.includes(value)) {
+      return value;
+    }
+  }
+  return null;
+}
+
 function validateTextKeywords(
   text: string,
   policy: PublicPolicyResponse,

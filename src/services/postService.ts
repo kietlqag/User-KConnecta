@@ -390,6 +390,13 @@ export const postService = {
       category: category ?? null,
       reason: reason?.trim() || null,
     }),
+  verifyContent: (content: string) =>
+    api.post<{
+      safe: boolean;
+      level: 'NONE' | 'BLACKLIST' | 'WATCHLIST' | 'AI_UNSAFE';
+      matchedKeyword?: string;
+      reason?: string;
+    }>('/posts/verify-content', { content }),
   votePoll: (postId: string, payload: VotePostPollPayload) =>
     api.put<PostPollResponse>(`/posts/${encodeURIComponent(postId)}/poll/vote`, payload),
   addPollOption: (postId: string, payload: AddPostPollOptionPayload) =>

@@ -40,7 +40,7 @@ import { usePublicPolicies } from '@/hooks/usePublicPolicies';
 import { useRefreshPoliciesOnOpen } from '@/hooks/useRefreshPoliciesOnOpen';
 import { usePostRateLimit } from '@/hooks/usePostRateLimit';
 import { formatPostRateLimitMessage, isPostRateLimitReached } from '@/utils/postRateLimit';
-import { validatePostAgainstPolicy, checkKeywords, validatePostMediaFiles } from '@/utils/policyValidation';
+import { validatePostAgainstPolicy, checkKeywords, checkWatchlistKeywords, validatePostMediaFiles } from '@/utils/policyValidation';
 import { buildPostMediaAcceptAttribute, getPostMediaKind, toApiMediaType, type PostMediaKind } from '@/utils/allowedFileTypes';
 
 import { toApiScheduledAt, debugScheduleLog } from './postScheduleUtils';
@@ -112,6 +112,41 @@ export function ProfileCreatePostModal({
   const [showPoll, setShowPoll] = useState(initialShowPoll);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollAllowAddOptions, setPollAllowAddOptions] = useState(true);
+  const [isAiChecking, setIsAiChecking] = useState(false);
+  const [aiViolationError, setAiViolationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const trimmed = postContent.trim();
+    if (!trimmed || trimmed.length < 5) {
+      setAiViolationError(null);
+      setIsAiChecking(false);
+      return;
+    }
+
+    if (checkKeywords(postContent, publicPolicy)) {
+      setAiViolationError(null);
+      setIsAiChecking(false);
+      return;
+    }
+
+    setIsAiChecking(true);
+    const handler = setTimeout(async () => {
+      try {
+        const response = await postService.verifyContent(trimmed);
+        if (response.level === 'AI_UNSAFE') {
+          setAiViolationError(response.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
+        } else {
+          setAiViolationError(null);
+        }
+      } catch (err) {
+        console.error('Failed to verify content with AI:', err);
+      } finally {
+        setIsAiChecking(false);
+      }
+    }, 1000);
+
+    return () => clearTimeout(handler);
+  }, [postContent, publicPolicy]);
 
   const { data: targetGroup } = useGroupById(groupId);
   const postContext = groupId ? 'GROUP' : 'PROFILE';
@@ -541,6 +576,27 @@ export function ProfileCreatePostModal({
                 </div>
               ) : null;
             })()}
+            {(() => {
+              const matchedWatchlist = checkWatchlistKeywords(postContent, publicPolicy);
+              return matchedWatchlist ? (
+                <div className="flex items-center gap-1.5 mt-1 rounded-md bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                  Nội dung chứa từ nhạy cảm: "{matchedWatchlist}". Bài viết sẽ được AI kiểm duyệt sau khi đăng.
+                </div>
+              ) : null;
+            })()}
+            {isAiChecking && (
+              <div className="flex items-center gap-1.5 mt-1 rounded-md bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400">
+                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                AI đang kiểm duyệt nội dung...
+              </div>
+            )}
+            {aiViolationError && (
+              <div className="flex items-center gap-1.5 mt-1 rounded-md bg-red-50 dark:bg-red-900/20 px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400 font-semibold">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+                {aiViolationError}
+              </div>
+            )}
 
             {showPoll && isGroupPost && (
               <GroupPollComposer
@@ -746,7 +802,7 @@ export function ProfileCreatePostModal({
                 : hasVideo
                   ? 'Đang đăng hình ảnh/video...'
                   : 'Đang tải ảnh lên...';
-              const disabled = !hasContent || isUploading || isPosting || rateLimitBlocked || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions;
+              const disabled = !hasContent || isUploading || isPosting || rateLimitBlocked || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions || isAiChecking || !!aiViolationError;
               const useDirectPost = isGroupPost;
 
               return (
