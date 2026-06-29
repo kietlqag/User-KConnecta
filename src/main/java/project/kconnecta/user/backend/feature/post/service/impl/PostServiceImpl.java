@@ -37,6 +37,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.SharedAlbumResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.SharedGroupResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.ContentVerificationResponse;
 import project.kconnecta.user.backend.feature.post.entity.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.MediaType;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
@@ -2266,5 +2267,54 @@ public class PostServiceImpl implements PostService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    @Override
+    public ContentVerificationResponse verifyPostContent(String content) {
+        if (content == null || content.isBlank()) {
+            return ContentVerificationResponse.builder()
+                    .safe(true)
+                    .level("NONE")
+                    .build();
+        }
+
+        // 1. Kiểm tra từ khóa trong blacklist / watchlist
+        var matchedOpt = policyContentValidator.findAnyMatchedKeyword(content);
+        if (matchedOpt.isPresent()) {
+            var matched = matchedOpt.get();
+            String cat = matched.category();
+            if ("blacklist".equalsIgnoreCase(cat) || "banned".equalsIgnoreCase(cat)) {
+                return ContentVerificationResponse.builder()
+                        .safe(false)
+                        .level("BLACKLIST")
+                        .matchedKeyword(matched.value())
+                        .reason("Nội dung chứa từ khóa bị cấm: \"" + matched.value() + "\"")
+                        .build();
+            } else if ("watchlist".equalsIgnoreCase(cat) || "sensitive".equalsIgnoreCase(cat)) {
+                return ContentVerificationResponse.builder()
+                        .safe(true) // Watchlist vẫn cho qua để đăng, nhưng cảnh báo để AI quét tiếp
+                        .level("WATCHLIST")
+                        .matchedKeyword(matched.value())
+                        .reason("Nội dung chứa từ nhạy cảm: \"" + matched.value() + "\"")
+                        .build();
+            }
+        }
+
+        // 2. Kiểm tra bằng AI (nếu AI bật)
+        if (aiModerationPolicyReader.isEnabled()) {
+            var moderationOpt = geminiModerationService.moderate(content);
+            if (moderationOpt.isPresent() && !moderationOpt.get().safe()) {
+                return ContentVerificationResponse.builder()
+                        .safe(false)
+                        .level("AI_UNSAFE")
+                        .reason("Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderationOpt.get().reason())
+                        .build();
+            }
+        }
+
+        return ContentVerificationResponse.builder()
+                .safe(true)
+                .level("NONE")
+                .build();
     }
 }

@@ -30,6 +30,7 @@ import project.kconnecta.user.backend.feature.post.dto.response.PostRateLimitSta
 import project.kconnecta.user.backend.feature.post.dto.response.PostReportResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostResponse;
 import project.kconnecta.user.backend.feature.post.dto.response.PostShareResponse;
+import project.kconnecta.user.backend.feature.post.dto.response.ContentVerificationResponse;
 import project.kconnecta.user.backend.feature.post.service.PostService;
 
 import org.springframework.data.domain.Page;
@@ -322,5 +323,12 @@ public class PostController {
             @PathVariable UUID id,
             @PathVariable UUID optionId) {
         return ResponseEntity.ok(postService.deletePollOption(id, optionId, principal.getUserId()));
+    }
+
+    @PostMapping("/verify-content")
+    public ResponseEntity<ContentVerificationResponse> verifyContent(
+            @RequestBody Map<String, String> request) {
+        String content = request.get("content");
+        return ResponseEntity.ok(postService.verifyPostContent(content));
     }
 }

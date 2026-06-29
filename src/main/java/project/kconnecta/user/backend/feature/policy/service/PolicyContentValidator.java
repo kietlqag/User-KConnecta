@@ -221,6 +221,30 @@ public class PolicyContentValidator {
     /** Từ cấm đã khớp khi bình luận vi phạm (để audit vi phạm). */
     public record MatchedKeyword(String id, String value, String category) {}
 
+    public Optional<MatchedKeyword> findAnyMatchedKeyword(String content) {
+        String text = content == null ? "" : content;
+        if (text.isBlank()) {
+            return Optional.empty();
+        }
+        JsonNode keywords = policyService.getConfigJson().path("keywords");
+        if (!keywords.isArray()) {
+            return Optional.empty();
+        }
+        String lower = text.toLowerCase(Locale.ROOT);
+        String norm = normalizeForMatch(text);
+        for (JsonNode kw : keywords) {
+            String category = kw.path("category").asText("");
+            String value = kw.path("value").asText("");
+            if (value.isBlank()) {
+                continue;
+            }
+            if (keywordMatches(lower, norm, value)) {
+                return Optional.of(new MatchedKeyword(kw.path("id").asText(""), value, category));
+            }
+        }
+        return Optional.empty();
+    }
+
     /**
      * Trả về từ cấm (blacklist / blocked_domain) đầu tiên mà nội dung bình luận khớp,
      * rỗng nếu không vi phạm (KHÔNG tính lỗi độ dài, watchlist là vùng xám nên bỏ qua).

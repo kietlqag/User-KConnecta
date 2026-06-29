@@ -90,4 +90,6 @@ public interface PostService {
     PostPollResponse addPollOption(UUID postId, UUID userId, AddPostPollOptionRequest request);
 
     PostPollResponse deletePollOption(UUID postId, UUID optionId, UUID userId);
+
+    project.kconnecta.user.backend.feature.post.dto.response.ContentVerificationResponse verifyPostContent(String content);
 }
