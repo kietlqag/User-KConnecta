@@ -26,6 +26,15 @@ const reactions: Array<{ label: string; value: NonNullable<UpsertLiveReactionReq
 
 const isPlayableUrl = (value?: string | null) => /^https?:\/\//i.test(value?.trim() ?? '');
 
+async function isHlsPlaylistReachable(url: string) {
+  try {
+    const response = await fetch(url, { method: 'HEAD', mode: 'cors' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 function formatLiveElapsed(startedAt?: string | null) {
   if (!startedAt) return '00:00';
   const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
@@ -53,6 +62,9 @@ export default function LiveViewerPage() {
   const [toolState, setToolState] = useState<LiveSessionToolStateResponse | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const playerSectionRef = useRef<HTMLElement | null>(null);
   const [liveElapsed, setLiveElapsed] = useState('00:00');
   const [isReacting, setIsReacting] = useState(false);
   const [isVotingPoll, setIsVotingPoll] = useState(false);
@@ -70,9 +82,12 @@ export default function LiveViewerPage() {
   const [replayCurrentSeconds, setReplayCurrentSeconds] = useState(0);
   const [replayDurationSeconds, setReplayDurationSeconds] = useState(0);
   const [isReplayPaused, setIsReplayPaused] = useState(false);
+  const [hlsVodReady, setHlsVodReady] = useState(false);
 
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
-  const replayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() : '';
+  const candidateReplayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() ?? '' : '';
+  const isHlsVodCandidate = /\.m3u8(\?|$)/i.test(candidateReplayUrl);
+  const replayUrl = candidateReplayUrl && (!isHlsVodCandidate || hlsVodReady) ? candidateReplayUrl : '';
   const isReplay = Boolean(replayUrl);
   const isHlsReplay = useMemo(() => /\.m3u8(\?|$)/i.test(replayUrl), [replayUrl]);
   const isActiveLiveSession = Boolean(session && !isLiveEnded && !isReplay && session.status === 'LIVE');
@@ -293,20 +308,60 @@ export default function LiveViewerPage() {
   }, [hlsPlaybackUrl, isActiveLiveSession, sessionId]);
 
   useEffect(() => {
+    if (!candidateReplayUrl || !isHlsVodCandidate) {
+      setHlsVodReady(false);
+      return;
+    }
+    if (session?.recordingStatus === 'READY') {
+      setHlsVodReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    const pollPlaylist = async () => {
+      const ready = await isHlsPlaylistReachable(candidateReplayUrl);
+      if (!cancelled && ready) {
+        setHlsVodReady(true);
+      }
+    };
+
+    void pollPlaylist();
+    const interval = window.setInterval(() => void pollPlaylist(), 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [candidateReplayUrl, isHlsVodCandidate, session?.recordingStatus]);
+
+  useEffect(() => {
     if (!isLiveEnded) return;
-    roomRef.current?.disconnect();
-    if (isPlayableUrl(session?.playbackUrl)) {
+    if (session?.recordingStatus === 'FAILED') {
+      setStatus(session.recordingError || 'Không thể tạo bản ghi phát lại cho phiên live này.');
+      setError('');
+      return;
+    }
+    if (isHlsVodCandidate && !hlsVodReady) {
+      setStatus('Đang lưu bản ghi HLS lên R2...');
+      setError('');
+      return;
+    }
+    if (isPlayableUrl(replayUrl)) {
       setStatus('Phát lại bản ghi live.');
       setError('');
       return;
     }
     setStatus('Live đã kết thúc.');
-  }, [isLiveEnded, session?.playbackUrl]);
+  }, [hlsVodReady, isHlsVodCandidate, isLiveEnded, replayUrl, session?.recordingError, session?.recordingStatus]);
+
+  useEffect(() => {
+    if (!isLiveEnded) return;
+    roomRef.current?.disconnect();
+  }, [isLiveEnded]);
 
   useEffect(() => {
     if (!sessionId) return;
     if (!isLiveEnded) return;
-    if (isPlayableUrl(session?.playbackUrl)) return;
+    if (isPlayableUrl(replayUrl)) return;
     if (session?.recordingStatus !== 'PROCESSING') return;
 
     let cancelled = false;
@@ -316,10 +371,14 @@ export default function LiveViewerPage() {
         if (cancelled) return;
         setSession(updated);
         if (isPlayableUrl(updated.playbackUrl)) {
+          if (/\.m3u8(\?|$)/i.test(updated.playbackUrl ?? '')) {
+            const ready = await isHlsPlaylistReachable(updated.playbackUrl!.trim());
+            if (ready) setHlsVodReady(true);
+          }
           setStatus('Phát lại bản ghi live.');
           setError('');
         } else if (updated.recordingStatus === 'FAILED') {
-          setStatus('Không thể tạo bản ghi phát lại cho phiên live này.');
+          setStatus(updated.recordingError || 'Không thể tạo bản ghi phát lại cho phiên live này.');
         }
       } catch {
         // Keep polling until upload completes or user leaves.
@@ -332,7 +391,7 @@ export default function LiveViewerPage() {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [isLiveEnded, session?.playbackUrl, session?.recordingStatus, sessionId]);
+  }, [isLiveEnded, replayUrl, session?.recordingStatus, sessionId]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -364,49 +423,68 @@ export default function LiveViewerPage() {
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.muted = isMuted || !isAtLiveEdge || useHlsPlayback;
+      audioRef.current.volume = volume;
     }
     if (dvrVideoRef.current) {
       dvrVideoRef.current.muted = isMuted;
+      dvrVideoRef.current.volume = volume;
     }
     if (hlsPlayback.videoRef.current) {
       hlsPlayback.videoRef.current.muted = isMuted;
+      hlsPlayback.videoRef.current.volume = volume;
     }
     if (replayVideoRef.current) {
       replayVideoRef.current.muted = isMuted;
+      replayVideoRef.current.volume = volume;
     }
-  }, [hlsPlayback.videoRef, isMuted, isAtLiveEdge, useHlsPlayback, dvrUrl]);
+  }, [hlsPlayback.videoRef, isMuted, volume, isAtLiveEdge, useHlsPlayback, dvrUrl]);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
 
   useEffect(() => {
     if (!isReplay) return;
     const video = replayVideoRef.current;
     if (!video) return;
 
+    setReplayCurrentSeconds(0);
+    setReplayDurationSeconds(0);
+
     let hls: Hls | null = null;
+
+    const finiteEnd = (ranges: TimeRanges) => {
+      if (ranges.length === 0) return 0;
+      const end = ranges.end(ranges.length - 1);
+      return Number.isFinite(end) && end > 0 ? end : 0;
+    };
 
     const resolveDuration = () => {
       // Ưu tiên duration chuẩn; nếu Infinity/NaN (blob MediaRecorder, HLS đang ghi)
-      // thì lấy mốc cuối của seekable/buffered làm thời lượng tạm.
+      // thì lấy mốc cuối seekable/buffered hoặc currentTime làm thời lượng tạm.
       if (Number.isFinite(video.duration) && video.duration > 0) {
         return video.duration;
       }
-      if (video.seekable.length > 0) {
-        return video.seekable.end(video.seekable.length - 1);
-      }
-      if (video.buffered.length > 0) {
-        return video.buffered.end(video.buffered.length - 1);
+      const seekableEnd = finiteEnd(video.seekable);
+      if (seekableEnd > 0) return seekableEnd;
+      const bufferedEnd = finiteEnd(video.buffered);
+      if (bufferedEnd > 0) return bufferedEnd;
+      if (Number.isFinite(video.currentTime) && video.currentTime > 0) {
+        return video.currentTime;
       }
       return 0;
     };
     const syncDuration = () => {
       const next = resolveDuration();
-      if (next > 0) {
-        // Chỉ tăng (không tụt) để thanh tua không nhảy lùi khi buffer chưa đủ.
-        setReplayDurationSeconds((prev) => Math.max(prev, Math.floor(next)));
-      }
+      if (!Number.isFinite(next) || next <= 0) return;
+      // Chỉ tăng (không tụt) để thanh tua không nhảy lùi khi buffer chưa đủ.
+      setReplayDurationSeconds((prev) => Math.max(prev, Math.floor(next)));
     };
     const onTimeUpdate = () => {
       syncDuration();
-      if (!replayScrubbingRef.current) {
+      if (!replayScrubbingRef.current && Number.isFinite(video.currentTime)) {
         setReplayCurrentSeconds(Math.floor(video.currentTime));
       }
     };
@@ -453,7 +531,11 @@ export default function LiveViewerPage() {
         const onFixed = () => {
           video.removeEventListener('durationchange', onFixed);
           video.removeEventListener('timeupdate', onFixed);
-          syncDuration();
+          // Sau khi seek tới cuối, currentTime thường là mốc cuối thật dù duration vẫn Infinity.
+          const estimate = resolveDuration();
+          if (Number.isFinite(estimate) && estimate > 0) {
+            setReplayDurationSeconds(Math.floor(estimate));
+          }
           try {
             video.currentTime = 0;
           } catch {
@@ -629,6 +711,27 @@ export default function LiveViewerPage() {
     setIsMuted((prev) => !prev);
   };
 
+  const handleVolumeChange = (next: number) => {
+    const clamped = Math.max(0, Math.min(1, next));
+    setVolume(clamped);
+    if (clamped > 0) setIsMuted(false);
+    if (clamped === 0) setIsMuted(true);
+  };
+
+  const handleToggleFullscreen = async () => {
+    const el = playerSectionRef.current;
+    if (!el) return;
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await el.requestFullscreen();
+      }
+    } catch {
+      /* trình duyệt có thể chặn fullscreen */
+    }
+  };
+
   const handleReplaySeek = useCallback((seconds: number) => {
     const video = replayVideoRef.current;
     const max = Math.max(replayDurationSeconds, video?.duration || 0, 1);
@@ -680,6 +783,7 @@ export default function LiveViewerPage() {
 
       <div className="mt-14 grid h-[calc(100vh-3.5rem)] grid-cols-1 gap-0 overflow-hidden xl:grid-cols-[1.35fr_380px]">
         <section
+          ref={playerSectionRef}
           className="group/player relative h-full bg-black"
           onMouseEnter={() => setShowControls(true)}
           onMouseLeave={() => setShowControls(false)}
@@ -725,7 +829,7 @@ export default function LiveViewerPage() {
                     className="min-h-0 w-full flex-1 cursor-pointer object-contain"
                     onClick={handleReplayTogglePlay}
                   />
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-4 pt-10">
                     <LiveViewerScrubBar
                       mode="replay"
                       bufferedSeconds={replayDurationSeconds}
@@ -733,6 +837,10 @@ export default function LiveViewerPage() {
                       isAtLiveEdge={false}
                       canScrub={replayDurationSeconds > 0}
                       isMuted={isMuted}
+                      volume={volume}
+                      onVolumeChange={handleVolumeChange}
+                      isFullscreen={isFullscreen}
+                      onToggleFullscreen={handleToggleFullscreen}
                       showControls
                       isPaused={isReplayPaused}
                       onTogglePlay={handleReplayTogglePlay}
@@ -787,7 +895,7 @@ export default function LiveViewerPage() {
           <LiveFloatingReactions bursts={bursts} />
 
           {!isReplay && (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-4">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-4 pt-10">
             {isActiveLiveSession && (
               <LiveViewerScrubBar
                 bufferedSeconds={bufferedSeconds}
@@ -796,6 +904,10 @@ export default function LiveViewerPage() {
                 isAtLiveEdge={isAtLiveEdge}
                 canScrub={canScrub}
                 isMuted={isMuted}
+                volume={volume}
+                onVolumeChange={handleVolumeChange}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={handleToggleFullscreen}
                 showControls={showControls}
                 onSeek={seekTo}
                 onSeekStart={() => setScrubbing(true)}

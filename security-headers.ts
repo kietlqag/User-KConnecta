@@ -5,8 +5,8 @@ const CSP_DEV =
   "style-src 'self' 'unsafe-inline' https://accounts.google.com; " +
   "font-src 'self' data:; " +
   "img-src 'self' data: blob: https://res.cloudinary.com https://cdn.jsdelivr.net https://i.pravatar.cc https://ui-avatars.com https://images.unsplash.com https://placehold.co https://lh3.googleusercontent.com https://*.googleusercontent.com; " +
-  "media-src 'self' blob: https://res.cloudinary.com; " +
-  "connect-src 'self' http://localhost:8080 ws://localhost:3000 ws://localhost:8080 https://res.cloudinary.com https://accounts.google.com https://oauth2.googleapis.com wss: ws:; " +
+  "media-src 'self' blob: https://res.cloudinary.com https://*.r2.dev https://*.r2.cloudflarestorage.com; " +
+  "connect-src 'self' http://localhost:8080 ws://localhost:3000 ws://localhost:8080 https://res.cloudinary.com https://accounts.google.com https://oauth2.googleapis.com https://*.r2.dev https://*.r2.cloudflarestorage.com wss: ws:; " +
   "frame-src https://accounts.google.com; " +
   "frame-ancestors 'none'; " +
   "base-uri 'self'; " +

@@ -54,16 +54,6 @@ const rankCamera = (device: MediaDeviceInfo) => {
   return 3;
 };
 
-const getSupportedRecordingMimeType = () => {
-  if (typeof MediaRecorder === 'undefined') return '';
-  return [
-    'video/webm;codecs=vp9,opus',
-    'video/webm;codecs=vp8,opus',
-    'video/webm',
-    'video/mp4',
-  ].find((type) => MediaRecorder.isTypeSupported(type)) ?? '';
-};
-
 function LiveTimer({ startedAt, paused = false }: { startedAt?: string | null; paused?: boolean }) {
   const formatElapsed = useCallback((at: string) => {
     const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(at).getTime()) / 1000));
@@ -164,11 +154,6 @@ export default function LiveProducerPage() {
   const roomRef = useRef<Room | null>(null);
   const publishedTracksRef = useRef<MediaStreamTrack[]>([]);
   const previousTrackStatsRef = useRef<PreviousTrackStats>({});
-  const recordingChunksRef = useRef<BlobPart[]>([]);
-  const allRecordingChunksRef = useRef<BlobPart[]>([]);
-  const liveRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingStartedAtRef = useRef<number | null>(null);
-  const recordingMimeTypeRef = useRef('');
   const toolFormDirtyRef = useRef(false);
   const commentCount = postMetrics?.commentCount ?? 0;
   const shareCount = postMetrics?.shareCount ?? 0;
@@ -294,77 +279,6 @@ export default function LiveProducerPage() {
     await Promise.all([bind(mainVideoRef.current), bind(miniVideoRef.current)]);
   }, []);
 
-  const flushRecordingSegment = useCallback(async () => {
-    const recorder = liveRecorderRef.current;
-    if (!recorder) {
-      return;
-    }
-
-    if (recorder.state === 'recording' || recorder.state === 'paused') {
-      recorder.requestData();
-      await new Promise<void>((resolve) => {
-        recorder.addEventListener('stop', () => resolve(), { once: true });
-        recorder.stop();
-      });
-    } else if (recorder.state !== 'inactive') {
-      await new Promise<void>((resolve) => {
-        recorder.addEventListener('stop', () => resolve(), { once: true });
-        recorder.stop();
-      });
-    }
-
-    liveRecorderRef.current = null;
-    if (recordingChunksRef.current.length > 0) {
-      allRecordingChunksRef.current.push(...recordingChunksRef.current);
-      recordingChunksRef.current = [];
-    }
-  }, []);
-
-  const startLiveRecording = useCallback((stream: MediaStream) => {
-    if (typeof MediaRecorder === 'undefined') return;
-    if (!stream.getVideoTracks().length) return;
-
-    try {
-      const mimeType = getSupportedRecordingMimeType();
-      const recorder = new MediaRecorder(
-        stream,
-        mimeType
-          ? { mimeType, videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 }
-          : { videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 },
-      );
-      recordingChunksRef.current = [];
-      if (recordingStartedAtRef.current == null) {
-        recordingStartedAtRef.current = Date.now();
-      }
-      recordingMimeTypeRef.current = recorder.mimeType || mimeType || 'video/webm';
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordingChunksRef.current.push(event.data);
-        }
-      };
-      recorder.start(1000);
-      liveRecorderRef.current = recorder;
-    } catch {
-      liveRecorderRef.current = null;
-      recordingStartedAtRef.current = null;
-      recordingChunksRef.current = [];
-    }
-  }, []);
-
-  const stopLiveRecording = useCallback(async () => {
-    await flushRecordingSegment();
-
-    if (allRecordingChunksRef.current.length === 0) {
-      return null;
-    }
-
-    const blob = new Blob(allRecordingChunksRef.current, {
-      type: recordingMimeTypeRef.current || 'video/webm',
-    });
-    allRecordingChunksRef.current = [];
-    return blob;
-  }, [flushRecordingSegment]);
-
   useEffect(() => {
     let mounted = true;
     let permissionStream: MediaStream | null = null;
@@ -462,23 +376,6 @@ export default function LiveProducerPage() {
       cancelled = true;
     };
   }, [selectedCameraId, selectedMicId, videoSourceMode, bindStreamToPreview]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const syncRecording = async () => {
-      const stream = localStreamRef.current;
-      if (!sessionId || !isMediaReady || !stream) return;
-
-      await flushRecordingSegment();
-      if (cancelled) return;
-      startLiveRecording(stream);
-    };
-
-    void syncRecording();
-    return () => {
-      cancelled = true;
-    };
-  }, [flushRecordingSegment, isMediaReady, localStreamVersion, sessionId, startLiveRecording]);
 
   useEffect(() => {
     if (!livekitUrl || !hostToken) return;
@@ -782,31 +679,18 @@ export default function LiveProducerPage() {
 
     try {
       if (sessionId) {
-        const recording = await stopLiveRecording();
         roomRef.current?.disconnect();
         localStreamRef.current?.getTracks().forEach((track) => track.stop());
 
         const ended = await liveService.endSession(sessionId);
-        const hasR2Replay = /\.m3u8(\?|$)/i.test(ended.playbackUrl ?? '');
+        const hasHlsReplay = /\.m3u8(\?|$)/i.test(ended.playbackUrl ?? '') || Boolean(ended.hlsPlaybackUrl);
 
-        if (hasR2Replay) {
-          toast.success('Live đã kết thúc. Bản ghi HLS trên R2 sẵn sàng phát lại.');
-        } else if (recording && recording.size > 0 && currentUser?.id) {
-          const startedAt = recordingStartedAtRef.current;
-          const durationSec = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : undefined;
-          try {
-            await liveService.uploadRecording(sessionId, recording, durationSec);
-            toast.success('Đã lưu bản ghi phát lại live.');
-          } catch (error) {
-            const message = error instanceof Error ? error.message : 'Không thể tải bản ghi live lên server';
-            await liveService.markRecordingFailed(sessionId, message).catch(() => undefined);
-            toast.error(message || 'Không thể lưu bản ghi live. Vui lòng kiểm tra cấu hình Cloudinary trên server.');
-          }
-        } else if (currentUser?.id) {
-          await liveService.markRecordingFailed(
-            sessionId,
-            'Không ghi được video từ phiên live. Vui lòng kiểm tra quyền camera/micro và thử lại.',
-          ).catch(() => undefined);
+        if (hasHlsReplay) {
+          toast.success('Live đã kết thúc. Bản ghi HLS đang được lưu lên R2.');
+        } else if (ended.recordingStatus === 'FAILED') {
+          toast.error(ended.recordingError || 'Không ghi được bản live lên R2. Kiểm tra cấu hình LIVEKIT_EGRESS_* trên server.');
+        } else {
+          toast.success('Live đã kết thúc.');
         }
       }
       navigate('/live');

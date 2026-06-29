@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pause, Play, Volume2, VolumeX } from 'lucide-react';
+import { Maximize, Minimize, Pause, Play, Volume1, Volume2, VolumeX } from 'lucide-react';
 
 function formatDuration(seconds: number) {
-  const safe = Math.max(0, Math.floor(seconds));
+  if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
+  const safe = Math.floor(seconds);
   const hours = Math.floor(safe / 3600);
   const minutes = Math.floor((safe % 3600) / 60);
   const secs = safe % 60;
@@ -15,6 +16,8 @@ function formatDuration(seconds: number) {
 type LiveViewerScrubBarProps = {
   bufferedSeconds: number;
   playbackSeconds: number;
+  /** Mốc đã tải sẵn (xem trước) để vẽ vạch buffer mờ phía sau. Mặc định = bufferedSeconds. */
+  loadedSeconds?: number;
   displayOffsetSeconds?: number;
   isAtLiveEdge: boolean;
   canScrub: boolean;
@@ -29,11 +32,17 @@ type LiveViewerScrubBarProps = {
   mode?: 'live' | 'replay';
   isPaused?: boolean;
   onTogglePlay?: () => void;
+  /** Âm lượng 0..1. Khi có cùng onVolumeChange sẽ hiện thanh trượt âm lượng. */
+  volume?: number;
+  onVolumeChange?: (value: number) => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 };
 
 export function LiveViewerScrubBar({
   bufferedSeconds,
   playbackSeconds,
+  loadedSeconds,
   displayOffsetSeconds = 0,
   isAtLiveEdge,
   canScrub,
@@ -48,6 +57,10 @@ export function LiveViewerScrubBar({
   mode = 'live',
   isPaused = false,
   onTogglePlay,
+  volume = 1,
+  onVolumeChange,
+  isFullscreen = false,
+  onToggleFullscreen,
 }: LiveViewerScrubBarProps) {
   const isReplay = mode === 'replay';
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -55,6 +68,9 @@ export function LiveViewerScrubBar({
 
   const max = Math.max(bufferedSeconds, 1);
   const progressPercent = bufferedSeconds > 0 ? Math.min(100, (playbackSeconds / max) * 100) : 0;
+  const loadedPercent = bufferedSeconds > 0
+    ? Math.min(100, (Math.max(loadedSeconds ?? bufferedSeconds, playbackSeconds) / max) * 100)
+    : 0;
   // Nhãn thời gian cộng offset để hiển thị giờ thật của buổi live; slider vẫn
   // chạy theo toạ độ local (0..bufferedSeconds) nên logic seek không đổi.
   const displayPlayback = playbackSeconds + displayOffsetSeconds;
@@ -62,13 +78,16 @@ export function LiveViewerScrubBar({
   // Live edge: vạch đỏ; đã tua / replay: vạch trắng.
   const isLiveActive = !isReplay && isAtLiveEdge;
   const fillColor = isLiveActive ? 'bg-red-500' : 'bg-white';
-  const showBubble = (isScrubbing || isHovering) && canScrub;
+  const thumbColor = isLiveActive ? 'bg-red-500' : 'bg-white';
+  const showThumb = isScrubbing || isHovering;
+  const effectiveVolume = isMuted ? 0 : volume;
+  const VolumeIcon = effectiveVolume <= 0 ? VolumeX : effectiveVolume < 0.5 ? Volume1 : Volume2;
 
   return (
     <div
-      className={`mb-2 transition-opacity duration-200 ${ showControls ? 'opacity-100' : 'pointer-events-none opacity-0' }`}
+      className={`select-none transition-opacity duration-200 ${ showControls ? 'opacity-100' : 'pointer-events-none opacity-0' }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {(isReplay || onTogglePlay) && (
           <button
             type="button"
@@ -84,7 +103,7 @@ export function LiveViewerScrubBar({
           <button
             type="button"
             onClick={onGoLive}
-            className="flex shrink-0 items-center gap-1.5 rounded-full px-1.5 py-0.5 text-sm font-semibold text-white transition hover:bg-white/10"
+            className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-1 text-sm font-semibold text-white transition hover:bg-white/10"
             aria-label="Về trực tiếp"
           >
             <span className={`h-2.5 w-2.5 rounded-full ${isLiveActive ? 'bg-red-500' : 'bg-white/50'} ${isLiveActive ? 'animate-pulse' : ''}`} />
@@ -92,32 +111,35 @@ export function LiveViewerScrubBar({
           </button>
         )}
 
-        <span className="shrink-0 text-xs font-medium tabular-nums text-white/90">
+        <span className="ml-1 shrink-0 text-xs font-medium tabular-nums text-white/90">
           {formatDuration(displayPlayback)}
         </span>
 
         <div
-          className="group relative flex h-5 flex-1 items-center"
+          className="group/track relative flex h-5 flex-1 cursor-pointer items-center"
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
         >
-          {/* Track nền */}
-          <div className="absolute inset-x-0 h-1.5 rounded-full bg-white/25" />
-          {/* Phần đã phát */}
+          {/* Track nền + buffered + fill: nở dày khi hover/scrub */}
           <div
-            className={`absolute h-1.5 rounded-full ${fillColor} ${isScrubbing ? '' : 'transition-[width] duration-200 ease-linear'}`}
-            style={{ width: `${progressPercent}%` }}
-          />
-          {/* Núm kéo (luôn hiển thị để thấy điểm chạy hiện tại) */}
+            className={`absolute inset-x-0 overflow-hidden rounded-full bg-white/25 transition-[height] duration-150 ${ showThumb ? 'h-[5px]' : 'h-[3px]' }`}
+          >
+            <div className="absolute inset-y-0 left-0 bg-white/35" style={{ width: `${loadedPercent}%` }} />
+            <div
+              className={`absolute inset-y-0 left-0 ${fillColor} ${isScrubbing ? '' : 'transition-[width] duration-200 ease-linear'}`}
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          {/* Núm kéo: ẩn khi rảnh, hiện khi hover/scrub (chuẩn Facebook) */}
           <span
-            className={`pointer-events-none absolute h-4 w-4 -translate-x-1/2 rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.25),0_1px_3px_rgba(0,0,0,0.5)] transition-transform ${ showBubble ? 'scale-110' : 'scale-100' }`}
+            className={`pointer-events-none absolute h-3.5 w-3.5 -translate-x-1/2 rounded-full ${thumbColor} shadow-[0_0_0_1px_rgba(0,0,0,0.2),0_1px_4px_rgba(0,0,0,0.5)] transition-transform duration-150 ${ showThumb ? 'scale-100' : 'scale-0' }`}
             style={{ left: `${progressPercent}%` }}
             aria-hidden
           />
-          {/* Bong bóng thời gian */}
-          {showBubble && (
+          {/* Bong bóng thời gian khi hover/scrub */}
+          {showThumb && canScrub && (
             <span
-              className="pointer-events-none absolute -top-8 -translate-x-1/2 rounded-md bg-black/85 px-2 py-1 text-xs font-semibold tabular-nums text-white shadow-lg"
+              className="pointer-events-none absolute -top-9 -translate-x-1/2 rounded-md bg-black/90 px-2 py-1 text-xs font-semibold tabular-nums text-white shadow-lg"
               style={{ left: `${progressPercent}%` }}
               aria-hidden
             >
@@ -144,17 +166,48 @@ export function LiveViewerScrubBar({
         </div>
 
         <span className="shrink-0 text-xs font-medium tabular-nums text-white/70">
-          {isLiveActive ? formatDuration(displayBuffered) : `${formatDuration(displayBuffered)}`}
+          {formatDuration(displayBuffered)}
         </span>
 
-        <button
-          type="button"
-          onClick={onToggleMute}
-          className="shrink-0 rounded-full p-1.5 text-white transition hover:bg-white/15"
-          aria-label={isMuted ? 'Bật âm thanh' : 'Tắt âm thanh'}
-        >
-          {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-        </button>
+        {/* Âm lượng: nút mute + thanh trượt hiện khi hover (chuẩn Facebook) */}
+        <div className="group/vol flex shrink-0 items-center">
+          <button
+            type="button"
+            onClick={onToggleMute}
+            className="rounded-full p-1.5 text-white transition hover:bg-white/15"
+            aria-label={effectiveVolume <= 0 ? 'Bật âm thanh' : 'Tắt âm thanh'}
+          >
+            <VolumeIcon className="h-5 w-5" />
+          </button>
+          {onVolumeChange && (
+            <div className="w-0 overflow-hidden opacity-0 transition-all duration-200 group-hover/vol:ml-1 group-hover/vol:w-16 group-hover/vol:opacity-100">
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.05}
+                value={effectiveVolume}
+                aria-label="Âm lượng"
+                onChange={(event) => onVolumeChange(Number(event.target.value))}
+                className="h-1 w-16 cursor-pointer appearance-none rounded-full bg-white/30 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white"
+                style={{
+                  background: `linear-gradient(to right, #fff ${effectiveVolume * 100}%, rgba(255,255,255,0.3) ${effectiveVolume * 100}%)`,
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {onToggleFullscreen && (
+          <button
+            type="button"
+            onClick={onToggleFullscreen}
+            className="shrink-0 rounded-full p-1.5 text-white transition hover:bg-white/15"
+            aria-label={isFullscreen ? 'Thoát toàn màn hình' : 'Toàn màn hình'}
+          >
+            {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+          </button>
+        )}
       </div>
     </div>
   );
