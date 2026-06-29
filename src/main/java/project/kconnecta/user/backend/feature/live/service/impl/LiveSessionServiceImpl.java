@@ -40,8 +40,11 @@ import project.kconnecta.user.backend.feature.live.service.LiveKitTokenService;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionService;
 import project.kconnecta.user.backend.feature.post.entity.Post;
+import project.kconnecta.user.backend.feature.post.entity.PostReaction;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
+import project.kconnecta.user.backend.feature.post.repository.PostReactionRepository;
 import project.kconnecta.user.backend.feature.post.repository.PostRepository;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
@@ -49,6 +52,7 @@ import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -66,6 +70,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     private final LiveSessionReactionRepository liveSessionReactionRepository;
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+    private final PostReactionRepository postReactionRepository;
     private final LiveSessionRealtimePublisher realtimePublisher;
     private final LiveAccessService liveAccessService;
     private final LiveKitTokenService liveKitTokenService;
@@ -210,8 +215,74 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }
 
         LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
+        syncLiveEngagementToPost(session);
         realtimePublisher.publishSessionEvent("LIVE_ENDED", response);
         return response;
+    }
+
+    /**
+     * Chuyển cảm xúc live (live_session_reactions) sang post_reactions để bài post
+     * hiển thị đúng sau khi xem lại. Bình luận live đã ghi vào post_comments nên không cần sync.
+     */
+    private void syncLiveEngagementToPost(LiveSession session) {
+        UUID postId = session.getPostId();
+        if (postId == null) {
+            return;
+        }
+        Post post = postRepository.findById(postId).orElse(null);
+        if (post == null) {
+            return;
+        }
+
+        List<LiveSessionReaction> liveReactions = liveSessionReactionRepository.findAllBySession_Id(session.getId());
+        for (LiveSessionReaction liveReaction : liveReactions) {
+            ReactionType postReactionType = mapLiveReactionToPost(liveReaction.getReactionType());
+            if (postReactionType == null) {
+                continue;
+            }
+            UUID userId = liveReaction.getUser().getId();
+            Optional<PostReaction> existing = postReactionRepository.findByPostIdAndUserId(postId, userId);
+            if (existing.isPresent()) {
+                PostReaction reaction = existing.get();
+                reaction.setReactionType(postReactionType);
+                postReactionRepository.save(reaction);
+            } else {
+                postReactionRepository.save(PostReaction.builder()
+                        .post(post)
+                        .user(liveReaction.getUser())
+                        .reactionType(postReactionType)
+                        .build());
+            }
+        }
+        log.info("Synced {} live reactions to post {} for session {}", liveReactions.size(), postId, session.getId());
+    }
+
+    private ReactionType mapLiveReactionToPost(LiveReactionType liveType) {
+        if (liveType == null) {
+            return null;
+        }
+        return switch (liveType) {
+            case LIKE -> ReactionType.LIKE;
+            case LOVE, CARE -> ReactionType.LOVE;
+            case HAHA -> ReactionType.HAHA;
+            case WOW -> ReactionType.WOW;
+            case SAD -> ReactionType.SAD;
+            case ANGRY -> ReactionType.ANGRY;
+        };
+    }
+
+    private void syncLiveEngagementToPostIfNeeded(LiveSession session) {
+        if (session.getPostId() == null || session.getTotalReactionCount() <= 0) {
+            return;
+        }
+        if (session.getStatus() != LiveSessionStatus.ENDED && session.getStatus() != LiveSessionStatus.CANCELED) {
+            return;
+        }
+        long postReactionCount = postReactionRepository.countByPostId(session.getPostId());
+        if (postReactionCount >= session.getTotalReactionCount()) {
+            return;
+        }
+        syncLiveEngagementToPost(session);
     }
 
     @Override
@@ -350,6 +421,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         LiveSession session = liveSessionRepository.findByPostId(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Live session not found for post: " + postId));
         liveAccessService.requireCanView(session, viewerUserId);
+        syncLiveEngagementToPostIfNeeded(session);
         return toResponse(session, viewerUserId);
     }
 

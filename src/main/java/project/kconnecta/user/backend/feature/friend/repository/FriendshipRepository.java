@@ -39,6 +39,16 @@ public interface FriendshipRepository extends JpaRepository<Friendship, UUID> {
             @Param("status") FriendshipStatus status);
 
     @Query("""
+            SELECT DISTINCT f FROM Friendship f
+            JOIN FETCH f.requester
+            JOIN FETCH f.addressee
+            WHERE f.requester.id = :requesterId AND f.status = :status
+            """)
+    List<Friendship> findAllByRequesterIdAndStatusWithUsers(
+            @Param("requesterId") UUID requesterId,
+            @Param("status") FriendshipStatus status);
+
+    @Query("""
             SELECT f.requester.id, f.addressee.id
             FROM Friendship f
             WHERE f.status = :status

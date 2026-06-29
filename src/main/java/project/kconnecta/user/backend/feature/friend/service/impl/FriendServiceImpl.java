@@ -84,6 +84,15 @@ public class FriendServiceImpl implements FriendService {
     }
 
     @Override
+    public List<FriendResponse> getSentFriendRequests(UUID userId) {
+        return friendshipRepository.findAllByRequesterIdAndStatusWithUsers(userId, FriendshipStatus.PENDING)
+                .stream()
+                .filter(f -> !f.getRequester().getId().equals(f.getAddressee().getId()))
+                .map(f -> mapToResponse(f, userId))
+                .toList();
+    }
+
+    @Override
     public List<FriendResponse> getSuggestions(UUID userId) {
         return friendSuggestionService.getSuggestions(userId);
     }

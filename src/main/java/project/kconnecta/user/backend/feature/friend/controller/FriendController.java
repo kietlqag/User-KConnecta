@@ -39,6 +39,12 @@ public class FriendController {
         return ResponseEntity.ok(friendService.getFriendRequests(principal.getUserId()));
     }
 
+    @GetMapping("/sent-requests")
+    public ResponseEntity<List<FriendResponse>> getSentFriendRequests(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(friendService.getSentFriendRequests(principal.getUserId()));
+    }
+
     @GetMapping("/{userId}/suggestions")
     public ResponseEntity<List<FriendResponse>> getSuggestions(@PathVariable UUID userId) {
         return ResponseEntity.ok(friendService.getSuggestions(userId));

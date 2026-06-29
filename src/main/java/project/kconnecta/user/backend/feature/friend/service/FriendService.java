@@ -11,6 +11,7 @@ public interface FriendService {
     List<FriendResponse> getFriends(UUID userId);
     List<FriendBirthdayResponse> getFriendBirthdays(UUID userId);
     List<FriendResponse> getFriendRequests(UUID userId);
+    List<FriendResponse> getSentFriendRequests(UUID userId);
     List<FriendResponse> getSuggestions(UUID userId);
     FriendResponse sendFriendRequest(UUID requesterId, UUID addresseeId);
     FriendResponse acceptFriendRequest(UUID friendshipId);
