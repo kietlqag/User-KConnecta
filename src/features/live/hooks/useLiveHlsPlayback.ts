@@ -205,6 +205,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
 
   return {
     videoRef,
+    isReady,
     isAtLiveEdge,
     playbackSeconds,
     bufferedSeconds,
