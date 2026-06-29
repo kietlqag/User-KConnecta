@@ -89,7 +89,3 @@ export async function navigateToLiveSession(
   const previewQuery = options?.asViewerPreview ? '&preview=1' : '';
   navigate(`/live/viewer?sessionId=${encodeURIComponent(session.id)}${previewQuery}`);
 }
-
-export function getLiveViewerPreviewUrl(sessionId: string) {
-  return `/live/viewer?sessionId=${encodeURIComponent(sessionId)}&preview=1`;
-}

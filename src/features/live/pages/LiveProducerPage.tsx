@@ -27,7 +27,6 @@ import { postService, type PostResponse } from '@/services/postService';
 import { LiveCommentPanel } from '../components/LiveCommentPanel';
 import {
   buildProducerStateForHost,
-  getLiveViewerPreviewUrl,
   isLiveSessionHost,
   LIVE_PRODUCER_STATE_KEY,
   persistProducerState,
@@ -161,10 +160,6 @@ export default function LiveProducerPage() {
   const reactionCount = liveStats?.totalReactionCount ?? 0;
   const peakViewerCount = liveStats?.peakViewerCount ?? viewerCount;
   const hasFeaturedLink = Boolean(toolState?.featuredLinkTitle && toolState?.featuredLinkUrl);
-  const viewerUrl = useMemo(() => {
-    if (!sessionId) return '';
-    return `${window.location.origin}/live/viewer?sessionId=${encodeURIComponent(sessionId)}`;
-  }, [sessionId]);
 
   const applyToolState = useCallback((data: LiveSessionToolStateResponse, forceSyncForm = false) => {
     setToolState(data);
@@ -1091,18 +1086,6 @@ export default function LiveProducerPage() {
                         {toolState?.featuredLinkTitle}
                       </a>
                     )}
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-border bg-card p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-lg font-bold">Liên kết xem trước</h3>
-                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-foreground mb-3">Xem trước giao diện người xem (không tính vào lượt xem).</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 rounded-full bg-background px-4 py-2 truncate">{viewerUrl || 'Chưa có liên kết xem trước'}</div>
-                    <button onClick={() => navigate(getLiveViewerPreviewUrl(sessionId))} className="rounded-xl bg-emerald-50 text-emerald-700 font-semibold px-4 py-2">Xem như người xem</button>
                   </div>
                 </section>
               </div>

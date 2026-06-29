@@ -38,6 +38,10 @@ function mapFriend(f: FriendApiResponse): Friend {
   };
 }
 
+function needsSentRequests(tab: FriendsTab) {
+  return tab === 'sent-requests';
+}
+
 function needsRequestsForContent(tab: FriendsTab) {
   return tab === 'home' || tab === 'requests';
 }
@@ -57,6 +61,7 @@ export function useFriendsPageData(userId: string | undefined, activeTab: Friend
     const invalidate = () => {
       if (!userId) return;
       void queryClient.invalidateQueries({ queryKey: ['friend-requests', userId] });
+      void queryClient.invalidateQueries({ queryKey: ['sent-friend-requests', userId] });
       void queryClient.invalidateQueries({ queryKey: ['friend-suggestions', userId] });
       void queryClient.invalidateQueries({ queryKey: ['friends', userId] });
     };
@@ -68,6 +73,13 @@ export function useFriendsPageData(userId: string | undefined, activeTab: Friend
     queryKey: ['friend-requests', userId],
     queryFn: () => friendService.getFriendRequests(),
     enabled: !!userId,
+    staleTime: 60_000,
+  });
+
+  const sentRequestsQuery = useQuery({
+    queryKey: ['sent-friend-requests', userId],
+    queryFn: () => friendService.getSentFriendRequests(),
+    enabled: !!userId && needsSentRequests(activeTab),
     staleTime: 60_000,
   });
 
@@ -87,19 +99,22 @@ export function useFriendsPageData(userId: string | undefined, activeTab: Friend
 
   const loading =
     (needsRequestsForContent(activeTab) && requestsQuery.isLoading) ||
+    (needsSentRequests(activeTab) && sentRequestsQuery.isLoading) ||
     (needsSuggestions(activeTab) && suggestionsQuery.isLoading) ||
     (needsFriendsList(activeTab) && friendsQuery.isLoading);
 
-  const error = requestsQuery.error ?? suggestionsQuery.error ?? friendsQuery.error;
+  const error = requestsQuery.error ?? sentRequestsQuery.error ?? suggestionsQuery.error ?? friendsQuery.error;
 
   return {
     friendRequests: (requestsQuery.data ?? []).map(mapRequest),
+    sentFriendRequests: (sentRequestsQuery.data ?? []).map(mapRequest),
     suggestions: (suggestionsQuery.data ?? []).map(mapSuggestion),
     friends: (friendsQuery.data ?? []).map(mapFriend),
     loading,
     error,
     refetch: () => {
       void requestsQuery.refetch();
+      if (needsSentRequests(activeTab)) void sentRequestsQuery.refetch();
       if (needsSuggestions(activeTab)) void suggestionsQuery.refetch();
       if (needsFriendsList(activeTab)) void friendsQuery.refetch();
     },

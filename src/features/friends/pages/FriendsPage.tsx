@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FriendsLeftSidebar, FriendCard, FriendRequestCard } from '../components';
+import { FriendsLeftSidebar, FriendCard, FriendRequestCard, SentFriendRequestCard } from '../components';
 import { BirthdayPage } from '@/features/birthdays/components';
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
 import { MainLayout } from '../../../layouts';
@@ -23,7 +23,7 @@ export const FriendsPage = () => {
     initialTabParam &&
     initialTabParam !== 'custom-lists' &&
     initialTabParam !== 'suggestions' &&
-    ['home', 'requests', 'all-friends', 'birthdays'].includes(initialTabParam)
+    ['home', 'requests', 'sent-requests', 'all-friends', 'birthdays'].includes(initialTabParam)
       ? initialTabParam
       : 'home';
   const [activeTab, setActiveTab] = useState<FriendsTab>(initialTab);
@@ -51,7 +51,7 @@ export const FriendsPage = () => {
   }, []);
 
   const currentUser = authService.getCurrentUser();
-  const { friendRequests, suggestions, friends, loading, error, refetch } = useFriendsPageData(
+  const { friendRequests, sentFriendRequests, suggestions, friends, loading, error, refetch } = useFriendsPageData(
     currentUser?.id,
     activeTab,
   );
@@ -65,6 +65,12 @@ export const FriendsPage = () => {
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
   }, [activeTab]);
+
+  const handleCancelSentRequest = async (id: string) => {
+    await friendService.deleteFriendship(id);
+    refetch();
+    toast.success(t('friendsPage.cancelSuccess'));
+  };
 
   const handleAcceptRequest = async (id: string) => {
     const target = friendRequests.find((r) => r.id === id);
@@ -137,6 +143,30 @@ export const FriendsPage = () => {
                   request={request}
                   onAccept={handleAcceptRequest}
                   onDelete={handleDeleteRequest}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    if (activeTab === 'sent-requests') {
+      return (
+        <section>
+          <h2 className="text-xl font-bold text-foreground mb-4">
+            {t('friendsPage.sentRequests')}
+            <span className="ml-2 text-muted-foreground font-normal">{sentFriendRequests.length}</span>
+          </h2>
+          {sentFriendRequests.length === 0 ? (
+            <p className="text-muted-foreground">{t('friendsPage.noSentRequests')}</p>
+          ) : (
+            <div className={FRIEND_GRID_CLASS}>
+              {sentFriendRequests.map((request) => (
+                <SentFriendRequestCard
+                  key={request.id}
+                  request={request}
+                  onCancel={handleCancelSentRequest}
                 />
               ))}
             </div>

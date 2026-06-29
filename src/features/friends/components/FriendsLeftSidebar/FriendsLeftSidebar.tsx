@@ -1,11 +1,11 @@
-import { Users, UserPlus, Cake, Home } from 'lucide-react';
+import { Users, UserPlus, Cake, Home, Send } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-export type FriendsTab = 'home' | 'requests' | 'all-friends' | 'birthdays';
+export type FriendsTab = 'home' | 'requests' | 'sent-requests' | 'all-friends' | 'birthdays';
 
 interface SidebarItem {
   id: FriendsTab;
-  labelKey: 'home' | 'requests' | 'allFriends' | 'birthdays';
+  labelKey: 'home' | 'requests' | 'sentRequests' | 'allFriends' | 'birthdays';
   icon: React.ReactNode;
   count?: number;
 }
@@ -22,6 +22,7 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
   const sidebarItems: SidebarItem[] = [
     { id: 'home', labelKey: 'home', icon: <Home className="w-5 h-5" /> },
     { id: 'requests', labelKey: 'requests', icon: <UserPlus className="w-5 h-5" />, count: requestCount },
+    { id: 'sent-requests', labelKey: 'sentRequests', icon: <Send className="w-5 h-5" /> },
     { id: 'all-friends', labelKey: 'allFriends', icon: <Users className="w-5 h-5" /> },
     { id: 'birthdays', labelKey: 'birthdays', icon: <Cake className="w-5 h-5" /> },
   ];

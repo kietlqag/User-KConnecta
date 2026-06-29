@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import { authService } from '@/services/authService';
 import { postService, SAVED_POSTS_CHANGED_EVENT, type PostReactionCountResponse, type PostResponse, type ReactionType } from '@/services/postService';
+import { liveService } from '@/services/liveService';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { UserAvatar } from './UserAvatar';
 import { PostDetailModal } from '../posts/PostDetailModal';
@@ -220,6 +221,52 @@ export function Post({
   const [postStatus, setPostStatus] = useState(initialStatus);
   const [displayTimestamp, setDisplayTimestamp] = useState(timestamp);
   const currentUser = authService.getCurrentUser();
+
+  // Sau khi live kết thúc, đồng bộ lại react/comment từ buổi live xuống thanh tương tác bài post.
+  useEffect(() => {
+    if (!hasLivePreview || !liveSource?.postId) return;
+    let cancelled = false;
+
+    const refreshPostEngagement = async () => {
+      try {
+        const post = await postService.getPostById(liveSource.postId, currentUser?.id);
+        if (cancelled) return;
+        setCommentCount(post.commentCount);
+        setShareCount(post.shareCount);
+        setLikeCount(post.reactionCount);
+        setReactionCounts(mapReactionCounts(
+          post.reactionCounts,
+          buildInitialReactionCounts(post.reactionCount, post.currentUserReactionType ?? null),
+        ));
+        const userReaction = post.currentUserReactionType
+          ? reactions.find((item) => item.type === post.currentUserReactionType) ?? null
+          : null;
+        setSelectedReaction(userReaction);
+        setIsLiked(Boolean(post.currentUserReactionType));
+      } catch {
+        // Bỏ qua nếu không tải được post.
+      }
+    };
+
+    const poll = async () => {
+      try {
+        const session = await liveService.getSessionByPost(liveSource.postId);
+        if (cancelled) return;
+        if (session.status === 'ENDED' || session.status === 'CANCELED') {
+          await refreshPostEngagement();
+        }
+      } catch {
+        // Session chưa sẵn sàng.
+      }
+    };
+
+    void poll();
+    const interval = window.setInterval(() => void poll(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [currentUser?.id, hasLivePreview, liveSource?.postId]);
 
   useEffect(() => {
     setPostStatus(initialStatus);

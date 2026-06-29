@@ -31,6 +31,9 @@ export const friendService = {
   getFriendRequests: () =>
     api.get<FriendApiResponse[]>('/friends/requests'),
 
+  getSentFriendRequests: () =>
+    api.get<FriendApiResponse[]>('/friends/sent-requests'),
+
   getSuggestions: (userId: string) =>
     api.get<FriendApiResponse[]>(`/friends/${userId}/suggestions`),
 

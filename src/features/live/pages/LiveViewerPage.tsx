@@ -8,6 +8,7 @@ import { Header } from '../../home/components';
 import { authService } from '@/services/authService';
 import { liveService, type LiveSessionRealtimeEvent, type LiveSessionResponse, type LiveSessionToolStateResponse, type UpsertLiveReactionRequest } from '@/services/liveService';
 import { LiveCommentPanel } from '../components/LiveCommentPanel';
+import { LiveSidebarInfoCard } from '../components/LiveSidebarInfoCard';
 import { LiveFloatingReactions, useLiveReactionBursts } from '../components/LiveFloatingReactions';
 import { isLiveSessionHost, navigateToLiveSession } from '../utils/navigateToLiveSession';
 import { useLiveSessionSocket } from '../hooks/useLiveSessionSocket';
@@ -1011,7 +1012,9 @@ export default function LiveViewerPage() {
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-2 text-3xl">
+            <div
+              className={`flex items-center gap-2 text-3xl transition-opacity duration-200 ${ showControls ? 'opacity-100' : 'pointer-events-none opacity-0' }`}
+            >
               {reactions.map((reaction) => (
                 <button
                   key={reaction.value}
@@ -1067,14 +1070,21 @@ export default function LiveViewerPage() {
           {(toolState?.hostNotice || toolState?.featuredLinkUrl || toolState?.pollEnabled) && (
             <div className="mt-4 shrink-0 space-y-3">
               {toolState.hostNotice && (
-                <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">
+                <LiveSidebarInfoCard variant="notice">
                   {toolState.hostNotice}
-                </div>
+                </LiveSidebarInfoCard>
               )}
               {toolState.featuredLinkUrl && (
-                <a href={toolState.featuredLinkUrl} target="_blank" rel="noreferrer" className="block rounded-xl bg-background p-3 text-sm font-semibold text-emerald-700">
-                  {toolState.featuredLinkTitle || toolState.featuredLinkUrl}
-                </a>
+                <LiveSidebarInfoCard variant="link">
+                  <a
+                    href={toolState.featuredLinkUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {toolState.featuredLinkTitle || toolState.featuredLinkUrl}
+                  </a>
+                </LiveSidebarInfoCard>
               )}
               {toolState.pollEnabled && toolState.pollQuestion && (
                 <div className="rounded-xl bg-background p-3">
