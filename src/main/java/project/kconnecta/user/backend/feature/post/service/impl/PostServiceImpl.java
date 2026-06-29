@@ -138,6 +138,9 @@ public class PostServiceImpl implements PostService {
     private final PostTopicService postTopicService;
     private final UserInterestService userInterestService;
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     @Override
     public PostRateLimitStatus getPostRateLimitStatus(UUID userId) {
         return policyContentValidator.getPostRateLimitStatus(userId);
@@ -1672,6 +1675,23 @@ public class PostServiceImpl implements PostService {
         }
         deletePostCloudinaryAssets(post);
         String username = post.getAuthor().getUsername();
+
+        // Manual cascade deletion to avoid FK constraint violations
+        entityManager.createNativeQuery("DELETE FROM post_comment_likes WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM comment_violations WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM comment_reports WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_comments WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+
+        entityManager.createNativeQuery("DELETE FROM post_poll_votes WHERE poll_id IN (SELECT id FROM post_polls WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_poll_options WHERE poll_id IN (SELECT id FROM post_polls WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_polls WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+
+        entityManager.createNativeQuery("DELETE FROM post_reactions WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_saved WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_reports WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_shares WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_topics WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+
         postRepository.delete(post);
         activityLogService.log(userId, username, ActivityLogType.POST_DELETED,
                 "{\"postId\":\"" + postId + "\"}");
