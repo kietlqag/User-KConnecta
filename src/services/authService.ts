@@ -1,7 +1,10 @@
 import { api } from './api';
 
 const AUTH_USER_KEY = 'authUser';
+export const AUTH_STORAGE_KEY = AUTH_USER_KEY;
 const REMEMBER_ME_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+/** Profile cache without time expiry — session cookies on the backend control real auth lifetime. */
+const BROWSER_SESSION_EXPIRES_AT = 0;
 export const AUTH_USER_CHANGED_EVENT = 'auth-user-changed';
 
 const notifyAuthUserChanged = () => {
@@ -11,13 +14,8 @@ const notifyAuthUserChanged = () => {
 
 interface StoredAuthUser {
   user: AuthUser;
+  /** >0 = remember-me expiry timestamp; 0 = browser session profile cache. */
   expiresAt: number;
-}
-
-interface CurrentAuthState {
-  user: AuthUser | null;
-  storage: 'local' | 'session' | null;
-  expiresAt: number | null;
 }
 
 export interface AuthUser {
@@ -95,27 +93,95 @@ function sanitizeStoredUser(user: AuthUser): AuthUser {
 
 /** Remove legacy JWT fields from existing storage (one-time cleanup on read). */
 function stripLegacyTokensFromStorage() {
-  for (const storage of [localStorage, sessionStorage]) {
-    const raw = storage.getItem(AUTH_USER_KEY);
-    if (!raw) continue;
-    try {
-      const parsed = JSON.parse(raw) as StoredAuthUser | AuthUser;
-      if (typeof parsed === 'object' && parsed !== null && 'user' in parsed && 'expiresAt' in parsed) {
-        const payload = parsed as StoredAuthUser;
-        if (payload.user?.token || payload.user?.refreshToken) {
-          payload.user = sanitizeStoredUser(payload.user);
-          storage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
-        }
-      } else {
-        const user = parsed as AuthUser;
-        if (user.token || user.refreshToken) {
-          storage.setItem(AUTH_USER_KEY, JSON.stringify(sanitizeStoredUser(user)));
-        }
+  const raw = localStorage.getItem(AUTH_USER_KEY);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw) as StoredAuthUser | AuthUser;
+    if (typeof parsed === 'object' && parsed !== null && 'user' in parsed && 'expiresAt' in parsed) {
+      const payload = parsed as StoredAuthUser;
+      if (payload.user?.token || payload.user?.refreshToken) {
+        payload.user = sanitizeStoredUser(payload.user);
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
       }
-    } catch {
-      /* ignore */
+    } else {
+      const user = parsed as AuthUser;
+      if (user.token || user.refreshToken) {
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(sanitizeStoredUser(user)));
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function normalizeStoredPayload(raw: string): StoredAuthUser | null {
+  try {
+    const parsed = JSON.parse(raw) as StoredAuthUser | AuthUser;
+    if (typeof parsed === 'object' && parsed !== null && 'user' in parsed && 'expiresAt' in parsed) {
+      return parsed as StoredAuthUser;
+    }
+    return {
+      user: parsed as AuthUser,
+      expiresAt: BROWSER_SESSION_EXPIRES_AT,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isRememberMeExpired(expiresAt: number) {
+  return expiresAt > 0 && expiresAt <= Date.now();
+}
+
+/** sessionStorage was tab-scoped — migrate once so one browser shares one account. */
+function migrateSessionAuthToLocalStorage() {
+  const sessionRaw = sessionStorage.getItem(AUTH_USER_KEY);
+  if (!sessionRaw) return;
+
+  if (!localStorage.getItem(AUTH_USER_KEY)) {
+    const payload = normalizeStoredPayload(sessionRaw);
+    if (payload) {
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
     }
   }
+  sessionStorage.removeItem(AUTH_USER_KEY);
+}
+
+function readStoredAuthUser(): StoredAuthUser | null {
+  migrateSessionAuthToLocalStorage();
+  const localRaw = localStorage.getItem(AUTH_USER_KEY);
+  if (!localRaw) return null;
+
+  const payload = normalizeStoredPayload(localRaw);
+  if (!payload) {
+    localStorage.removeItem(AUTH_USER_KEY);
+    return null;
+  }
+
+  if (isRememberMeExpired(payload.expiresAt)) {
+    localStorage.removeItem(AUTH_USER_KEY);
+    return null;
+  }
+
+  return payload;
+}
+
+function writeStoredAuthUser(user: AuthUser, rememberMe: boolean) {
+  const payload: StoredAuthUser = {
+    user: sanitizeStoredUser(user),
+    expiresAt: rememberMe ? Date.now() + REMEMBER_ME_TTL_MS : BROWSER_SESSION_EXPIRES_AT,
+  };
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
+  sessionStorage.removeItem(AUTH_USER_KEY);
+  notifyAuthUserChanged();
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === AUTH_USER_KEY) {
+      notifyAuthUserChanged();
+    }
+  });
 }
 
 export const authService = {
@@ -194,120 +260,33 @@ export const authService = {
     api.post<{ message: string }>('/auth/request-account-review', { email, reason }),
 
   saveCurrentUser: (user: AuthUser, rememberMe?: boolean) => {
-    const readCurrentState = (): CurrentAuthState => {
-      const localRaw = localStorage.getItem(AUTH_USER_KEY);
-      if (localRaw) {
-        try {
-          const parsed = JSON.parse(localRaw) as StoredAuthUser | AuthUser;
-          if (
-            typeof parsed === 'object' &&
-            parsed !== null &&
-            'user' in parsed &&
-            'expiresAt' in parsed
-          ) {
-            return {
-              user: parsed.user,
-              storage: 'local',
-              expiresAt: typeof parsed.expiresAt === 'number' ? parsed.expiresAt : null,
-            };
-          }
-
-          return {
-            user: parsed as AuthUser,
-            storage: 'local',
-            expiresAt: null,
-          };
-        } catch {
-          // ignore parse error and continue reading session
-        }
-      }
-
-      const sessionRaw = sessionStorage.getItem(AUTH_USER_KEY);
-      if (sessionRaw) {
-        try {
-          return {
-            user: JSON.parse(sessionRaw) as AuthUser,
-            storage: 'session',
-            expiresAt: null,
-          };
-        } catch {
-          // ignore parse error and fallback to empty state
-        }
-      }
-
-      return { user: null, storage: null, expiresAt: null };
-    };
-
-    const currentState = readCurrentState();
+    const currentPayload = readStoredAuthUser();
+    const sameAccount = currentPayload?.user?.id === user.id;
     const mergedUser: AuthUser = sanitizeStoredUser({
-      ...(currentState.user ?? {}),
+      ...(sameAccount ? currentPayload?.user ?? {} : {}),
       ...user,
     });
 
-    const targetStorage: 'local' | 'session' =
-      rememberMe === true
-        ? 'local'
-        : rememberMe === false
-          ? 'session'
-          : currentState.storage ?? 'session';
-
-    if (targetStorage === 'local') {
-      const payload: StoredAuthUser = {
-        user: mergedUser,
-        expiresAt:
-          currentState.storage === 'local' &&
-          currentState.expiresAt !== null &&
-          currentState.expiresAt > Date.now()
-            ? currentState.expiresAt
-            : Date.now() + REMEMBER_ME_TTL_MS,
-      };
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
-      sessionStorage.removeItem(AUTH_USER_KEY);
-      notifyAuthUserChanged();
+    if (rememberMe === true) {
+      writeStoredAuthUser(mergedUser, true);
       return;
     }
 
-    sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(mergedUser));
-    localStorage.removeItem(AUTH_USER_KEY);
-    notifyAuthUserChanged();
+    if (rememberMe === false) {
+      writeStoredAuthUser(mergedUser, false);
+      return;
+    }
+
+    const keepRememberMe =
+      currentPayload !== null &&
+      currentPayload.expiresAt > 0 &&
+      !isRememberMeExpired(currentPayload.expiresAt);
+    writeStoredAuthUser(mergedUser, keepRememberMe);
   },
 
   getCurrentUser: (): AuthUser | null => {
     stripLegacyTokensFromStorage();
-    const localUser = localStorage.getItem(AUTH_USER_KEY);
-    if (localUser) {
-      try {
-        const parsed = JSON.parse(localUser) as StoredAuthUser | AuthUser;
-
-        if (
-          typeof parsed === 'object' &&
-          parsed !== null &&
-          'user' in parsed &&
-          'expiresAt' in parsed
-        ) {
-          if (typeof parsed.expiresAt !== 'number' || parsed.expiresAt <= Date.now()) {
-            localStorage.removeItem(AUTH_USER_KEY);
-          } else {
-            return parsed.user;
-          }
-        } else {
-          authService.saveCurrentUser(parsed as AuthUser, true);
-          return parsed as AuthUser;
-        }
-      } catch {
-        localStorage.removeItem(AUTH_USER_KEY);
-      }
-    }
-
-    const sessionUser = sessionStorage.getItem(AUTH_USER_KEY);
-    if (!sessionUser) return null;
-
-    try {
-      return JSON.parse(sessionUser) as AuthUser;
-    } catch {
-      sessionStorage.removeItem(AUTH_USER_KEY);
-      return null;
-    }
+    return readStoredAuthUser()?.user ?? null;
   },
 
   logout: async () => {

@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { authService } from '@/services/authService';
 import {
   ArrowRight,
   MessageCircle,
@@ -75,6 +76,11 @@ function WelcomePreview() {
 }
 
 export function WelcomePage() {
+  const currentUser = authService.getCurrentUser();
+  if (currentUser?.accountStatus === 'ACTIVE') {
+    return <Navigate to="/home" replace />;
+  }
+
   return (
     <div
       className="welcome-page relative h-[100dvh] overflow-hidden"
