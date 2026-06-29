@@ -1339,7 +1339,15 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       answeredAt: snapshot.answeredAt ?? null,
       durationSec: snapshot.durationSec ?? null,
     });
-  }, [applyAuthoritativeSnapshot]);
+    // Nguồn sự thật là backend: nếu phiên đã kết thúc (COMPLETED/MISSED) mà máy vẫn
+    // còn đang trong cuộc gọi thì chủ động đóng — phòng khi tín hiệu CALL_END realtime
+    // bị lỡ khiến modal bên kia "dừng đếm giờ nhưng không tự tắt".
+    const terminal = snapshot.status === 'COMPLETED' || snapshot.status === 'MISSED';
+    if (terminal && activeCallRef.current) {
+      setStatus('ended');
+      cleanup(true);
+    }
+  }, [applyAuthoritativeSnapshot, cleanup]);
 
   const handleCallError = useCallback((error: IncomingCallError) => {
     if (!error) return;
