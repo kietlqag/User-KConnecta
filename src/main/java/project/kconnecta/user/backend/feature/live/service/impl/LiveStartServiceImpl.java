@@ -96,7 +96,7 @@ public class LiveStartServiceImpl implements LiveStartService {
                     session.setEgressId(result.getEgressId());
                     session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
                 }, () -> session.setRecordingError(
-                        "Khong khoi dong duoc HLS egress. Kiem tra LiveKit Cloud egress va cau hinh R2."));
+                        "Không khởi động được HLS egress. Kiểm tra LiveKit Cloud egress và cấu hình R2."));
             }
         }
 

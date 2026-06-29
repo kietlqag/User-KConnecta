@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import project.kconnecta.user.backend.common.util.CloudinaryService;
-import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.exception.BadRequestException;
 import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
@@ -51,7 +49,6 @@ import project.kconnecta.user.backend.feature.user.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -61,7 +58,6 @@ import java.util.UUID;
 public class LiveSessionServiceImpl implements LiveSessionService {
 
     private static final long VIEWER_HEARTBEAT_TIMEOUT_SECONDS = 45;
-    private static final long MAX_RECORDING_SIZE_BYTES = 500L * 1024L * 1024L;
     private static final DateTimeFormatter SCHEDULED_AT_DISPLAY_FORMAT =
             DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
 
@@ -70,7 +66,6 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     private final LiveSessionReactionRepository liveSessionReactionRepository;
     private final UserRepository userRepository;
     private final PostRepository postRepository;
-    private final CloudinaryService cloudinaryService;
     private final LiveSessionRealtimePublisher realtimePublisher;
     private final LiveAccessService liveAccessService;
     private final LiveKitTokenService liveKitTokenService;
@@ -187,11 +182,19 @@ public class LiveSessionServiceImpl implements LiveSessionService {
 
         if (!isBlank(session.getHlsPlaybackUrl())) {
             session.setPlaybackUrl(liveKitEgressService.buildVodPlaylistUrl(sessionId));
-            session.setRecordingStatus(LiveRecordingStatus.READY);
+            session.setRecordingStatus(LiveRecordingStatus.PROCESSING);
             session.setRecordingMimeType("application/vnd.apple.mpegurl");
             session.setRecordingError(null);
-        } else if (isBlank(session.getPlaybackUrl()) && session.getRecordingStatus() != LiveRecordingStatus.READY) {
-            session.setRecordingStatus(LiveRecordingStatus.PROCESSING);
+        } else if (liveKitEgressService.isEgressConfigured()) {
+            session.setRecordingStatus(LiveRecordingStatus.FAILED);
+            if (isBlank(session.getRecordingError())) {
+                session.setRecordingError(trimToLength(
+                        "Không ghi được HLS lên R2. Kiểm tra LIVEKIT_EGRESS_* và quyền bucket R2.", 500));
+            }
+        } else if (isBlank(session.getPlaybackUrl())) {
+            session.setRecordingStatus(LiveRecordingStatus.FAILED);
+            session.setRecordingError(trimToLength(
+                    "Chưa bật HLS egress. Đặt LIVEKIT_EGRESS_ENABLED=true và cấu hình R2 trên server.", 500));
         }
 
         LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
@@ -203,45 +206,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     public LiveSessionResponse saveRecording(UUID sessionId, UUID hostUserId, MultipartFile file, Integer durationSec) {
         LiveSession session = findSession(sessionId);
         liveAccessService.requireHost(session, hostUserId);
-        validateRecordingFile(file);
-
-        if (!isBlank(session.getPlaybackUrl()) && session.getPlaybackUrl().toLowerCase().contains(".m3u8")) {
-            log.info("Skipping Cloudinary upload for session {} — R2 HLS playback already set", sessionId);
-            if (session.getRecordingStatus() != LiveRecordingStatus.READY) {
-                session.setRecordingStatus(LiveRecordingStatus.READY);
-                session.setRecordingMimeType("application/vnd.apple.mpegurl");
-                session.setRecordingError(null);
-            }
-            return toResponse(liveSessionRepository.save(session));
-        }
-
-        String playbackUrl;
-        try {
-            playbackUrl = cloudinaryService.uploadLiveRecording(file, sessionId.toString());
-        } catch (Exception ex) {
-            log.error("Failed to upload live recording for session {}", sessionId, ex);
-            String detail = ex.getMessage() == null ? "" : " (" + trimToLength(ex.getMessage(), 200) + ")";
-            throw new BadRequestException(
-                    "Không thể tải bản ghi live lên Cloudinary. Kiểm tra cấu hình CLOUDINARY_* trên server." + detail);
-        }
-        session.setPlaybackUrl(playbackUrl);
-        session.setRecordingStatus(LiveRecordingStatus.READY);
-        session.setRecordingDurationSec(durationSec == null ? null : Math.max(0, durationSec));
-        session.setRecordingMimeType(file.getContentType());
-        session.setRecordingFileSizeBytes(file.getSize());
-        session.setRecordingError(null);
-        boolean endedByRecording = false;
-        if (session.getStatus() != LiveSessionStatus.ENDED && session.getStatus() != LiveSessionStatus.CANCELED) {
-            session.setStatus(LiveSessionStatus.ENDED);
-            session.setEndedAt(LocalDateTime.now());
-            session.setViewerCount(0);
-            liveSessionViewerRepository.deleteAllBySessionId(sessionId);
-            endedByRecording = true;
-        }
-
-        LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
-        realtimePublisher.publishSessionEvent(endedByRecording ? "LIVE_ENDED" : "SESSION_UPDATED", response);
-        return response;
+        throw new BadRequestException(
+                "Bản ghi live dùng HLS trên R2 qua LiveKit Egress. Upload file không còn được hỗ trợ.");
     }
 
     @Override
@@ -600,19 +566,6 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
     }
 
-    private void validateRecordingFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BadRequestException("Recording file is required");
-        }
-        if (file.getSize() > MAX_RECORDING_SIZE_BYTES) {
-            throw new BadRequestException("Recording file is too large");
-        }
-        String sniffed = MediaFileSniffer.sniffExtension(file);
-        if (!Set.of("mp4", "mov", "webm").contains(sniffed)) {
-            throw new BadRequestException("Unsupported recording format");
-        }
-    }
-
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
@@ -639,7 +592,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }, () -> {
             log.warn("LiveKit HLS egress failed to start for session {}", session.getId());
             session.setRecordingError(trimToLength(
-                    "Khong khoi dong duoc HLS egress. Kiem tra LiveKit Cloud egress va cau hinh R2.", 500));
+                    "Không khởi động được HLS egress. Kiểm tra LiveKit Cloud egress và cấu hình R2.", 500));
         });
     }
 
