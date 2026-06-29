@@ -341,17 +341,17 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     const audio = remoteAudioRef.current;
     if (!audio) return;
     audio.srcObject = voiceCall.remoteStream;
+    // Áp dụng âm lượng + chủ động play ngay khi có stream (autoPlay đôi khi không
+    // tự chạy sau khi đổi srcObject), nếu không sẽ "không nghe được" dù mic bật.
+    audio.muted = false;
+    audio.volume = speakerMode === 'outer' ? 1 : 0.45;
+    if (voiceCall.remoteStream) {
+      void audio.play().catch(() => undefined);
+    }
     return () => {
       audio.srcObject = null;
     };
-  }, [voiceCall.remoteStream]);
-
-  useEffect(() => {
-    const audio = remoteAudioRef.current;
-    if (!audio) return;
-    audio.muted = false;
-    audio.volume = speakerMode === 'outer' ? 1 : 0.45;
-  }, [speakerMode]);
+  }, [speakerMode, voiceCall.remoteStream]);
 
   useEffect(() => {
     const video = remoteVideoRef.current;
@@ -605,7 +605,7 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     <RealtimeCallContext.Provider value={contextValue}>
       {children}
       <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />
-      <video ref={remoteVideoRef} autoPlay playsInline className="hidden" />
+      <video ref={remoteVideoRef} autoPlay playsInline muted className="hidden" />
       <video ref={localVideoRef} autoPlay muted playsInline className="hidden" />
 
       <CallMinimizedBar

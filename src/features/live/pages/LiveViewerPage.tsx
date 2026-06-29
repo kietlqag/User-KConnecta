@@ -12,7 +12,6 @@ import { LiveSidebarInfoCard } from '../components/LiveSidebarInfoCard';
 import { LiveFloatingReactions, useLiveReactionBursts } from '../components/LiveFloatingReactions';
 import { isLiveSessionHost, navigateToLiveSession } from '../utils/navigateToLiveSession';
 import { useLiveSessionSocket } from '../hooks/useLiveSessionSocket';
-import { useLiveViewerDvr } from '../hooks/useLiveViewerDvr';
 import { useLiveHlsPlayback } from '../hooks/useLiveHlsPlayback';
 import { LiveViewerScrubBar } from '../components/LiveViewerScrubBar';
 
@@ -79,13 +78,10 @@ export default function LiveViewerPage() {
   const roomRef = useRef<Room | null>(null);
   const videoTrackRef = useRef<RemoteTrack | null>(null);
   const audioTrackRef = useRef<RemoteTrack | null>(null);
-  const dvrVideoRef = useRef<HTMLVideoElement | null>(null);
   const replayVideoRef = useRef<HTMLVideoElement | null>(null);
   const replayScrubbingRef = useRef(false);
-  const dvrDurationFixedRef = useRef<string | null>(null);
-  const playbackSourceRef = useRef<'hls' | 'dvr' | 'webrtc'>('webrtc');
+  const playbackSourceRef = useRef<'hls' | 'webrtc'>('webrtc');
   const intentionalDisconnectRef = useRef(false);
-  const [preferDvrPlayback, setPreferDvrPlayback] = useState(false);
   const [replayCurrentSeconds, setReplayCurrentSeconds] = useState(0);
   const [replayDurationSeconds, setReplayDurationSeconds] = useState(0);
   const [isReplayPaused, setIsReplayPaused] = useState(false);
@@ -114,29 +110,25 @@ export default function LiveViewerPage() {
 
   const showHlsVideo = useHlsPlayback && hlsPlayback.isReady;
 
-  // Luôn ghi DVR client trong lúc live để tua lại; HLS chỉ hiển thị ở live edge.
-  const clientDvr = useLiveViewerDvr(isActiveLiveSession, session?.startedAt);
-  const { setSourceStream, reset: resetDvr, dvrUrl, syncPlaybackFromVideo } = clientDvr;
-
-  const playbackSource: 'hls' | 'dvr' | 'webrtc' = preferDvrPlayback && dvrUrl
-    ? 'dvr'
-    : showHlsVideo
-      ? 'hls'
-      : 'webrtc';
-
+  // Khi HLS đã sẵn sàng: dùng DUY NHẤT HLS (playlist playback.m3u8 đầy đủ) cho cả
+  // xem trực tiếp lẫn tua lại — nhờ vậy tua được từ ĐẦU buổi và không phải đổi
+  // nguồn (tránh đen màn hình khi về trực tiếp). Vài giây đầu chưa có HLS thì
+  // hiển thị WebRTC để xem ngay (chưa tua được trong giai đoạn này).
+  const playbackSource: 'hls' | 'webrtc' = showHlsVideo ? 'hls' : 'webrtc';
   playbackSourceRef.current = playbackSource;
 
-  const isAtLiveEdge = !preferDvrPlayback;
-  const playbackSeconds = clientDvr.playbackSeconds;
-  const bufferedSeconds = clientDvr.bufferedSeconds;
-  const displayOffsetSeconds = clientDvr.displayOffsetSeconds;
-  const canScrub = clientDvr.canScrub;
+  const isAtLiveEdge = showHlsVideo ? hlsPlayback.isAtLiveEdge : true;
+  const playbackSeconds = showHlsVideo ? hlsPlayback.playbackSeconds : 0;
+  const bufferedSeconds = showHlsVideo ? hlsPlayback.bufferedSeconds : 0;
+  const displayOffsetSeconds = 0;
+  const canScrub = showHlsVideo ? hlsPlayback.canScrub : false;
 
   useEffect(() => {
     setHlsLoadFailed(false);
-    setPreferDvrPlayback(false);
   }, [hlsPlaybackUrl]);
 
+  // Gắn/tháo track WebRTC theo nguồn đang phát. Khi dùng HLS thì tháo track WebRTC
+  // (không phát tiếng song song gây vọng), nhưng vẫn giữ room kết nối để fallback.
   useEffect(() => {
     if (playbackSource === 'webrtc') {
       if (videoTrackRef.current && videoRef.current) {
@@ -150,18 +142,6 @@ export default function LiveViewerPage() {
     videoTrackRef.current?.detach();
     audioTrackRef.current?.detach();
   }, [playbackSource]);
-
-  const syncDvrStream = useCallback(() => {
-    const tracks = [
-      videoTrackRef.current?.mediaStreamTrack,
-      audioTrackRef.current?.mediaStreamTrack,
-    ].filter((track): track is MediaStreamTrack => Boolean(track && track.readyState === 'live'));
-    if (tracks.length === 0) {
-      setSourceStream(null);
-      return;
-    }
-    setSourceStream(new MediaStream(tracks));
-  }, [setSourceStream]);
 
   const hostLabel = useMemo(() => {
     if (!session) return 'Người dùng';
@@ -193,15 +173,13 @@ export default function LiveViewerPage() {
     if (event.type === 'LIVE_ENDED') {
       intentionalDisconnectRef.current = true;
       roomRef.current?.disconnect();
-      resetDvr();
-      setSourceStream(null);
       setStatus('Live đã kết thúc.');
       setError('');
       if (!isViewerPreview && currentUserId && sessionId) {
         void liveService.leaveSession(sessionId).catch(() => undefined);
       }
     }
-  }, [currentUserId, isViewerPreview, pushBurst, sessionId, resetDvr, setSourceStream]);
+  }, [currentUserId, isViewerPreview, pushBurst, sessionId]);
 
   useLiveSessionSocket(sessionId, Boolean(currentUser), handleLiveEvent);
 
@@ -219,14 +197,12 @@ export default function LiveViewerPage() {
     const attachTrack = (track: RemoteTrack) => {
       if (track.kind === Track.Kind.Video) {
         videoTrackRef.current = track;
-        syncDvrStream();
         if (playbackSourceRef.current === 'webrtc' && videoRef.current) {
           track.attach(videoRef.current);
         }
       }
       if (track.kind === Track.Kind.Audio) {
         audioTrackRef.current = track;
-        syncDvrStream();
         if (playbackSourceRef.current === 'webrtc' && audioRef.current) {
           track.attach(audioRef.current);
         }
@@ -299,7 +275,7 @@ export default function LiveViewerPage() {
         void liveService.leaveSession(sessionId).catch(() => undefined);
       }
     };
-  }, [currentUserId, isViewerPreview, navigate, sessionId, syncDvrStream]);
+  }, [currentUserId, isViewerPreview, navigate, sessionId]);
 
   useEffect(() => {
     if (!sessionId || !currentUserId || isLiveEnded || isViewerPreview) return;
@@ -467,10 +443,6 @@ export default function LiveViewerPage() {
       audioRef.current.muted = isMuted || playbackSource !== 'webrtc';
       audioRef.current.volume = volume;
     }
-    if (dvrVideoRef.current) {
-      dvrVideoRef.current.muted = isMuted;
-      dvrVideoRef.current.volume = volume;
-    }
     if (hlsPlayback.videoRef.current) {
       hlsPlayback.videoRef.current.muted = isMuted;
       hlsPlayback.videoRef.current.volume = volume;
@@ -479,7 +451,7 @@ export default function LiveViewerPage() {
       replayVideoRef.current.muted = isMuted;
       replayVideoRef.current.volume = volume;
     }
-  }, [hlsPlayback.videoRef, isMuted, volume, playbackSource, dvrUrl]);
+  }, [hlsPlayback.videoRef, isMuted, volume, playbackSource]);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
@@ -629,102 +601,24 @@ export default function LiveViewerPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (playbackSource !== 'dvr' || !dvrUrl) return;
-    const video = dvrVideoRef.current;
-    if (!video) return;
-
-    let cancelled = false;
-
-    const playAt = (seconds: number) => {
-      if (cancelled) return;
-      if (Math.abs(video.currentTime - seconds) > 0.25) {
-        try {
-          video.currentTime = seconds;
-        } catch {
-          /* seeking may throw if not seekable yet; ignored */
-        }
-      }
-      void video.play().catch(() => undefined);
-    };
-
-    const seekAndPlay = () => {
-      if (cancelled) return;
-
-      if (dvrDurationFixedRef.current === dvrUrl && Number.isFinite(video.duration)) {
-        playAt(playbackSeconds);
-        return;
-      }
-
-      if (!Number.isFinite(video.duration) || video.duration === 0) {
-        clientDvr.setScrubbing(true);
-        const onFixed = () => {
-          video.removeEventListener('timeupdate', onFixed);
-          video.removeEventListener('durationchange', onFixed);
-          if (cancelled) return;
-          dvrDurationFixedRef.current = dvrUrl;
-          clientDvr.setScrubbing(false);
-          playAt(playbackSeconds);
-        };
-        video.addEventListener('timeupdate', onFixed, { once: true });
-        video.addEventListener('durationchange', onFixed, { once: true });
-        try {
-          video.currentTime = 1e101;
-        } catch {
-          /* ignored */
-        }
-        return;
-      }
-
-      dvrDurationFixedRef.current = dvrUrl;
-      playAt(playbackSeconds);
-    };
-
-    if (video.src !== dvrUrl) {
-      dvrDurationFixedRef.current = null;
-      video.src = dvrUrl;
-      video.load();
-      video.addEventListener('loadedmetadata', seekAndPlay, { once: true });
-    } else {
-      seekAndPlay();
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [clientDvr.setScrubbing, dvrUrl, playbackSeconds, playbackSource]);
-
-  useEffect(() => {
-    if (playbackSource !== 'dvr') return;
-    const video = dvrVideoRef.current;
-    if (!video) return;
-    const onTimeUpdate = () => syncPlaybackFromVideo(video.currentTime);
-    video.addEventListener('timeupdate', onTimeUpdate);
-    return () => video.removeEventListener('timeupdate', onTimeUpdate);
-  }, [playbackSource, syncPlaybackFromVideo]);
-
+  // Tua trên một video HLS duy nhất (playlist DVR đầy đủ): chỉ cập nhật nhãn khi
+  // đang rê, seek thật khi thả. Không đổi nguồn nên về trực tiếp không đen màn hình.
   const handleLiveSeek = (seconds: number) => {
-    clientDvr.seekTo(seconds);
+    if (!showHlsVideo) return;
+    hlsPlayback.previewScrub(seconds);
   };
 
   const handleScrubEnd = (seconds: number) => {
-    clientDvr.setScrubbing(false);
-    clientDvr.seekTo(seconds);
-    const atEdge = seconds >= bufferedSeconds - LIVE_EDGE_THRESHOLD_SEC;
-    if (atEdge) {
-      setPreferDvrPlayback(false);
-      clientDvr.goToLive();
-      if (showHlsVideo) {
-        hlsPlayback.goToLive();
-      }
-    } else if (dvrUrl) {
-      setPreferDvrPlayback(true);
+    if (!showHlsVideo) return;
+    hlsPlayback.setScrubbing(false);
+    if (seconds >= bufferedSeconds - LIVE_EDGE_THRESHOLD_SEC) {
+      hlsPlayback.goToLive();
+    } else {
+      hlsPlayback.commitScrub(seconds);
     }
   };
 
   const handleGoLive = () => {
-    setPreferDvrPlayback(false);
-    clientDvr.goToLive();
     if (showHlsVideo) {
       hlsPlayback.goToLive();
     }
@@ -946,20 +840,6 @@ export default function LiveViewerPage() {
                     <audio ref={audioRef} autoPlay />
                   </>
                 )}
-                {playbackSource === 'dvr' && dvrUrl && (
-                  <video
-                    ref={dvrVideoRef}
-                    autoPlay
-                    playsInline
-                    muted={isMuted}
-                    className="h-full w-full object-contain"
-                  />
-                )}
-                {playbackSource === 'dvr' && !dvrUrl && (
-                  <div className="flex h-full w-full items-center justify-center px-6 text-center text-sm text-white/70">
-                    Đang chuẩn bị bản ghi để tua lại...
-                  </div>
-                )}
               </>
             ) : (
               <>
@@ -995,7 +875,7 @@ export default function LiveViewerPage() {
                 onToggleFullscreen={handleToggleFullscreen}
                 showControls={showControls}
                 onSeek={handleLiveSeek}
-                onSeekStart={() => clientDvr.setScrubbing(true)}
+                onSeekStart={() => hlsPlayback.setScrubbing(true)}
                 onSeekEnd={handleScrubEnd}
                 onGoLive={handleGoLive}
                 onToggleMute={handleToggleMute}

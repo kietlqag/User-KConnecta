@@ -44,10 +44,6 @@ function createCallId() {
   return `${Date.now()}-${Math.random()}`;
 }
 
-function hasVideoInSdp(sdp?: string | null) {
-  return typeof sdp === 'string' && /\bm=video\b/i.test(sdp);
-}
-
 function extractCandidateType(candidate?: string | null) {
   if (!candidate) return 'unknown';
   if (candidate.includes(' typ relay ')) return 'relay';
@@ -429,7 +425,16 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
 
     if (existing) {
       const hasVideoTrack = existing.getVideoTracks().length > 0;
-      if (mediaType === 'audio' || hasVideoTrack) {
+      // Tái dùng stream chỉ khi ĐÚNG loại media yêu cầu: cuộc gọi audio không
+      // được mang theo video track (sẽ làm SDP có m=video → đầu kia hiểu nhầm là
+      // cuộc gọi video). Nếu không khớp thì dừng hẳn và tạo stream mới.
+      const matchesRequest = mediaType === 'video' ? hasVideoTrack : !hasVideoTrack;
+      if (matchesRequest) {
+        // Đảm bảo mic luôn bật cho cuộc gọi mới, kể cả khi lần gọi trước đã mute.
+        existing.getAudioTracks().forEach((track) => {
+          track.enabled = true;
+        });
+        setIsMuted(false);
         setLocalStream(existing);
         return existing;
       }
@@ -442,6 +447,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       audio: true,
       video: mediaType === 'video',
     });
+    stream.getAudioTracks().forEach((track) => {
+      track.enabled = true;
+    });
+    setIsMuted(false);
     if (mediaType === 'video') {
       const initialVideoEnabled = stream.getVideoTracks().some((track) => track.enabled);
       setIsCameraEnabled(initialVideoEnabled);
@@ -519,7 +528,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
                   const offer = await pc.createOffer({
                     iceRestart: true,
                     offerToReceiveAudio: true,
-                    offerToReceiveVideo: true,
+                    offerToReceiveVideo: activeCallRef.current?.mediaType === 'video',
                   });
                   await pc.setLocalDescription(offer);
                   sendSignal(peerUserId, callId, 'CALL_OFFER', {
@@ -543,7 +552,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
                 const offer = await pc.createOffer({
                   iceRestart: true,
                   offerToReceiveAudio: true,
-                  offerToReceiveVideo: true,
+                  offerToReceiveVideo: activeCallRef.current?.mediaType === 'video',
                 });
                 await pc.setLocalDescription(offer);
                 sendSignal(peerUserId, callId, 'CALL_OFFER', { sdp: offer.sdp ?? undefined });
@@ -564,7 +573,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
               const offer = await pc.createOffer({
                 iceRestart: true,
                 offerToReceiveAudio: true,
-                offerToReceiveVideo: true,
+                offerToReceiveVideo: activeCallRef.current?.mediaType === 'video',
               });
               await pc.setLocalDescription(offer);
               sendSignal(peerUserId, callId, 'CALL_OFFER', { sdp: offer.sdp ?? undefined });
@@ -877,7 +886,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     if (!incomingSignal || !currentUserId) return;
     const callId = incomingSignal.callId;
     const peerUserId = incomingSignal.fromUserId;
-    const offerMediaType: CallMediaType = hasVideoInSdp(pendingOfferRef.current?.sdp) ? 'video' : incomingMediaType;
+    // Loại cuộc gọi lấy theo mediaType khai báo ở CALL_INVITE, KHÔNG đoán từ SDP
+    // (đoán từ SDP khiến cuộc gọi thoại bị bật cả camera/hiển thị như video).
+    const offerMediaType: CallMediaType = incomingMediaType;
 
     setErrorMessage(null);
     const nextCall: ActiveCall = {
@@ -962,7 +973,11 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         (activeCall.direction === 'incoming' ||
           connectedGroupParticipantIdsRef.current.size > 1 ||
           authoritativeSessionStatus === 'ONGOING');
-      const endType: CallSignalType = status === 'in_call' || hasJoinedGroupCall ? 'CALL_END' : 'CALL_CANCEL';
+      // Cuộc gọi đã được nghe máy (session ONGOING) thì luôn gửi CALL_END, kể cả
+      // khi ICE còn đang 'connecting'. Trước đây dùng status==='in_call' nên video
+      // chưa connect xong sẽ gửi nhầm CALL_CANCEL và đầu kia bỏ qua → không tắt máy.
+      const callAnswered = status === 'in_call' || authoritativeSessionStatus === 'ONGOING';
+      const endType: CallSignalType = callAnswered || hasJoinedGroupCall ? 'CALL_END' : 'CALL_CANCEL';
       const durationSec =
         endType === 'CALL_END' ? calculateCallDurationSeconds(callStartedAtMs) : undefined;
       const receivers = activeCall.participantIds?.length ? activeCall.participantIds : [activeCall.peerUserId];
@@ -1085,9 +1100,9 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
               }
               break;
             }
-            if (matchesByCallId && status === 'in_call') {
-              break;
-            }
+            // Cuộc gọi 1-1: chỉ có một đầu bên kia, nên CALL_CANCEL/END đến từ họ thì
+            // luôn kết thúc cuộc gọi ở phía này (không chặn theo in_call như trước,
+            // vì sẽ gây kẹt máy khi đầu kia tắt lúc mình đang in_call).
             applyAuthoritativeSnapshot({
               status: signal.sessionStatus,
               answeredAt: signal.sessionAnsweredAt,
@@ -1108,9 +1123,6 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
               if (finishGroupCallIfAllReceiversSettled(activeCall, signal.fromUserId)) {
                 break;
               }
-              break;
-            }
-            if (matchesByCallId && status === 'in_call') {
               break;
             }
             applyAuthoritativeSnapshot({
@@ -1211,13 +1223,6 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
         case 'CALL_OFFER':
           if (!signal.sdp) break;
           pendingOfferRef.current = { type: 'offer', sdp: signal.sdp };
-
-          if (hasVideoInSdp(signal.sdp)) {
-            setIncomingMediaType('video');
-            setActiveCall((prev) =>
-              prev && prev.callId === signal.callId ? { ...prev, mediaType: 'video' } : prev,
-            );
-          }
 
           if (matchesByCallId && peerRef.current) {
             try {

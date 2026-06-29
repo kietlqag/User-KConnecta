@@ -318,7 +318,7 @@ export function CallOverlayModal({
         ) : isVideoCall ? (
           <>
             <div className="mt-7 relative overflow-hidden rounded-xl bg-black h-[360px]">
-              <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover bg-black" />
+              <video ref={remoteVideoRef} autoPlay playsInline muted className="w-full h-full object-cover bg-black" />
               <video ref={localVideoRef} autoPlay muted playsInline className="absolute bottom-3 right-3 w-40 h-28 object-cover rounded-lg border border-white/40 bg-black" />
               {!hasRemoteStream && <div className="absolute inset-0 flex items-center justify-center text-sm text-white/80">Đang chờ video...</div>}
             </div>
