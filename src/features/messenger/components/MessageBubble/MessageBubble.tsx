@@ -286,7 +286,7 @@ export const MessageBubble = ({
 
   if (message.systemType === 'call_log' || message.systemType === 'missed_call') {
     const isCompleted = message.callLogKind === 'completed';
-    const isVideoCall = message.callMediaType === 'video' || message.text.toLowerCase().includes('video');
+    const isVideoCall = message.callMediaType === 'video';
     const avatar = (
       <UserAvatar
         name={senderName || 'User'}

@@ -44,6 +44,7 @@ import {
   buildConversationPreviewFromContent,
   formatConversationPreview,
   mapContentToConversationPreview,
+  parseCallLogMediaType,
 } from '../utils/conversationPreview';
 import { toast } from 'sonner';
 import { getAppOrigin } from '@/utils/apiBaseUrl';
@@ -368,10 +369,7 @@ function mapBackendContentToMessageFields(
 
   try {
     const payload = JSON.parse(content.slice(CALL_LOG_PREFIX.length));
-    const mediaType: 'audio' | 'video' =
-      payload?.mediaType === 'video' || String(payload?.label || '').toLowerCase().includes('video')
-        ? 'video'
-        : 'audio';
+    const mediaType = parseCallLogMediaType(payload);
     const fallbackLabel =
       payload?.kind === 'completed'
         ? mediaType === 'video'
@@ -3528,7 +3526,8 @@ export default function MessengerPage() {
   }, [activeChatUser?.avatar, activeChatUser?.name, activeChatUserId, connected, currentUser, groupMembersById, voiceCall]);
 
   const handleCallAgain = useCallback(
-    (mediaType: 'audio' | 'video' = 'audio') => {
+    (mediaType?: 'audio' | 'video') => {
+      // Mặc định luôn là thoại nếu không truyền rõ — tránh gọi nhầm video.
       if (mediaType === 'video') {
         handleStartVideoCall();
       } else {

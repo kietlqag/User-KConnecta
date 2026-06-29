@@ -98,6 +98,7 @@ export const ChatWindow = ({
   onStartVideoCall,
   onEndVoiceCall,
   onToggleMute,
+  onCallAgain,
   isGroupChat = false,
   isGroupCreator = false,
   groupCreatorName = 'Người tạo',
@@ -353,6 +354,7 @@ export const ChatWindow = ({
         groupAvatar={user.avatar}
         themeColor={themeColor}
         onGroupJoinLinkClick={onGroupJoinLinkClick}
+        onCallAgain={onCallAgain}
       />
 
       {canMessage ? (

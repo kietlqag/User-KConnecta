@@ -32,6 +32,7 @@ interface MessageListProps {
   peerName?: string;
   themeColor?: string | null;
   onGroupJoinLinkClick?: (token: string) => void;
+  onCallAgain?: (mediaType?: 'audio' | 'video') => void;
 }
 
 export const MessageList = forwardRef(({
@@ -62,6 +63,7 @@ export const MessageList = forwardRef(({
   peerName = 'Người dùng',
   themeColor,
   onGroupJoinLinkClick,
+  onCallAgain,
 }: MessageListProps, ref: ForwardedRef<HTMLDivElement>) => {
   const senderById = new Map(groupMembers.map((member) => [member.id, member]));
   const pinnedMessageIdSet = new Set(pinnedMessageIds);
@@ -208,6 +210,7 @@ export const MessageList = forwardRef(({
                 onJumpToMessage={onJumpToMessage}
                 themeColor={themeColor}
                 onGroupJoinLinkClick={onGroupJoinLinkClick}
+                onCallAgain={onCallAgain}
               />
             )}
           </div>

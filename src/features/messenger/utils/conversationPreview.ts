@@ -27,6 +27,11 @@ function mapPlainTextPreview(raw: string): string {
   return raw;
 }
 
+/** mediaType trong JSON call log — chỉ tin field này, không đoán từ label. */
+export function parseCallLogMediaType(payload: { mediaType?: unknown } | null | undefined): 'audio' | 'video' {
+  return payload?.mediaType === 'video' ? 'video' : 'audio';
+}
+
 /** Map stored message content to a short sidebar preview. Returns empty for non-preview system events. */
 export function mapContentToConversationPreview(content?: string | null): string {
   const raw = content?.trim();
@@ -102,10 +107,7 @@ export function mapContentToConversationPreview(content?: string | null): string
 
   try {
     const payload = JSON.parse(raw.slice(CALL_LOG_PREFIX.length));
-    const mediaType: 'audio' | 'video' =
-      payload?.mediaType === 'video' || String(payload?.label || '').toLowerCase().includes('video')
-        ? 'video'
-        : 'audio';
+    const mediaType = parseCallLogMediaType(payload);
 
     if (typeof payload?.label === 'string' && payload.label.trim()) {
       return payload.label.trim();
