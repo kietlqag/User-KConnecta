@@ -155,6 +155,7 @@ export default function LiveProducerPage() {
   const publishedTracksRef = useRef<MediaStreamTrack[]>([]);
   const previousTrackStatsRef = useRef<PreviousTrackStats>({});
   const toolFormDirtyRef = useRef(false);
+  const egressStartedRef = useRef(false);
   const commentCount = postMetrics?.commentCount ?? 0;
   const shareCount = postMetrics?.shareCount ?? 0;
   const reactionCount = liveStats?.totalReactionCount ?? 0;
@@ -445,6 +446,17 @@ export default function LiveProducerPage() {
           publishedTracksRef.current.push(track);
         }
         setLiveError('');
+        if (sessionId && !egressStartedRef.current) {
+          egressStartedRef.current = true;
+          try {
+            const updated = await liveService.startHlsEgress(sessionId);
+            if (updated.recordingError) {
+              toast.error(updated.recordingError);
+            }
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Không khởi động được HLS egress.');
+          }
+        }
       } catch (err) {
         setLiveError(err instanceof Error ? err.message : 'Không thể publish camera/microphone.');
       }

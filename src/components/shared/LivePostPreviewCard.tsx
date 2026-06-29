@@ -52,6 +52,7 @@ export function LivePostPreviewCard({
 
   const [liveSessionStatus, setLiveSessionStatus] = useState<'LIVE' | 'ENDED' | 'CANCELED' | 'SCHEDULED' | null>(null);
   const [liveSession, setLiveSession] = useState<LiveSessionResponse | null>(null);
+  const [isLiveStatusLoading, setIsLiveStatusLoading] = useState(true);
   const [isLiveSubscribed, setIsLiveSubscribed] = useState(false);
   const [liveSubscriptionCount, setLiveSubscriptionCount] = useState(0);
   const [isSubscribeLoading, setIsSubscribeLoading] = useState(false);
@@ -80,13 +81,17 @@ export function LivePostPreviewCard({
   );
   const showLivePlaceholder = liveSessionStatus === 'LIVE' && !isLivePreviewReady && !isLivePreviewConnecting;
   const isPrimaryActionDisabled =
-    isScheduledLockedForHost
+    isLiveStatusLoading
+    || isScheduledLockedForHost
     || isRecordingProcessing
     || isRecordingFailed
     || (isLiveEnded && !liveReplayUrl);
 
   // Mỗi trạng thái buổi live có màu badge riêng để phân biệt nhanh bằng mắt.
   const statusBadge = useMemo(() => {
+    if (isLiveStatusLoading) {
+      return { label: 'Đang tải', className: 'bg-gray-600', pulse: true };
+    }
     if (scheduledLiveAt) {
       return { label: 'Đã lên lịch', className: 'bg-blue-600', pulse: false };
     }
@@ -103,10 +108,11 @@ export function LivePostPreviewCard({
       return { label: 'Đã kết thúc', className: 'bg-gray-600', pulse: false };
     }
     return { label: 'Live', className: 'bg-red-600', pulse: true };
-  }, [scheduledLiveAt, liveReplayUrl, isRecordingProcessing, isRecordingFailed, isLiveEnded]);
+  }, [isLiveStatusLoading, scheduledLiveAt, liveReplayUrl, isRecordingProcessing, isRecordingFailed, isLiveEnded]);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLiveStatusLoading(true);
     const loadLiveStatus = async () => {
       try {
         const session = await liveService.getSessionByPost(postId);
@@ -120,6 +126,10 @@ export function LivePostPreviewCard({
         if (!cancelled) {
           setLiveSession(null);
           setLiveSessionStatus(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLiveStatusLoading(false);
         }
       }
     };
@@ -293,6 +303,18 @@ export function LivePostPreviewCard({
   const renderPrimaryActionButton = (size: 'sm' | 'md' = 'md') => {
     const sizeClass = size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm';
 
+    if (isLiveStatusLoading) {
+      return (
+        <button
+          type="button"
+          disabled
+          className={`shrink-0 cursor-wait rounded-lg bg-gray-600 font-semibold text-white opacity-80 ${sizeClass}`}
+        >
+          Đang tải...
+        </button>
+      );
+    }
+
     if (scheduledLiveAt && isOwner) {
       return (
         <button
@@ -325,7 +347,7 @@ export function LivePostPreviewCard({
         type="button"
         disabled={isPrimaryActionDisabled}
         onClick={() => void handleOpenLive()}
-        className={`shrink-0 rounded-lg font-semibold text-white ${sizeClass} ${ isPrimaryActionDisabled ? 'cursor-not-allowed bg-gray-700 opacity-80' : isLiveEnded ? 'bg-gray-700 hover:bg-card' : 'bg-red-600 hover:bg-red-700' }`}
+        className={`shrink-0 rounded-lg font-semibold text-white ${sizeClass} ${ isPrimaryActionDisabled ? 'cursor-not-allowed bg-gray-700 opacity-80' : isLiveEnded ? 'bg-gray-700 hover:bg-gray-800' : 'bg-red-600 hover:bg-red-700' }`}
       >
         {liveReplayUrl
           ? 'Xem lại'
@@ -388,7 +410,9 @@ export function LivePostPreviewCard({
                   <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{liveDescription}</p>
                 )}
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {scheduledLiveAt
+                  {isLiveStatusLoading
+                    ? 'Đang tải trạng thái live...'
+                    : scheduledLiveAt
                     ? `Bắt đầu lúc ${scheduledLiveAt}`
                     : liveReplayUrl
                       ? 'Có bản ghi phát lại'
@@ -502,7 +526,9 @@ export function LivePostPreviewCard({
             <div className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black via-black/80 to-transparent p-4 text-white transition-opacity duration-300 ${ showLiveVideo ? 'opacity-100 group-hover:opacity-100' : 'opacity-100' }`}>
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-red-100">
                 <Radio className="h-4 w-4" />
-                {scheduledLiveAt
+                {isLiveStatusLoading
+                  ? 'Đang tải trạng thái live...'
+                  : scheduledLiveAt
                   ? `Bắt đầu lúc ${scheduledLiveAt}`
                   : liveReplayUrl
                     ? 'Xem lại phiên live'
@@ -533,7 +559,9 @@ export function LivePostPreviewCard({
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-foreground">{liveTitle}</p>
                 <p className="text-xs text-muted-foreground">
-                  {scheduledLiveAt
+                  {isLiveStatusLoading
+                    ? 'Đang tải trạng thái live...'
+                    : scheduledLiveAt
                     ? isOwner && !canStartScheduledLive
                       ? `Có thể bắt đầu phát lúc ${scheduledLiveAt}`
                       : scheduledLiveAt

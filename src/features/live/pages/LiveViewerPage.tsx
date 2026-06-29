@@ -15,6 +15,8 @@ import { useLiveViewerDvr } from '../hooks/useLiveViewerDvr';
 import { useLiveHlsPlayback } from '../hooks/useLiveHlsPlayback';
 import { LiveViewerScrubBar } from '../components/LiveViewerScrubBar';
 
+const LIVE_EDGE_THRESHOLD_SEC = 2;
+
 const reactions: Array<{ label: string; value: NonNullable<UpsertLiveReactionRequest['reactionType']> }> = [
   { label: '👍', value: 'LIKE' },
   { label: '❤️', value: 'LOVE' },
@@ -28,8 +30,10 @@ const isPlayableUrl = (value?: string | null) => /^https?:\/\//i.test(value?.tri
 
 async function isHlsPlaylistReachable(url: string) {
   try {
-    const response = await fetch(url, { method: 'HEAD', mode: 'cors' });
-    return response.ok;
+    const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-store' });
+    if (!response.ok) return false;
+    const text = await response.text();
+    return text.includes('#EXTM3U');
   } catch {
     return false;
   }
@@ -83,40 +87,59 @@ export default function LiveViewerPage() {
   const [replayDurationSeconds, setReplayDurationSeconds] = useState(0);
   const [isReplayPaused, setIsReplayPaused] = useState(false);
   const [hlsVodReady, setHlsVodReady] = useState(false);
+  const [resolvedReplayUrl, setResolvedReplayUrl] = useState('');
+  const [hlsLoadFailed, setHlsLoadFailed] = useState(false);
 
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
   const candidateReplayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() ?? '' : '';
   const isHlsVodCandidate = /\.m3u8(\?|$)/i.test(candidateReplayUrl);
-  const replayUrl = candidateReplayUrl && (!isHlsVodCandidate || hlsVodReady) ? candidateReplayUrl : '';
+  const replayUrl = isHlsVodCandidate ? (hlsVodReady && resolvedReplayUrl ? resolvedReplayUrl : '') : candidateReplayUrl;
   const isReplay = Boolean(replayUrl);
+  const isInitialSessionLoading = !session && !error;
+  const isReplayExperience = isInitialSessionLoading || isLiveEnded;
   const isHlsReplay = useMemo(() => /\.m3u8(\?|$)/i.test(replayUrl), [replayUrl]);
   const isActiveLiveSession = Boolean(session && !isLiveEnded && !isReplay && session.status === 'LIVE');
   const hlsPlaybackUrl = isPlayableUrl(session?.hlsPlaybackUrl) ? session?.hlsPlaybackUrl?.trim() : '';
-  const useHlsPlayback = isActiveLiveSession && Boolean(hlsPlaybackUrl);
+  const useHlsPlayback = isActiveLiveSession && Boolean(hlsPlaybackUrl) && !hlsLoadFailed;
 
   const hlsPlayback = useLiveHlsPlayback({
     enabled: useHlsPlayback,
     hlsUrl: hlsPlaybackUrl,
     startedAt: session?.startedAt,
+    onFatalError: () => setHlsLoadFailed(true),
   });
 
-  const clientDvr = useLiveViewerDvr(isActiveLiveSession && !useHlsPlayback, session?.startedAt);
+  const showHlsVideo = useHlsPlayback && hlsPlayback.isReady;
 
-  const isAtLiveEdge = useHlsPlayback ? hlsPlayback.isAtLiveEdge : clientDvr.isAtLiveEdge;
-  const playbackSeconds = useHlsPlayback ? hlsPlayback.playbackSeconds : clientDvr.playbackSeconds;
-  const bufferedSeconds = useHlsPlayback ? hlsPlayback.bufferedSeconds : clientDvr.bufferedSeconds;
+  const clientDvr = useLiveViewerDvr(isActiveLiveSession && !showHlsVideo, session?.startedAt);
+
+  const isAtLiveEdge = showHlsVideo ? hlsPlayback.isAtLiveEdge : clientDvr.isAtLiveEdge;
+  const playbackSeconds = showHlsVideo ? hlsPlayback.playbackSeconds : clientDvr.playbackSeconds;
+  const bufferedSeconds = showHlsVideo ? hlsPlayback.bufferedSeconds : clientDvr.bufferedSeconds;
   // HLS playlist đã bắt đầu từ đầu buổi live nên currentTime chính là giờ thật (offset 0).
   // Client DVR ghi từ lúc viewer vào nên cần cộng offset để nhãn khớp đồng hồ buổi live.
-  const displayOffsetSeconds = useHlsPlayback ? 0 : clientDvr.displayOffsetSeconds;
-  const canScrub = useHlsPlayback ? hlsPlayback.canScrub : clientDvr.canScrub;
-  const seekTo = useHlsPlayback ? hlsPlayback.seekTo : clientDvr.seekTo;
-  const goToLive = useHlsPlayback ? hlsPlayback.goToLive : clientDvr.goToLive;
-  const setScrubbing = useHlsPlayback ? hlsPlayback.setScrubbing : clientDvr.setScrubbing;
+  const displayOffsetSeconds = showHlsVideo ? 0 : clientDvr.displayOffsetSeconds;
+  const canScrub = showHlsVideo ? hlsPlayback.canScrub : clientDvr.canScrub;
+  const previewScrub = showHlsVideo ? hlsPlayback.previewScrub : clientDvr.seekTo;
+  const commitScrub = showHlsVideo ? hlsPlayback.commitScrub : clientDvr.seekTo;
+  const goToLive = showHlsVideo ? hlsPlayback.goToLive : clientDvr.goToLive;
+  const setScrubbing = showHlsVideo ? hlsPlayback.setScrubbing : clientDvr.setScrubbing;
   const { setSourceStream, reset: resetDvr } = clientDvr;
   const { dvrUrl } = clientDvr;
   const { syncPlaybackFromVideo } = clientDvr;
 
-  useHlsPlaybackRef.current = useHlsPlayback;
+  useHlsPlaybackRef.current = showHlsVideo;
+
+  useEffect(() => {
+    setHlsLoadFailed(false);
+  }, [hlsPlaybackUrl]);
+
+  useEffect(() => {
+    if (!showHlsVideo) return;
+    roomRef.current?.disconnect();
+    setSourceStream(null);
+    setStatus((prev) => (prev === 'Live đã ngắt kết nối.' ? 'Đang xem trực tiếp.' : prev));
+  }, [setSourceStream, showHlsVideo]);
 
   const syncDvrStream = useCallback(() => {
     const tracks = [
@@ -169,12 +192,6 @@ export default function LiveViewerPage() {
     }
   }, [currentUserId, isViewerPreview, pushBurst, sessionId, resetDvr, setSourceStream]);
 
-  useEffect(() => {
-    if (!useHlsPlayback) return;
-    roomRef.current?.disconnect();
-    setSourceStream(null);
-  }, [setSourceStream, useHlsPlayback]);
-
   useLiveSessionSocket(sessionId, Boolean(currentUser), handleLiveEvent);
 
   useEffect(() => {
@@ -204,7 +221,9 @@ export default function LiveViewerPage() {
 
     room.on(RoomEvent.TrackSubscribed, attachTrack);
     room.on(RoomEvent.Disconnected, () => {
-      if (!cancelled) setStatus('Live đã ngắt kết nối.');
+      if (!cancelled && !useHlsPlaybackRef.current) {
+        setStatus('Live đã ngắt kết nối.');
+      }
     });
 
     const connect = async () => {
@@ -310,28 +329,35 @@ export default function LiveViewerPage() {
   useEffect(() => {
     if (!candidateReplayUrl || !isHlsVodCandidate) {
       setHlsVodReady(false);
+      setResolvedReplayUrl('');
       return;
     }
-    if (session?.recordingStatus === 'READY') {
-      setHlsVodReady(true);
-      return;
+
+    const urlsToTry = [candidateReplayUrl];
+    const livePlaylistUrl = isPlayableUrl(session?.hlsPlaybackUrl) ? session!.hlsPlaybackUrl!.trim() : '';
+    if (livePlaylistUrl && livePlaylistUrl !== candidateReplayUrl) {
+      urlsToTry.push(livePlaylistUrl);
     }
 
     let cancelled = false;
     const pollPlaylist = async () => {
-      const ready = await isHlsPlaylistReachable(candidateReplayUrl);
-      if (!cancelled && ready) {
-        setHlsVodReady(true);
+      for (const url of urlsToTry) {
+        if (cancelled) return;
+        if (await isHlsPlaylistReachable(url)) {
+          setResolvedReplayUrl(url);
+          setHlsVodReady(true);
+          return;
+        }
       }
     };
 
     void pollPlaylist();
-    const interval = window.setInterval(() => void pollPlaylist(), 3000);
+    const interval = window.setInterval(() => void pollPlaylist(), 5000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [candidateReplayUrl, isHlsVodCandidate, session?.recordingStatus]);
+  }, [candidateReplayUrl, isHlsVodCandidate, session?.hlsPlaybackUrl]);
 
   useEffect(() => {
     if (!isLiveEnded) return;
@@ -666,10 +692,14 @@ export default function LiveViewerPage() {
     return () => video.removeEventListener('timeupdate', onTimeUpdate);
   }, [isAtLiveEdge, syncPlaybackFromVideo, useHlsPlayback]);
 
+  const handleLiveSeek = (seconds: number) => {
+    previewScrub(seconds);
+  };
+
   const handleScrubEnd = (seconds: number) => {
     setScrubbing(false);
-    seekTo(seconds);
-    if (seconds >= bufferedSeconds - 2) {
+    commitScrub(seconds);
+    if (seconds >= bufferedSeconds - LIVE_EDGE_THRESHOLD_SEC) {
       goToLive();
     }
   };
@@ -781,7 +811,7 @@ export default function LiveViewerPage() {
     <div className="h-screen overflow-hidden bg-background">
       <Header />
 
-      <div className="mt-14 grid h-[calc(100vh-3.5rem)] grid-cols-1 gap-0 overflow-hidden xl:grid-cols-[1.35fr_380px]">
+      <div className={`mt-14 grid h-[calc(100vh-3.5rem)] grid-cols-1 gap-0 overflow-hidden ${isReplayExperience ? '' : 'xl:grid-cols-[1.35fr_380px]'}`}>
         <section
           ref={playerSectionRef}
           className="group/player relative h-full bg-black"
@@ -810,13 +840,13 @@ export default function LiveViewerPage() {
               <span className="rounded-md bg-red-600 px-2 py-1 text-sm font-semibold text-white">TRỰC TIẾP</span>
             </div>
           )}
-          {!isLiveEnded && !isAtLiveEdge && canScrub && (
+          {!isReplayExperience && !isAtLiveEdge && canScrub && (
             <div className="absolute top-4 right-4 rounded-md bg-card/15 text-white text-sm font-semibold px-2 py-1 backdrop-blur-sm">
               TUA LẠI
             </div>
           )}
 
-          <div className={`flex items-center justify-center ${isReplay ? 'h-[calc(100vh-56px)] flex-col' : 'h-[calc(100vh-160px)]'}`}>
+          <div className={`flex items-center justify-center ${isReplayExperience ? 'h-[calc(100vh-56px)] flex-col' : 'h-[calc(100vh-160px)]'}`}>
             {isReplay ? (
               <>
                 <div className="relative flex min-h-0 w-full flex-1 flex-col">
@@ -853,13 +883,52 @@ export default function LiveViewerPage() {
                   </div>
                 </div>
               </>
+            ) : isReplayExperience ? (
+              <div className="flex h-full w-full items-center justify-center px-6 text-center text-white">
+                <div className="max-w-md rounded-2xl bg-black/40 px-6 py-5 backdrop-blur-sm">
+                  <p className="text-lg font-semibold">
+                    {isInitialSessionLoading
+                      ? 'Đang tải phiên live'
+                      : session?.recordingStatus === 'FAILED'
+                        ? 'Không thể tạo bản phát lại'
+                        : 'Đang chuẩn bị bản phát lại'}
+                  </p>
+                  <p className="mt-2 text-sm text-white/70">
+                    {isInitialSessionLoading
+                      ? status
+                      : session?.recordingStatus === 'FAILED'
+                      ? (session.recordingError || 'Bản ghi HLS chưa được tạo thành công.')
+                      : status}
+                  </p>
+                </div>
+              </div>
             ) : useHlsPlayback ? (
-              <video
-                ref={hlsPlayback.videoRef}
-                autoPlay
-                playsInline
-                className="h-full w-full object-contain"
-              />
+              <>
+                <video
+                  ref={hlsPlayback.videoRef}
+                  autoPlay
+                  playsInline
+                  muted={isMuted}
+                  className={`h-full w-full object-contain ${showHlsVideo ? '' : 'hidden'}`}
+                />
+                {!showHlsVideo && (
+                  <>
+                    <div className={isAtLiveEdge ? 'h-full w-full' : 'hidden'}>
+                      <video ref={videoRef} autoPlay playsInline className="h-full w-full object-contain" />
+                      <audio ref={audioRef} autoPlay />
+                    </div>
+                    {!isAtLiveEdge && dvrUrl && (
+                      <video
+                        ref={dvrVideoRef}
+                        autoPlay
+                        playsInline
+                        muted={isMuted}
+                        className="h-full w-full object-contain"
+                      />
+                    )}
+                  </>
+                )}
+              </>
             ) : (
               <>
                 <div className={isAtLiveEdge ? 'h-full w-full' : 'hidden'}>
@@ -882,7 +951,7 @@ export default function LiveViewerPage() {
                 )}
               </>
             )}
-            {!isReplay && isAtLiveEdge && (error || status !== 'Đang xem trực tiếp.') && (
+            {!isReplayExperience && isAtLiveEdge && (error || status !== 'Đang xem trực tiếp.') && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 px-5 text-center text-white/80">
                 <div>
                   <p className="text-lg font-semibold">{error || status}</p>
@@ -894,7 +963,7 @@ export default function LiveViewerPage() {
 
           <LiveFloatingReactions bursts={bursts} />
 
-          {!isReplay && (
+          {!isReplayExperience && (
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-4 pb-4 pt-10">
             {isActiveLiveSession && (
               <LiveViewerScrubBar
@@ -909,12 +978,12 @@ export default function LiveViewerPage() {
                 isFullscreen={isFullscreen}
                 onToggleFullscreen={handleToggleFullscreen}
                 showControls={showControls}
-                onSeek={seekTo}
+                onSeek={handleLiveSeek}
                 onSeekStart={() => setScrubbing(true)}
                 onSeekEnd={handleScrubEnd}
                 onGoLive={goToLive}
                 onToggleMute={handleToggleMute}
-                fullSession={useHlsPlayback}
+                fullSession={showHlsVideo}
               />
             )}
             {!isActiveLiveSession && (
@@ -952,6 +1021,7 @@ export default function LiveViewerPage() {
           )}
         </section>
 
+        {!isReplayExperience && (
         <aside className="relative flex h-full flex-col overflow-hidden border-l border-border bg-card p-4">
           <div className="flex shrink-0 items-start gap-3 border-b border-border pb-4">
             <div className="h-12 w-12 rounded-full bg-muted" />
@@ -1060,6 +1130,7 @@ export default function LiveViewerPage() {
             className="mt-4 min-h-0 flex-1 overflow-hidden"
           />
         </aside>
+        )}
       </div>
     </div>
   );

@@ -261,6 +261,8 @@ export const liveService = {
     api.put<LiveSessionToolStateResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/tools/pinned-comment`, payload),
   endSession: (sessionId: string) =>
     api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/end`, {}),
+  startHlsEgress: (sessionId: string) =>
+    api.post<LiveSessionResponse>(`/live/sessions/${encodeURIComponent(sessionId)}/egress/start`, {}),
   uploadRecording: (sessionId: string, file: Blob, durationSec?: number) => {
     const formData = new FormData();
     const mimeType = file.type || 'video/webm';
