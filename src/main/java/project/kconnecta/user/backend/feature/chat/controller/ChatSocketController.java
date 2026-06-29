@@ -1,6 +1,8 @@
 package project.kconnecta.user.backend.feature.chat.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -58,6 +60,27 @@ public class ChatSocketController {
     private final ChatConversationRepository chatConversationRepository;
     private final ChatConversationMemberRepository chatConversationMemberRepository;
 
+    // Self-proxy để @Transactional vẫn có hiệu lực khi handler (không transaction)
+    // gọi sang processCallSignal (có transaction).
+    @Autowired
+    @Lazy
+    private ChatSocketController self;
+
+    // Serialize việc xử lý tín hiệu theo callId để tránh race "duplicate key" khi
+    // CALL_INVITE và CALL_OFFER tới gần như đồng thời cùng insert call_sessions.
+    // Striped lock: bó cố định 64 khóa, đủ cho 1 instance trên Render.
+    private final Object[] callLockStripes = new Object[64];
+
+    {
+        for (int i = 0; i < callLockStripes.length; i++) {
+            callLockStripes[i] = new Object();
+        }
+    }
+
+    private Object callLockFor(UUID callId) {
+        return callLockStripes[Math.floorMod(callId.hashCode(), callLockStripes.length)];
+    }
+
     @MessageMapping("/chat.private")
     public void sendPrivateMessage(PrivateMessageRequest request, Principal principal) {
         if (principal == null) {
@@ -91,8 +114,20 @@ public class ChatSocketController {
     }
 
     @MessageMapping("/call.signal")
-    @Transactional
     public void sendCallSignal(CallSignalRequest request, Principal principal) {
+        // Khóa theo callId rồi mới vào transaction: thread sau chỉ đọc DB sau khi
+        // thread trước đã COMMIT, nên find-or-create không còn chèn trùng call_id.
+        if (request != null && request.getCallId() != null) {
+            synchronized (callLockFor(request.getCallId())) {
+                self.processCallSignal(request, principal);
+            }
+        } else {
+            self.processCallSignal(request, principal);
+        }
+    }
+
+    @Transactional
+    public void processCallSignal(CallSignalRequest request, Principal principal) {
         try {
             if (principal == null) {
                 throw new ForbiddenException("Unauthenticated WebSocket session");
@@ -246,8 +281,12 @@ public class ChatSocketController {
             session.setCallMediaType(MEDIA_TYPE_AUDIO);
         }
 
-        String mediaTypeFromSignal = resolveMediaType(request.getMediaType(), request.getSdp());
-        if (MEDIA_TYPE_VIDEO.equals(mediaTypeFromSignal)) {
+        // Loại cuộc gọi chỉ lấy từ mediaType khai báo (CALL_INVITE), KHÔNG suy từ SDP.
+        // Offer/ICE có thể chứa m=video do tái dùng stream → nhầm thoại thành video
+        // trong call log và nút "Gọi lại".
+        if ("CALL_INVITE".equals(type)) {
+            session.setCallMediaType(normalizeMediaType(request.getMediaType()));
+        } else if (MEDIA_TYPE_VIDEO.equalsIgnoreCase(request.getMediaType())) {
             session.setCallMediaType(MEDIA_TYPE_VIDEO);
         }
 
@@ -333,12 +372,13 @@ public class ChatSocketController {
                     .startedAt(now)
                     .status("RINGING")
                     .lastSignalType("CALL_INVITE")
-                    .callMediaType(MEDIA_TYPE_AUDIO)
+                    .callMediaType(normalizeMediaType(request.getMediaType()))
                     .build();
         }
 
-        String mediaTypeFromSignal = resolveMediaType(request.getMediaType(), request.getSdp());
-        if (MEDIA_TYPE_VIDEO.equals(mediaTypeFromSignal)) {
+        if ("CALL_INVITE".equals(type)) {
+            session.setCallMediaType(normalizeMediaType(request.getMediaType()));
+        } else if (MEDIA_TYPE_VIDEO.equalsIgnoreCase(request.getMediaType())) {
             session.setCallMediaType(MEDIA_TYPE_VIDEO);
         }
         session.setLastSignalType(type);
@@ -469,25 +509,11 @@ public class ChatSocketController {
         };
     }
 
-    private String inferMediaTypeFromSdp(String sdp) {
-        if (sdp == null || sdp.isBlank()) {
-            return MEDIA_TYPE_AUDIO;
-        }
-        return sdp.toLowerCase().contains("m=video") ? MEDIA_TYPE_VIDEO : MEDIA_TYPE_AUDIO;
-    }
-
     private String normalizeMediaType(String mediaType) {
         if (MEDIA_TYPE_VIDEO.equalsIgnoreCase(mediaType)) {
             return MEDIA_TYPE_VIDEO;
         }
         return MEDIA_TYPE_AUDIO;
-    }
-
-    private String resolveMediaType(String mediaType, String sdp) {
-        if (MEDIA_TYPE_VIDEO.equalsIgnoreCase(mediaType)) {
-            return MEDIA_TYPE_VIDEO;
-        }
-        return inferMediaTypeFromSdp(sdp);
     }
 
     private String buildCallLogContent(CallSession session) {
