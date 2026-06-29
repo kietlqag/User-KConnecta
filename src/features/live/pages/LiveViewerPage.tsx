@@ -83,6 +83,7 @@ export default function LiveViewerPage() {
   const replayScrubbingRef = useRef(false);
   const dvrDurationFixedRef = useRef<string | null>(null);
   const useHlsPlaybackRef = useRef(false);
+  const intentionalDisconnectRef = useRef(false);
   const [replayCurrentSeconds, setReplayCurrentSeconds] = useState(0);
   const [replayDurationSeconds, setReplayDurationSeconds] = useState(0);
   const [isReplayPaused, setIsReplayPaused] = useState(false);
@@ -136,6 +137,9 @@ export default function LiveViewerPage() {
 
   useEffect(() => {
     if (!showHlsVideo) return;
+    // Đã chuyển sang HLS: chủ động ngắt WebRTC, đánh dấu để handler Disconnected
+    // không hiểu nhầm là live bị rớt.
+    intentionalDisconnectRef.current = true;
     roomRef.current?.disconnect();
     setSourceStream(null);
     setStatus((prev) => (prev === 'Live đã ngắt kết nối.' ? 'Đang xem trực tiếp.' : prev));
@@ -181,6 +185,7 @@ export default function LiveViewerPage() {
       setToolState(event.tools);
     }
     if (event.type === 'LIVE_ENDED') {
+      intentionalDisconnectRef.current = true;
       roomRef.current?.disconnect();
       resetDvr();
       setSourceStream(null);
@@ -221,9 +226,12 @@ export default function LiveViewerPage() {
 
     room.on(RoomEvent.TrackSubscribed, attachTrack);
     room.on(RoomEvent.Disconnected, () => {
-      if (!cancelled && !useHlsPlaybackRef.current) {
-        setStatus('Live đã ngắt kết nối.');
+      // Bỏ qua khi: component unmount, đang dùng HLS, hoặc ta chủ động ngắt
+      // (chuyển sang HLS / live đã kết thúc).
+      if (cancelled || useHlsPlaybackRef.current || intentionalDisconnectRef.current) {
+        return;
       }
+      setStatus('Live đã ngắt kết nối.');
     });
 
     const connect = async () => {
@@ -277,6 +285,7 @@ export default function LiveViewerPage() {
 
     return () => {
       cancelled = true;
+      intentionalDisconnectRef.current = true;
       room.disconnect();
       roomRef.current = null;
       if (!isViewerPreview) {
