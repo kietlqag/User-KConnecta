@@ -141,7 +141,6 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         if (session.getStartedAt() == null) {
             session.setStartedAt(LocalDateTime.now());
         }
-        startHlsEgressIfNeeded(session);
 
         LiveSessionResponse response = toResponse(liveSessionRepository.save(session), hostUserId);
         realtimePublisher.publishSessionEvent("LIVE_STARTED", response);
@@ -158,6 +157,19 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .livekitUrl(hostToken.getLivekitUrl())
                 .hostToken(hostToken.getToken())
                 .build();
+    }
+
+    @Override
+    public LiveSessionResponse startHlsEgress(UUID sessionId, UUID hostUserId) {
+        LiveSession session = findSession(sessionId);
+        liveAccessService.requireHost(session, hostUserId);
+        if (session.getStatus() != LiveSessionStatus.LIVE) {
+            throw new ValidationException("Phiên live chưa ở trạng thái LIVE");
+        }
+        startHlsEgressIfNeeded(session);
+        LiveSessionResponse response = toResponse(liveSessionRepository.save(session), hostUserId);
+        realtimePublisher.publishSessionEvent("SESSION_UPDATED", response);
+        return response;
     }
 
     @Override

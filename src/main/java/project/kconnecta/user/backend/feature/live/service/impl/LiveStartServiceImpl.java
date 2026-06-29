@@ -14,7 +14,6 @@ import project.kconnecta.user.backend.feature.live.entity.enums.LiveRecordingSta
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveSessionStatus;
 import project.kconnecta.user.backend.feature.live.entity.enums.LiveStartMode;
 import project.kconnecta.user.backend.feature.live.repository.LiveSessionRepository;
-import project.kconnecta.user.backend.feature.live.service.LiveKitEgressService;
 import project.kconnecta.user.backend.feature.live.service.LiveKitTokenService;
 import project.kconnecta.user.backend.feature.live.service.LiveSessionRealtimePublisher;
 import project.kconnecta.user.backend.feature.live.service.LiveStartService;
@@ -37,7 +36,6 @@ public class LiveStartServiceImpl implements LiveStartService {
     private final UserRepository userRepository;
     private final LiveSessionRepository liveSessionRepository;
     private final LiveKitTokenService liveKitTokenService;
-    private final LiveKitEgressService liveKitEgressService;
     private final LiveSessionRealtimePublisher realtimePublisher;
 
     @Override
@@ -89,16 +87,6 @@ public class LiveStartServiceImpl implements LiveStartService {
                 .totalReactionCount(0)
                 .startedAt(status == LiveSessionStatus.LIVE ? now : null)
                 .build());
-
-        if (status == LiveSessionStatus.LIVE) {
-            if (liveKitEgressService.isEgressConfigured()) {
-                liveKitEgressService.startRoomHlsEgress(session).ifPresentOrElse(result -> {
-                    session.setEgressId(result.getEgressId());
-                    session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
-                }, () -> session.setRecordingError(
-                        "Không khởi động được HLS egress. Kiểm tra LiveKit Cloud egress và cấu hình R2."));
-            }
-        }
 
         if (status == LiveSessionStatus.LIVE) {
             realtimePublisher.publishSessionEvent("LIVE_STARTED", toResponse(session));

@@ -87,13 +87,24 @@ public class LiveKitEgressServiceImpl implements LiveKitEgressService {
             ).execute();
 
             if (!response.isSuccessful() || response.body() == null) {
-                log.error("LiveKit egress start failed for session {}: HTTP {}", session.getId(), response.code());
+                String errorBody = "";
+                try {
+                    if (response.errorBody() != null) {
+                        errorBody = response.errorBody().string();
+                    }
+                } catch (Exception ignored) {
+                    /* bỏ qua */
+                }
+                log.error("LiveKit egress start failed for session {}: HTTP {} {}", session.getId(), response.code(), errorBody);
                 return Optional.empty();
             }
 
+            String liveUrl = buildPublicHlsUrl(prefix, "live.m3u8");
+            log.info("LiveKit HLS egress started for session {}: egressId={}, liveUrl={}",
+                    session.getId(), response.body().getEgressId(), liveUrl);
             return Optional.of(EgressStartResult.builder()
                     .egressId(response.body().getEgressId())
-                    .hlsPlaybackUrl(buildPublicHlsUrl(prefix, "live.m3u8"))
+                    .hlsPlaybackUrl(liveUrl)
                     .build());
         } catch (Exception ex) {
             log.error("Failed to start LiveKit HLS egress for session {}", session.getId(), ex);
@@ -140,12 +151,14 @@ public class LiveKitEgressServiceImpl implements LiveKitEgressService {
     }
 
     private String storagePrefix(UUID sessionId) {
-        return "kconnecta/live/" + sessionId;
+        // LiveKit nối playlist/segment trực tiếp vào prefix; cần dấu / cuối để tạo thư mục riêng.
+        return "kconnecta/live/" + sessionId + "/";
     }
 
     private String buildPublicHlsUrl(String prefix, String playlistFile) {
         String base = publicBaseUrl.endsWith("/") ? publicBaseUrl.substring(0, publicBaseUrl.length() - 1) : publicBaseUrl;
-        return base + "/" + prefix + "/" + playlistFile;
+        String normalizedPrefix = prefix.replaceAll("/+$", "");
+        return base + "/" + normalizedPrefix + "/" + playlistFile;
     }
 
     private String toHttpApiUrl(String url) {

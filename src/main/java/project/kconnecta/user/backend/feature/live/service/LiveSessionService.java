@@ -34,6 +34,8 @@ public interface LiveSessionService {
 
     LiveSessionResponse endLive(UUID sessionId, UUID requesterUserId);
 
+    LiveSessionResponse startHlsEgress(UUID sessionId, UUID hostUserId);
+
     LiveSessionResponse saveRecording(UUID sessionId, UUID hostUserId, MultipartFile file, Integer durationSec);
 
     LiveSessionResponse markRecordingFailed(UUID sessionId, UUID hostUserId, String error);

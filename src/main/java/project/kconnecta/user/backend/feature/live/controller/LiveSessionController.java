@@ -73,6 +73,17 @@ public class LiveSessionController {
         return ResponseEntity.ok(liveSessionService.endLive(sessionId, principal.getUserId()));
     }
 
+    @PostMapping("/{sessionId}/egress/start")
+    public ResponseEntity<LiveSessionResponse> startHlsEgress(
+            @PathVariable UUID sessionId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(liveSessionService.startHlsEgress(sessionId, principal.getUserId()));
+    }
+
     @PostMapping(value = "/{sessionId}/recording", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LiveSessionResponse> uploadRecording(
             @PathVariable UUID sessionId,
