@@ -7,6 +7,7 @@ import { authService } from '@/services/authService';
 import { liveService, type LiveEventSubscriberResponse, type LiveSessionResponse } from '@/services/liveService';
 import { isSessionHost, navigateToLiveSession, startScheduledLiveAndNavigate } from '@/features/live/utils/navigateToLiveSession';
 import { formatScheduledDisplayFromIso, isScheduledSessionDue } from '@/features/live/utils/liveFormUtils';
+import { parseLivePostContent } from '@/utils/postUtils';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import {
   Dialog,
@@ -64,9 +65,14 @@ export function LivePostPreviewCard({
 
   const isLiveEnded = liveSessionStatus === 'ENDED' || liveSessionStatus === 'CANCELED';
   const [liveTitle, liveDescription] = useMemo(() => {
-    const [title, ...rest] = (content || '').split(/\n\s*\n/);
-    return [title?.trim() || 'Video trực tiếp', rest.join('\n\n').trim()];
-  }, [content]);
+    if (liveSession?.title?.trim()) {
+      const title = liveSession.title.trim();
+      const description = liveSession.description?.trim() || '';
+      return [title, description && description !== title ? description : ''];
+    }
+    const parsed = parseLivePostContent(content);
+    return [parsed.title, parsed.description];
+  }, [content, liveSession?.title, liveSession?.description]);
   const liveReplayUrl = isLiveEnded && isPlayableUrl(liveSession?.playbackUrl) ? liveSession?.playbackUrl?.trim() : '';
   const isRecordingProcessing = isLiveEnded && liveSession?.recordingStatus === 'PROCESSING' && !liveReplayUrl;
   const isRecordingFailed = isLiveEnded && liveSession?.recordingStatus === 'FAILED' && !liveReplayUrl;

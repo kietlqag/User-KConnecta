@@ -123,13 +123,49 @@ function isVideoUrl(url?: string | null): boolean {
   return url.includes('/video/') || /\.(mp4|mov|webm|ogg)(\?.*)?$/i.test(url);
 }
 
+/** Split live announcement post content into title + description (dedupes identical blocks). */
+export function parseLivePostContent(content: string): { title: string; description: string } {
+  const raw = (content || '').trim();
+  if (!raw) return { title: 'Video trực tiếp', description: '' };
+
+  const blocks = raw.split(/\n\s*\n/);
+  if (blocks.length >= 2) {
+    const title = blocks[0].trim() || 'Video trực tiếp';
+    const description = blocks.slice(1).join('\n\n').trim();
+    return {
+      title,
+      description: description && description !== title ? description : '',
+    };
+  }
+
+  const lines = raw.split(/\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 2 && lines[0] === lines[1]) {
+    return { title: lines[0], description: '' };
+  }
+
+  return { title: raw, description: '' };
+}
+
+export function normalizeLivePostContent(content: string): string {
+  const { title, description } = parseLivePostContent(content);
+  return description ? `${title}\n\n${description}` : title;
+}
+
+function isLikelyLiveByContent(item: PostResponse): boolean {
+  if ((item.media ?? []).length > 0) return false;
+  const content = (item.content || '').trim();
+  if (!content) return false;
+  if (content.includes('\n\n')) return true;
+  const lines = content.split(/\n/).map((line) => line.trim()).filter(Boolean);
+  return lines.length === 2 && lines[0] === lines[1];
+}
+
 export function mapApiPost(item: PostResponse): FeedPost {
   const firstVideo = (item.media ?? []).find((m) => m.mediaType === 'VIDEO');
   const firstImage = (item.media ?? []).find((m) => m.mediaType === 'IMAGE');
   const legacyVideoUrl = !firstVideo && isVideoUrl(item.imageUrl) ? item.imageUrl : null;
   const legacyImageUrl = item.imageUrl && !isVideoUrl(item.imageUrl) ? item.imageUrl : null;
-  const isLikelyLiveByContent = (item.content || '').includes('\n\n') && (item.media ?? []).length === 0;
-  const isLivePost = item.backgroundStyle === 'LIVE_POST' || isLikelyLiveByContent;
+  const isLivePost = item.backgroundStyle === 'LIVE_POST' || isLikelyLiveByContent(item);
 
   const videoUrl = firstVideo?.mediaUrl || firstVideo?.fileUrl || legacyVideoUrl || undefined;
   const imageUrl = firstImage?.mediaUrl || firstImage?.fileUrl || legacyImageUrl || undefined;
@@ -145,7 +181,7 @@ export function mapApiPost(item: PostResponse): FeedPost {
       item.status === 'SCHEDULED'
         ? formatScheduledPostLabel(item.scheduledAt)
         : formatPostTimestamp(item.publishedAt || item.createdAt),
-    content: item.content || '',
+    content: isLivePost ? normalizeLivePostContent(item.content || '') : (item.content || ''),
     image: imageUrl,
     media: videoUrl
       ? { type: 'video', url: videoUrl }
