@@ -68,6 +68,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
 
     let hls: Hls | null = null;
     let becameReady = false;
+    let recovering = false;
     setIsReady(false);
 
     const onTimeUpdate = () => updateFromVideo(video);
@@ -105,9 +106,13 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       hls.on(Hls.Events.LEVEL_UPDATED, () => updateFromVideo(video));
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal || !hls) return;
-        // Lỗi tạm thời (segment chưa kịp ghi, mạng chập chờn) → tự phục hồi,
-        // KHÔNG fallback sang WebRTC để tránh ngắt kết nối giữa chừng.
+        // Phục hồi có kiểm soát để tránh vòng lặp startLoad gây hủy request liên tục.
+        if (recovering) return;
+        recovering = true;
+        window.setTimeout(() => { recovering = false; }, 3000);
+
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          // Segment chưa kịp ghi / playlist tạm thời thiếu → nạp lại.
           hls.startLoad();
           return;
         }
@@ -115,11 +120,9 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           hls.recoverMediaError();
           return;
         }
-        // Lỗi không thể phục hồi: chỉ báo fallback nếu chưa từng phát được.
+        // Lỗi không thể phục hồi: chỉ fallback nếu chưa từng phát được.
         if (!becameReady) {
           onFatalError?.();
-        } else {
-          hls.startLoad();
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -155,7 +158,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     setIsAtLiveEdge(buffer - clamped <= LIVE_EDGE_THRESHOLD_SEC);
   }, [bufferedSeconds, getSessionElapsed]);
 
-  /** Seek thật khi thả chuột — playlist DVR có đủ segment nên set currentTime là đủ. */
+  /** Seek thật khi thả chuột. */
   const commitScrub = useCallback((seconds: number) => {
     isScrubbingRef.current = false;
     const video = videoRef.current;
@@ -166,11 +169,20 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     const timelineDuration = Math.max(end - start, 1);
     const clamped = Math.max(0, Math.min(seconds, timelineDuration));
     const atEdge = timelineDuration - clamped <= LIVE_EDGE_THRESHOLD_SEC;
+    const targetTime = start + clamped;
 
     try {
-      video.currentTime = start + clamped;
+      video.currentTime = targetTime;
     } catch {
       /* seekable range chưa sẵn sàng */
+    }
+
+    // Ép hls.js chuyển vị trí nạp segment xuống đúng điểm tua; nếu không nó vẫn
+    // bám live edge và hủy request, khiến video đứng hình tại điểm tua.
+    const hls = hlsRef.current;
+    if (hls) {
+      hls.stopLoad();
+      hls.startLoad(atEdge ? -1 : targetTime);
     }
 
     setPlaybackSeconds(Math.floor(clamped));
@@ -195,6 +207,11 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     const liveTarget = hls && Number.isFinite(hls.liveSyncPosition ?? NaN)
       ? (hls.liveSyncPosition as number)
       : (end > start ? end : Math.max(sessionElapsed, bufferedSeconds));
+
+    if (hls) {
+      hls.stopLoad();
+      hls.startLoad(-1);
+    }
 
     try {
       video.currentTime = liveTarget;
