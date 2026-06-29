@@ -1,7 +1,7 @@
 import Hls from 'hls.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const LIVE_EDGE_THRESHOLD_SEC = 2;
+const LIVE_EDGE_THRESHOLD_SEC = 3;
 
 type UseLiveHlsPlaybackOptions = {
   enabled: boolean;
@@ -28,22 +28,24 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
   const [bufferedSeconds, setBufferedSeconds] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
+  // Chỉ dùng làm độ dài dự phòng KHI seekable chưa sẵn sàng (vài giây đầu).
   const getSessionElapsed = useCallback(() => {
     if (!startedAt) return 0;
     return Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
   }, [startedAt]);
 
+  // Toàn bộ thời gian (live edge + vị trí phát) đều bám theo seekable range THẬT của
+  // video, không dùng đồng hồ tường — nhờ vậy kéo tới giây nào là tới đúng giây đó.
   const updateFromVideo = useCallback((video: HTMLVideoElement) => {
     const { start, end } = getSeekableRange(video);
-    const timelineDuration = Math.max(end - start, 0);
-    const relativeTime = Math.max(0, video.currentTime - start);
-    const buffer = Math.max(timelineDuration, getSessionElapsed());
+    const duration = Math.max(end - start, 0);
+    const buffer = duration > 0 ? duration : getSessionElapsed();
+    const relative = Math.max(0, Math.min(video.currentTime - start, buffer));
 
     setBufferedSeconds(Math.floor(buffer));
-
     if (!isScrubbingRef.current) {
-      setPlaybackSeconds(Math.floor(relativeTime));
-      setIsAtLiveEdge(buffer - relativeTime <= LIVE_EDGE_THRESHOLD_SEC);
+      setPlaybackSeconds(Math.floor(relative));
+      setIsAtLiveEdge(buffer - relative <= LIVE_EDGE_THRESHOLD_SEC);
     }
   }, [getSessionElapsed]);
 
@@ -85,14 +87,13 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     if (Hls.isSupported()) {
       hls = new Hls({
         enableWorker: true,
-        // Playlist DVR (playback.m3u8) cần tua lại toàn bộ buổi live nên TẮT
-        // lowLatency và cho phép giữ buffer dài ở cả hai chiều.
+        // DVR: tua lại toàn bộ buổi live. Tắt low-latency, giữ back buffer vô hạn,
+        // và đặt ngưỡng "trễ tối đa" rất lớn để hls.js KHÔNG tự nhảy về live edge
+        // khi người xem đang xem lại quá khứ.
         lowLatencyMode: false,
         backBufferLength: Infinity,
-        // Không tự "nhảy" về live edge khi người xem đang tua lại quá khứ.
-        liveSyncDurationCount: 4,
+        liveSyncDurationCount: 3,
         liveMaxLatencyDurationCount: 600,
-        liveDurationInfinity: true,
       });
       hlsRef.current = hls;
       hls.loadSource(hlsUrl);
@@ -106,13 +107,11 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       hls.on(Hls.Events.LEVEL_UPDATED, () => updateFromVideo(video));
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal || !hls) return;
-        // Phục hồi có kiểm soát để tránh vòng lặp startLoad gây hủy request liên tục.
         if (recovering) return;
         recovering = true;
         window.setTimeout(() => { recovering = false; }, 3000);
 
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          // Segment chưa kịp ghi / playlist tạm thời thiếu → nạp lại.
           hls.startLoad();
           return;
         }
@@ -120,7 +119,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           hls.recoverMediaError();
           return;
         }
-        // Lỗi không thể phục hồi: chỉ fallback nếu chưa từng phát được.
         if (!becameReady) {
           onFatalError?.();
         }
@@ -148,83 +146,58 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
 
   /** Chỉ cập nhật nhãn khi đang kéo — không seek video (tránh giật khi rê chuột). */
   const previewScrub = useCallback((seconds: number) => {
-    const video = videoRef.current;
-    const sessionElapsed = getSessionElapsed();
-    const { start, end } = video ? getSeekableRange(video) : { start: 0, end: 0 };
-    const buffer = Math.max(end - start, sessionElapsed, bufferedSeconds, 1);
-    const clamped = Math.max(0, Math.min(seconds, buffer));
+    const clamped = Math.max(0, Math.min(seconds, bufferedSeconds));
     setPlaybackSeconds(Math.floor(clamped));
-    setBufferedSeconds(Math.floor(buffer));
-    setIsAtLiveEdge(buffer - clamped <= LIVE_EDGE_THRESHOLD_SEC);
-  }, [bufferedSeconds, getSessionElapsed]);
+    setIsAtLiveEdge(bufferedSeconds - clamped <= LIVE_EDGE_THRESHOLD_SEC);
+  }, [bufferedSeconds]);
 
-  /** Seek thật khi thả chuột. */
+  /**
+   * Seek thật khi thả chuột. Chỉ set video.currentTime trong seekable range —
+   * hls.js tự nạp đúng segment ở vị trí đó. KHÔNG gọi stopLoad/startLoad (gây đứng hình).
+   */
   const commitScrub = useCallback((seconds: number) => {
     isScrubbingRef.current = false;
     const video = videoRef.current;
     if (!video) return;
 
-    const sessionElapsed = getSessionElapsed();
     const { start, end } = getSeekableRange(video);
-    const timelineDuration = Math.max(end - start, 1);
-    const clamped = Math.max(0, Math.min(seconds, timelineDuration));
-    const atEdge = timelineDuration - clamped <= LIVE_EDGE_THRESHOLD_SEC;
-    const targetTime = start + clamped;
+    const duration = Math.max(end - start, 0);
+    const clamped = Math.max(0, Math.min(seconds, duration));
+    const atEdge = duration - clamped <= LIVE_EDGE_THRESHOLD_SEC;
 
     try {
-      video.currentTime = targetTime;
+      video.currentTime = start + clamped;
     } catch {
-      /* seekable range chưa sẵn sàng */
-    }
-
-    // Ép hls.js chuyển vị trí nạp segment xuống đúng điểm tua; nếu không nó vẫn
-    // bám live edge và hủy request, khiến video đứng hình tại điểm tua.
-    const hls = hlsRef.current;
-    if (hls) {
-      hls.stopLoad();
-      hls.startLoad(atEdge ? -1 : targetTime);
+      /* seekable chưa sẵn sàng */
     }
 
     setPlaybackSeconds(Math.floor(clamped));
-    setBufferedSeconds(Math.floor(Math.max(timelineDuration, sessionElapsed)));
     setIsAtLiveEdge(atEdge);
     resumePlayback(video);
-  }, [getSessionElapsed, resumePlayback]);
+  }, [resumePlayback]);
 
   const seekTo = useCallback((seconds: number) => {
-    previewScrub(seconds);
     commitScrub(seconds);
-  }, [commitScrub, previewScrub]);
+  }, [commitScrub]);
 
   const goToLive = useCallback(() => {
     isScrubbingRef.current = false;
     const video = videoRef.current;
     if (!video) return;
 
-    const sessionElapsed = getSessionElapsed();
     const { start, end } = getSeekableRange(video);
-    const hls = hlsRef.current;
-    const liveTarget = hls && Number.isFinite(hls.liveSyncPosition ?? NaN)
-      ? (hls.liveSyncPosition as number)
-      : (end > start ? end : Math.max(sessionElapsed, bufferedSeconds));
-
-    if (hls) {
-      hls.stopLoad();
-      hls.startLoad(-1);
-    }
+    const target = end > start ? Math.max(end - 0.5, start) : end;
 
     try {
-      video.currentTime = liveTarget;
+      video.currentTime = target;
     } catch {
       /* ignored */
     }
 
-    const relative = Math.max(0, liveTarget - start);
-    setPlaybackSeconds(Math.floor(relative));
-    setBufferedSeconds(Math.floor(Math.max(relative, sessionElapsed)));
+    setPlaybackSeconds(Math.floor(Math.max(0, target - start)));
     setIsAtLiveEdge(true);
     resumePlayback(video);
-  }, [bufferedSeconds, getSessionElapsed, resumePlayback]);
+  }, [resumePlayback]);
 
   const setScrubbing = useCallback((scrubbing: boolean) => {
     isScrubbingRef.current = scrubbing;
