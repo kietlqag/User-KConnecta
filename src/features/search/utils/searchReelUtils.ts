@@ -3,8 +3,11 @@ import { isVideoUrl } from '@/utils/mediaUtils';
 import type { Reel } from '@/features/watch/types/watch.types';
 import type { SearchResultPost, SearchResultReel } from '../types/search.types';
 
-/** Watch-style reel: video-first with little or no caption — not a feed post with embedded video. */
+/** Reel posts are typed REEL on the server; legacy heuristic only when postType is absent. */
 export function isReelStylePost(post: SearchResultPost): boolean {
+  if (post.postType === 'REEL') return true;
+  if (post.postType === 'POST') return false;
+
   const hasVideo = !!(post.video || isVideoUrl(post.image));
   if (!hasVideo) return false;
 

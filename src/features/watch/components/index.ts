@@ -7,3 +7,4 @@ export { ReelInteractionPanel } from './ReelInteractionPanel';
 export { ReelNavigation } from './ReelNavigation';
 export { CommentsPanel } from './CommentsPanel';
 export { ReelMoreMenu } from './ReelMoreMenu';
+export { CreateReelModal } from './CreateReelModal/CreateReelModal';

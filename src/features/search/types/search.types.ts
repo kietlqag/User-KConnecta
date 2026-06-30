@@ -56,6 +56,7 @@ export interface SearchResultPost {
   savedByCurrentUser?: boolean;
   groupId?: string;
   mediaItems?: { type: string; url: string }[];
+  postType?: 'POST' | 'REEL';
 }
 
 export interface SearchResultReel {

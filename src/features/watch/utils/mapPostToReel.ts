@@ -27,6 +27,8 @@ function resolveThumbnailUrl(post: PostResponse, videoUrl: string): string {
 }
 
 export function mapPostToReel(post: PostResponse): Reel | null {
+  if (post.postType === 'POST') return null;
+
   const videoUrl = resolveVideoUrl(post);
   if (!videoUrl) return null;
 

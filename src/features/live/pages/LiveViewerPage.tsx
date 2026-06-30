@@ -82,6 +82,7 @@ export default function LiveViewerPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const playerSectionRef = useRef<HTMLElement | null>(null);
   const [liveElapsed, setLiveElapsed] = useState('00:00');
+  const [liveElapsedSeconds, setLiveElapsedSeconds] = useState(0);
   const [isReacting, setIsReacting] = useState(false);
   const [isVotingPoll, setIsVotingPoll] = useState(false);
   const { bursts, pushBurst } = useLiveReactionBursts();
@@ -135,12 +136,23 @@ export default function LiveViewerPage() {
     ? (isDvrMode ? hlsPlayback.playbackSeconds : hlsPlayback.bufferedSeconds)
     : 0;
   const bufferedSeconds = hlsReady ? hlsPlayback.bufferedSeconds : 0;
-  const displayOffsetSeconds = 0;
+  // Egress HLS bắt đầu trễ vài giây sau lúc phát nên DVR (bufferedSeconds) ngắn hơn
+  // thời gian thật của buổi live. Cộng offset = khoảng trống đó để NHÃN trên thanh
+  // tua hiển thị theo giờ buổi live (khớp đồng hồ "TRỰC TIẾP" góc phải). Toạ độ seek
+  // vẫn giữ theo timeline HLS nên logic tua không đổi.
+  const displayOffsetSeconds = hlsReady
+    ? Math.max(0, liveElapsedSeconds - hlsPlayback.bufferedSeconds)
+    : 0;
   const canScrub = hlsReady ? hlsPlayback.canScrub : false;
 
-  // Đồng bộ đồng hồ "TRỰC TIẾP" với timeline HLS (nguồn thời gian thật của nội dung
-  // đang phát). Khi chưa có HLS (vài giây đầu dùng WebRTC) thì tạm dùng đồng hồ tường.
-  const liveTimerLabel = hlsReady ? formatClock(bufferedSeconds) : liveElapsed;
+  // Nhãn đồng hồ:
+  // - Live edge (đang xem WebRTC, gần real-time): dùng đồng hồ tường (now - startedAt)
+  //   để KHỚP với đồng hồ của người phát. Trước đây dùng bufferedSeconds (timeline
+  //   HLS) nên trễ ~5s + bắt đầu muộn → nhìn như lệch ~10s dù video chỉ trễ ~1s.
+  // - DVR (đang tua lại bằng HLS): hiển thị đúng vị trí phát trên timeline HLS.
+  const liveTimerLabel = isDvrMode && hlsReady
+    ? formatClock(hlsPlayback.playbackSeconds + displayOffsetSeconds)
+    : liveElapsed;
 
   useEffect(() => {
     setHlsLoadFailed(false);
@@ -457,7 +469,11 @@ export default function LiveViewerPage() {
 
   useEffect(() => {
     if (!session?.startedAt || isLiveEnded) return;
-    const updateElapsed = () => setLiveElapsed(formatLiveElapsed(session.startedAt));
+    const startMs = new Date(session.startedAt).getTime();
+    const updateElapsed = () => {
+      setLiveElapsed(formatLiveElapsed(session.startedAt));
+      setLiveElapsedSeconds(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+    };
     updateElapsed();
     const interval = window.setInterval(updateElapsed, 1000);
     return () => window.clearInterval(interval);
@@ -858,14 +874,17 @@ export default function LiveViewerPage() {
                 </div>
               </div>
             ) : isActiveLiveSession ? (
-              <>
+              <div className="relative h-full w-full">
+                {/* Cả 2 video cùng mounted & buffer nền (KHÔNG dùng sr-only 1x1px vì
+                    trình duyệt có thể throttle/không nạp segment video bị thu nhỏ →
+                    seekable trống → thanh tua trắng). Ẩn bằng opacity, giữ full-size. */}
                 {useHlsPlayback && (
                   <video
                     ref={hlsPlayback.videoRef}
                     autoPlay
                     playsInline
                     muted={playbackSource === 'hls' ? isMuted : true}
-                    className={playbackSource === 'hls' ? 'h-full w-full object-contain' : 'sr-only'}
+                    className={`absolute inset-0 h-full w-full object-contain transition-opacity ${playbackSource === 'hls' ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
                     aria-hidden={playbackSource !== 'hls'}
                   />
                 )}
@@ -873,11 +892,11 @@ export default function LiveViewerPage() {
                   ref={videoRef}
                   autoPlay
                   playsInline
-                  className={playbackSource === 'webrtc' ? 'h-full w-full object-contain' : 'sr-only'}
+                  className={`absolute inset-0 h-full w-full object-contain transition-opacity ${playbackSource === 'webrtc' ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
                   aria-hidden={playbackSource !== 'webrtc'}
                 />
                 <audio ref={audioRef} autoPlay />
-              </>
+              </div>
             ) : (
               <>
                 <video ref={videoRef} autoPlay playsInline className="h-full w-full object-contain" />

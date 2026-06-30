@@ -95,7 +95,28 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     let hls: Hls | null = null;
     let becameReady = false;
     let recovering = false;
+    // Khi mới vào live, playback.m3u8 có thể chưa kịp lên R2 (egress đang ghi segment
+    // đầu) → manifest 404. Không được bỏ cuộc vì HLS là nguồn DVR duy nhất; thay vào
+    // đó retry nạp lại manifest với số lần đủ lớn. Chỉ báo fatal sau khi thử rất nhiều
+    // lần mà vẫn chưa từng sẵn sàng (HLS hỏng thật, vd cấu hình sai).
+    let manifestRetries = 0;
+    const MAX_MANIFEST_RETRIES = 40;
+    let retryTimer = 0;
     setIsReady(false);
+
+    const scheduleReload = () => {
+      if (retryTimer) return;
+      retryTimer = window.setTimeout(() => {
+        retryTimer = 0;
+        if (!hls) return;
+        try {
+          hls.loadSource(hlsUrl);
+          hls.startLoad();
+        } catch {
+          /* hls đã destroy */
+        }
+      }, 1500);
+    };
 
     const onTimeUpdate = () => updateFromVideo(video);
     const onLoadedMetadata = () => {
@@ -127,6 +148,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         becameReady = true;
+        manifestRetries = 0;
         setIsReady(true);
         resumePlayback(video);
         updateFromVideo(video);
@@ -134,6 +156,20 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       hls.on(Hls.Events.LEVEL_UPDATED, () => updateFromVideo(video));
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal || !hls) return;
+
+        // Chưa từng sẵn sàng (playlist đầu buổi chưa lên R2): kiên trì nạp lại
+        // manifest cho tới khi có. Đây là lý do "vào lần 1 thanh tua trống, lần 2
+        // mới có" — trước đây lỗi này tắt HLS vĩnh viễn.
+        if (!becameReady) {
+          manifestRetries += 1;
+          if (manifestRetries <= MAX_MANIFEST_RETRIES) {
+            scheduleReload();
+            return;
+          }
+          onFatalErrorRef.current?.();
+          return;
+        }
+
         if (recovering) return;
         recovering = true;
         window.setTimeout(() => { recovering = false; }, 3000);
@@ -146,15 +182,24 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           hls.recoverMediaError();
           return;
         }
-        if (!becameReady) {
-          onFatalErrorRef.current?.();
-        }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl;
-      video.addEventListener('loadedmetadata', onLoadedMetadata);
-      video.addEventListener('error', () => onFatalErrorRef.current?.(), { once: true });
-      resumePlayback(video);
+      const loadNative = () => {
+        video.src = hlsUrl;
+        resumePlayback(video);
+      };
+      const onNativeError = () => {
+        if (becameReady) return;
+        manifestRetries += 1;
+        if (manifestRetries <= MAX_MANIFEST_RETRIES) {
+          window.setTimeout(loadNative, 1500);
+          return;
+        }
+        onFatalErrorRef.current?.();
+      };
+      video.addEventListener('loadedmetadata', () => { becameReady = true; onLoadedMetadata(); });
+      video.addEventListener('error', onNativeError);
+      loadNative();
     }
 
     video.addEventListener('timeupdate', onTimeUpdate);
@@ -163,6 +208,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
 
     return () => {
       window.clearInterval(tick);
+      if (retryTimer) window.clearTimeout(retryTimer);
       video.removeEventListener('timeupdate', onTimeUpdate);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('loadedmetadata', onLoadedMetadata);

@@ -448,6 +448,7 @@ export function ProfileCreatePostModal({
             allowAddOptions: pollAllowAddOptions,
           },
         }),
+        postType: 'POST',
       });
 
       toast.success(isScheduled ? 'Đã lên lịch đăng bài' : 'Đăng bài thành công');

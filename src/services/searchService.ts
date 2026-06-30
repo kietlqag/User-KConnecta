@@ -57,6 +57,7 @@ export interface SearchPostDto {
   savedByCurrentUser?: boolean;
   groupId?: string;
   mediaItems?: { type: string; url: string }[];
+  postType?: 'POST' | 'REEL';
   publishedAt?: string;
 }
 export interface SearchApiResponse {

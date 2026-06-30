@@ -12,6 +12,8 @@ export interface CreatePostMediaRequest {
   sortOrder?: number;
 }
 
+export type PostType = 'POST' | 'REEL';
+
 export interface CreatePostPayload {
   authorId: string;
   groupId?: string;
@@ -31,6 +33,7 @@ export interface CreatePostPayload {
   taggedUserIds?: string[];
   promoted?: boolean;
   poll?: CreatePostPollPayload;
+  postType?: PostType;
 }
 
 export interface CreatePostPollPayload {
@@ -140,6 +143,7 @@ export interface PostResponse {
   imageUrl?: string | null;
   privacy: 'PUBLIC' | 'FRIENDS' | 'FRIENDS_EXCEPT' | 'SPECIFIC_FRIENDS' | 'PRIVATE';
   status: 'PUBLISHED' | 'SCHEDULED' | 'DRAFT' | 'HIDDEN' | 'DELETED';
+  postType?: PostType;
   scheduledAt?: string | null;
   publishedAt?: string | null;
   locationText?: string | null;

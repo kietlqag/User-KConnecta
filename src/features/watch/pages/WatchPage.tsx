@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { Search, Star, Bookmark } from 'lucide-react';
+import { Search, Star, Bookmark, Clapperboard } from 'lucide-react';
 import { Header } from '../../home/components/Header';
-import { ReelSlideViewport, type ReelSlideViewportHandle } from '../components';
+import { ReelSlideViewport, type ReelSlideViewportHandle, CreateReelModal } from '../components';
 import { AUTH_USER_CHANGED_EVENT, authService } from '@/services/authService';
 import { WATCH_FEED_KEY, useWatchFeed } from '../hooks/useWatchFeed';
 import { useSearchWatchReels } from '../hooks/useSearchWatchReels';
@@ -34,11 +34,15 @@ const WatchSidebar = ({
   onTabChange,
   searchQuery,
   showSavedTab,
+  showCreateReel,
+  onCreateReel,
 }: {
   activeTab: WatchTab;
   onTabChange: (tab: WatchTab) => void;
   searchQuery?: string | null;
   showSavedTab: boolean;
+  showCreateReel: boolean;
+  onCreateReel: () => void;
 }) => {
   const { t } = useTranslation();
 
@@ -76,6 +80,17 @@ const WatchSidebar = ({
         )}
       </nav>
     )}
+
+    {showCreateReel && !searchQuery && (
+      <button
+        type="button"
+        onClick={onCreateReel}
+        className="mt-auto flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-[15px] font-semibold text-white transition-colors hover:bg-emerald-700"
+      >
+        <Clapperboard className="h-5 w-5 shrink-0" />
+        {t('watch.createReel')}
+      </button>
+    )}
   </aside>
   );
 };
@@ -84,6 +99,7 @@ export const WatchPage = () => {
   const { t } = useTranslation();
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
   const [watchTab, setWatchTab] = useState<WatchTab>('forYou');
+  const [showCreateReelModal, setShowCreateReelModal] = useState(false);
   const viewportRef = useRef<ReelSlideViewportHandle>(null);
   const [currentUser, setCurrentUser] = useState(() => authService.getCurrentUser());
   const queryClient = useQueryClient();
@@ -240,6 +256,13 @@ export const WatchPage = () => {
         onTabChange={handleWatchTabChange}
         searchQuery={isSearchWatchMode ? searchQuery : null}
         showSavedTab={showSavedTab}
+        showCreateReel={showSavedTab}
+        onCreateReel={() => setShowCreateReelModal(true)}
+      />
+
+      <CreateReelModal
+        isOpen={showCreateReelModal}
+        onClose={() => setShowCreateReelModal(false)}
       />
 
       {!isSearchWatchMode && showSavedTab && (
@@ -264,6 +287,17 @@ export const WatchPage = () => {
             {t('watch.saved')}
           </button>
         </nav>
+      )}
+
+      {!isSearchWatchMode && showSavedTab && (
+        <button
+          type="button"
+          onClick={() => setShowCreateReelModal(true)}
+          className="lg:hidden fixed bottom-6 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg transition-colors hover:bg-emerald-700"
+          aria-label={t('watch.createReel')}
+        >
+          <Clapperboard className="h-6 w-6" />
+        </button>
       )}
 
       <div className={`mt-14 h-[calc(100vh-56px)] relative overflow-hidden overscroll-none lg:pl-[320px] ${showSavedTab && !isSearchWatchMode ? 'pt-12 lg:pt-0' : ''}`}>
