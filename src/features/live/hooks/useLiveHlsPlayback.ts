@@ -28,6 +28,15 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
   const [bufferedSeconds, setBufferedSeconds] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
+  // Giữ callback trong ref để identity của nó KHÔNG làm effect chính chạy lại.
+  // Trước đây truyền inline `() => setHlsLoadFailed(true)` khiến mỗi render (mỗi
+  // giây) tạo hàm mới → effect teardown/destroy Hls liên tục → màn hình nháy và
+  // thanh tua đứng ở 00:00 vì seekable range không kịp tích lũy.
+  const onFatalErrorRef = useRef(onFatalError);
+  useEffect(() => {
+    onFatalErrorRef.current = onFatalError;
+  }, [onFatalError]);
+
   // Chỉ dùng làm độ dài dự phòng KHI seekable chưa sẵn sàng (vài giây đầu).
   const getSessionElapsed = useCallback(() => {
     if (!startedAt) return 0;
@@ -120,13 +129,13 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           return;
         }
         if (!becameReady) {
-          onFatalError?.();
+          onFatalErrorRef.current?.();
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = hlsUrl;
       video.addEventListener('loadedmetadata', onLoadedMetadata);
-      video.addEventListener('error', () => onFatalError?.(), { once: true });
+      video.addEventListener('error', () => onFatalErrorRef.current?.(), { once: true });
       resumePlayback(video);
     }
 
@@ -142,7 +151,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       hls?.destroy();
       hlsRef.current = null;
     };
-  }, [enabled, hlsUrl, onFatalError, resumePlayback, updateFromVideo]);
+  }, [enabled, hlsUrl, resumePlayback, updateFromVideo]);
 
   /** Chỉ cập nhật nhãn khi đang kéo — không seek video (tránh giật khi rê chuột). */
   const previewScrub = useCallback((seconds: number) => {
