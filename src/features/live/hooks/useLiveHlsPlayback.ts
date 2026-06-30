@@ -80,11 +80,29 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     let hls: Hls | null = null;
     let becameReady = false;
     let recovering = false;
+    // Nhảy tới live edge MỘT LẦN khi mới sẵn sàng. hls.js mặc định bắt đầu lùi
+    // liveSyncDurationCount segment (~6s) so với segment mới nhất; trong khi WebRTC
+    // gần real-time. Nếu không ép về edge, lúc chuyển nguồn WebRTC→HLS sẽ thấy
+    // video "tự tua lại 1 khúc" và bị tính là không ở live edge ngay khi vừa vào.
+    let didInitialEdgeSeek = false;
     setIsReady(false);
+
+    const seekToLiveEdgeOnce = () => {
+      if (didInitialEdgeSeek || isScrubbingRef.current) return;
+      const { start, end } = getSeekableRange(video);
+      if (end - start <= 0.5) return;
+      try {
+        video.currentTime = Math.max(end - 0.5, start);
+        didInitialEdgeSeek = true;
+      } catch {
+        /* seekable chưa sẵn sàng, thử lại ở LEVEL_UPDATED kế tiếp */
+      }
+    };
 
     const onTimeUpdate = () => updateFromVideo(video);
     const onLoadedMetadata = () => {
       setIsReady(true);
+      seekToLiveEdgeOnce();
       updateFromVideo(video);
     };
     const onWaiting = () => {
@@ -110,10 +128,14 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         becameReady = true;
         setIsReady(true);
+        seekToLiveEdgeOnce();
         resumePlayback(video);
         updateFromVideo(video);
       });
-      hls.on(Hls.Events.LEVEL_UPDATED, () => updateFromVideo(video));
+      hls.on(Hls.Events.LEVEL_UPDATED, () => {
+        seekToLiveEdgeOnce();
+        updateFromVideo(video);
+      });
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal || !hls) return;
         if (recovering) return;
