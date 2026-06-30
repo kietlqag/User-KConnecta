@@ -31,6 +31,8 @@ public class SearchPostDto implements Serializable {
     private Boolean savedByCurrentUser;
     private String groupId;
     private List<MediaItem> mediaItems;
+    /** POST = feed post, REEL = Watch reel */
+    private String postType;
 
     @Data
     @Builder

@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostType;
 import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
 
 import java.time.LocalDateTime;
@@ -28,6 +29,7 @@ public class PostResponse {
     private String imageUrl;
     private PostPrivacy privacy;
     private PostStatus status;
+    private PostType postType;
     private LocalDateTime scheduledAt;
     private LocalDateTime publishedAt;
     private String locationText;

@@ -76,6 +76,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "  GROUP BY pt.post_id" +
         ") topic_agg ON topic_agg.post_id = p.id " +
         "WHERE p.status = 'PUBLISHED' " +
+        "  AND (p.post_type IS NULL OR p.post_type = 'POST') " +
         "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC') " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
@@ -146,6 +147,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "SELECT count(*) FROM posts p " +
         "LEFT JOIN user_groups g ON p.group_id = g.id " +
         "WHERE p.status = 'PUBLISHED' " +
+        "  AND (p.post_type IS NULL OR p.post_type = 'POST') " +
         "  AND (p.group_id IS NULL OR g.privacy = 'PUBLIC') " +
         "  AND (" +
         "    p.privacy = 'PUBLIC' " +
@@ -189,6 +191,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "  GROUP BY pt.post_id" +
         ") topic_agg ON topic_agg.post_id = p.id " +
         "WHERE p.status = 'PUBLISHED' " +
+        "  AND p.post_type = 'REEL' " +
         "  AND (" +
         "    EXISTS (SELECT 1 FROM post_media pm WHERE pm.post_id = p.id AND pm.media_type = 'VIDEO') " +
         "    OR (p.image_url IS NOT NULL AND (" +
@@ -256,6 +259,7 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
         "SELECT count(*) FROM posts p " +
         "LEFT JOIN user_groups g ON p.group_id = g.id " +
         "WHERE p.status = 'PUBLISHED' " +
+        "  AND p.post_type = 'REEL' " +
         "  AND (" +
         "    EXISTS (SELECT 1 FROM post_media pm WHERE pm.post_id = p.id AND pm.media_type = 'VIDEO') " +
         "    OR (p.image_url IS NOT NULL AND (" +

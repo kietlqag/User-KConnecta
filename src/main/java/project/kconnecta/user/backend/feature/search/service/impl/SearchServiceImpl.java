@@ -352,6 +352,7 @@ public class SearchServiceImpl implements SearchService {
                     .savedByCurrentUser(savedPostIds.contains(p.getId()))
                     .groupId(p.getGroup() != null ? p.getGroup().getId().toString() : null)
                     .mediaItems(mediaItems)
+                    .postType(p.getPostType() != null ? p.getPostType().name() : "POST")
                     .build();
         }).toList();
     }

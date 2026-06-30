@@ -42,6 +42,7 @@ import project.kconnecta.user.backend.feature.post.entity.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.MediaType;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostType;
 import project.kconnecta.user.backend.feature.post.entity.enums.ReactionType;
 import project.kconnecta.user.backend.feature.activity.entity.enums.ActivityLogType;
 import project.kconnecta.user.backend.feature.activity.service.ActivityLogService;
@@ -155,6 +156,7 @@ public class PostServiceImpl implements PostService {
     public PostResponse createPost(CreatePostRequest request) {
         User author = getUser(request.getAuthorId(), "Author not found");
         List<CreatePostMediaRequest> mediaRequests = request.getMedia() == null ? Collections.emptyList() : request.getMedia();
+        PostType postType = request.getPostType() == null ? PostType.POST : request.getPostType();
 
         if ((request.getContent() == null || request.getContent().isBlank())
                 && mediaRequests.isEmpty()
@@ -166,6 +168,9 @@ public class PostServiceImpl implements PostService {
         if (request.getPoll() != null) {
             if (request.getGroupId() == null) {
                 throw new ValidationException("Polls are only supported in group posts");
+            }
+            if (postType == PostType.REEL) {
+                throw new ValidationException("Reels cannot include polls");
             }
             if (request.getContent() == null || request.getContent().isBlank()) {
                 throw new ValidationException("Bạn không thể tạo cuộc thăm dò ý kiến không chứa văn bản trong bài viết.");
@@ -213,8 +218,18 @@ public class PostServiceImpl implements PostService {
             status = PostStatus.SCHEDULED;
         }
 
-        log.info("create post: authorId={}, status={}, scheduledAt={}, groupId={}, pageId={}",
-                request.getAuthorId(), status, request.getScheduledAt(), request.getGroupId(), request.getPageId());
+        log.info("create post: authorId={}, status={}, scheduledAt={}, groupId={}, pageId={}, postType={}",
+                request.getAuthorId(), status, request.getScheduledAt(), request.getGroupId(), request.getPageId(), postType);
+
+        if (postType == PostType.REEL) {
+            if (request.getGroupId() != null || request.getPageId() != null) {
+                throw new ValidationException("Reels cannot be posted to a group or page");
+            }
+            if (request.getSharedGroupId() != null || request.getSharedAlbumId() != null) {
+                throw new ValidationException("Reels cannot share groups or albums");
+            }
+            validateReelMedia(mediaRequests);
+        }
 
         if (request.getGroupId() != null && request.getPageId() != null) {
             throw new ValidationException("Cannot post to both a group and a page");
@@ -300,6 +315,7 @@ public class PostServiceImpl implements PostService {
                 .imageUrl(trimToNull(request.getImageUrl()) != null ? request.getImageUrl().trim() : 
                         (mediaRequests.isEmpty() ? null : mediaRequests.get(0).getFileUrl().trim()))
                 .promoted(Boolean.TRUE.equals(request.getPromoted()))
+                .postType(postType)
                 .build();
 
         attachMedia(post, mediaRequests);
@@ -1938,6 +1954,7 @@ public class PostServiceImpl implements PostService {
                 .imageUrl(post.getImageUrl())
                 .privacy(post.getPrivacy())
                 .status(post.getStatus())
+                .postType(post.getPostType())
                 .scheduledAt(post.getScheduledAt())
                 .publishedAt(post.getPublishedAt())
                 .locationText(post.getLocationText())
@@ -2335,5 +2352,16 @@ public class PostServiceImpl implements PostService {
                 .safe(true)
                 .level("NONE")
                 .build();
+    }
+
+    private void validateReelMedia(List<CreatePostMediaRequest> mediaRequests) {
+        long videoCount = mediaRequests.stream().filter(m -> m.getMediaType() == MediaType.VIDEO).count();
+        long imageCount = mediaRequests.stream().filter(m -> m.getMediaType() == MediaType.IMAGE).count();
+        if (mediaRequests.isEmpty() || videoCount != 1) {
+            throw new ValidationException("Reel must include exactly one video");
+        }
+        if (imageCount > 0) {
+            throw new ValidationException("Reels cannot include images");
+        }
     }
 }

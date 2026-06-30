@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostType;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,6 +35,8 @@ public class CreatePostRequest {
     private PostPrivacy privacy;
 
     private PostStatus status;
+
+    private PostType postType;
 
     private LocalDateTime scheduledAt;
 

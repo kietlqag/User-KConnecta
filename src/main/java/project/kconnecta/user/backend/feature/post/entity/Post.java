@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostPrivacy;
 import project.kconnecta.user.backend.feature.post.entity.enums.PostStatus;
+import project.kconnecta.user.backend.feature.post.entity.enums.PostType;
 import org.hibernate.annotations.BatchSize;
 import project.kconnecta.user.backend.feature.album.entity.Album;
 import project.kconnecta.user.backend.feature.group.entity.Group;
@@ -61,6 +62,11 @@ public class Post {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PostStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "post_type", nullable = false, length = 20)
+    @Builder.Default
+    private PostType postType = PostType.POST;
 
     @Column(name = "scheduled_at")
     private LocalDateTime scheduledAt;
@@ -121,6 +127,9 @@ public class Post {
         }
         if (privacy == null) {
             privacy = PostPrivacy.PUBLIC;
+        }
+        if (postType == null) {
+            postType = PostType.POST;
         }
         if (createdAt == null) {
             createdAt = now;
