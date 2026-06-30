@@ -114,9 +114,12 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
         // DVR: tua lại toàn bộ buổi live. Tắt low-latency, giữ back buffer vô hạn,
         // và đặt ngưỡng "trễ tối đa" rất lớn để hls.js KHÔNG tự nhảy về live edge
         // khi người xem đang xem lại quá khứ.
+        // liveSyncDurationCount=1: phát sát segment mới nhất để giảm độ trễ so với
+        // real-time (mặc định 3 ≈ trễ thêm ~6s). Đổi lại buffer phía trước mỏng hơn
+        // nên mạng yếu có thể giật nhẹ — onWaiting sẽ tự play lại.
         lowLatencyMode: false,
         backBufferLength: Infinity,
-        liveSyncDurationCount: 3,
+        liveSyncDurationCount: 1,
         liveMaxLatencyDurationCount: 600,
       });
       hlsRef.current = hls;

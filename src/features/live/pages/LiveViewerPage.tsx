@@ -100,6 +100,7 @@ export default function LiveViewerPage() {
   const [hlsVodReady, setHlsVodReady] = useState(false);
   const [resolvedReplayUrl, setResolvedReplayUrl] = useState('');
   const [hlsLoadFailed, setHlsLoadFailed] = useState(false);
+  const [isDvrMode, setIsDvrMode] = useState(false);
 
   const isLiveEnded = session?.status === 'ENDED' || session?.status === 'CANCELED';
   const candidateReplayUrl = isLiveEnded && isPlayableUrl(session?.playbackUrl) ? session?.playbackUrl?.trim() ?? '' : '';
@@ -120,28 +121,36 @@ export default function LiveViewerPage() {
     onFatalError: () => setHlsLoadFailed(true),
   });
 
-  const showHlsVideo = useHlsPlayback && hlsPlayback.isReady;
+  const hlsReady = useHlsPlayback && hlsPlayback.isReady;
 
-  // Khi HLS đã sẵn sàng: dùng DUY NHẤT HLS (playlist playback.m3u8 đầy đủ) cho cả
-  // xem trực tiếp lẫn tua lại — nhờ vậy tua được từ ĐẦU buổi và không phải đổi
-  // nguồn (tránh đen màn hình khi về trực tiếp). Vài giây đầu chưa có HLS thì
-  // hiển thị WebRTC để xem ngay (chưa tua được trong giai đoạn này).
-  const playbackSource: 'hls' | 'webrtc' = showHlsVideo ? 'hls' : 'webrtc';
+  // Hybrid playback:
+  // - Live edge: phát WebRTC để gần real-time, không bị độ trễ HLS.
+  // - DVR/tua lại: phát HLS playback.m3u8 để tua được từ đầu buổi live.
+  // HLS vẫn chạy nền khi ở WebRTC để giữ seekable timeline cho thanh tua.
+  const playbackSource: 'hls' | 'webrtc' = isDvrMode && hlsReady ? 'hls' : 'webrtc';
   playbackSourceRef.current = playbackSource;
 
-  const isAtLiveEdge = showHlsVideo ? hlsPlayback.isAtLiveEdge : true;
-  const playbackSeconds = showHlsVideo ? hlsPlayback.playbackSeconds : 0;
-  const bufferedSeconds = showHlsVideo ? hlsPlayback.bufferedSeconds : 0;
+  const isAtLiveEdge = playbackSource === 'webrtc';
+  const playbackSeconds = hlsReady
+    ? (isDvrMode ? hlsPlayback.playbackSeconds : hlsPlayback.bufferedSeconds)
+    : 0;
+  const bufferedSeconds = hlsReady ? hlsPlayback.bufferedSeconds : 0;
   const displayOffsetSeconds = 0;
-  const canScrub = showHlsVideo ? hlsPlayback.canScrub : false;
+  const canScrub = hlsReady ? hlsPlayback.canScrub : false;
 
   // Đồng bộ đồng hồ "TRỰC TIẾP" với timeline HLS (nguồn thời gian thật của nội dung
   // đang phát). Khi chưa có HLS (vài giây đầu dùng WebRTC) thì tạm dùng đồng hồ tường.
-  const liveTimerLabel = showHlsVideo ? formatClock(bufferedSeconds) : liveElapsed;
+  const liveTimerLabel = hlsReady ? formatClock(bufferedSeconds) : liveElapsed;
 
   useEffect(() => {
     setHlsLoadFailed(false);
   }, [hlsPlaybackUrl]);
+
+  useEffect(() => {
+    if (!hlsReady) {
+      setIsDvrMode(false);
+    }
+  }, [hlsReady]);
 
   // Gắn/tháo track WebRTC theo nguồn đang phát. Khi dùng HLS thì tháo track WebRTC
   // (không phát tiếng song song gây vọng), nhưng vẫn giữ room kết nối để fallback.
@@ -617,27 +626,37 @@ export default function LiveViewerPage() {
     }
   }, []);
 
-  // Tua trên một video HLS duy nhất (playlist DVR đầy đủ): chỉ cập nhật nhãn khi
-  // đang rê, seek thật khi thả. Không đổi nguồn nên về trực tiếp không đen màn hình.
+  // Hybrid scrub: live edge dùng WebRTC; khi người dùng kéo tua thì chuyển sang HLS
+  // DVR. Thả gần mép live sẽ quay lại WebRTC để giữ độ trễ thấp.
+  const handleLiveSeekStart = () => {
+    if (!hlsReady) return;
+    setIsDvrMode(true);
+    hlsPlayback.setScrubbing(true);
+  };
+
   const handleLiveSeek = (seconds: number) => {
-    if (!showHlsVideo) return;
+    if (!hlsReady) return;
+    setIsDvrMode(true);
     hlsPlayback.previewScrub(seconds);
   };
 
   const handleScrubEnd = (seconds: number) => {
-    if (!showHlsVideo) return;
+    if (!hlsReady) return;
     hlsPlayback.setScrubbing(false);
     if (seconds >= bufferedSeconds - LIVE_EDGE_THRESHOLD_SEC) {
       hlsPlayback.goToLive();
+      setIsDvrMode(false);
     } else {
+      setIsDvrMode(true);
       hlsPlayback.commitScrub(seconds);
     }
   };
 
   const handleGoLive = () => {
-    if (showHlsVideo) {
+    if (hlsReady) {
       hlsPlayback.goToLive();
     }
+    setIsDvrMode(false);
   };
 
   const handleReaction = async (reactionType: NonNullable<UpsertLiveReactionRequest['reactionType']>) => {
@@ -846,16 +865,18 @@ export default function LiveViewerPage() {
                     autoPlay
                     playsInline
                     muted={playbackSource === 'hls' ? isMuted : true}
-                    className={playbackSource === 'hls' ? 'h-full w-full object-contain' : 'hidden'}
+                    className={playbackSource === 'hls' ? 'h-full w-full object-contain' : 'sr-only'}
                     aria-hidden={playbackSource !== 'hls'}
                   />
                 )}
-                {playbackSource === 'webrtc' && (
-                  <>
-                    <video ref={videoRef} autoPlay playsInline className="h-full w-full object-contain" />
-                    <audio ref={audioRef} autoPlay />
-                  </>
-                )}
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className={playbackSource === 'webrtc' ? 'h-full w-full object-contain' : 'sr-only'}
+                  aria-hidden={playbackSource !== 'webrtc'}
+                />
+                <audio ref={audioRef} autoPlay />
               </>
             ) : (
               <>
@@ -891,7 +912,7 @@ export default function LiveViewerPage() {
                 onToggleFullscreen={handleToggleFullscreen}
                 showControls={showControls}
                 onSeek={handleLiveSeek}
-                onSeekStart={() => hlsPlayback.setScrubbing(true)}
+                onSeekStart={handleLiveSeekStart}
                 onSeekEnd={handleScrubEnd}
                 onGoLive={handleGoLive}
                 onToggleMute={handleToggleMute}
