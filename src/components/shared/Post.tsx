@@ -328,11 +328,6 @@ export function Post({
     return raw.filter((x) => Boolean(x.url?.trim()));
   }, [displayMediaList, media, image]);
 
-  const imagesOnly = useMemo(
-    () => galleryItems.filter((m) => m.type === 'IMAGE').map((m) => m.url),
-    [galleryItems],
-  );
-
   const openLightbox = useCallback((index: number) => {
     setLightboxIndex(index);
     setLightboxZoom(1);
@@ -346,13 +341,13 @@ export function Post({
 
   const prevImage = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setLightboxIndex(prev => (prev === 0 ? imagesOnly.length - 1 : prev - 1));
-  }, [imagesOnly.length]);
+    setLightboxIndex(prev => (prev === 0 ? galleryItems.length - 1 : prev - 1));
+  }, [galleryItems.length]);
 
   const nextImage = useCallback((e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setLightboxIndex(prev => (prev === imagesOnly.length - 1 ? 0 : prev + 1));
-  }, [imagesOnly.length]);
+    setLightboxIndex(prev => (prev === galleryItems.length - 1 ? 0 : prev + 1));
+  }, [galleryItems.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -839,13 +834,7 @@ export function Post({
             className={compact ? 'max-h-[min(280px,70vw)]' : undefined}
             altText={`Ảnh trong bài viết của ${author.name}`}
             onMediaClick={(itemIndex) => {
-              const item = galleryItems[itemIndex];
-              if (item.type !== 'IMAGE') return;
-              let imgIdx = 0;
-              for (let j = 0; j < itemIndex; j++) {
-                if (galleryItems[j].type === 'IMAGE') imgIdx++;
-              }
-              openLightbox(imgIdx);
+              openLightbox(itemIndex);
             }}
           />
         ) : mediaUrl ? (
@@ -994,150 +983,168 @@ export function Post({
         reactionCounts={reactionCounts}
       />
 
-      {/* Fullscreen Lightbox: ảnh vùng giữa; thanh zoom + đếm ảnh hàng dưới, không chồng ảnh */}
-      {isLightboxOpen && imagesOnly.length > 0 && (
-        <div
-          className="fixed inset-0 z-[1000] flex h-dvh max-h-dvh flex-col bg-black/90 transition-opacity"
-          onClick={closeLightbox}
-        >
-          <button
-            type="button"
-            className="absolute right-4 top-4 z-[1001] cursor-pointer rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
-            onClick={closeLightbox}
-            aria-label="Đóng xem ảnh"
-          >
-            <X size={32} />
-          </button>
-
-          {imagesOnly.length > 1 && (
-            <>
-              <button
-                type="button"
-                className="absolute left-4 top-1/2 z-[1001] -translate-y-1/2 cursor-pointer rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
-                aria-label="Ảnh trước"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  prevImage();
-                }}
-              >
-                <ChevronLeft size={40} />
-              </button>
-              <button
-                type="button"
-                className="absolute right-4 top-1/2 z-[1001] -translate-y-1/2 cursor-pointer rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
-                aria-label="Ảnh tiếp theo"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  nextImage();
-                }}
-              >
-                <ChevronRight size={40} />
-              </button>
-            </>
-          )}
-
+      {/* Fullscreen Lightbox: ảnh/video vùng giữa; thanh zoom + đếm media hàng dưới, không chồng ảnh */}
+      {isLightboxOpen && galleryItems.length > 0 && (() => {
+        const currentItem = galleryItems[lightboxIndex];
+        const isVideo = currentItem?.type === 'VIDEO';
+        return (
           <div
-            className="flex min-h-0 flex-1 flex-col pt-14"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[1000] flex h-dvh max-h-dvh flex-col bg-black/90 transition-opacity"
+            onClick={closeLightbox}
           >
-            <div
-              className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden px-2"
-              onWheel={(e) => {
-                if (e.ctrlKey || e.metaKey) {
-                  e.preventDefault();
-                  setLightboxZoom((z) =>
-                    Math.min(4, Math.max(0.25, z + (e.deltaY < 0 ? 0.12 : -0.12))),
-                  );
-                }
-              }}
+            <button
+              type="button"
+              className="absolute right-4 top-4 z-[1001] cursor-pointer rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
+              onClick={closeLightbox}
+              aria-label="Đóng xem phương tiện"
             >
-              <ImageWithFallback
-                src={imagesOnly[lightboxIndex]}
-                alt={`Xem ảnh ${lightboxIndex + 1}`}
-                className="max-h-full max-w-[calc(100dvw-16px)] object-contain shadow-2xl sm:max-w-[calc(100dvw-24px)]"
-                style={{
-                  transform: `rotate(${lightboxRotation}deg) scale(${lightboxZoom})`,
-                  transformOrigin: 'center center',
-                }}
-                draggable={false}
-              />
-            </div>
+              <X size={32} />
+            </button>
 
-            <div className="pointer-events-none flex shrink-0 flex-col items-center gap-2 px-4 pb-4 pt-3">
-              <div className="pointer-events-auto flex w-full max-w-lg flex-row flex-wrap items-center justify-center gap-3 sm:max-w-none sm:flex-nowrap">
-                <div className="flex items-center gap-1 rounded-full bg-black/60 p-1.5 text-white shadow-lg">
-              <button
-                type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-card/15"
-                aria-label="Thu nhỏ"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxZoom((z) => Math.max(0.25, z - 0.25));
+            {galleryItems.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="absolute left-4 top-1/2 z-[1001] -translate-y-1/2 cursor-pointer rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
+                  aria-label="Phương tiện trước"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevImage();
+                  }}
+                >
+                  <ChevronLeft size={40} />
+                </button>
+                <button
+                  type="button"
+                  className="absolute right-4 top-1/2 z-[1001] -translate-y-1/2 cursor-pointer rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
+                  aria-label="Phương tiện tiếp theo"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextImage();
+                  }}
+                >
+                  <ChevronRight size={40} />
+                </button>
+              </>
+            )}
+
+            <div
+              className="flex min-h-0 flex-1 flex-col pt-14"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div
+                className="flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden px-2"
+                onWheel={(e) => {
+                  if (!isVideo && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    setLightboxZoom((z) =>
+                      Math.min(4, Math.max(0.25, z + (e.deltaY < 0 ? 0.12 : -0.12))),
+                    );
+                  }
                 }}
               >
-                <ZoomOut className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                className="min-w-[3.25rem] cursor-pointer rounded-full px-2 py-1.5 text-sm font-semibold tabular-nums hover:bg-card/15"
-                title="Ctrl + cuộn chuột để zoom"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxZoom(1);
-                  setLightboxRotation(0);
-                }}
-              >
-                {Math.round(lightboxZoom * 100)}%
-              </button>
-              <button
-                type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-card/15"
-                aria-label="Phóng to"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxZoom((z) => Math.min(4, z + 0.25));
-                }}
-              >
-                <ZoomIn className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-card/15"
-                aria-label="Xoay ảnh 90°"
-                title="Xoay 90°"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxRotation((r) => (r + 90) % 360);
-                }}
-              >
-                <RotateCw className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                className="cursor-pointer rounded-full p-2 hover:bg-card/15"
-                aria-label="Vừa khung"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxZoom(1);
-                  setLightboxRotation(0);
-                }}
-              >
-                <RotateCcw className="h-5 w-5" />
-              </button>
-            </div>
-            {imagesOnly.length > 1 && (
-                  <div className="shrink-0 rounded-full bg-black/50 px-4 py-1.5 text-sm font-medium tabular-nums text-white">
-                    {lightboxIndex + 1} / {imagesOnly.length}
-                  </div>
+                {isVideo ? (
+                  <video
+                    src={currentItem.url}
+                    controls
+                    autoPlay
+                    className="max-h-full max-w-[calc(100dvw-16px)] object-contain shadow-2xl sm:max-w-[calc(100dvw-24px)]"
+                  />
+                ) : (
+                  <ImageWithFallback
+                    src={currentItem.url}
+                    alt={`Xem ảnh ${lightboxIndex + 1}`}
+                    className="max-h-full max-w-[calc(100dvw-16px)] object-contain shadow-2xl sm:max-w-[calc(100dvw-24px)]"
+                    style={{
+                      transform: `rotate(${lightboxRotation}deg) scale(${lightboxZoom})`,
+                      transformOrigin: 'center center',
+                      userSelect: 'none',
+                    }}
+                    draggable={false}
+                  />
                 )}
               </div>
-              <p className="pointer-events-none text-center text-xs text-white/60">
-                Ctrl + cuộn (hoặc ⌘ + cuộn) để zoom nhanh
-              </p>
+
+              <div className="pointer-events-none flex shrink-0 flex-col items-center gap-2 px-4 pb-4 pt-3">
+                <div className="pointer-events-auto flex w-full max-w-lg flex-row flex-wrap items-center justify-center gap-3 sm:max-w-none sm:flex-nowrap">
+                  {!isVideo && (
+                    <div className="flex items-center gap-1 rounded-full bg-black/60 p-1.5 text-white shadow-lg">
+                      <button
+                        type="button"
+                        className="cursor-pointer rounded-full p-2 hover:bg-card/15"
+                        aria-label="Thu nhỏ"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxZoom((z) => Math.max(0.25, z - 0.25));
+                        }}
+                      >
+                        <ZoomOut className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="min-w-[3.25rem] cursor-pointer rounded-full px-2 py-1.5 text-sm font-semibold tabular-nums hover:bg-card/15"
+                        title="Ctrl + cuộn chuột để zoom"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxZoom(1);
+                          setLightboxRotation(0);
+                        }}
+                      >
+                        {Math.round(lightboxZoom * 100)}%
+                      </button>
+                      <button
+                        type="button"
+                        className="cursor-pointer rounded-full p-2 hover:bg-card/15"
+                        aria-label="Phóng to"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxZoom((z) => Math.min(4, z + 0.25));
+                        }}
+                      >
+                        <ZoomIn className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="cursor-pointer rounded-full p-2 hover:bg-card/15"
+                        aria-label="Xoay ảnh 90°"
+                        title="Xoay 90°"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxRotation((r) => (r + 90) % 360);
+                        }}
+                      >
+                        <RotateCw className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="cursor-pointer rounded-full p-2 hover:bg-card/15"
+                        aria-label="Vừa khung"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxZoom(1);
+                          setLightboxRotation(0);
+                        }}
+                      >
+                        <RotateCcw className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
+                  {galleryItems.length > 1 && (
+                    <div className="shrink-0 rounded-full bg-black/50 px-4 py-1.5 text-sm font-medium tabular-nums text-white">
+                      {lightboxIndex + 1} / {galleryItems.length}
+                    </div>
+                  )}
+                </div>
+                {!isVideo && (
+                  <p className="pointer-events-none text-center text-xs text-white/60">
+                    Ctrl + cuộn (hoặc ⌘ + cuộn) để zoom nhanh
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <PostShareModal
         isOpen={isShareModalOpen}

@@ -59,8 +59,18 @@ function MediaTile({
           className="absolute inset-0 h-full w-full object-cover"
           muted
           playsInline
+          controls
           preload="metadata"
           aria-label="Video trong bài viết"
+          onClick={(e) => {
+            e.stopPropagation(); // prevent triggering parent onActivate
+            const video = e.currentTarget;
+            if (video.paused) {
+              video.play().catch(err => console.log("Video play interrupted:", err));
+            } else {
+              video.pause();
+            }
+          }}
         />
       )}
       {overlay ? (

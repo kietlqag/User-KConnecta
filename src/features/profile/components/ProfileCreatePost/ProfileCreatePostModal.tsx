@@ -397,6 +397,17 @@ export function ProfileCreatePostModal({
 
     setIsPosting(true);
     try {
+      // Check AI content verification synchronously on submit
+      const trimmedText = postContent.trim();
+      if (trimmedText.length >= 5 && !checkKeywords(postContent, publicPolicy)) {
+        const verifyRes = await postService.verifyContent(trimmedText);
+        if (verifyRes.level === 'AI_UNSAFE') {
+          toast.error(verifyRes.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
+          setIsPosting(false);
+          return;
+        }
+      }
+
       // 1. Collect media — use cached URLs, wait only for still-uploading ones
       const uploadedMedia: CreatePostMediaRequest[] = [];
       if (selectedImages.length > 0) {
@@ -577,27 +588,7 @@ export function ProfileCreatePostModal({
                 </div>
               ) : null;
             })()}
-            {(() => {
-              const matchedWatchlist = checkWatchlistKeywords(postContent, publicPolicy);
-              return matchedWatchlist ? (
-                <div className="flex items-center gap-1.5 mt-1 rounded-md bg-amber-50 dark:bg-amber-900/20 px-2.5 py-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium">
-                  <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                  Nội dung chứa từ nhạy cảm: "{matchedWatchlist}". Bài viết sẽ được AI kiểm duyệt sau khi đăng.
-                </div>
-              ) : null;
-            })()}
-            {isAiChecking && (
-              <div className="flex items-center gap-1.5 mt-1 rounded-md bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400">
-                <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-                AI đang kiểm duyệt nội dung...
-              </div>
-            )}
-            {aiViolationError && (
-              <div className="flex items-center gap-1.5 mt-1 rounded-md bg-red-50 dark:bg-red-900/20 px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400 font-semibold">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
-                {aiViolationError}
-              </div>
-            )}
+
 
             {showPoll && isGroupPost && (
               <GroupPollComposer
@@ -803,7 +794,7 @@ export function ProfileCreatePostModal({
                 : hasVideo
                   ? 'Đang đăng hình ảnh/video...'
                   : 'Đang tải ảnh lên...';
-              const disabled = !hasContent || isUploading || isPosting || rateLimitBlocked || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions || isAiChecking || !!aiViolationError;
+              const disabled = !hasContent || isUploading || isPosting || rateLimitBlocked || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions;
               const useDirectPost = isGroupPost;
 
               return (
