@@ -93,9 +93,16 @@ public class LiveKitTokenService {
         long issuedAt = System.currentTimeMillis() / 1000;
         long expiration = expiresAt.atZone(ZoneId.systemDefault()).toEpochSecond();
         Map<String, Object> header = Map.of("alg", "HS256", "typ", "JWT");
+        // LiveKit chỉ cho phép MỘT kết nối cho mỗi identity (sub). Nếu mọi kết nối
+        // của một user đều dùng userId làm identity thì khi mở 2 tab cùng tài khoản
+        // (hoặc host bật preview xem live của chính mình) sẽ trùng identity → LiveKit
+        // đá kết nối cũ liên tục → màn hình chớp/giật. Thêm hậu tố ngẫu nhiên để mỗi
+        // kết nối có identity riêng. Quyền publish vẫn lấy từ role nên không ảnh hưởng.
+        String identity = user.getId() + "__" + (host ? "HOST" : "VIEWER") + "__"
+                + java.util.UUID.randomUUID().toString().substring(0, 8);
         Map<String, Object> payload = new HashMap<>();
         payload.put("iss", apiKey);
-        payload.put("sub", user.getId().toString());
+        payload.put("sub", identity);
         payload.put("name", user.getFullName());
         payload.put("video", grants);
         payload.put("iat", issuedAt);
