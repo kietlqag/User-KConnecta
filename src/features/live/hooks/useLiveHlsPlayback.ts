@@ -37,21 +37,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     onFatalErrorRef.current = onFatalError;
   }, [onFatalError]);
 
-  // startedAt đọc từ `session` (object bị thay liên tục bởi heartbeat/polling).
-  // Đưa vào ref để getSessionElapsed/updateFromVideo GIỮ NGUYÊN identity, nhờ đó
-  // effect HLS chỉ chạy 1 lần cho mỗi URL — tránh tạo lại Hls + seek về edge lặp
-  // vô tận (hiện tượng "nhảy trực tiếp rồi tua lại liên tục").
-  const startedAtRef = useRef(startedAt);
-  useEffect(() => {
-    startedAtRef.current = startedAt;
-  }, [startedAt]);
 
-  // Chỉ dùng làm độ dài dự phòng KHI seekable chưa sẵn sàng (vài giây đầu).
-  const getSessionElapsed = useCallback(() => {
-    const value = startedAtRef.current;
-    if (!value) return 0;
-    return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
-  }, []);
 
   // Toàn bộ thời gian (live edge + vị trí phát) đều bám theo seekable range THẬT của
   // video. Lưu ý: hls.js luôn giữ playback lùi ~liveSyncDurationCount×segment (~6s)
@@ -62,7 +48,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
   const updateFromVideo = useCallback((video: HTMLVideoElement) => {
     const { start, end } = getSeekableRange(video);
     const duration = Math.max(end - start, 0);
-    const buffer = duration > 0 ? duration : getSessionElapsed();
+    const buffer = duration;
     const relative = Math.max(0, Math.min(video.currentTime - start, buffer));
     const atEdge = buffer - relative <= LIVE_EDGE_THRESHOLD_SEC;
 
@@ -71,7 +57,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       setPlaybackSeconds(Math.floor(atEdge ? buffer : relative));
       setIsAtLiveEdge(atEdge);
     }
-  }, [getSessionElapsed]);
+  }, []);
 
   const resumePlayback = useCallback((video: HTMLVideoElement) => {
     const play = () => {
