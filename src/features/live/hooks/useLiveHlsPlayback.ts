@@ -37,11 +37,21 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     onFatalErrorRef.current = onFatalError;
   }, [onFatalError]);
 
+  // startedAt đọc từ `session` (object bị thay liên tục bởi heartbeat/polling).
+  // Đưa vào ref để getSessionElapsed/updateFromVideo GIỮ NGUYÊN identity, nhờ đó
+  // effect HLS chỉ chạy 1 lần cho mỗi URL — tránh tạo lại Hls + seek về edge lặp
+  // vô tận (hiện tượng "nhảy trực tiếp rồi tua lại liên tục").
+  const startedAtRef = useRef(startedAt);
+  useEffect(() => {
+    startedAtRef.current = startedAt;
+  }, [startedAt]);
+
   // Chỉ dùng làm độ dài dự phòng KHI seekable chưa sẵn sàng (vài giây đầu).
   const getSessionElapsed = useCallback(() => {
-    if (!startedAt) return 0;
-    return Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
-  }, [startedAt]);
+    const value = startedAtRef.current;
+    if (!value) return 0;
+    return Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  }, []);
 
   // Toàn bộ thời gian (live edge + vị trí phát) đều bám theo seekable range THẬT của
   // video, không dùng đồng hồ tường — nhờ vậy kéo tới giây nào là tới đúng giây đó.
