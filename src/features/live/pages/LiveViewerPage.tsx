@@ -39,6 +39,18 @@ async function isHlsPlaylistReachable(url: string) {
   }
 }
 
+function formatClock(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '00:00';
+  const safe = Math.floor(seconds);
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const secs = safe % 60;
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
 function formatLiveElapsed(startedAt?: string | null) {
   if (!startedAt) return '00:00';
   const elapsedSec = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
@@ -122,6 +134,10 @@ export default function LiveViewerPage() {
   const bufferedSeconds = showHlsVideo ? hlsPlayback.bufferedSeconds : 0;
   const displayOffsetSeconds = 0;
   const canScrub = showHlsVideo ? hlsPlayback.canScrub : false;
+
+  // Đồng bộ đồng hồ "TRỰC TIẾP" với timeline HLS (nguồn thời gian thật của nội dung
+  // đang phát). Khi chưa có HLS (vài giây đầu dùng WebRTC) thì tạm dùng đồng hồ tường.
+  const liveTimerLabel = showHlsVideo ? formatClock(bufferedSeconds) : liveElapsed;
 
   useEffect(() => {
     setHlsLoadFailed(false);
@@ -755,7 +771,7 @@ export default function LiveViewerPage() {
           {!isLiveEnded && isAtLiveEdge && (
             <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
               <span className="rounded-md bg-black/70 px-2 py-1 font-mono text-xs tabular-nums text-white shadow">
-                {liveElapsed}
+                {liveTimerLabel}
               </span>
               <span className="rounded-md bg-red-600 px-2 py-1 text-sm font-semibold text-white">TRỰC TIẾP</span>
             </div>
