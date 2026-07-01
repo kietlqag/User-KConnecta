@@ -663,7 +663,9 @@ public class AlbumServiceImpl implements AlbumService {
             return null;
         }
         return albumMediaRepository.findById(album.getCoverMediaId())
-                .map(m -> m.getThumbnailUrl() != null ? m.getThumbnailUrl() : m.getUrl())
+                .map(m -> m.getMediaType() == AlbumMediaType.VIDEO 
+                        ? getVideoThumbnail(m.getThumbnailUrl() != null ? m.getThumbnailUrl() : m.getUrl())
+                        : m.getThumbnailUrl() != null ? m.getThumbnailUrl() : m.getUrl())
                 .orElse(null);
     }
 
@@ -679,7 +681,9 @@ public class AlbumServiceImpl implements AlbumService {
                 .id(media.getId())
                 .mediaType(media.getMediaType())
                 .url(media.getUrl())
-                .thumbnailUrl(media.getThumbnailUrl())
+                .thumbnailUrl(media.getMediaType() == AlbumMediaType.VIDEO 
+                        ? getVideoThumbnail(media.getThumbnailUrl() != null ? media.getThumbnailUrl() : media.getUrl())
+                        : media.getThumbnailUrl())
                 .caption(media.getCaption())
                 .sortOrder(media.getSortOrder())
                 .width(media.getWidth())
@@ -691,6 +695,58 @@ public class AlbumServiceImpl implements AlbumService {
                 .reactionCount(reactionCount)
                 .viewerReaction(viewerReaction)
                 .build();
+    }
+
+    private String getVideoThumbnail(String url) {
+        if (url == null || url.isBlank()) {
+            return "";
+        }
+        if (url.contains("cloudinary.com")) {
+            String baseUrl = url.split("\\?")[0];
+            String query = url.contains("?") ? "?" + url.split("\\?")[1] : "";
+            String cleanUrl = baseUrl.replaceAll("(?i)\\.(mp4|mov|webm|m4v|ogg)$", ".jpg");
+            return cleanUrl + query;
+        }
+        return url;
+    }
+
+    @Override
+    public List<AlbumMediaResponse> importMedia(UUID userId, UUID albumId, ImportAlbumMediaRequest request) {
+        if (request.getMediaItems() == null || request.getMediaItems().isEmpty()) {
+            throw new ValidationException("Media items are required");
+        }
+
+        Album album = loadAlbum(albumId);
+        albumPermissionService.requireEdit(userId, album);
+
+        User uploader = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        int nextOrder = albumMediaRepository.findMaxSortOrder(albumId) + 1;
+        List<AlbumMedia> savedMedia = new ArrayList<>();
+
+        for (ImportMediaItem item : request.getMediaItems()) {
+            AlbumMedia media = AlbumMedia.builder()
+                    .album(album)
+                    .uploader(uploader)
+                    .mediaType(item.getMediaType())
+                    .url(item.getUrl())
+                    .thumbnailUrl(item.getThumbnailUrl() != null ? item.getThumbnailUrl() : (item.getMediaType() == AlbumMediaType.VIDEO ? item.getUrl() : null))
+                    .caption(item.getCaption())
+                    .sortOrder(nextOrder++)
+                    .build();
+            savedMedia.add(albumMediaRepository.save(media));
+        }
+
+        refreshMediaCount(album);
+        if (album.getCoverMediaId() == null && !savedMedia.isEmpty()) {
+            album.setCoverMediaId(savedMedia.get(0).getId());
+            albumRepository.save(album);
+        }
+
+        return savedMedia.stream()
+                .map(m -> mapMedia(m, userId))
+                .collect(Collectors.toList());
     }
 
     private AlbumCommentResponse mapComment(AlbumComment comment) {

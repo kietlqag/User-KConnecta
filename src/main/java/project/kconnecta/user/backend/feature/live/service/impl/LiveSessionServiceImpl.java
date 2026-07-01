@@ -673,6 +673,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             session.setEgressId(result.getEgressId());
             session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
             session.setRecordingError(null);
+            session.setStartedAt(LocalDateTime.now());
         }, () -> {
             log.warn("LiveKit HLS egress failed to start for session {}", session.getId());
             session.setRecordingError(trimToLength(

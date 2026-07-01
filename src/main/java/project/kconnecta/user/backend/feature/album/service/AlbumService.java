@@ -61,4 +61,6 @@ public interface AlbumService {
     Page<AlbumResponse> getGroupAlbums(UUID viewerId, UUID groupId, Pageable pageable);
 
     void reportAlbum(UUID userId, UUID albumId, ReportAlbumRequest request);
+
+    List<AlbumMediaResponse> importMedia(UUID userId, UUID albumId, ImportAlbumMediaRequest request);
 }

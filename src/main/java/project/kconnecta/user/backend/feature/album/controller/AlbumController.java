@@ -109,6 +109,15 @@ public class AlbumController {
                 .body(albumService.uploadMedia(principal.getUserId(), id, file, caption));
     }
 
+    @PostMapping("/api/albums/{id}/media/import")
+    public ResponseEntity<List<AlbumMediaResponse>> importMedia(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody ImportAlbumMediaRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(albumService.importMedia(principal.getUserId(), id, request));
+    }
+
     @DeleteMapping("/api/albums/{albumId}/media/{mediaId}")
     public ResponseEntity<Void> deleteMedia(
             @AuthenticationPrincipal UserPrincipal principal,
