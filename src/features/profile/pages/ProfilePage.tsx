@@ -17,6 +17,7 @@ import {
   extractPhotosFromPosts,
   fetchAllUserPosts,
   isAbortError,
+  type ProfilePhoto,
 } from '../utils/profilePhotoUtils';
 import { useProfileLayoutContext } from './ProfileLayout';
 import { logProfileTabError, useProfileTabDebug } from '../utils/profileTabLogger';
@@ -43,14 +44,14 @@ export function ProfilePage() {
   const [hasMorePosts, setHasMorePosts] = React.useState(false);
   const [loadingMorePosts, setLoadingMorePosts] = React.useState(false);
   const [postsPage, setPostsPage] = React.useState(0);
-  const [profilePhotos, setProfilePhotos] = React.useState<{ id: string; url: string }[]>([]);
+  const [profilePhotos, setProfilePhotos] = React.useState<ProfilePhoto[]>([]);
 
   const PAGE_SIZE = 10;
 
   const refreshProfilePhotos = React.useCallback(async (authorId: string, signal?: AbortSignal) => {
     try {
       const allPosts = await fetchAllUserPosts(authorId, currentUser?.id, signal);
-      setProfilePhotos(extractPhotosFromPosts(allPosts).map(({ id, url }) => ({ id, url })));
+      setProfilePhotos(extractPhotosFromPosts(allPosts));
     } catch (error) {
       if (isAbortError(error)) return;
       logProfileTabError('all', 'load-photos', error, { resolvedId: authorId });

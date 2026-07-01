@@ -1,7 +1,7 @@
 import { Plus, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService, AuthUser } from '../../../../services/authService';
+import { authService, AuthUser, AUTH_USER_CHANGED_EVENT } from '../../../../services/authService';
 import { useStoriesQuery, type OptimisticStory } from '../../../stories/hooks/useStories';
 
 interface StoryGroup {
@@ -46,7 +46,18 @@ function buildGroups(stories: OptimisticStory[], currentUserId?: string): StoryG
 
 export function Stories() {
   const navigate = useNavigate();
-  const [currentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+
+  useEffect(() => {
+    const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+    window.addEventListener('storage', syncAuthUser);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+      window.removeEventListener('storage', syncAuthUser);
+    };
+  }, []);
+
   const [scrollPosition, setScrollPosition] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);

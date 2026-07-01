@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { authService, AuthUser } from '@/services/authService';
+import { authService, AuthUser, AUTH_USER_CHANGED_EVENT } from '@/services/authService';
 import { useCreateStoryMutation } from '@/features/stories/hooks/useStories';
 import type { StoryDurationHours, StoryPrivacy } from '@/services/storyService';
 import { estimateStoryTextSize } from '@/lib/storyShareText';
@@ -160,7 +160,18 @@ export function CreateStoryPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const createStory = useCreateStoryMutation();
-  const [currentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
+
+  useEffect(() => {
+    const syncAuthUser = () => setCurrentUser(authService.getCurrentUser());
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+    window.addEventListener('storage', syncAuthUser);
+    return () => {
+      window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncAuthUser);
+      window.removeEventListener('storage', syncAuthUser);
+    };
+  }, []);
+
   const userAvatar = currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14';
   const userFullName = currentUser?.fullName || 'Khang Nguyen';
 

@@ -22,10 +22,12 @@ export interface ProfilePageFriendPreview {
   avatarUrl?: string | null;
 }
 
+import type { ProfilePhoto } from './profilePhotoUtils';
+
 export interface ProfilePageSnapshot {
   posts: FeedPost[];
   friends: ProfilePageFriendPreview[];
-  profilePhotos: { id: string; url: string }[];
+  profilePhotos: ProfilePhoto[];
   postsPage: number;
   hasMorePosts: boolean;
   scrollY: number;

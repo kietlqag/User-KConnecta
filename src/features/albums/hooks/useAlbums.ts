@@ -4,6 +4,7 @@ import {
   albumService,
   type Album,
   type AlbumComment,
+  type AlbumMediaType,
   type AlbumSidebarItem,
   type CreateAlbumPayload,
   type SpringPage,
@@ -123,6 +124,20 @@ export function useUploadAlbumMedia(albumId: string) {
   return useMutation({
     mutationFn: ({ file, caption }: { file: File; caption?: string }) =>
       albumService.uploadMedia(albumId, file, caption),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['albums', 'detail', albumId] });
+      void queryClient.invalidateQueries({ queryKey: ALBUM_SIDEBAR_KEY });
+      void queryClient.invalidateQueries({ queryKey: MY_ALBUMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USER_ALBUMS_KEY });
+    },
+  });
+}
+
+export function useImportAlbumMedia(albumId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mediaItems: Array<{ url: string; thumbnailUrl?: string | null; mediaType: AlbumMediaType; caption?: string | null }>) =>
+      albumService.importMedia(albumId, mediaItems),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['albums', 'detail', albumId] });
       void queryClient.invalidateQueries({ queryKey: ALBUM_SIDEBAR_KEY });

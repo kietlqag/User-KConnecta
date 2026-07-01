@@ -7,3 +7,16 @@ export function isVideoUrl(url?: string | null): boolean {
     /\.(mp4|mov|webm|m4v|ogg)(\?.*)?$/i.test(u)
   );
 }
+
+export function getVideoThumbnail(url?: string | null): string {
+  if (!url?.trim()) return '';
+  const u = url.trim();
+  if (u.includes('cloudinary.com')) {
+    const parts = u.split('?');
+    const baseUrl = parts[0];
+    const query = parts[1] ? `?${parts[1]}` : '';
+    const cleanUrl = baseUrl.replace(/\.(mp4|mov|webm|m4v|ogg)$/i, '.jpg');
+    return cleanUrl + query;
+  }
+  return u;
+}

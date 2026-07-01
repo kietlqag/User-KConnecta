@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Images, Play } from 'lucide-react';
 import { ImageWithFallback } from '../../../components/figma/ImageWithFallback';
 import { authService } from '@/services/authService';
+import { isVideoUrl, getVideoThumbnail } from '@/utils/mediaUtils';
 import { useProfileLayoutContext } from './ProfileLayout';
 import {
   extractPhotosFromPosts,
@@ -76,7 +77,7 @@ export function ProfilePhotosPage() {
           <div className="flex items-center gap-3 mb-5">
             <Images className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             <h2 className="text-xl font-bold text-foreground">
-              Ảnh
+              Phương tiện
               {!isLoadingContent && (
                 <span className="ml-2 text-base font-normal text-muted-foreground">
                   · {photos.length}
@@ -97,30 +98,42 @@ export function ProfilePhotosPage() {
                   <Images className="h-10 w-10 text-muted-foreground" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">Chưa có ảnh nào</h3>
-              <p className="text-sm text-muted-foreground">Các ảnh từ bài viết sẽ xuất hiện ở đây.</p>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Chưa có phương tiện nào</h3>
+              <p className="text-sm text-muted-foreground">Các ảnh và video từ bài viết sẽ xuất hiện ở đây.</p>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                {photos.map((photo, index) => (
-                  <div
-                    key={photo.id}
-                    className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer bg-muted"
-                    onClick={() => openLightbox(index)}
-                  >
-                    <ImageWithFallback
-                      src={photo.url}
-                      alt=""
-                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-200 flex items-end">
-                      <p className="w-full px-2 py-1.5 text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/60 to-transparent">
-                        {photo.date}
-                      </p>
+                {photos.map((photo, index) => {
+                  const isVideo = photo.mediaType === 'VIDEO';
+                  const thumbSrc = isVideo
+                    ? (photo.thumbnailUrl && !isVideoUrl(photo.thumbnailUrl) ? photo.thumbnailUrl : getVideoThumbnail(photo.url))
+                    : photo.url;
+
+                  return (
+                    <div
+                      key={photo.id}
+                      className="group relative aspect-square rounded-lg overflow-hidden cursor-pointer bg-muted"
+                      onClick={() => openLightbox(index)}
+                    >
+                      <ImageWithFallback
+                        src={thumbSrc}
+                        alt=""
+                        className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                      />
+                      {isVideo && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                          <Play className="w-8 h-8 text-white fill-white" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-200 flex items-end">
+                        <p className="w-full px-2 py-1.5 text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-t from-black/60 to-transparent">
+                          {photo.date}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
@@ -143,7 +156,11 @@ export function ProfilePhotosPage() {
               <ChevronLeft className="w-8 h-8" />
             </button>
           )}
-          <img src={photos[lbIndex].url} alt="" className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl rounded-sm" onClick={e => e.stopPropagation()} />
+          {photos[lbIndex].mediaType === 'VIDEO' ? (
+            <video src={photos[lbIndex].url} controls autoPlay className="max-h-[90vh] max-w-[90vw] rounded-sm shadow-2xl" onClick={e => e.stopPropagation()} />
+          ) : (
+            <img src={photos[lbIndex].url} alt="" className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl rounded-sm" onClick={e => e.stopPropagation()} />
+          )}
           <p className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-3 py-1 rounded-full">
             {photos[lbIndex].date}
           </p>

@@ -48,6 +48,7 @@ import { GroupPollComposer } from '@/features/groups/components/GroupPollCompose
 import { HashtagSuggestions } from '@/components/posts/HashtagSuggestions';
 import { computeEmojiPickerPosition, type EmojiPickerPosition } from '@/utils/emojiPickerPosition';
 import { PostAllowedFormatsHint } from './PostAllowedFormatsHint';
+import { SaveMomentsToAlbumModal } from './SaveMomentsToAlbumModal';
 
 interface ProfileCreatePostModalProps {
   isOpen: boolean;
@@ -93,6 +94,8 @@ export function ProfileCreatePostModal({
     uploadFailed?: boolean;
   }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [postForAlbum, setPostForAlbum] = useState<PostResponse | null>(null);
+  const [isCheckingContent, setIsCheckingContent] = useState(false);
   const { data: publicPolicy, isLoading: policyLoading } = usePublicPolicies();
   useRefreshPoliciesOnOpen(isOpen);
   const queryClient = useQueryClient();
@@ -217,10 +220,36 @@ export function ProfileCreatePostModal({
 
   if (!isOpen) return null;
 
-  const handleNext = () => {
-    if (postContent.trim() || selectedImages.length > 0) {
-      setShowSettingsModal(true);
+  const handleNext = async () => {
+    const trimmedText = postContent.trim();
+    if (!trimmedText && selectedImages.length === 0) return;
+
+    const policyError = validatePostAgainstPolicy(
+      trimmedText,
+      selectedImages.length,
+      publicPolicy
+    );
+    if (policyError) {
+      toast.error(policyError);
+      return;
     }
+
+    if (trimmedText.length >= 5 && !checkKeywords(postContent, publicPolicy)) {
+      setIsCheckingContent(true);
+      try {
+        const verifyRes = await postService.verifyContent(trimmedText);
+        if (verifyRes.level === 'AI_UNSAFE') {
+          toast.error(verifyRes.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to verify content with AI:', err);
+      } finally {
+        setIsCheckingContent(false);
+      }
+    }
+
+    setShowSettingsModal(true);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,6 +374,21 @@ export function ProfileCreatePostModal({
         })}`
       : 'Đăng ngay';
 
+  const resetFormState = () => {
+    setPostContent('');
+    setSelectedImages([]);
+    uploadPromisesRef.current.clear();
+    setShowImagePicker(false);
+    setShowSettingsModal(false);
+    setScheduleMode('now');
+    setScheduledAtLocal(defaultScheduledDatetimeLocal());
+    setSelectedGroupId(null);
+    setSelectedGroupName(null);
+    setShowPoll(false);
+    setPollOptions(['', '']);
+    setPollAllowAddOptions(true);
+  };
+
   const handlePost = async () => {
     const trimmedPollOptions = pollOptions.map((item) => item.trim()).filter(Boolean);
     if (showPoll) {
@@ -464,20 +508,15 @@ export function ProfileCreatePostModal({
 
       toast.success(isScheduled ? 'Đã lên lịch đăng bài' : 'Đăng bài thành công');
       void queryClient.invalidateQueries({ queryKey: ['posts', 'rate-limit'] });
-      onPostCreated?.(createdPost);
-      onClose();
-      setPostContent('');
-      setSelectedImages([]);
-      uploadPromisesRef.current.clear();
-      setShowImagePicker(false);
-      setShowSettingsModal(false);
-      setScheduleMode('now');
-      setScheduledAtLocal(defaultScheduledDatetimeLocal());
-      setSelectedGroupId(null);
-      setSelectedGroupName(null);
-      setShowPoll(false);
-      setPollOptions(['', '']);
-      setPollAllowAddOptions(true);
+
+      const hasMedia = (createdPost.media && createdPost.media.length > 0) || createdPost.imageUrl;
+      if (hasMedia && !isScheduled) {
+        setPostForAlbum(createdPost);
+      } else {
+        onPostCreated?.(createdPost);
+        onClose();
+        resetFormState();
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Không thể đăng bài';
       toast.error(message);
@@ -503,6 +542,20 @@ export function ProfileCreatePostModal({
 
   const privacyInfo = getPrivacyInfo();
   const PrivacyIcon = privacyInfo.icon;
+
+  if (postForAlbum) {
+    return (
+      <SaveMomentsToAlbumModal
+        post={postForAlbum}
+        onClose={() => {
+          onPostCreated?.(postForAlbum);
+          onClose();
+          setPostForAlbum(null);
+          resetFormState();
+        }}
+      />
+    );
+  }
 
   return (
     <>
@@ -794,7 +847,7 @@ export function ProfileCreatePostModal({
                 : hasVideo
                   ? 'Đang đăng hình ảnh/video...'
                   : 'Đang tải ảnh lên...';
-              const disabled = !hasContent || isUploading || isPosting || rateLimitBlocked || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions;
+              const disabled = !hasContent || isUploading || isPosting || isCheckingContent || rateLimitBlocked || !!checkKeywords(postContent, publicPolicy) || pollNeedsText || pollNeedsOptions;
               const useDirectPost = isGroupPost;
 
               return (
@@ -809,6 +862,11 @@ export function ProfileCreatePostModal({
                       <span className="flex items-center justify-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Đang đăng...
+                      </span>
+                    ) : isCheckingContent ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang kiểm tra...
                       </span>
                     ) : isUploading ? (
                       <span className="flex items-center justify-center gap-2">

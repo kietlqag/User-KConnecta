@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
 import { SettingsSidebar, SettingsMobileNav, useSettingsTabLabel } from '../components/SettingsSidebar';
@@ -6,12 +6,13 @@ import { SecuritySection } from '../components/sections/SecuritySection';
 import { PrivacySection } from '../components/sections/PrivacySection';
 import { NotificationsSection } from '../components/sections/NotificationsSection';
 import { AppearanceSection } from '../components/sections/AppearanceSection';
+import { RemindersSection } from '../components/sections/RemindersSection';
 import { useUserSettings } from '../hooks/useUserSettings';
 import type { SettingsTab } from '../types/userSettings.types';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
-const VALID_TABS: SettingsTab[] = ['security', 'privacy', 'notifications', 'appearance'];
+const VALID_TABS: SettingsTab[] = ['security', 'privacy', 'notifications', 'appearance', 'reminders'];
 
 function parseTab(value: string | null): SettingsTab {
   if (value && VALID_TABS.includes(value as SettingsTab)) {
@@ -96,6 +97,7 @@ export default function SettingsPage() {
                 {activeTab === 'privacy' && <PrivacySection {...sectionProps} />}
                 {activeTab === 'notifications' && <NotificationsSection {...sectionProps} />}
                 {activeTab === 'appearance' && <AppearanceSection {...sectionProps} />}
+                {activeTab === 'reminders' && <RemindersSection />}
               </>
             )}
           </main>

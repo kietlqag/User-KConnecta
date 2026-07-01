@@ -4,13 +4,13 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import {
-  Cake,
   Bookmark,
-  MessageCircle,
-  CalendarPlus,
+  Users,
+  Clapperboard,
+  Shapes,
+  Radio,
 } from 'lucide-react';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
-import { useTodayBirthdaysSidebar } from '@/features/birthdays/hooks/useBirthdays';
 import { useRecentGroupShortcuts } from '@/features/groups/hooks/useRecentGroupShortcuts';
 import { UserAvatar } from '@/components/shared/UserAvatar';
 
@@ -20,7 +20,7 @@ export const LeftSidebar = () => {
   const { isLeftSidebarOpen, setLeftSidebarOpen } = useSidebar();
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
-  const { data: todayBirthdays = [] } = useTodayBirthdaysSidebar();
+
   const groupShortcuts = useRecentGroupShortcuts(4);
 
   useEffect(() => {
@@ -74,28 +74,34 @@ export const LeftSidebar = () => {
       href: `/profile/${userUsername || userId}`,
     },
     {
-      id: 'birthdays',
-      icon: <Cake className="h-9 w-9 rounded-full bg-rose-100 p-2 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400" />,
-      label: t('nav.birthdays'),
-      href: '/friends?tab=birthdays',
-    },
-    {
       id: 'saved',
       icon: <Bookmark className="h-9 w-9 rounded-full bg-violet-100 p-2 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400" />,
       label: t('nav.saved'),
       href: '/saved',
     },
     {
-      id: 'messages',
-      icon: <MessageCircle className="h-9 w-9 rounded-full bg-sky-100 p-2 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400" />,
-      label: t('nav.messages'),
-      href: '/messages',
+      id: 'friends',
+      icon: <Users className="h-9 w-9 rounded-full bg-blue-100 p-2 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />,
+      label: t('nav.friends'),
+      href: '/friends',
     },
     {
-      id: 'create-event',
-      icon: <CalendarPlus className="h-9 w-9 rounded-full bg-orange-100 p-2 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400" />,
-      label: t('nav.createEvent'),
-      href: '/live/event',
+      id: 'watch',
+      icon: <Clapperboard className="h-9 w-9 rounded-full bg-amber-100 p-2 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />,
+      label: t('nav.watch'),
+      href: '/watch',
+    },
+    {
+      id: 'groups',
+      icon: <Shapes className="h-9 w-9 rounded-full bg-pink-100 p-2 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" />,
+      label: t('nav.groups'),
+      href: '/groups',
+    },
+    {
+      id: 'live',
+      icon: <Radio className="h-9 w-9 rounded-full bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" />,
+      label: t('nav.live'),
+      href: '/live',
     },
   ];
 
@@ -134,7 +140,7 @@ export const LeftSidebar = () => {
           </nav>
         </div>
 
-        {(groupShortcuts.length > 0 || todayBirthdays.length > 0) && (
+        {groupShortcuts.length > 0 && (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2">
             {groupShortcuts.length > 0 && (
               <div className="flex min-h-0 flex-col">
@@ -170,39 +176,6 @@ export const LeftSidebar = () => {
                         </div>
                       )}
                       <span className="truncate text-sm font-medium text-foreground">{group.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {todayBirthdays.length > 0 && (
-              <div className="flex min-h-0 flex-1 flex-col">
-                <div className="my-2 shrink-0 border-t border-border" />
-                <h3 className="mb-2 shrink-0 px-1 text-sm font-semibold text-muted-foreground">{t('sidebar.birthdays')}</h3>
-                <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overflow-x-hidden pr-0.5 sidebar-scrollbar">
-                  {todayBirthdays.map((person) => (
-                    <button
-                      key={person.userId}
-                      type="button"
-                      onClick={() => handleNavigate('/friends?tab=birthdays')}
-                      className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-muted"
-                    >
-                      <UserAvatar
-                        name={person.name}
-                        avatarUrl={person.avatar}
-                        userId={person.userId}
-                        rounded="full"
-                        className="h-9 w-9 shrink-0"
-                      />
-                      <p className="text-sm text-foreground">
-                        <Trans
-                          i18nKey="sidebar.birthdayToday"
-                          values={{ name: person.name }}
-                          components={{ strong: <strong className="font-semibold" /> }}
-                        />
-                        {person.age > 0 ? t('sidebar.birthdayAge', { age: person.age }) : ''}
-                      </p>
                     </button>
                   ))}
                 </div>

@@ -6,6 +6,7 @@ import { queryClient } from './lib/queryClient';
 import { MenuProvider } from './contexts/MenuContext';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { Toaster } from '@/components/ui/sonner';
+import { ScreenTimeTracker } from '@/features/settings/components/ScreenTimeTracker';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <SidebarProvider>
             <RouterProvider router={router} />
             <Toaster position="top-right" richColors />
+            <ScreenTimeTracker />
           </SidebarProvider>
         </MenuProvider>
       </ThemeProvider>

@@ -1,4 +1,4 @@
-import { Shield, ShieldCheck, Palette, Bell } from 'lucide-react';
+import { Shield, ShieldCheck, Palette, Bell, Timer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/components/ui/utils';
 import type { SettingsTab } from '../types/userSettings.types';
@@ -8,6 +8,7 @@ const NAV_ITEM_IDS: { id: SettingsTab; icon: typeof Shield }[] = [
   { id: 'privacy', icon: ShieldCheck },
   { id: 'notifications', icon: Bell },
   { id: 'appearance', icon: Palette },
+  { id: 'reminders', icon: Timer },
 ];
 
 interface SettingsSidebarProps {

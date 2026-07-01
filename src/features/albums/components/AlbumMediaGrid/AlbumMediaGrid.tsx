@@ -5,6 +5,7 @@ import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
 import type { AlbumMedia } from '@/services/albumService';
 import { useReorderAlbumMedia } from '../../hooks/useAlbums';
 import { formatAlbumDateTime } from '../../utils/formatAlbumDateTime';
+import { isVideoUrl, getVideoThumbnail } from '@/utils/mediaUtils';
 
 interface AlbumMediaGridProps {
   albumId: string;
@@ -56,36 +57,42 @@ export function AlbumMediaGrid({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-      {items.map((item, index) => (
-        <div
-          key={item.id}
-          draggable={canEdit}
-          onDragStart={() => setDragIndex(index)}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={() => handleDrop(index)}
-          onDragEnd={() => setDragIndex(null)}
-          className={`relative group aspect-square rounded-lg overflow-hidden bg-muted ${ dragIndex === index ? 'ring-2 ring-emerald-500 opacity-70' : '' } ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
-        >
-          <button type="button" onClick={() => onOpenLightbox(index)} className="w-full h-full">
-            {item.mediaType === 'VIDEO' ? (
-              <div className="relative w-full h-full">
-                <ImageWithFallback
-                  src={item.thumbnailUrl ?? item.url}
-                  alt={item.caption ?? 'Video'}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <Play className="w-10 h-10 text-white fill-white" />
+      {items.map((item, index) => {
+        const isVideo = item.mediaType === 'VIDEO';
+        const thumbSrc = isVideo
+          ? (item.thumbnailUrl && !isVideoUrl(item.thumbnailUrl) ? item.thumbnailUrl : getVideoThumbnail(item.url))
+          : item.url;
+
+        return (
+          <div
+            key={item.id}
+            draggable={canEdit}
+            onDragStart={() => setDragIndex(index)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleDrop(index)}
+            onDragEnd={() => setDragIndex(null)}
+            className={`relative group aspect-square rounded-lg overflow-hidden bg-muted ${ dragIndex === index ? 'ring-2 ring-emerald-500 opacity-70' : '' } ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          >
+            <button type="button" onClick={() => onOpenLightbox(index)} className="w-full h-full">
+              {isVideo ? (
+                <div className="relative w-full h-full">
+                  <ImageWithFallback
+                    src={thumbSrc}
+                    alt={item.caption ?? 'Video'}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <Play className="w-10 h-10 text-white fill-white" />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <ImageWithFallback
-                src={item.url}
-                alt={item.caption ?? 'Ảnh'}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              />
-            )}
-          </button>
+              ) : (
+                <ImageWithFallback
+                  src={thumbSrc}
+                  alt={item.caption ?? 'Ảnh'}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+              )}
+            </button>
           {item.createdAt && (
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent px-2.5 pt-6 pb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               <p className="text-[11px] leading-tight text-white font-medium">
@@ -112,7 +119,8 @@ export function AlbumMediaGrid({
             </>
           )}
         </div>
-      ))}
+      );
+    })}
     </div>
   );
 }

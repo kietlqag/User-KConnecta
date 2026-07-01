@@ -114,6 +114,11 @@ export const albumService = {
     return api.postMultipart<AlbumMedia>(`/albums/${albumId}/media`, formData);
   },
 
+  importMedia: (
+    albumId: string,
+    mediaItems: Array<{ url: string; thumbnailUrl?: string | null; mediaType: AlbumMediaType; caption?: string | null }>,
+  ) => api.post<AlbumMedia[]>(`/albums/${albumId}/media/import`, { mediaItems }),
+
   deleteMedia: (albumId: string, mediaId: string) =>
     api.delete<void>(`/albums/${albumId}/media/${mediaId}`),
 

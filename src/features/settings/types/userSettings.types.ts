@@ -1,4 +1,4 @@
-export type SettingsTab = 'security' | 'privacy' | 'notifications' | 'appearance';
+export type SettingsTab = 'security' | 'privacy' | 'notifications' | 'appearance' | 'reminders';
 
 export type VisibilityOption = 'PUBLIC' | 'FRIENDS' | 'PRIVATE';
 

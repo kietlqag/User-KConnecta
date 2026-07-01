@@ -1,15 +1,13 @@
 import { postService, type PostResponse } from '@/services/postService';
+import { isVideoUrl, getVideoThumbnail } from '@/utils/mediaUtils';
 
 export interface ProfilePhoto {
   id: string;
   url: string;
   postId: string;
   date: string;
-}
-
-function isVideoUrl(url?: string | null): boolean {
-  if (!url) return false;
-  return url.includes('/video/') || /\.(mp4|mov|webm|ogg)(\?.*)?$/i.test(url);
+  mediaType: 'IMAGE' | 'VIDEO';
+  thumbnailUrl?: string | null;
 }
 
 function formatPhotoDate(post: PostResponse): string {
@@ -31,25 +29,32 @@ export function extractPhotosFromPosts(posts: PostResponse[]): ProfilePhoto[] {
     const seenInPost = new Set<string>();
 
     for (const media of post.media ?? []) {
-      if (media.mediaType !== 'IMAGE') continue;
       const url = media.mediaUrl || media.fileUrl;
       if (!url || seenInPost.has(url)) continue;
       seenInPost.add(url);
+      
+      const isVideo = media.mediaType === 'VIDEO';
+
       photos.push({
         id: `${post.id}-${media.id}`,
         url,
         postId: post.id,
         date,
+        mediaType: isVideo ? 'VIDEO' : 'IMAGE',
+        thumbnailUrl: isVideo ? media.thumbnailUrl : null,
       });
     }
 
     const legacyUrl = post.imageUrl;
-    if (legacyUrl && !isVideoUrl(legacyUrl) && !seenInPost.has(legacyUrl)) {
+    if (legacyUrl && !seenInPost.has(legacyUrl)) {
+      const isVideo = isVideoUrl(legacyUrl);
       photos.push({
         id: `${post.id}-legacy`,
         url: legacyUrl,
         postId: post.id,
         date,
+        mediaType: isVideo ? 'VIDEO' : 'IMAGE',
+        thumbnailUrl: isVideo ? getVideoThumbnail(legacyUrl) : null,
       });
     }
   }

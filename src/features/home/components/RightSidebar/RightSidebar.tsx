@@ -5,6 +5,7 @@ import { UserAvatar } from '@/components/shared/UserAvatar';
 import { ImageWithFallback } from '../../../../components/figma/ImageWithFallback';
 import { friendService } from '@/services/friendService';
 import { authService } from '@/services/authService';
+import { chatService, type PrivatePeerConversationResponse } from '@/services/chatService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import { AlbumSidebarCard } from '@/features/albums/components/AlbumSidebarCard/AlbumSidebarCard';
 
@@ -40,13 +41,45 @@ export function RightSidebar() {
     if (!currentUser?.id) return;
 
     setLoading(true);
-    friendService.getFriends(currentUser.id)
-      .then((friends) => {
-        setContacts(friends.map(f => ({
+    Promise.all([
+      chatService.getPrivatePeerConversations().catch(() => [] as PrivatePeerConversationResponse[]),
+      friendService.getFriends(currentUser.id).catch(() => []),
+    ])
+      .then(([conversations, friends]) => {
+        // 1. Map conversations first (already sorted by recent contact)
+        const mappedConversations = conversations.map((c) => ({
+          id: c.peerUserId,
+          name: c.peerName,
+          avatar: c.peerAvatarUrl?.trim() || '',
+        }));
+
+        // 2. Map friends
+        const mappedFriends = friends.map((f) => ({
           id: f.userId,
           name: f.fullName,
           avatar: f.avatarUrl?.trim() || '',
-        })));
+        }));
+
+        // 3. Combine them, keeping conversations first, unique by ID
+        const seenIds = new Set<string>();
+        const combined: typeof mappedConversations = [];
+
+        for (const item of mappedConversations) {
+          if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            combined.push(item);
+          }
+        }
+
+        for (const item of mappedFriends) {
+          if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            combined.push(item);
+          }
+        }
+
+        // 4. Take top 5
+        setContacts(combined.slice(0, 5));
       })
       .finally(() => setLoading(false));
   }, [currentUser?.id]);

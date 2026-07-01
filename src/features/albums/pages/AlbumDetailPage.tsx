@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { MainLayout } from '@/layouts';
-import { useAlbumDetail, useDeleteAlbumMedia, useUploadAlbumMedia } from '../hooks/useAlbums';
+import { useAlbumDetail, useDeleteAlbumMedia, useUploadAlbumMedia, useImportAlbumMedia } from '../hooks/useAlbums';
 import { albumService, type AlbumMedia } from '@/services/albumService';
 import type { ReactionType } from '@/services/postService';
 import {
@@ -25,6 +25,7 @@ import { AlbumMediaGrid } from '../components/AlbumMediaGrid/AlbumMediaGrid';
 import { AlbumCommentsSection } from '../components/AlbumCommentsSection/AlbumCommentsSection';
 import { AlbumShareModal } from '../components/AlbumShareModal/AlbumShareModal';
 import { EditAlbumSettingsModal } from '../components/EditAlbumSettingsModal/EditAlbumSettingsModal';
+import { PostMediaSelectModal } from '../components/PostMediaSelectModal/PostMediaSelectModal';
 import { formatAlbumDateTime } from '../utils/formatAlbumDateTime';
 import { getAlbumPrivacyMeta } from '../utils/albumPrivacy';
 import { ImageWithFallback } from '@/components/figma/ImageWithFallback';
@@ -46,8 +47,11 @@ export function AlbumDetailPage() {
   const { data: album, isLoading, error, refetch } = useAlbumDetail(albumId);
   const uploadMedia = useUploadAlbumMedia(albumId!);
   const deleteMedia = useDeleteAlbumMedia(albumId!);
+  const importMedia = useImportAlbumMedia(albumId!);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectPostMediaOpen, setSelectPostMediaOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -181,9 +185,9 @@ export function AlbumDetailPage() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="min-w-0">
-        <div className="bg-card rounded-xl border border-border overflow-hidden shadow-sm mb-6">
+        <div className="bg-card rounded-xl border border-border shadow-sm mb-6">
           {album.coverUrl && (
-            <div className="h-48 sm:h-64 bg-muted">
+            <div className="h-48 sm:h-64 bg-muted rounded-t-xl overflow-hidden">
               <ImageWithFallback src={album.coverUrl} alt={album.title} className="w-full h-full object-cover" />
             </div>
           )}
@@ -268,15 +272,44 @@ export function AlbumDetailPage() {
                     className="hidden"
                     onChange={(e) => void handleFiles(e.target.files)}
                   />
-                  <button
-                    type="button"
-                    disabled={uploading}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60"
-                  >
-                    <ImagePlus className="w-4 h-4" />
-                    {uploading ? 'Đang tải...' : 'Thêm ảnh/video'}
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      disabled={uploading || importMedia.isPending}
+                      onClick={() => setMenuOpen(!menuOpen)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60 cursor-pointer"
+                    >
+                      <ImagePlus className="w-4 h-4" />
+                      {uploading || importMedia.isPending ? 'Đang thêm...' : 'Thêm ảnh/video'}
+                    </button>
+                    {menuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                        <div className="absolute right-0 mt-2 w-48 rounded-xl border border-border bg-card p-1 shadow-lg z-20 flex flex-col">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuOpen(false);
+                              fileInputRef.current?.click();
+                            }}
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-lg text-left w-full cursor-pointer"
+                          >
+                            Tải lên từ thiết bị
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMenuOpen(false);
+                              setSelectPostMediaOpen(true);
+                            }}
+                            className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-lg text-left w-full cursor-pointer"
+                          >
+                            Chọn từ bài đăng
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -371,6 +404,27 @@ export function AlbumDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PostMediaSelectModal
+        isOpen={selectPostMediaOpen}
+        onClose={() => setSelectPostMediaOpen(false)}
+        userId={album.ownerId}
+        onSelect={async (selected) => {
+          try {
+            const payload = selected.map((item) => ({
+              url: item.url,
+              thumbnailUrl: item.thumbnailUrl,
+              mediaType: item.mediaType,
+              caption: item.caption,
+            }));
+            await importMedia.mutateAsync(payload);
+            toast.success('Đã thêm ảnh/video từ bài viết vào album.');
+            void refetch();
+          } catch {
+            toast.error('Không thể thêm ảnh/video. Vui lòng thử lại.');
+          }
+        }}
+      />
 
       {currentMedia && lightboxIndex !== null && (
         <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
