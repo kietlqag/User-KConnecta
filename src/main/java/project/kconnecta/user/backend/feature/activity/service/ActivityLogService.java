@@ -39,4 +39,16 @@ public class ActivityLogService {
                 .metadata(metadata)
                 .build());
     }
+
+    public boolean hasLogged(UUID userId, ActivityLogType actionType) {
+        return repository.existsByUserIdAndActionType(userId, actionType);
+    }
+
+    public boolean hasLoggedSinceLatestAction(UUID userId, ActivityLogType actionToCheck, ActivityLogType benchmarkAction) {
+        var latestBenchmarkLog = repository.findFirstByUserIdAndActionTypeOrderByCreatedAtDesc(userId, benchmarkAction);
+        if (latestBenchmarkLog.isPresent()) {
+            return repository.existsByUserIdAndActionTypeAndCreatedAtAfter(userId, actionToCheck, latestBenchmarkLog.get().getCreatedAt());
+        }
+        return repository.existsByUserIdAndActionType(userId, actionToCheck);
+    }
 }

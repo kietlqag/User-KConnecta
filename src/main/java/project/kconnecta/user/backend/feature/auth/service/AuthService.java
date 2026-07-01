@@ -355,6 +355,11 @@ public class AuthService {
 
         User user = userRepository.findByAccountId(account.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
+
+        if (activityLogService.hasLoggedSinceLatestAction(user.getId(), ActivityLogType.ACCOUNT_REVIEW_REQUESTED, ActivityLogType.ACCOUNT_LOCKED)) {
+            throw new ValidationException("Bạn đã gửi yêu cầu xem xét tài khoản rồi. Vui lòng chờ admin xử lý.");
+        }
+
         String displayReason = reason == null || reason.isBlank()
                 ? "Người dùng yêu cầu admin xem xét mở khóa"
                 : reason.trim();

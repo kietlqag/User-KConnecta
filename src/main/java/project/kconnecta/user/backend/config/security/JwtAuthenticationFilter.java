@@ -40,6 +40,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final AuthCookieService authCookieService;
 
     @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
+        String path = request.getServletPath();
+        if (path == null || path.isBlank()) {
+            path = request.getRequestURI();
+        }
+
+        // Skip OPTIONS requests
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+
+        // Bypassing filter for public auth endpoints (except set-password)
+        if (path.contains("/api/auth/") && !path.contains("/api/auth/set-password")) {
+            return true;
+        }
+
+        // Bypassing filter for other public paths
+        if (path.contains("/api/internal/") ||
+            path.contains("/ws/") ||
+            path.contains("/api/v1/policies/public") ||
+            path.contains("/api/search/suggest") ||
+            path.endsWith(".html")) {
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain chain) throws ServletException, IOException {
