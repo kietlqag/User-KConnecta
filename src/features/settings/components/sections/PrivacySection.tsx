@@ -37,7 +37,8 @@ export function PrivacySection({
   onSave,
   onDiscard,
   unblockUser,
-}: PrivacySectionProps) {
+}: PrivacySectionProps) {
+
   return (
     <div className="space-y-8">
       <SettingsSection

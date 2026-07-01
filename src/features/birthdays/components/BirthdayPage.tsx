@@ -8,10 +8,7 @@ import { useBirthdays, useSendBirthdayWish, type BirthdayFriend } from '../hooks
 import { SendWishDialog } from './SendWishDialog';
 import { toast } from 'sonner';
 
-function formatGroupLabel(
-  friends: BirthdayFriend[],
-  t: (key: string, options?: Record<string, unknown>) => string,
-): string {
+function formatGroupLabel(friends: BirthdayFriend[]): string {
   if (friends.length === 0) return '';
   if (friends.length === 1) return friends[0].name;
   if (friends.length === 2) return `${friends[0].name}, ${friends[1].name}`;
@@ -34,9 +31,10 @@ const PANEL_CLASS =
 
 const QUICK_WISH_KEYS = ['quickWish1', 'quickWish2', 'quickWish3', 'quickWish4'] as const;
 
-function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWish }: BirthdayFriendCardProps) {  const quickWishes = useMemo(
-    () => QUICK_WISH_KEYS.map((key) => t(`birthdays.${key}`)),
-    [t],
+function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWish }: BirthdayFriendCardProps) {
+  const quickWishes = useMemo(
+    () => QUICK_WISH_KEYS.map((key) => vi.birthdays[key]),
+    [],
   );
 
   const birthDate = new Date(friend.birthDate);
@@ -103,7 +101,8 @@ function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWi
   );
 }
 
-export function BirthdayPage() {  const [searchQuery, setSearchQuery] = useState('');
+export function BirthdayPage() {
+  const [searchQuery, setSearchQuery] = useState('');
   const [wishFriend, setWishFriend] = useState<BirthdayFriend | null>(null);
   const [wishDialogOpen, setWishDialogOpen] = useState(false);
   const [wishInitialMessage, setWishInitialMessage] = useState('');
@@ -197,7 +196,7 @@ export function BirthdayPage() {  const [searchQuery, setSearchQuery] = useStat
                       {formatVi(vi.birthdays.month, { month: group.month })}
                     </h3>
                     <p className="mb-3 text-sm text-muted-foreground">
-                      {formatGroupLabel(group.friends, t)}
+                      {formatGroupLabel(group.friends)}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {group.friends.map((friend) => (

@@ -12,7 +12,8 @@ interface FriendRequestCardProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequestCardProps) => {  const [loading, setLoading] = useState<'accept' | 'delete' | null>(null);
+export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequestCardProps) => {
+  const [loading, setLoading] = useState<'accept' | 'delete' | null>(null);
 
   const handleAccept = async () => {
     setLoading('accept');

@@ -16,7 +16,8 @@ const HOME_SUGGESTIONS_MAX = 40;
 const FRIEND_GRID_CLASS =
   'grid grid-cols-2 items-start gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5';
 
-export const FriendsPage = () => {  const [searchParams] = useSearchParams();
+export const FriendsPage = () => {
+  const [searchParams] = useSearchParams();
   const initialTabParam = searchParams.get('tab') as FriendsTab | 'custom-lists' | 'suggestions' | null;
   const initialTab: FriendsTab =
     initialTabParam &&
@@ -75,7 +76,7 @@ export const FriendsPage = () => {  const [searchParams] = useSearchParams();
     const target = friendRequests.find((r) => r.id === id);
     await friendService.acceptFriendRequest(id);
     refetch();
-    toast.success(formatVi(vi.friendsPage.acceptSuccess, { name: target?.name ?? t('friendsPage.unknownUser') }));
+    toast.success(formatVi(vi.friendsPage.acceptSuccess, { name: target?.name ?? vi.friendsPage.unknownUser }));
   };
 
   const handleDeleteRequest = async (id: string) => {
@@ -90,7 +91,7 @@ export const FriendsPage = () => {  const [searchParams] = useSearchParams();
     if (res.friendshipId) {
       setPendingRequests((prev) => ({ ...prev, [userId]: res.friendshipId! }));
     }
-    toast.success(formatVi(vi.friendsPage.sendSuccess, { name: target?.name ?? t('friendsPage.unknownUser') }));
+    toast.success(formatVi(vi.friendsPage.sendSuccess, { name: target?.name ?? vi.friendsPage.unknownUser }));
   };
 
   const handleCancelFriendRequest = async (userId: string) => {

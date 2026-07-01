@@ -15,7 +15,8 @@ import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/
 import { useRecentGroupShortcuts } from '@/features/groups/hooks/useRecentGroupShortcuts';
 import { UserAvatar } from '@/components/shared/UserAvatar';
 
-export const LeftSidebar = () => {  const navigate = useNavigate();
+export const LeftSidebar = () => {
+  const navigate = useNavigate();
   const { isLeftSidebarOpen, setLeftSidebarOpen } = useSidebar();
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());

@@ -22,14 +22,15 @@ export function AppearanceSection({
   saving,
   onSave,
   onDiscard,
-}: AppearanceSectionProps) {
+}: AppearanceSectionProps) {
+
   const themeOptions = useMemo(
     () => [
       { value: 'light' as ThemeOption, label: vi.settings.appearance.themeLight, description: vi.settings.appearance.themeLightDesc, icon: Sun },
       { value: 'dark' as ThemeOption, label: vi.settings.appearance.themeDark, description: vi.settings.appearance.themeDarkDesc, icon: Moon },
       { value: 'system' as ThemeOption, label: vi.settings.appearance.themeSystem, description: vi.settings.appearance.themeSystemDesc, icon: Monitor },
     ],
-    [t],
+    [],
   );
 
   return (

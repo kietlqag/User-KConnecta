@@ -15,7 +15,8 @@ export const SavedSidebar = ({
   collections = [],
   onSelectCollection,
   onCreateCollection,
-}: SavedSidebarProps) => {
+}: SavedSidebarProps) => {
+
   return (
     <aside className="w-[360px] h-[calc(100vh-56px)] bg-card border-r border-border flex flex-col fixed left-0 top-14 z-20">
       <div className="p-4">

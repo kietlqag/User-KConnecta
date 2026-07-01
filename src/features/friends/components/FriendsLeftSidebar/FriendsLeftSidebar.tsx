@@ -16,7 +16,8 @@ interface FriendsLeftSidebarProps {
   requestCount?: number;
 }
 
-export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: FriendsLeftSidebarProps) => {
+export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: FriendsLeftSidebarProps) => {
+
   const sidebarItems: SidebarItem[] = [
     { id: 'home', labelKey: 'home', icon: <Home className="w-5 h-5" /> },
     { id: 'requests', labelKey: 'requests', icon: <UserPlus className="w-5 h-5" />, count: requestCount },
@@ -42,7 +43,7 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
                   {item.icon}
                 </div>
                 <span className={`font-medium ${activeTab === item.id ? 'text-emerald-600' : 'text-foreground'}`}>
-                  {t(`friendsPage.${item.labelKey}`)}
+                  {vi.friendsPage[item.labelKey]}
                 </span>
               </div>
               {item.count != null && item.count > 0 && (
