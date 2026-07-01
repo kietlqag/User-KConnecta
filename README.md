@@ -12,31 +12,60 @@ Frontend ứng dụng mạng xã hội **KConnecta** dành cho người dùng cu
 | UI Components | Radix UI, shadcn/ui, Lucide React |
 | Styling | Tailwind CSS 4 |
 | Forms | React Hook Form 7 |
-| Real-time | STOMP over WebSocket (`@stomp/stompjs`) |
+| Real-time (chat / gọi / live) | STOMP over WebSocket (`@stomp/stompjs`) |
 | Video/Audio call | WebRTC |
+| Livestream | LiveKit (`livekit-client`) |
 | Charts | Recharts |
-| Notifications | Sonner, React Hot Toast |
+| Toast UI | Sonner, React Hot Toast |
 | Theme | next-themes (dark / light) |
+| i18n | i18next (tiếng Việt) |
 
-## Tính năng chính
+## Tính năng đã triển khai
 
-- **Xác thực**: đăng nhập, đăng ký nhiều bước, OTP qua email, quên mật khẩu
-- **Newsfeed**: bài viết, stories, reactions, bình luận
-- **Hồ sơ cá nhân**: ảnh đại diện, bìa, bài viết, ảnh, danh sách bạn bè
-- **Bạn bè**: gợi ý, gửi / chấp nhận / từ chối lời mời kết bạn
-- **Nhóm**: trang nhóm và sidebar quản lý nhóm
-- **Nhắn tin (Messenger)**: chat thời gian thực, gọi thoại / video call qua WebRTC
-- **Thông báo**: panel thông báo real-time
-- **Tìm kiếm**: tìm người, nhóm, bài viết
-- **Marketplace**: đăng và duyệt sản phẩm
-- **Watch**: xem reels / video ngắn
-- **Live**: phát trực tiếp
+- **Xác thực**: đăng nhập, đăng ký nhiều bước, OTP qua email, Google OAuth, 2FA, quên mật khẩu
+- **Newsfeed**: bài viết (`POST`), stories, reactions, bình luận, lên lịch đăng
+- **Hồ sơ cá nhân**: ảnh đại diện, bìa, bài viết, ảnh, thước phim (reel)
+- **Bạn bè & sinh nhật**: gợi ý, lời mời kết bạn, trang sinh nhật
+- **Nhóm**: tạo/khám phá nhóm, feed nhóm, thành viên, sự kiện, bình chọn
+- **Nhắn tin (Messenger)**: chat thời gian thực (STOMP), gọi thoại / video (WebRTC), ghi âm
+- **Thông báo**: panel thông báo, **làm mới định kỳ qua REST API (~30 giây)** — chưa dùng WebSocket trên FE
+- **Tin nhắn mới**: toast khi có tin nhắn đến (STOMP, tách khỏi panel thông báo)
+- **Tìm kiếm**: người dùng, nhóm, bài viết, reel (Redis Search phía backend)
+- **Watch (Reels)**: xem reel (`REEL`), lưu reel, tạo reel riêng (tách khỏi đăng bài thường)
+- **Live**: phát trực tiếp (LiveKit), lên lịch, xem live; HLS/DVR khi bật egress + lưu trữ object
+- **Album**: tạo album, thêm media từ bài viết
+- **Đã lưu**: bài viết đã lưu và bộ sưu tập
+- **Cài đặt**: bảo mật, quyền riêng tư, giao diện, nhắc nhở / thời gian sử dụng
+- **Hỗ trợ**: gửi yêu cầu hỗ trợ (đồng bộ với Admin)
+
+> **Quản trị**: ứng dụng Admin riêng tại `../../Admin` (kiểm duyệt, báo cáo, chính sách, thống kê).
+
+## Phạm vi chưa triển khai (frontend)
+
+Các mục sau **chưa có** trong codebase user FE — không liệt kê như tính năng sẵn có:
+
+| Mục | Trạng thái |
+|-----|------------|
+| **Marketplace** (chợ / đăng sản phẩm) | Chưa triển khai |
+| **Trang Facebook-style (Pages)** | Chỉ có entity phía backend, chưa có UI |
+| **Bảng điều khiển thống kê người dùng** | Đã gỡ khỏi sidebar (không còn route `/dashboard`) |
+| **Thông báo push WebSocket trên panel** | Backend REST đủ dùng; FE poll 30s |
+
+## Realtime — phạm vi thực tế
+
+| Kênh | Cơ chế |
+|------|--------|
+| Chat, typing, presence | STOMP / WebSocket |
+| Gọi thoại / video (mesh P2P) | WebRTC + signaling STOMP |
+| Phiên live (host/viewer) | STOMP + LiveKit |
+| Panel thông báo (like, comment, kết bạn…) | REST, poll **30s** (`useNotifications.ts`) |
+| Toast tin nhắn mới | STOMP (`useMessageNotifications`) |
 
 ## Yêu cầu
 
 - Node.js ≥ 18
 - npm ≥ 9
-- Backend KConnecta đang chạy (xem [User_backend](../User_backend))
+- Backend KConnecta đang chạy (xem [`../user_be`](../user_be))
 
 ## Cài đặt & chạy
 
@@ -53,7 +82,7 @@ npm run build
 
 ## Biến môi trường
 
-Tạo file `.env` ở thư mục gốc (hoặc cấu hình trên Vercel / Render):
+Tạo file `.env` ở thư mục gốc (hoặc cấu hình trên Vercel):
 
 ```env
 # URL của backend (bắt buộc dùng https:// trên production để WebSocket dùng wss://)
@@ -87,16 +116,22 @@ src/
 ├── features/           # Mỗi tính năng là một module độc lập
 │   ├── auth/           #   Xác thực
 │   ├── home/           #   Newsfeed
-│   ├── profile/        #   Hồ sơ cá nhân
+│   ├── profile/        #   Hồ sơ cá nhân & đăng bài
 │   ├── friends/        #   Bạn bè
+│   ├── birthdays/      #   Sinh nhật
 │   ├── groups/         #   Nhóm
 │   ├── messenger/      #   Nhắn tin & gọi video
-│   ├── notifications/  #   Thông báo
+│   ├── notifications/  #   Panel thông báo (REST poll)
 │   ├── search/         #   Tìm kiếm
-│   ├── marketplace/    #   Chợ
-│   ├── watch/          #   Reels / video
+│   ├── watch/          #   Reels / video ngắn
 │   ├── live/           #   Livestream
-│   └── stories/        #   Stories
+│   ├── stories/        #   Stories
+│   ├── albums/         #   Album ảnh/video
+│   ├── saved/          #   Đã lưu & bộ sưu tập
+│   ├── settings/       #   Cài đặt tài khoản
+│   ├── support/        #   Yêu cầu hỗ trợ
+│   └── account/        #   Menu tài khoản
+├── i18n/               # Bản dịch (vi)
 ├── layouts/            # Layout wrapper
 ├── routes/             # Định nghĩa routes
 ├── services/           # API client (axios), auth service
