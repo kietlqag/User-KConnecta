@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, Lock, Mail } from "lucide-react";
 import { authService } from "@/services/authService";
@@ -37,6 +37,34 @@ export function ForgotPasswordPage() {
       setMouseY(e.clientY);
     };
     window.addEventListener("mousemove", handleMouseMove);
+
+    // Auto verify OTP from URL parameters (e.g. /auth/forgot-password?email=abc@gmail.com&code=123456)
+    const params = new URLSearchParams(window.location.search);
+    const urlEmail = params.get("email");
+    const urlCode = params.get("code");
+    if (urlEmail && urlCode) {
+      // If user is currently logged in, log them out first to ensure proper security and routing
+      if (authService.getCurrentUser()) {
+        authService.logout();
+      }
+
+      setEmail(urlEmail);
+      setOtp(urlCode);
+      setStep("otp");
+      setIsLoading(true);
+      authService.verifyOtp(urlEmail, urlCode)
+        .then(() => {
+          setStep("reset");
+          setErrors({});
+        })
+        .catch((err) => {
+          setErrors({ otp: err instanceof Error ? err.message : "Mã liên kết xác thực không hợp lệ hoặc đã hết hạn" });
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 

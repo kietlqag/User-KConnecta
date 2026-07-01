@@ -50,6 +50,9 @@ export function GuestRoute() {
   }
 
   if (currentUser?.accountStatus === 'ACTIVE') {
+    if (location.pathname === '/auth/forgot-password') {
+      return <Outlet />;
+    }
     const redirectTo =
       (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/home';
     return <Navigate to={redirectTo} replace />;
