@@ -10,24 +10,26 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const location = useLocation();
-  const isHomePage = location.pathname === '/home' || location.pathname === '/home/';
+  const showSidebar = 
+    location.pathname === '/home' || 
+    location.pathname === '/home/';
   const { setLeftSidebarOpen } = useSidebar();
 
   useEffect(() => {
-    if (!isHomePage) {
+    if (!showSidebar) {
       setLeftSidebarOpen(false);
     }
-  }, [isHomePage, setLeftSidebarOpen]);
+  }, [showSidebar, setLeftSidebarOpen]);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
       {/* Left Sidebar - Only on /home */}
-      {isHomePage && <LeftSidebar />}
+      {showSidebar && <LeftSidebar />}
       
       {/* Main Content Area */}
-      <div className={`pt-14 ${isHomePage ? 'lg:pl-72' : ''}`}>
+      <div className={`pt-14 ${showSidebar ? 'lg:pl-72' : ''}`}>
         {children}
       </div>
     </div>
