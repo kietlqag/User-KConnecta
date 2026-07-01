@@ -1,7 +1,8 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { useState } from 'react';
 import { Loader2, MessageCircle, UserMinus, UserPlus, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Friend } from '../../types/friends.types';
 import { UserAvatar } from '@/components/shared';
 
@@ -25,9 +26,7 @@ export const FriendCard = ({
   pendingFriendshipId,
   onRemoveSuggestion,
   showRemove = false,
-}: FriendCardProps) => {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState<'add' | 'cancel' | 'unfriend' | 'remove' | null>(null);
+}: FriendCardProps) => {  const [loading, setLoading] = useState<'add' | 'cancel' | 'unfriend' | 'remove' | null>(null);
 
   const handleAdd = async () => {
     if (!onAddFriend) return;
@@ -92,8 +91,8 @@ export const FriendCard = ({
           <p className="mt-1 h-5 truncate text-sm text-muted-foreground">
             {friend.suggestionReason
               ?? (friend.mutualFriends > 0
-                ? t('friendCard.mutualFriends', { count: friend.mutualFriends })
-                : t('friendCard.noMutualFriends'))}
+                ? formatVi(vi.friendCard.mutualFriends, { count: friend.mutualFriends })
+                : vi.friendCard.noMutualFriends)}
           </p>
         </div>
 
@@ -106,7 +105,7 @@ export const FriendCard = ({
                   className="flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-emerald-100 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  <span>{t('friendCard.message')}</span>
+                  <span>{vi.friendCard.message}</span>
                 </button>
               )}
               {onUnfriend && (
@@ -120,7 +119,7 @@ export const FriendCard = ({
                   ) : (
                     <UserMinus className="h-4 w-4" />
                   )}
-                  {t('friendCard.unfriend')}
+                  {vi.friendCard.unfriend}
                 </button>
               )}
             </>
@@ -135,7 +134,7 @@ export const FriendCard = ({
               ) : (
                 <X className="h-4 w-4" />
               )}
-              {t('friendCard.cancelRequest')}
+              {vi.friendCard.cancelRequest}
             </button>
           ) : (
             <div className="flex gap-2">
@@ -150,7 +149,7 @@ export const FriendCard = ({
                   ) : (
                     <UserPlus className="h-4 w-4 shrink-0" />
                   )}
-                  <span className="truncate">{t('friendCard.addFriend')}</span>
+                  <span className="truncate">{vi.friendCard.addFriend}</span>
                 </button>
               )}
               {isSuggestion && (
@@ -164,7 +163,7 @@ export const FriendCard = ({
                   ) : (
                     <X className="h-4 w-4" />
                   )}
-                  {t('friendCard.remove')}
+                  {vi.friendCard.remove}
                 </button>
               )}
             </div>

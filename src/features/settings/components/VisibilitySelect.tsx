@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+import { vi } from '@/constants/vi';
 import {
   Select,
   SelectContent,
@@ -13,13 +13,11 @@ interface VisibilitySelectProps {
   onChange: (value: VisibilityOption) => void;
 }
 
-export function VisibilitySelect({ value, onChange }: VisibilitySelectProps) {
-  const { t } = useTranslation();
-
+export function VisibilitySelect({ value, onChange }: VisibilitySelectProps) {
   const options: { value: VisibilityOption; label: string; description: string }[] = [
-    { value: 'PUBLIC', label: t('settings.visibility.public'), description: t('settings.visibility.publicDesc') },
-    { value: 'FRIENDS', label: t('settings.visibility.friends'), description: t('settings.visibility.friendsDesc') },
-    { value: 'PRIVATE', label: t('settings.visibility.private'), description: t('settings.visibility.privateDesc') },
+    { value: 'PUBLIC', label: vi.settings.visibility.public, description: vi.settings.visibility.publicDesc },
+    { value: 'FRIENDS', label: vi.settings.visibility.friends, description: vi.settings.visibility.friendsDesc },
+    { value: 'PRIVATE', label: vi.settings.visibility.private, description: vi.settings.visibility.privateDesc },
   ];
 
   return (

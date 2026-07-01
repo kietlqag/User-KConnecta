@@ -27,14 +27,11 @@
             if (!id.includes('node_modules')) return;
             if (id.includes('livekit-client')) return 'livekit';
             if (id.includes('@emoji-mart')) return 'emoji-mart';
-            if (id.includes('recharts') || id.includes('echarts')) return 'charts';
             if (id.includes('@tiptap') || id.includes('prosemirror')) return 'editor';
             if (id.includes('@radix-ui')) return 'radix';
             if (id.includes('@tanstack/react-query')) return 'query';
             if (id.includes('react-router')) return 'router';
-            if (id.includes('i18next') || id.includes('react-i18next')) return 'i18n';
             if (id.includes('hls.js')) return 'hls';
-            if (id.includes('animejs')) return 'anime';
             return 'vendor';
           },
         },

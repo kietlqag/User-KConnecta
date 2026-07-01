@@ -1,4 +1,3 @@
-export { WatchHeader } from './WatchHeader';
 export { ReelSlideViewport } from './ReelSlideViewport';
 export type { ReelSlideViewportHandle } from './ReelSlideViewport';
 export { ReelPlayer } from './ReelPlayer';

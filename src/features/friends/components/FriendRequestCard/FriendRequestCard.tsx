@@ -1,7 +1,8 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { FriendRequest } from '../../types/friends.types';
 import { UserAvatar } from '@/components/shared';
 
@@ -11,9 +12,7 @@ interface FriendRequestCardProps {
   onDelete: (id: string) => Promise<void>;
 }
 
-export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequestCardProps) => {
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState<'accept' | 'delete' | null>(null);
+export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequestCardProps) => {  const [loading, setLoading] = useState<'accept' | 'delete' | null>(null);
 
   const handleAccept = async () => {
     setLoading('accept');
@@ -47,7 +46,7 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
           onClick={handleDelete}
           disabled={loading !== null}
           className="absolute right-2 top-2 rounded-full bg-card/95 p-2 shadow-md transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
-          aria-label={t('friendRequestCard.deleteAria')}
+          aria-label={vi.friendRequestCard.deleteAria}
         >
           {loading === 'delete' ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -65,7 +64,7 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
         </Link>
 
         <p className="mt-1 h-5 truncate text-sm text-muted-foreground">
-          {t('friendRequestCard.mutualFriends', { count: request.mutualFriends })}
+          {formatVi(vi.friendRequestCard.mutualFriends, { count: request.mutualFriends })}
         </p>
         <p className="mt-1 h-4 truncate text-xs text-muted-foreground">{request.timestamp}</p>
 
@@ -76,7 +75,7 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
             className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary px-4 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading === 'accept' && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t('friendRequestCard.confirm')}
+            {vi.friendRequestCard.confirm}
           </button>
           <button
             onClick={handleDelete}
@@ -84,7 +83,7 @@ export const FriendRequestCard = ({ request, onAccept, onDelete }: FriendRequest
             className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-red-50 px-4 font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading === 'delete' && <Loader2 className="h-4 w-4 animate-spin" />}
-            {t('friendRequestCard.delete')}
+            {vi.friendRequestCard.delete}
           </button>
         </div>
       </div>

@@ -93,7 +93,7 @@ src/
 ├── components/       # Shared UI (shadcn, Post, reactions)
 ├── contexts/         # RealtimeCallProvider, SidebarContext
 ├── hooks/            # Cross-feature hooks
-├── i18n/             # i18next — locale `vi`
+├── constants/        # Chuỗi UI (`vi.ts`), `formatVi`
 ├── utils/            # apiBaseUrl, webrtcConfig, policy validation
 └── lib/              # cn(), helpers
 ```

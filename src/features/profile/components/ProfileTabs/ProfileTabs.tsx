@@ -1,6 +1,5 @@
 ﻿import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { logProfileTabClick, type ProfileTabId } from '../../utils/profileTabLogger';
 
 interface ProfileTabsProps {
@@ -8,9 +7,7 @@ interface ProfileTabsProps {
   profileKey?: string;
 }
 
-export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {
-  const { t } = useTranslation();
-  const location = useLocation();
+export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {  const location = useLocation();
   const currentPath = location.pathname;
   const resolvedProfileKey = profileKey || userId || '';
 

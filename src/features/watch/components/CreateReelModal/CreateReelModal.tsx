@@ -1,7 +1,7 @@
+import { vi } from '@/constants/vi';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
 import { Clapperboard, Globe, Loader2, Lock, Users, Video, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { CurrentUserAvatar } from '@/components/shared';
@@ -36,9 +36,7 @@ type SelectedVideo = {
   uploadFailed?: boolean;
 };
 
-export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalProps) {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
+export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalProps) {  const queryClient = useQueryClient();
   const [caption, setCaption] = useState('');
   const [privacy, setPrivacy] = useState<AudienceId>('public');
   const [showAudienceModal, setShowAudienceModal] = useState(false);
@@ -105,7 +103,7 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
     }
 
     if (getPostMediaKind(file) !== 'video') {
-      toast.error(t('watch.createReelOneVideo'));
+      toast.error(vi.watch.createReelOneVideo);
       if (e.target) e.target.value = '';
       return;
     }
@@ -154,15 +152,15 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
   const handlePublish = async () => {
     const user = authService.getCurrentUser();
     if (!user?.id) {
-      toast.error(t('watch.createReelLoginRequired'));
+      toast.error(vi.watch.createReelLoginRequired);
       return;
     }
     if (!selectedVideo || selectedVideo.uploadFailed) {
-      toast.error(t('watch.createReelSelectVideo'));
+      toast.error(vi.watch.createReelSelectVideo);
       return;
     }
     if (rateLimitBlocked) {
-      toast.error(rateLimitMessage ?? t('watch.createReelError'));
+      toast.error(rateLimitMessage ?? vi.watch.createReelError);
       return;
     }
 
@@ -174,7 +172,7 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
         videoUrl = pending ? await pending : (await postService.uploadPostImage(selectedVideo.file)).url;
       }
       if (!videoUrl) {
-        throw new Error(t('watch.createReelError'));
+        throw new Error(vi.watch.createReelError);
       }
 
       await postService.createPost({
@@ -193,14 +191,14 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
         postType: 'REEL',
       });
 
-      toast.success(t('watch.createReelSuccess'));
+      toast.success(vi.watch.createReelSuccess);
       void queryClient.invalidateQueries({ queryKey: WATCH_FEED_KEY });
       void queryClient.invalidateQueries({ queryKey: ['posts', 'rate-limit'] });
       onCreated?.();
       resetState({ keepUploadedMedia: true });
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('watch.createReelError');
+      const message = error instanceof Error ? error.message : vi.watch.createReelError;
       toast.error(message);
       if (/quá nhanh|phút/i.test(message)) {
         void queryClient.invalidateQueries({ queryKey: ['posts', 'rate-limit'] });
@@ -227,7 +225,7 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div className="flex items-center gap-2">
               <Clapperboard className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-              <h2 className="text-lg font-bold text-foreground">{t('watch.createReelTitle')}</h2>
+              <h2 className="text-lg font-bold text-foreground">{vi.watch.createReelTitle}</h2>
             </div>
             <button
               type="button"
@@ -258,7 +256,7 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
               </button>
             </div>
 
-            <p className="mb-3 text-sm text-muted-foreground">{t('watch.createReelHint')}</p>
+            <p className="mb-3 text-sm text-muted-foreground">{vi.watch.createReelHint}</p>
 
             {selectedVideo ? (
               <div className="relative mb-4 overflow-hidden rounded-xl bg-black">
@@ -278,7 +276,7 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute bottom-3 right-3 rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white hover:bg-black/80"
                 >
-                  {t('watch.createReelSelectVideo')}
+                  {vi.watch.createReelSelectVideo}
                 </button>
               </div>
             ) : (
@@ -289,7 +287,7 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
               >
                 <Video className="h-10 w-10 text-muted-foreground" />
                 <span className="text-sm font-semibold text-foreground">
-                  {t('watch.createReelSelectVideo')}
+                  {vi.watch.createReelSelectVideo}
                 </span>
               </button>
             )}
@@ -297,7 +295,7 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
-              placeholder={t('watch.createReelCaption')}
+              placeholder={vi.watch.createReelCaption}
               rows={3}
               className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
@@ -315,7 +313,7 @@ export function CreateReelModal({ isOpen, onClose, onCreated }: CreateReelModalP
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPosting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {t('watch.createReelPublish')}
+              {vi.watch.createReelPublish}
             </button>
           </div>
         </div>

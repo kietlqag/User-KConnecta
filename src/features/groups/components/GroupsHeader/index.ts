@@ -1,1 +1,0 @@
-export { GroupsHeader } from './GroupsHeader';

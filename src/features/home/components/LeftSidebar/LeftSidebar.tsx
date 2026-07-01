@@ -1,6 +1,7 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useTranslation, Trans } from 'react-i18next';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { cn } from '@/lib/utils';
 import {
@@ -14,9 +15,7 @@ import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/
 import { useRecentGroupShortcuts } from '@/features/groups/hooks/useRecentGroupShortcuts';
 import { UserAvatar } from '@/components/shared/UserAvatar';
 
-export const LeftSidebar = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
+export const LeftSidebar = () => {  const navigate = useNavigate();
   const { isLeftSidebarOpen, setLeftSidebarOpen } = useSidebar();
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
@@ -53,7 +52,7 @@ export const LeftSidebar = () => {
     };
   }, []);
 
-  const fullName = currentUser?.fullName || t('messenger.unknownSender');
+  const fullName = currentUser?.fullName || vi.messenger.unknownSender;
   const userId = currentUser?.id;
   const userUsername = currentUser?.username;
   const avatarUrl = currentUser?.avatarUrl;
@@ -76,31 +75,31 @@ export const LeftSidebar = () => {
     {
       id: 'saved',
       icon: <Bookmark className="h-9 w-9 rounded-full bg-violet-100 p-2 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400" />,
-      label: t('nav.saved'),
+      label: vi.nav.saved,
       href: '/saved',
     },
     {
       id: 'friends',
       icon: <Users className="h-9 w-9 rounded-full bg-blue-100 p-2 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />,
-      label: t('nav.friends'),
+      label: vi.nav.friends,
       href: '/friends',
     },
     {
       id: 'watch',
       icon: <Clapperboard className="h-9 w-9 rounded-full bg-amber-100 p-2 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />,
-      label: t('nav.watch'),
+      label: vi.nav.watch,
       href: '/watch',
     },
     {
       id: 'groups',
       icon: <Shapes className="h-9 w-9 rounded-full bg-pink-100 p-2 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" />,
-      label: t('nav.groups'),
+      label: vi.nav.groups,
       href: '/groups',
     },
     {
       id: 'live',
       icon: <Radio className="h-9 w-9 rounded-full bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" />,
-      label: t('nav.live'),
+      label: vi.nav.live,
       href: '/live',
     },
   ];
@@ -112,7 +111,7 @@ export const LeftSidebar = () => {
           type="button"
           className="fixed inset-0 top-14 z-20 cursor-default bg-black/40"
           onClick={() => setLeftSidebarOpen(false)}
-          aria-label={t('nav.closeNav')}
+          aria-label={vi.nav.closeNav}
         />
       )}
 
@@ -124,7 +123,7 @@ export const LeftSidebar = () => {
         inert={!isLargeScreen && !isLeftSidebarOpen ? true : undefined}
       >
         <div className="shrink-0 p-2">
-          <nav className="space-y-1" role="navigation" aria-label={t('nav.mainNav')}>
+          <nav className="space-y-1" role="navigation" aria-label={vi.nav.mainNav}>
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -146,13 +145,13 @@ export const LeftSidebar = () => {
               <div className="flex min-h-0 flex-col">
                 <div className="my-2 shrink-0 border-t border-border" />
                 <div className="mb-2 flex shrink-0 items-center justify-between px-1">
-                  <h3 className="text-sm font-semibold text-muted-foreground">{t('sidebar.shortcuts')}</h3>
+                  <h3 className="text-sm font-semibold text-muted-foreground">{vi.sidebar.shortcuts}</h3>
                   <button
                     type="button"
                     onClick={() => handleNavigate('/groups')}
                     className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
                   >
-                    {t('sidebar.seeAllGroups')}
+                    {vi.sidebar.seeAllGroups}
                   </button>
                 </div>
                 <div className="space-y-1">
@@ -202,7 +201,7 @@ export const LeftSidebar = () => {
             </Link>
           </nav>
           <p className="mt-1 text-[11px] leading-tight text-muted-foreground">
-            {t('nav.copyright', { year: new Date().getFullYear() })}
+            {formatVi(vi.nav.copyright, { year: new Date().getFullYear() })}
           </p>
         </div>
       </aside>

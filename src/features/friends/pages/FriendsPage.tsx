@@ -1,6 +1,7 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { FriendsLeftSidebar, FriendCard, FriendRequestCard, SentFriendRequestCard } from '../components';
 import { BirthdayPage } from '@/features/birthdays/components';
 import { FriendsTab } from '../components/FriendsLeftSidebar/FriendsLeftSidebar';
@@ -15,9 +16,7 @@ const HOME_SUGGESTIONS_MAX = 40;
 const FRIEND_GRID_CLASS =
   'grid grid-cols-2 items-start gap-4 sm:grid-cols-3 lg:grid-cols-4 lg:gap-5';
 
-export const FriendsPage = () => {
-  const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+export const FriendsPage = () => {  const [searchParams] = useSearchParams();
   const initialTabParam = searchParams.get('tab') as FriendsTab | 'custom-lists' | 'suggestions' | null;
   const initialTab: FriendsTab =
     initialTabParam &&
@@ -58,7 +57,7 @@ export const FriendsPage = () => {
 
   useEffect(() => {
     if (error) {
-      toast.error((error as Error).message || t('friendsPage.loadError'));
+      toast.error((error as Error).message || vi.friendsPage.loadError);
     }
   }, [error]);
 
@@ -69,14 +68,14 @@ export const FriendsPage = () => {
   const handleCancelSentRequest = async (id: string) => {
     await friendService.deleteFriendship(id);
     refetch();
-    toast.success(t('friendsPage.cancelSuccess'));
+    toast.success(vi.friendsPage.cancelSuccess);
   };
 
   const handleAcceptRequest = async (id: string) => {
     const target = friendRequests.find((r) => r.id === id);
     await friendService.acceptFriendRequest(id);
     refetch();
-    toast.success(t('friendsPage.acceptSuccess', { name: target?.name ?? t('friendsPage.unknownUser') }));
+    toast.success(formatVi(vi.friendsPage.acceptSuccess, { name: target?.name ?? t('friendsPage.unknownUser') }));
   };
 
   const handleDeleteRequest = async (id: string) => {
@@ -91,7 +90,7 @@ export const FriendsPage = () => {
     if (res.friendshipId) {
       setPendingRequests((prev) => ({ ...prev, [userId]: res.friendshipId! }));
     }
-    toast.success(t('friendsPage.sendSuccess', { name: target?.name ?? t('friendsPage.unknownUser') }));
+    toast.success(formatVi(vi.friendsPage.sendSuccess, { name: target?.name ?? t('friendsPage.unknownUser') }));
   };
 
   const handleCancelFriendRequest = async (userId: string) => {
@@ -103,7 +102,7 @@ export const FriendsPage = () => {
       delete next[userId];
       return next;
     });
-    toast.success(t('friendsPage.cancelSuccess'));
+    toast.success(vi.friendsPage.cancelSuccess);
   };
 
   const handleRemoveSuggestion = (id: string) => {
@@ -118,23 +117,23 @@ export const FriendsPage = () => {
   const handleUnfriend = async (id: string) => {
     await friendService.deleteFriendship(id);
     window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
-    toast.success(t('friendsPage.unfriendSuccess'));
+    toast.success(vi.friendsPage.unfriendSuccess);
   };
 
   const renderContent = () => {
     if (loading) {
-      return <div className="text-center py-16 text-muted-foreground">{t('friendsPage.loading')}</div>;
+      return <div className="text-center py-16 text-muted-foreground">{vi.friendsPage.loading}</div>;
     }
 
     if (activeTab === 'requests') {
       return (
         <section>
           <h2 className="text-xl font-bold text-foreground mb-4">
-            {t('friendsPage.requests')}
+            {vi.friendsPage.requests}
             <span className="ml-2 text-muted-foreground font-normal">{friendRequests.length}</span>
           </h2>
           {friendRequests.length === 0 ? (
-            <p className="text-muted-foreground">{t('friendsPage.noRequests')}</p>
+            <p className="text-muted-foreground">{vi.friendsPage.noRequests}</p>
           ) : (
             <div className={FRIEND_GRID_CLASS}>
               {friendRequests.map((request) => (
@@ -155,11 +154,11 @@ export const FriendsPage = () => {
       return (
         <section>
           <h2 className="text-xl font-bold text-foreground mb-4">
-            {t('friendsPage.sentRequests')}
+            {vi.friendsPage.sentRequests}
             <span className="ml-2 text-muted-foreground font-normal">{sentFriendRequests.length}</span>
           </h2>
           {sentFriendRequests.length === 0 ? (
-            <p className="text-muted-foreground">{t('friendsPage.noSentRequests')}</p>
+            <p className="text-muted-foreground">{vi.friendsPage.noSentRequests}</p>
           ) : (
             <div className={FRIEND_GRID_CLASS}>
               {sentFriendRequests.map((request) => (
@@ -189,11 +188,11 @@ export const FriendsPage = () => {
       return (
         <section>
           <h2 className="text-xl font-bold text-foreground mb-4">
-            {t('friendsPage.allFriends')}
+            {vi.friendsPage.allFriends}
             <span className="ml-2 text-muted-foreground font-normal">{friends.length}</span>
           </h2>
           {friends.length === 0 ? (
-            <p className="text-muted-foreground">{t('friendsPage.noFriends')}</p>
+            <p className="text-muted-foreground">{vi.friendsPage.noFriends}</p>
           ) : (
             <>
               <div className={FRIEND_GRID_CLASS}>
@@ -219,14 +218,14 @@ export const FriendsPage = () => {
           <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-foreground">
-                {t('friendsPage.requests')}
+                {vi.friendsPage.requests}
                 <span className="ml-2 text-muted-foreground font-normal">{friendRequests.length}</span>
               </h2>
               <button
                 onClick={() => setActiveTab('requests')}
                 className="text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer"
               >
-                {t('friendsPage.seeAll')}
+                {vi.friendsPage.seeAll}
               </button>
             </div>
             <div className={FRIEND_GRID_CLASS}>
@@ -245,7 +244,7 @@ export const FriendsPage = () => {
         {homeSuggestions.length > 0 && (
           <section>
             <h2 className="mb-4 text-xl font-bold text-foreground">
-              {t('friendsPage.peopleYouMayKnow')}
+              {vi.friendsPage.peopleYouMayKnow}
             </h2>
             <div className={FRIEND_GRID_CLASS}>
               {visibleHomeSuggestions.map((friend) => (
@@ -271,8 +270,8 @@ export const FriendsPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">{t('friendsPage.emptyTitle')}</h3>
-            <p className="text-muted-foreground">{t('friendsPage.emptyDesc')}</p>
+            <h3 className="text-xl font-semibold text-foreground mb-2">{vi.friendsPage.emptyTitle}</h3>
+            <p className="text-muted-foreground">{vi.friendsPage.emptyDesc}</p>
           </div>
         )}
       </>

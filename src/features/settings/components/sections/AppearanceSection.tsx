@@ -1,6 +1,6 @@
+import { vi } from '@/constants/vi';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { SettingsSection } from '../SettingsSection';
 import { SettingsSaveBar } from '../SettingsSaveBar';
@@ -22,14 +22,12 @@ export function AppearanceSection({
   saving,
   onSave,
   onDiscard,
-}: AppearanceSectionProps) {
-  const { t } = useTranslation();
-
+}: AppearanceSectionProps) {
   const themeOptions = useMemo(
     () => [
-      { value: 'light' as ThemeOption, label: t('settings.appearance.themeLight'), description: t('settings.appearance.themeLightDesc'), icon: Sun },
-      { value: 'dark' as ThemeOption, label: t('settings.appearance.themeDark'), description: t('settings.appearance.themeDarkDesc'), icon: Moon },
-      { value: 'system' as ThemeOption, label: t('settings.appearance.themeSystem'), description: t('settings.appearance.themeSystemDesc'), icon: Monitor },
+      { value: 'light' as ThemeOption, label: vi.settings.appearance.themeLight, description: vi.settings.appearance.themeLightDesc, icon: Sun },
+      { value: 'dark' as ThemeOption, label: vi.settings.appearance.themeDark, description: vi.settings.appearance.themeDarkDesc, icon: Moon },
+      { value: 'system' as ThemeOption, label: vi.settings.appearance.themeSystem, description: vi.settings.appearance.themeSystemDesc, icon: Monitor },
     ],
     [t],
   );
@@ -37,8 +35,8 @@ export function AppearanceSection({
   return (
     <div className="space-y-8">
       <SettingsSection
-        title={t('settings.appearance.themeTitle')}
-        description={t('settings.appearance.themeDesc')}
+        title={vi.settings.appearance.themeTitle}
+        description={vi.settings.appearance.themeDesc}
       >
         <RadioGroup
           value={settings.theme}

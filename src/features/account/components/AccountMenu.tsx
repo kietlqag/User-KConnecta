@@ -1,7 +1,7 @@
+import { vi } from '@/constants/vi';
 import { Settings, HelpCircle, LogOut, ChevronRight, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { UserAvatar } from '@/components/shared/UserAvatar';
 
@@ -9,9 +9,7 @@ interface AccountMenuProps {
   onClose: () => void;
 }
 
-export function AccountMenu({ onClose }: AccountMenuProps) {
-  const { t } = useTranslation();
-  const menuRef = useRef<HTMLDivElement>(null);
+export function AccountMenu({ onClose }: AccountMenuProps) {  const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
   const [loggingOut, setLoggingOut] = useState(false);
@@ -97,7 +95,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
             <div className="w-9 h-9 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
               <Settings className="w-5 h-5 text-foreground" />
             </div>
-            <span className="flex-1 text-left font-medium text-foreground">{t('account.settings')}</span>
+            <span className="flex-1 text-left font-medium text-foreground">{vi.account.settings}</span>
             <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </button>
 
@@ -126,7 +124,7 @@ export function AccountMenu({ onClose }: AccountMenuProps) {
               )}
             </div>
             <span className="flex-1 text-left font-medium text-foreground">
-              {loggingOut ? 'Đang đăng xuất...' : t('account.logout')}
+              {loggingOut ? 'Đang đăng xuất...' : vi.account.logout}
             </span>
           </button>
         </div>

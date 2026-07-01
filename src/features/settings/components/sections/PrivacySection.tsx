@@ -1,7 +1,8 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/shared/UserAvatar';
-import { useTranslation } from 'react-i18next';
 import { SettingsSection } from '../SettingsSection';
 import { SettingRow } from '../SettingRow';
 import { SettingsSaveBar } from '../SettingsSaveBar';
@@ -36,16 +37,14 @@ export function PrivacySection({
   onSave,
   onDiscard,
   unblockUser,
-}: PrivacySectionProps) {
-  const { t } = useTranslation();
-
+}: PrivacySectionProps) {
   return (
     <div className="space-y-8">
       <SettingsSection
-        title={t('settings.privacy.profileTitle')}
-        description={t('settings.privacy.profileDesc')}
+        title={vi.settings.privacy.profileTitle}
+        description={vi.settings.privacy.profileDesc}
       >
-        <SettingRow label={t('settings.privacy.profileLabel')}>
+        <SettingRow label={vi.settings.privacy.profileLabel}>
           <VisibilitySelect
             value={settings.profileVisibility}
             onChange={(profileVisibility) => updateSettings({ profileVisibility })}
@@ -54,17 +53,17 @@ export function PrivacySection({
       </SettingsSection>
 
       <SettingsSection
-        title={t('settings.privacy.blockedTitle')}
-        description={t('settings.privacy.blockedDesc')}
+        title={vi.settings.privacy.blockedTitle}
+        description={vi.settings.privacy.blockedDesc}
       >
         {settings.blockedUsers.length === 0 ? (
           <div className="flex flex-col items-center rounded-[12px] border border-dashed border-border bg-card px-6 py-10 text-center">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-muted">
               <UserX className="h-5 w-5 text-muted-foreground" />
             </div>
-            <p className="text-sm font-medium text-foreground">{t('settings.privacy.blockedEmpty')}</p>
+            <p className="text-sm font-medium text-foreground">{vi.settings.privacy.blockedEmpty}</p>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-              {t('settings.privacy.blockedEmptyDesc')}
+              {vi.settings.privacy.blockedEmptyDesc}
             </p>
           </div>
         ) : (
@@ -84,7 +83,7 @@ export function PrivacySection({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {t('settings.privacy.blockedAt', {
+                    {formatVi(vi.settings.privacy.blockedAt, {
                       date: formatBlockedDate(user.blockedAt, 'vi'),
                     })}
                   </p>
@@ -97,7 +96,7 @@ export function PrivacySection({
                     className="shrink-0 rounded-[10px]"
                     onClick={() => void unblockUser(user.id)}
                   >
-                    {t('settings.privacy.unblock')}
+                    {vi.settings.privacy.unblock}
                   </Button>
                 ) : null}
               </div>

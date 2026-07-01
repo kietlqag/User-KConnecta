@@ -1,6 +1,6 @@
+import { vi } from '@/constants/vi';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Search, Star, Bookmark, Clapperboard } from 'lucide-react';
 import { Header } from '../../home/components/Header';
@@ -43,30 +43,28 @@ const WatchSidebar = ({
   showSavedTab: boolean;
   showCreateReel: boolean;
   onCreateReel: () => void;
-}) => {
-  const { t } = useTranslation();
-
+}) => {
   return (
   <aside className="hidden lg:flex fixed top-14 left-0 z-40 h-[calc(100vh-56px)] w-[320px] flex-col gap-1 border-r border-border bg-card px-3 py-4">
-    <h1 className="px-3 pb-3 text-2xl font-bold text-foreground">{t('watch.title')}</h1>
+    <h1 className="px-3 pb-3 text-2xl font-bold text-foreground">{vi.watch.title}</h1>
 
     {searchQuery ? (
       <div className="flex items-center gap-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 px-3 py-2.5 text-foreground">
         <Search className="h-6 w-6 shrink-0 text-emerald-600 dark:text-emerald-400" />
         <div className="min-w-0">
-          <span className="block text-[15px] font-semibold">{t('watch.searchResults')}</span>
+          <span className="block text-[15px] font-semibold">{vi.watch.searchResults}</span>
           <span className="block truncate text-xs text-muted-foreground">&quot;{searchQuery}&quot;</span>
         </div>
       </div>
     ) : (
-      <nav className="flex flex-col gap-1" aria-label={t('watch.navAria')}>
+      <nav className="flex flex-col gap-1" aria-label={vi.watch.navAria}>
         <button
           type="button"
           onClick={() => onTabChange('forYou')}
           className={sidebarTabClass(activeTab === 'forYou')}
         >
           <Star className="h-6 w-6 shrink-0" />
-          <span className="text-[15px] font-semibold">{t('watch.forYou')}</span>
+          <span className="text-[15px] font-semibold">{vi.watch.forYou}</span>
         </button>
         {showSavedTab && (
           <button
@@ -75,7 +73,7 @@ const WatchSidebar = ({
             className={sidebarTabClass(activeTab === 'saved')}
           >
             <Bookmark className="h-6 w-6 shrink-0" />
-            <span className="text-[15px] font-semibold">{t('watch.saved')}</span>
+            <span className="text-[15px] font-semibold">{vi.watch.saved}</span>
           </button>
         )}
       </nav>
@@ -88,16 +86,14 @@ const WatchSidebar = ({
         className="mt-auto flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2.5 text-[15px] font-semibold text-white transition-colors hover:bg-emerald-700"
       >
         <Clapperboard className="h-5 w-5 shrink-0" />
-        {t('watch.createReel')}
+        {vi.watch.createReel}
       </button>
     )}
   </aside>
   );
 };
 
-export const WatchPage = () => {
-  const { t } = useTranslation();
-  const [currentReelIndex, setCurrentReelIndex] = useState(0);
+export const WatchPage = () => {  const [currentReelIndex, setCurrentReelIndex] = useState(0);
   const [watchTab, setWatchTab] = useState<WatchTab>('forYou');
   const [showCreateReelModal, setShowCreateReelModal] = useState(false);
   const viewportRef = useRef<ReelSlideViewportHandle>(null);
@@ -242,9 +238,9 @@ export const WatchPage = () => {
   }, []);
 
   const loadingMessage = useMemo(() => {
-    if (!currentUser?.id) return t('watch.loginRequired');
-    if (isLoading) return t('watch.loading');
-    if (isFetchingNextPage && reels.length === 0) return t('watch.loading');
+    if (!currentUser?.id) return vi.watch.loginRequired;
+    if (isLoading) return vi.watch.loading;
+    if (isFetchingNextPage && reels.length === 0) return vi.watch.loading;
     return null;
   }, [currentUser?.id, isLoading, isFetchingNextPage, reels.length, t]);
 
@@ -268,7 +264,7 @@ export const WatchPage = () => {
       {!isSearchWatchMode && showSavedTab && (
         <nav
           className="lg:hidden fixed top-14 left-0 right-0 z-40 flex border-b border-border bg-card"
-          aria-label={t('watch.navAria')}
+          aria-label={vi.watch.navAria}
         >
           <button
             type="button"
@@ -276,7 +272,7 @@ export const WatchPage = () => {
             className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${ watchTab === 'forYou' ? 'border-b-2 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'text-muted-foreground' }`}
           >
             <Star className="h-4 w-4" />
-            {t('watch.forYou')}
+            {vi.watch.forYou}
           </button>
           <button
             type="button"
@@ -284,7 +280,7 @@ export const WatchPage = () => {
             className={`flex flex-1 items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors ${ watchTab === 'saved' ? 'border-b-2 border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'text-muted-foreground' }`}
           >
             <Bookmark className="h-4 w-4" />
-            {t('watch.saved')}
+            {vi.watch.saved}
           </button>
         </nav>
       )}
@@ -294,7 +290,7 @@ export const WatchPage = () => {
           type="button"
           onClick={() => setShowCreateReelModal(true)}
           className="lg:hidden fixed bottom-6 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg transition-colors hover:bg-emerald-700"
-          aria-label={t('watch.createReel')}
+          aria-label={vi.watch.createReel}
         >
           <Clapperboard className="h-6 w-6" />
         </button>
@@ -305,15 +301,15 @@ export const WatchPage = () => {
           <div className="flex h-full items-center justify-center text-foreground">{loadingMessage}</div>
         ) : isError ? (
           <div className="flex h-full items-center justify-center text-foreground">
-            {t('watch.loadError')}
+            {vi.watch.loadError}
           </div>
         ) : reels.length === 0 ? (
           <div className="flex h-full items-center justify-center text-foreground">
             {isSearchWatchMode
-              ? t('watch.emptySearch')
+              ? vi.watch.emptySearch
               : isSavedWatchMode
-                ? t('watch.emptySaved')
-                : t('watch.empty')}
+                ? vi.watch.emptySaved
+                : vi.watch.empty}
           </div>
         ) : currentReel ? (
           <ReelSlideViewport

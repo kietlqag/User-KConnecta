@@ -1,4 +1,4 @@
-export default {
+export const vi = {
   common: {
     save: 'Lưu thay đổi',
     discard: 'Hủy',

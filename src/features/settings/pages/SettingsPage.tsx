@@ -1,3 +1,4 @@
+import { vi } from '@/constants/vi';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Header } from '../../home/components/Header';
@@ -9,7 +10,6 @@ import { AppearanceSection } from '../components/sections/AppearanceSection';
 import { RemindersSection } from '../components/sections/RemindersSection';
 import { useUserSettings } from '../hooks/useUserSettings';
 import type { SettingsTab } from '../types/userSettings.types';
-import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
 const VALID_TABS: SettingsTab[] = ['security', 'privacy', 'notifications', 'appearance', 'reminders'];
@@ -25,9 +25,7 @@ export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => parseTab(searchParams.get('tab')));
 
-  const { settings, updateSettings, isDirty, save, discard, saving, loading, loadError, reload, unblockUser, revokeSession } = useUserSettings();
-  const { t } = useTranslation();
-  const tabLabel = useSettingsTabLabel(activeTab);
+  const { settings, updateSettings, isDirty, save, discard, saving, loading, loadError, reload, unblockUser, revokeSession } = useUserSettings();  const tabLabel = useSettingsTabLabel(activeTab);
 
   useEffect(() => {
     const tab = parseTab(searchParams.get('tab'));
@@ -59,8 +57,8 @@ export default function SettingsPage() {
 
       <div className="mx-auto max-w-6xl px-4 pb-12 pt-[calc(56px+1.5rem)] lg:px-8">
         <div className="mb-6 lg:hidden">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t('settings.subtitle')}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{vi.settings.title}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{vi.settings.subtitle}</p>
         </div>
 
         <SettingsMobileNav active={activeTab} onSelect={handleSelectTab} />
@@ -78,17 +76,17 @@ export default function SettingsPage() {
                 {tabLabel}
               </h2>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {t(`settings.tabDesc.${activeTab}`)}
+                {vi.settings.tabDesc[activeTab]}
               </p>
             </header>
 
             {loading ? (
-              <div className="py-16 text-center text-sm text-muted-foreground">{t('common.loadingSettings')}</div>
+              <div className="py-16 text-center text-sm text-muted-foreground">{vi.common.loadingSettings}</div>
             ) : loadError ? (
               <div className="flex flex-col items-center gap-4 py-16 text-center">
                 <p className="max-w-md text-sm text-muted-foreground">{loadError}</p>
                 <Button type="button" variant="outline" className="rounded-[10px]" onClick={() => void reload()}>
-                  {t('common.retry')}
+                  {vi.common.retry}
                 </Button>
               </div>
             ) : (

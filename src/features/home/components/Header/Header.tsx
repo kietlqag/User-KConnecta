@@ -1,6 +1,7 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { useEffect, useState, useMemo, useCallback, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Search, Home, Users, Shapes, Clapperboard, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
@@ -20,9 +21,7 @@ import logoV2 from '@/assets/LogoKConnecta_V2.png';
 import { LIVE_NAV_LABEL } from '@/components/shared';
 import { refreshHomeFeed } from '../../hooks/usePosts';
 
-export function Header() {
-  const { t } = useTranslation();
-  const [showMessenger, setShowMessenger] = useState(false);
+export function Header() {  const [showMessenger, setShowMessenger] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
@@ -116,10 +115,10 @@ export function Header() {
   );
 
   const navItems = useMemo(() => [
-    { icon: <Home className="w-6 h-6" />, href: '/home', label: t('nav.home') },
-    { icon: <Users className="w-6 h-6" />, href: '/friends', label: t('nav.friends') },
-    { icon: <Clapperboard className="w-6 h-6" />, href: '/watch', label: t('nav.watch') },
-    { icon: <Shapes className="w-6 h-6" />, href: '/groups', label: t('nav.groups') },
+    { icon: <Home className="w-6 h-6" />, href: '/home', label: vi.nav.home },
+    { icon: <Users className="w-6 h-6" />, href: '/friends', label: vi.nav.friends },
+    { icon: <Clapperboard className="w-6 h-6" />, href: '/watch', label: vi.nav.watch },
+    { icon: <Shapes className="w-6 h-6" />, href: '/groups', label: vi.nav.groups },
     { icon: <Radio className="w-6 h-6" />, href: '/live', label: LIVE_NAV_LABEL },
   ], [t]);
 
@@ -202,8 +201,8 @@ export function Header() {
                 setShowAccountMenu(false);
               }}
               className={headerActionBtnClass}
-              title={t('messenger.title', { defaultValue: 'Tin nhắn' })}
-              aria-label={t('messenger.title', { defaultValue: 'Tin nhắn' })}
+              title={formatVi(vi.messenger.title, { defaultValue: 'Tin nhắn' })}
+              aria-label={formatVi(vi.messenger.title, { defaultValue: 'Tin nhắn' })}
             >
               <MessageCircle className="h-5 w-5 text-foreground" />
               {unreadMessagesCount > 0 && (
@@ -221,8 +220,8 @@ export function Header() {
                 setShowAccountMenu(false);
               }}
               className={`${headerActionBtnClass} hidden sm:flex`}
-              title={t('nav.notifications', { defaultValue: 'Thông báo' })}
-              aria-label={t('nav.notifications', { defaultValue: 'Thông báo' })}
+              title={formatVi(vi.nav.notifications, { defaultValue: 'Thông báo' })}
+              aria-label={formatVi(vi.nav.notifications, { defaultValue: 'Thông báo' })}
             >
               <Bell className="h-5 w-5 text-foreground" />
               {unreadNotifications > 0 && (

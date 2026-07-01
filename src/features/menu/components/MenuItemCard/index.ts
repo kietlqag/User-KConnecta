@@ -1,1 +1,0 @@
-export { MenuItemCard } from './MenuItemCard';

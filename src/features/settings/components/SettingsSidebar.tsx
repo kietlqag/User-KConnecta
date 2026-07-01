@@ -1,5 +1,5 @@
+import { vi } from '@/constants/vi';
 import { Shield, ShieldCheck, Palette, Bell, Timer } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@/components/ui/utils';
 import type { SettingsTab } from '../types/userSettings.types';
 
@@ -17,14 +17,12 @@ interface SettingsSidebarProps {
   className?: string;
 }
 
-export function SettingsSidebar({ active, onSelect, className }: SettingsSidebarProps) {
-  const { t } = useTranslation();
-
+export function SettingsSidebar({ active, onSelect, className }: SettingsSidebarProps) {
   return (
-    <nav className={cn('flex flex-col', className)} aria-label={t('settings.title')}>
+    <nav className={cn('flex flex-col', className)} aria-label={vi.settings.title}>
       <div className="mb-6 hidden lg:block">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{t('settings.title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('settings.subtitle')}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">{vi.settings.title}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{vi.settings.subtitle}</p>
       </div>
 
       <ul className="space-y-1">
@@ -42,7 +40,7 @@ export function SettingsSidebar({ active, onSelect, className }: SettingsSidebar
                   className={cn('h-5 w-5 shrink-0', isActive ? 'text-primary' : 'text-muted-foreground')}
                   aria-hidden
                 />
-                <span className="text-sm">{t(`settings.tabs.${item.id}`)}</span>
+                <span className="text-sm">{vi.settings.tabs[item.id]}</span>
               </button>
             </li>
           );
@@ -52,9 +50,7 @@ export function SettingsSidebar({ active, onSelect, className }: SettingsSidebar
   );
 }
 
-export function SettingsMobileNav({ active, onSelect }: SettingsSidebarProps) {
-  const { t } = useTranslation();
-
+export function SettingsMobileNav({ active, onSelect }: SettingsSidebarProps) {
   return (
     <div className="scrollbar-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:hidden">
       {NAV_ITEM_IDS.map((item) => {
@@ -68,7 +64,7 @@ export function SettingsMobileNav({ active, onSelect }: SettingsSidebarProps) {
             className={cn( 'flex shrink-0 items-center gap-2 rounded-[10px] border px-3 py-2 text-sm transition-colors', isActive ? 'border-primary/30 bg-accent font-medium text-primary' : 'border-border bg-card text-foreground hover:bg-muted/50', )}
           >
             <Icon className="h-4 w-4" aria-hidden />
-            {t(`settings.tabs.${item.id}`)}
+            {vi.settings.tabs[item.id]}
           </button>
         );
       })}
@@ -76,7 +72,5 @@ export function SettingsMobileNav({ active, onSelect }: SettingsSidebarProps) {
   );
 }
 
-export function useSettingsTabLabel(tab: SettingsTab): string {
-  const { t } = useTranslation();
-  return t(`settings.tabs.${tab}`);
+export function useSettingsTabLabel(tab: SettingsTab): string {  return vi.settings.tabs[tab];
 }

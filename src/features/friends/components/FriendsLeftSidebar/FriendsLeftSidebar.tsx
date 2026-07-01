@@ -1,5 +1,5 @@
+import { vi } from '@/constants/vi';
 import { Users, UserPlus, Cake, Home, Send } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
 export type FriendsTab = 'home' | 'requests' | 'sent-requests' | 'all-friends' | 'birthdays';
 
@@ -16,9 +16,7 @@ interface FriendsLeftSidebarProps {
   requestCount?: number;
 }
 
-export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: FriendsLeftSidebarProps) => {
-  const { t } = useTranslation();
-
+export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: FriendsLeftSidebarProps) => {
   const sidebarItems: SidebarItem[] = [
     { id: 'home', labelKey: 'home', icon: <Home className="w-5 h-5" /> },
     { id: 'requests', labelKey: 'requests', icon: <UserPlus className="w-5 h-5" />, count: requestCount },
@@ -30,7 +28,7 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
   return (
     <div className="hidden h-full w-[clamp(280px,23vw,360px)] shrink-0 overflow-hidden border-r border-border bg-card md:block">
       <div className="p-4">
-        <h1 className="mb-4 text-2xl font-bold text-foreground">{t('friendsPage.title')}</h1>
+        <h1 className="mb-4 text-2xl font-bold text-foreground">{vi.friendsPage.title}</h1>
 
         <div className="space-y-1">
           {sidebarItems.map((item) => (

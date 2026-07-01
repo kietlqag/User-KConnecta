@@ -1,7 +1,8 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import i18n from '@/i18n';
 import { authService } from '@/services/authService';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
 import type { IncomingChatMessage } from '../types/message.types';
@@ -26,7 +27,7 @@ function buildMessageDeepLink(msg: IncomingChatMessage): string {
 }
 
 function resolveSenderLabel(msg: IncomingChatMessage): string {
-  return msg.senderUsername?.trim() || i18n.t('messenger.unknownSender', { defaultValue: 'Người dùng' });
+  return msg.senderUsername?.trim() || vi.messenger.unknownSender;
 }
 
 async function maybeShowBrowserNotification(title: string, body: string, tag: string, onClickPath: string) {
@@ -69,7 +70,7 @@ function notifyIncomingMessage(msg: IncomingChatMessage, currentUserId: string, 
     return;
   }
 
-  const preview = mapContentToConversationPreview(msg.content) || i18n.t('messenger.newMessage', { defaultValue: 'Tin nhắn mới' });
+  const preview = mapContentToConversationPreview(msg.content) || vi.messenger.newMessage;
   const senderLabel = resolveSenderLabel(msg);
   const deepLink = buildMessageDeepLink(msg);
 
@@ -79,13 +80,13 @@ function notifyIncomingMessage(msg: IncomingChatMessage, currentUserId: string, 
   toast(senderLabel, {
     description: preview,
     action: {
-      label: i18n.t('messenger.viewMessage', { defaultValue: 'Xem' }),
+      label: vi.messenger.viewMessage,
       onClick: () => navigate(deepLink),
     },
   });
 
   void maybeShowBrowserNotification(
-    i18n.t('messenger.messageFrom', { name: senderLabel, defaultValue: `Tin nhắn từ ${senderLabel}` }),
+    formatVi(vi.messenger.messageFrom, { name: senderLabel }),
     preview,
     `chat-${msg.id}`,
     deepLink,

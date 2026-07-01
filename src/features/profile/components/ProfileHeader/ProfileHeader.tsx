@@ -1,10 +1,11 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { useState, useRef, useEffect } from 'react';
 import {
   Camera, Plus, Edit,
   X, Loader2, UserPlus, UserCheck, UserX, MessageCircle, UserMinus, MoreHorizontal, Ban,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { friendService, FRIENDSHIP_CHANGED_EVENT, type FriendshipStatusResponse } from '@/services/friendService';
 import { authService } from '@/services/authService';
@@ -63,9 +64,7 @@ export function ProfileHeader({
   onAvatarUpload,
   onCoverUpload,
 }: ProfileHeaderProps) {
-  const navigate = useNavigate();
-  const { t } = useTranslation();
-
+  const navigate = useNavigate();
   // Lightbox / upload state
   const [viewerImage, setViewerImage]     = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -110,9 +109,9 @@ export function ProfileHeader({
     try {
       const res = await friendService.sendFriendRequest(currentUser.id, profileUserId);
       onFriendshipStatusChange?.({ friendshipId: res.friendshipId, status: 'PENDING', sentByMe: true });
-      toast.success(t('profile.friendRequestSent'));
+      toast.success(vi.profile.friendRequestSent);
     } catch {
-      toast.error(t('profile.friendRequestFailed'));
+      toast.error(vi.profile.friendRequestFailed);
     } finally {
       setFriendActionLoading(false);
     }
@@ -124,9 +123,9 @@ export function ProfileHeader({
     try {
       await friendService.deleteFriendship(friendshipStatus.friendshipId);
       onFriendshipStatusChange?.(null);
-      toast.success(t('profile.friendCancelSuccess'));
+      toast.success(vi.profile.friendCancelSuccess);
     } catch {
-      toast.error(t('profile.friendCancelFailed'));
+      toast.error(vi.profile.friendCancelFailed);
     } finally {
       setFriendActionLoading(false);
     }
@@ -139,9 +138,9 @@ export function ProfileHeader({
       const res = await friendService.acceptFriendRequest(friendshipStatus.friendshipId);
       onFriendshipStatusChange?.({ friendshipId: res.friendshipId, status: 'ACCEPTED', sentByMe: false });
       window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
-      toast.success(t('profile.friendAcceptSuccess'));
+      toast.success(vi.profile.friendAcceptSuccess);
     } catch {
-      toast.error(t('profile.friendAcceptFailed'));
+      toast.error(vi.profile.friendAcceptFailed);
     } finally {
       setFriendActionLoading(false);
     }
@@ -154,9 +153,9 @@ export function ProfileHeader({
       await friendService.deleteFriendship(friendshipStatus.friendshipId);
       onFriendshipStatusChange?.(null);
       window.dispatchEvent(new Event(FRIENDSHIP_CHANGED_EVENT));
-      toast.success(t('profile.unfriendSuccess'));
+      toast.success(vi.profile.unfriendSuccess);
     } catch {
-      toast.error(t('profile.unfriendFailed'));
+      toast.error(vi.profile.unfriendFailed);
     } finally {
       setFriendActionLoading(false);
     }
@@ -170,9 +169,9 @@ export function ProfileHeader({
       setIsBlockedByMe(true);
       onFriendshipStatusChange?.(null);
       setBlockDialogOpen(false);
-      toast.success(t('profile.blockSuccess'));
+      toast.success(vi.profile.blockSuccess);
     } catch {
-      toast.error(t('profile.blockError'));
+      toast.error(vi.profile.blockError);
     } finally {
       setBlockActionLoading(false);
     }
@@ -184,9 +183,9 @@ export function ProfileHeader({
     try {
       await userSettingsApi.unblockUser(profileUserId);
       setIsBlockedByMe(false);
-      toast.success(t('profile.unblockSuccess'));
+      toast.success(vi.profile.unblockSuccess);
     } catch {
-      toast.error(t('profile.unblockError'));
+      toast.error(vi.profile.unblockError);
     } finally {
       setBlockActionLoading(false);
     }
@@ -370,7 +369,7 @@ export function ProfileHeader({
                     </p>
                   )}
                   <p className="text-muted-foreground font-semibold mt-1">
-                    {t('common.friends', { count: friendsCount })}
+                    {formatVi(vi.common.friends, { count: friendsCount })}
                   </p>
                 </>
               )}
@@ -391,14 +390,14 @@ export function ProfileHeader({
                     className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium text-[15px]"
                   >
                     <Plus className="w-5 h-5" />
-                    {t('profile.addStory')}
+                    {vi.profile.addStory}
                   </button>
                   <button
                     onClick={onEditClick}
                     className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-foreground rounded-lg transition-colors font-medium text-[15px]"
                   >
                     <Edit className="w-4 h-4" />
-                    {t('profile.editProfile')}
+                    {vi.profile.editProfile}
                   </button>
                 </>
               ) : (
@@ -410,7 +409,7 @@ export function ProfileHeader({
                       className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
-                      {t('profile.friends')}
+                      {vi.profile.friends}
                     </button>
                   ) : friendshipStatus?.status === 'PENDING' && friendshipStatus.sentByMe ? (
                     <button
@@ -419,7 +418,7 @@ export function ProfileHeader({
                       className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-                      {t('profile.requestSent')}
+                      {vi.profile.requestSent}
                     </button>
                   ) : friendshipStatus?.status === 'PENDING' && !friendshipStatus.sentByMe ? (
                     <>
@@ -429,7 +428,7 @@ export function ProfileHeader({
                         className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                       >
                         {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
-                        {t('profile.accept')}
+                        {vi.profile.accept}
                       </button>
                       <button
                         onClick={handleCancelFriendRequest}
@@ -437,7 +436,7 @@ export function ProfileHeader({
                         className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                       >
                         {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserMinus className="w-4 h-4" />}
-                        {t('profile.reject')}
+                        {vi.profile.reject}
                       </button>
                     </>
                   ) : (
@@ -447,7 +446,7 @@ export function ProfileHeader({
                       className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium disabled:opacity-60"
                     >
                       {friendActionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-                      {t('profile.addFriend')}
+                      {vi.profile.addFriend}
                     </button>
                   )}
 
@@ -457,16 +456,16 @@ export function ProfileHeader({
                       className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors font-medium"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      {t('profile.message')}
+                      {vi.profile.message}
                     </button>
                   ) : (
                     <button
                       disabled
-                      title={t('profile.messageDisabled')}
+                      title={vi.profile.messageDisabled}
                       className="flex items-center gap-2 px-4 py-2 bg-muted text-muted-foreground rounded-lg font-medium cursor-not-allowed"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      {t('profile.message')}
+                      {vi.profile.message}
                     </button>
                   )}
 
@@ -476,7 +475,7 @@ export function ProfileHeader({
                         type="button"
                         disabled={blockActionLoading}
                         className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted hover:bg-muted text-foreground transition-colors disabled:opacity-60"
-                        title={t('profile.more')}
+                        title={vi.profile.more}
                       >
                         {blockActionLoading ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -489,7 +488,7 @@ export function ProfileHeader({
                       {isBlockedByMe ? (
                         <DropdownMenuItem onClick={() => void handleUnblockUser()} className="cursor-pointer">
                           <Ban className="mr-2 h-4 w-4" />
-                          {t('profile.unblock')}
+                          {vi.profile.unblock}
                         </DropdownMenuItem>
                       ) : (
                         <DropdownMenuItem
@@ -497,7 +496,7 @@ export function ProfileHeader({
                           className="cursor-pointer text-destructive focus:text-destructive"
                         >
                           <Ban className="mr-2 h-4 w-4" />
-                          {t('profile.block')}
+                          {vi.profile.block}
                         </DropdownMenuItem>
                       )}
                     </DropdownMenuContent>
@@ -507,14 +506,14 @@ export function ProfileHeader({
                     <AlertDialogContent className="rounded-[12px]">
                       <AlertDialogHeader>
                         <AlertDialogTitle>
-                          {t('profile.blockConfirmTitle', { name: fullName || username || '' })}
+                          {formatVi(vi.profile.blockConfirmTitle, { name: fullName || username || '' })}
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          {t('profile.blockConfirmDesc')}
+                          {vi.profile.blockConfirmDesc}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel disabled={blockActionLoading}>{t('common.cancel')}</AlertDialogCancel>
+                        <AlertDialogCancel disabled={blockActionLoading}>{vi.common.cancel}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={(event) => {
                             event.preventDefault();
@@ -523,7 +522,7 @@ export function ProfileHeader({
                           disabled={blockActionLoading}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          {t('profile.block')}
+                          {vi.profile.block}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>

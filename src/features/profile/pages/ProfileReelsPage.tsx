@@ -1,6 +1,6 @@
+import { vi } from '@/constants/vi';
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { Play, Clapperboard, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { authService, AUTH_USER_CHANGED_EVENT } from '@/services/authService';
@@ -31,9 +31,7 @@ function ReelsGrid({
   showUnsave?: boolean;
   onUnsave?: (postId: string) => void;
   onOpen: (postId: string) => void;
-}) {
-  const { t } = useTranslation();
-
+}) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {reels.map((reel) => (
@@ -51,7 +49,7 @@ function ReelsGrid({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent">
             <div className="absolute bottom-2 left-2 right-2">
               <p className="line-clamp-2 text-xs font-semibold leading-tight text-white">
-                {reel.caption || t('profileReels.defaultCaption')}
+                {reel.caption || vi.profileReels.defaultCaption}
               </p>
             </div>
           </div>
@@ -63,7 +61,7 @@ function ReelsGrid({
                 onUnsave(reel.id);
               }}
               className="absolute right-2 top-2 rounded-full bg-black/50 p-2 text-white opacity-0 transition-opacity hover:bg-black/70 group-hover:opacity-100"
-              title={t('profileReels.unsave')}
+              title={vi.profileReels.unsave}
             >
               <Bookmark className="h-4 w-4 fill-white" />
             </button>
@@ -79,9 +77,7 @@ function ReelsGrid({
   );
 }
 
-export function ProfileReelsPage() {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
+export function ProfileReelsPage() {  const navigate = useNavigate();
   const { profile, resolvedId, isOwnProfile, loading: profileLoading } = useProfileLayoutContext();
   useProfileTabDebug('watch', resolvedId);
   const [currentUser, setCurrentUser] = React.useState(() => authService.getCurrentUser());
@@ -182,9 +178,9 @@ export function ProfileReelsPage() {
       window.dispatchEvent(
         new CustomEvent(SAVED_POSTS_CHANGED_EVENT, { detail: { postId, saved: false } }),
       );
-      toast.success(t('profileReels.unsaveSuccess'));
+      toast.success(vi.profileReels.unsaveSuccess);
     } catch {
-      toast.error(t('profileReels.unsaveError'));
+      toast.error(vi.profileReels.unsaveError);
     }
   };
 
@@ -203,7 +199,7 @@ export function ProfileReelsPage() {
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-3">
             <Clapperboard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            <h2 className="text-xl font-bold text-foreground">{t('watch.title')}</h2>
+            <h2 className="text-xl font-bold text-foreground">{vi.watch.title}</h2>
           </div>
         </div>
 
@@ -216,7 +212,7 @@ export function ProfileReelsPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${ activeTab === tab.key ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-muted-foreground hover:bg-muted dark:text-muted-foreground' }`}
               >
-                {t(`profileReels.${tab.labelKey}`)}
+                {vi.profileReels[tab.labelKey]}
               </button>
             ))}
           </div>
@@ -242,12 +238,12 @@ export function ProfileReelsPage() {
                 </div>
               </div>
               <h3 className="mb-1 text-lg font-semibold text-foreground">
-                {isOwner && activeTab === 'saved' ? t('profileReels.emptySaved') : t('profileReels.empty')}
+                {isOwner && activeTab === 'saved' ? vi.profileReels.emptySaved : vi.profileReels.empty}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {isOwner && activeTab === 'saved'
-                  ? t('profileReels.emptySavedHint')
-                  : t('profileReels.emptyHint')}
+                  ? vi.profileReels.emptySavedHint
+                  : vi.profileReels.emptyHint}
               </p>
               {isOwner && activeTab === 'saved' && (
                 <button
@@ -255,7 +251,7 @@ export function ProfileReelsPage() {
                   onClick={() => navigate('/watch')}
                   className="mt-4 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                 >
-                  {t('profileReels.exploreWatch')}
+                  {vi.profileReels.exploreWatch}
                 </button>
               )}
             </div>

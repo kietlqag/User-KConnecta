@@ -1,7 +1,7 @@
+import { vi } from '@/constants/vi';
 import * as React from 'react';
 import { Outlet, useNavigate, useLocation, useParams, useOutletContext, useNavigationType } from 'react-router-dom';
 import { Lock } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { Header } from '../../home/components/Header';
 import { EditProfileDialog, ProfileHeader, ProfileTabs } from '../components';
 import { authService, AUTH_USER_CHANGED_EVENT, type AuthUser } from '@/services/authService';
@@ -70,9 +70,7 @@ export function ProfileLayout() {
   const [loading, setLoading] = React.useState(true);
   const [accessDenied, setAccessDenied] = React.useState(false);
   const [blocked, setBlocked] = React.useState(false);
-  const [isEditOpen, setIsEditOpen] = React.useState(false);
-  const { t } = useTranslation();
-  const navigationType = useNavigationType();
+  const [isEditOpen, setIsEditOpen] = React.useState(false);  const navigationType = useNavigationType();
   const locationRef = React.useRef(location);
   locationRef.current = location;
   const loadedProfileRef = React.useRef<{ id: string; username?: string } | null>(null);
@@ -340,8 +338,8 @@ export function ProfileLayout() {
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
                 <Lock className="h-7 w-7 text-muted-foreground" />
               </div>
-              <h2 className="text-lg font-semibold text-foreground">{t('profile.accessDeniedTitle')}</h2>
-              <p className="mt-2 max-w-md text-sm text-muted-foreground">{t('profile.accessDeniedDesc')}</p>
+              <h2 className="text-lg font-semibold text-foreground">{vi.profile.accessDeniedTitle}</h2>
+              <p className="mt-2 max-w-md text-sm text-muted-foreground">{vi.profile.accessDeniedDesc}</p>
             </div>
           </div>
         ) : (

@@ -1,6 +1,7 @@
+import { vi } from '@/constants/vi';
+import { formatVi } from '@/constants/formatVi';
 import { useState, useEffect } from 'react';
 import { Loader2, X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { BirthdayFriend } from '../hooks/useBirthdays';
 import { useSendBirthdayWish } from '../hooks/useBirthdays';
@@ -12,9 +13,7 @@ interface SendWishDialogProps {
   initialMessage?: string;
 }
 
-export function SendWishDialog({ friend, open, onOpenChange, initialMessage = '' }: SendWishDialogProps) {
-  const { t } = useTranslation();
-  const [message, setMessage] = useState(initialMessage);
+export function SendWishDialog({ friend, open, onOpenChange, initialMessage = '' }: SendWishDialogProps) {  const [message, setMessage] = useState(initialMessage);
   const sendWish = useSendBirthdayWish();
 
   useEffect(() => {
@@ -28,21 +27,21 @@ export function SendWishDialog({ friend, open, onOpenChange, initialMessage = ''
   const handleSubmit = async () => {
     const trimmed = message.trim();
     if (!trimmed) {
-      toast.error(t('birthdays.wishRequired'));
+      toast.error(vi.birthdays.wishRequired);
       return;
     }
     if (trimmed.length > 500) {
-      toast.error(t('birthdays.wishMaxLength'));
+      toast.error(vi.birthdays.wishMaxLength);
       return;
     }
 
     try {
       await sendWish.mutateAsync({ recipientId: friend.userId, message: trimmed });
-      toast.success(t('birthdays.sendSuccess', { name: friend.name }));
+      toast.success(formatVi(vi.birthdays.sendSuccess, { name: friend.name }));
       setMessage('');
       onOpenChange(false);
     } catch (error) {
-      toast.error((error as Error).message || t('birthdays.sendError'));
+      toast.error((error as Error).message || vi.birthdays.sendError);
     }
   };
 
@@ -51,7 +50,7 @@ export function SendWishDialog({ friend, open, onOpenChange, initialMessage = ''
       <div className="w-full max-w-md rounded-2xl bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-foreground">
-            {t('birthdays.sendDialogTitle', { name: friend.name })}
+            {formatVi(vi.birthdays.sendDialogTitle, { name: friend.name })}
           </h3>
           <button
             type="button"
@@ -65,7 +64,7 @@ export function SendWishDialog({ friend, open, onOpenChange, initialMessage = ''
         <textarea
           value={message}
           onChange={(event) => setMessage(event.target.value)}
-          placeholder={t('birthdays.wishPlaceholder')}
+          placeholder={vi.birthdays.wishPlaceholder}
           rows={4}
           maxLength={500}
           className="w-full resize-none rounded-xl border border-border bg-muted px-4 py-3 text-sm outline-none focus:border-emerald-500"
@@ -78,7 +77,7 @@ export function SendWishDialog({ friend, open, onOpenChange, initialMessage = ''
             onClick={() => onOpenChange(false)}
             className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
           >
-            {t('common.cancel')}
+            {vi.common.cancel}
           </button>
           <button
             type="button"
@@ -87,7 +86,7 @@ export function SendWishDialog({ friend, open, onOpenChange, initialMessage = ''
             className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
           >
             {sendWish.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {t('birthdays.sendWish')}
+            {vi.birthdays.sendWish}
           </button>
         </div>
       </div>

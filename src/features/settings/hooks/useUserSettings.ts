@@ -1,10 +1,10 @@
+import { vi } from '@/constants/vi';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useTheme } from 'next-themes';
 
 import { toast } from 'sonner';
 
-import i18n from '@/i18n';
 
 import type { UserSettings } from '../types/userSettings.types';
 
@@ -61,7 +61,7 @@ export function useUserSettings() {
 
     } catch (error) {
 
-      const message = error instanceof Error ? error.message : i18n.t('settings.loadError');
+      const message = error instanceof Error ? error.message : vi.settings.loadError;
 
       setLoadError(message);
 
@@ -127,11 +127,11 @@ export function useUserSettings() {
 
       setNotifyMessagesEnabled(data.notifyMessages);
 
-      toast.success(i18n.t('common.saved'));
+      toast.success(vi.common.saved);
 
     } catch (error) {
 
-      toast.error(error instanceof Error ? error.message : i18n.t('settings.saveError'));
+      toast.error(error instanceof Error ? error.message : vi.settings.saveError);
 
     } finally {
 
@@ -161,11 +161,11 @@ export function useUserSettings() {
 
       setSavedSnapshot(data);
 
-      toast.success(i18n.t('settings.unblockSuccess'));
+      toast.success(vi.settings.unblockSuccess);
 
     } catch (error) {
 
-      toast.error(error instanceof Error ? error.message : i18n.t('settings.unblockError'));
+      toast.error(error instanceof Error ? error.message : vi.settings.unblockError);
 
     }
 
@@ -183,11 +183,11 @@ export function useUserSettings() {
 
       setSavedSnapshot(data);
 
-      toast.success(i18n.t('settings.revokeSuccess'));
+      toast.success(vi.settings.revokeSuccess);
 
     } catch (error) {
 
-      toast.error(error instanceof Error ? error.message : i18n.t('settings.revokeError'));
+      toast.error(error instanceof Error ? error.message : vi.settings.revokeError);
 
     }
 
