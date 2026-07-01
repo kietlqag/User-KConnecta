@@ -1,144 +1,130 @@
-# User-UI-KConnecta
+# KConnecta — User Frontend (`user_fe`)
 
-Frontend ứng dụng mạng xã hội **KConnecta** dành cho người dùng cuối, xây dựng bằng React + TypeScript + Vite.
+SPA React phục vụ client người dùng của nền tảng KConnecta. Giao tiếp với `user_be` qua REST và STOMP/WebSocket; media qua Cloudinary; live qua LiveKit; gọi P2P qua WebRTC.
 
-## Tech Stack
+## Ngữ cảnh hệ thống
 
-| Lớp | Công nghệ |
-|-----|-----------|
-| Framework | React 18, TypeScript 5, Vite 6 |
-| Routing | React Router 7 |
-| State / Fetching | TanStack Query (React Query 5) |
-| UI Components | Radix UI, shadcn/ui, Lucide React |
-| Styling | Tailwind CSS 4 |
-| Forms | React Hook Form 7 |
-| Real-time (chat / gọi / live) | STOMP over WebSocket (`@stomp/stompjs`) |
-| Video/Audio call | WebRTC |
-| Livestream | LiveKit (`livekit-client`) |
-| Charts | Recharts |
-| Toast UI | Sonner, React Hot Toast |
-| Theme | next-themes (dark / light) |
-| i18n | i18next (tiếng Việt) |
+```
+┌─────────────┐     REST /api      ┌──────────────┐
+│  user_fe    │◄──────────────────►│   user_be    │
+│  (Vite SPA) │     WS  /ws        │ Spring Boot  │
+└──────┬──────┘                    └──────┬───────┘
+       │                                  │
+       │ WebRTC (signaling qua WS)         ├── PostgreSQL
+       │ LiveKit SDK                       ├── Redis (search)
+       ▼                                  └── Cloudinary / R2 (media, HLS)
+  Cloudinary CDN
+```
 
-## Tính năng đã triển khai
+| Thành phần | Đường dẫn | Vai trò |
+|------------|-----------|---------|
+| User API | [`../user_be`](../user_be) | Backend bắt buộc |
+| Admin | [`../../Admin`](../../Admin) | Ứng dụng quản trị độc lập |
 
-- **Xác thực**: đăng nhập, đăng ký nhiều bước, OTP qua email, Google OAuth, 2FA, quên mật khẩu
-- **Newsfeed**: bài viết (`POST`), stories, reactions, bình luận, lên lịch đăng
-- **Hồ sơ cá nhân**: ảnh đại diện, bìa, bài viết, ảnh, thước phim (reel)
-- **Bạn bè & sinh nhật**: gợi ý, lời mời kết bạn, trang sinh nhật
-- **Nhóm**: tạo/khám phá nhóm, feed nhóm, thành viên, sự kiện, bình chọn
-- **Nhắn tin (Messenger)**: chat thời gian thực (STOMP), gọi thoại / video (WebRTC), ghi âm
-- **Thông báo**: panel thông báo, **làm mới định kỳ qua REST API (~30 giây)** — chưa dùng WebSocket trên FE
-- **Tin nhắn mới**: toast khi có tin nhắn đến (STOMP, tách khỏi panel thông báo)
-- **Tìm kiếm**: người dùng, nhóm, bài viết, reel (Redis Search phía backend)
-- **Watch (Reels)**: xem reel (`REEL`), lưu reel, tạo reel riêng (tách khỏi đăng bài thường)
-- **Live**: phát trực tiếp (LiveKit), lên lịch, xem live; HLS/DVR khi bật egress + lưu trữ object
-- **Album**: tạo album, thêm media từ bài viết
-- **Đã lưu**: bài viết đã lưu và bộ sưu tập
-- **Cài đặt**: bảo mật, quyền riêng tư, giao diện, nhắc nhở / thời gian sử dụng
-- **Hỗ trợ**: gửi yêu cầu hỗ trợ (đồng bộ với Admin)
+## Stack
 
-> **Quản trị**: ứng dụng Admin riêng tại `../../Admin` (kiểm duyệt, báo cáo, chính sách, thống kê).
+| | |
+|---|---|
+| Runtime | Node.js ≥ 18, npm ≥ 9 |
+| UI | React 18, TypeScript 5, Vite 6 |
+| Router | React Router 7 (lazy routes) |
+| Data | TanStack Query 5, Axios |
+| Styling | Tailwind CSS 4, Radix UI |
+| Realtime | `@stomp/stompjs` |
+| Media | `livekit-client`, `hls.js`, WebRTC |
 
-## Phạm vi chưa triển khai (frontend)
-
-Các mục sau **chưa có** trong codebase user FE — không liệt kê như tính năng sẵn có:
-
-| Mục | Trạng thái |
-|-----|------------|
-| **Marketplace** (chợ / đăng sản phẩm) | Chưa triển khai |
-| **Trang Facebook-style (Pages)** | Chỉ có entity phía backend, chưa có UI |
-| **Bảng điều khiển thống kê người dùng** | Đã gỡ khỏi sidebar (không còn route `/dashboard`) |
-| **Thông báo push WebSocket trên panel** | Backend REST đủ dùng; FE poll 30s |
-
-## Realtime — phạm vi thực tế
-
-| Kênh | Cơ chế |
-|------|--------|
-| Chat, typing, presence | STOMP / WebSocket |
-| Gọi thoại / video (mesh P2P) | WebRTC + signaling STOMP |
-| Phiên live (host/viewer) | STOMP + LiveKit |
-| Panel thông báo (like, comment, kết bạn…) | REST, poll **30s** (`useNotifications.ts`) |
-| Toast tin nhắn mới | STOMP (`useMessageNotifications`) |
-
-## Yêu cầu
-
-- Node.js ≥ 18
-- npm ≥ 9
-- Backend KConnecta đang chạy (xem [`../user_be`](../user_be))
-
-## Cài đặt & chạy
+## Cài đặt
 
 ```bash
-# Cài dependencies
 npm install
-
-# Khởi động dev server (http://localhost:3000)
-npm run dev
-
-# Build production
-npm run build
 ```
 
-## Biến môi trường
+## Scripts
 
-Tạo file `.env` ở thư mục gốc (hoặc cấu hình trên Vercel):
+| Lệnh | Mô tả |
+|------|--------|
+| `npm run dev` | Dev server — mặc định `http://localhost:3000` |
+| `npm run build` | Production build → thư mục `build/` |
 
-```env
-# URL của backend (bắt buộc dùng https:// trên production để WebSocket dùng wss://)
-VITE_API_URL=https://<your-render-backend-domain>
+## Cấu hình môi trường
 
-# --- Cấu hình WebRTC ICE Servers ---
+Tạo `.env` tại root `user_fe` (hoặc biến môi trường trên Vercel). Tất cả biến client phải có prefix `VITE_`.
 
-# Cách A: chuỗi gộp, mỗi server cách nhau bằng ";"
-# Định dạng mỗi entry: <urls>|<username>|<credential>  (STUN có thể bỏ qua username/credential)
-# VITE_WEBRTC_ICE_SERVERS=stun:stun.l.google.com:19302;turn:turn.your-domain.com:3478|user|pass;turns:turn.your-domain.com:5349|user|pass
+| Biến | Bắt buộc | Mặc định (dev) | Mô tả |
+|------|----------|----------------|--------|
+| `VITE_API_URL` | Production: có | — (dùng proxy) | Origin backend, không kèm `/api`. Dev + `localhost:8080` → FE proxy `/api` |
+| `VITE_APP_URL` | Không | `window.location.origin` | Origin public cho link chia sẻ |
+| `VITE_GOOGLE_CLIENT_ID` | Nếu bật Google login | — | OAuth client ID |
+| `VITE_WEBRTC_ICE_SERVERS` | Không | Google STUN | Chuỗi ICE: `url\|user\|pass` ngăn cách `;` |
+| `VITE_STUN_URLS` | Không | — | STUN CSV (khi không dùng `VITE_WEBRTC_ICE_SERVERS`) |
+| `VITE_TURN_URLS` | Không | — | TURN CSV |
+| `VITE_TURN_USERNAME` | Khi có TURN | — | |
+| `VITE_TURN_CREDENTIAL` | Khi có TURN | — | |
+| `VITE_WEBRTC_FORCE_RELAY` | Không | `false` | Ép `iceTransportPolicy: relay` |
+| `VITE_WEBRTC_DEBUG` | Không | `false` | Log WebRTC |
+| `VITE_MODERATION_URL` | Không | — | Override URL moderation (nếu tách service) |
 
-# Cách B: tách từng biến (dùng khi không dùng Cách A)
-VITE_STUN_URLS=stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302
-VITE_TURN_URLS=turn:turn.your-domain.com:3478,turns:turn.your-domain.com:5349
-VITE_TURN_USERNAME=<turn-username>
-VITE_TURN_CREDENTIAL=<turn-password>
+### Dev proxy (`vite.config.ts`)
 
-# Tùy chọn debug
-VITE_WEBRTC_DEBUG=true          # Bật log chi tiết WebRTC
-VITE_WEBRTC_FORCE_RELAY=true    # Ép dùng TURN (tắt sau khi debug xong)
-```
+| Path FE | Target | Ghi chú |
+|---------|--------|---------|
+| `/api/*` | `http://localhost:8080` | Cookie auth same-origin |
+| `/ws/*` | `ws://localhost:8080` | STOMP |
 
-> **Lưu ý TURN server**: Khi người dùng ở các mạng khác nhau (4G vs Wi-Fi), cần TURN server để đảm bảo kết nối gọi ổn định.
+Khi `VITE_API_URL` trỏ `http://localhost:8080`, `getApiBaseUrl()` và `getWsBaseUrl()` tự chuyển sang proxy — không gọi thẳng `:8080` từ browser.
 
-## Cấu trúc thư mục
+## Build & triển khai
+
+- **Output:** `build/` (không phải `dist/`)
+- **Platform:** Vercel (`vercel.json`) — SPA fallback `/* → /index.html`
+- **Production:** đặt `VITE_API_URL=https://<backend-host>` (HTTPS → WSS tự suy ra)
+- **CSP:** header trong `vercel.json`; cập nhật `connect-src` / `media-src` khi đổi domain backend, LiveKit, R2
+
+Backend mặc định local: `http://localhost:8080`.
+
+## Kiến trúc mã nguồn
 
 ```
 src/
-├── assets/             # Hình ảnh tĩnh
-├── components/         # UI dùng chung (shadcn/ui, shared, reactions)
-├── features/           # Mỗi tính năng là một module độc lập
-│   ├── auth/           #   Xác thực
-│   ├── home/           #   Newsfeed
-│   ├── profile/        #   Hồ sơ cá nhân & đăng bài
-│   ├── friends/        #   Bạn bè
-│   ├── birthdays/      #   Sinh nhật
-│   ├── groups/         #   Nhóm
-│   ├── messenger/      #   Nhắn tin & gọi video
-│   ├── notifications/  #   Panel thông báo (REST poll)
-│   ├── search/         #   Tìm kiếm
-│   ├── watch/          #   Reels / video ngắn
-│   ├── live/           #   Livestream
-│   ├── stories/        #   Stories
-│   ├── albums/         #   Album ảnh/video
-│   ├── saved/          #   Đã lưu & bộ sưu tập
-│   ├── settings/       #   Cài đặt tài khoản
-│   ├── support/        #   Yêu cầu hỗ trợ
-│   └── account/        #   Menu tài khoản
-├── i18n/               # Bản dịch (vi)
-├── layouts/            # Layout wrapper
-├── routes/             # Định nghĩa routes
-├── services/           # API client (axios), auth service
-├── lib/                # Tiện ích (cn, ...)
-└── utils/              # apiBaseUrl, webrtcConfig
+├── routes/           # createBrowserRouter, RouteGuards, lazy loading
+├── layouts/          # MainLayout, AuthLayout
+├── services/         # Axios client, domain API wrappers
+├── features/         # Module theo domain (pages, components, hooks)
+├── components/       # Shared UI (shadcn, Post, reactions)
+├── contexts/         # RealtimeCallProvider, SidebarContext
+├── hooks/            # Cross-feature hooks
+├── i18n/             # i18next — locale `vi`
+├── utils/            # apiBaseUrl, webrtcConfig, policy validation
+└── lib/              # cn(), helpers
 ```
 
-## Thiết kế gốc
+**Alias:** `@/` → `src/` (Vite + TypeScript).
 
-Figma: [User-UI-KConnecta](https://www.figma.com/design/nbOWtCRDVQ5InzpBFJk11j/User-UI-KConnecta)
+**Routing:** protected routes bọc `ProtectedRoute`; messenger/live/watch mount dưới `RealtimeLayout` (STOMP + call context).
+
+**State:** server state qua React Query; auth user trong `localStorage` (`authService`); không Redux.
+
+## Tích hợp runtime
+
+| Subsystem | Client entry | Transport |
+|-----------|--------------|-----------|
+| REST API | `services/api.ts` | HTTPS `/api`, cookie + JWT refresh |
+| Chat / signaling | `useChatSocket`, messenger hooks | STOMP `/ws` |
+| Voice/video call | `useVoiceCall`, `RealtimeCallContext` | WebRTC + STOMP signaling |
+| Live | `livekit-client`, `useLiveHlsPlayback` | LiveKit token từ API; HLS optional |
+| Notifications panel | `useNotifications` | REST poll 30s |
+| Message toast | `useMessageNotifications` | STOMP |
+| Search | `searchService` | REST (index Redis phía BE) |
+
+**Post model:** `postType` = `POST` \| `REEL` — feed và Watch tách pipeline tạo/nạp dữ liệu.
+
+## Bảo mật client
+
+- Request API: `withCredentials: true` (HttpOnly refresh cookie)
+- 401: auto refresh token, redirect login khi hết phiên
+- Dev/preview: security headers trong `security-headers.ts`
+- Production CSP: `vercel.json`
+
+## Thiết kế UI
+
+[Figma — User-UI-KConnecta](https://www.figma.com/design/nbOWtCRDVQ5InzpBFJk11j/User-UI-KConnecta)
