@@ -1,8 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Pupil, EyeBall } from "@/features/auth/components/EyeCharacters";
+import { ShieldCheck, User, MessageSquare, Database } from "lucide-react";
 import { EmailStep, OTPVerificationStep, PasswordStep, ProfileSetupStep } from "../components/signup-steps";
 import { resolveGoogleSignupSession, clearGoogleSignupSession } from "../utils/googleSignupSession";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import logoV1 from "@/assets/LogoKConnecta_V1.png";
 
 type SignupStep = "email" | "otp" | "password" | "profile";
@@ -29,6 +40,21 @@ export function RegisterPage() {
     [location.state],
   );
   const isGoogleSignup = Boolean(googleSignupSession);
+
+  const [isConsentOpen, setIsConsentOpen] = useState(true);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [hasConsented, setHasConsented] = useState(false);
+
+  const handleCancelConsent = () => {
+    setIsConsentOpen(false);
+    clearGoogleSignupSession();
+    navigate("/auth/login", { replace: true });
+  };
+
+  const handleAcceptConsent = () => {
+    setIsConsentOpen(false);
+    setHasConsented(true);
+  };
 
   const [currentStep, setCurrentStep] = useState<SignupStep>(isGoogleSignup ? "profile" : "email");
   const [signupData, setSignupData] = useState<SignupData>({
@@ -310,6 +336,100 @@ export function RegisterPage() {
           )}
         </div>
       </div>
+
+      {isConsentOpen && (
+        <Dialog open={isConsentOpen} onOpenChange={(open) => { if (!open) handleCancelConsent(); }}>
+          <DialogContent 
+            className="sm:max-w-lg bg-card border-border shadow-2xl p-5 rounded-2xl"
+            onPointerDownOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
+            <DialogHeader className="space-y-2 text-center">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <ShieldCheck className="h-5.5 w-5.5" />
+              </div>
+              <DialogTitle className="text-center text-lg font-bold text-foreground">
+                Điều khoản dữ liệu & Quyền riêng tư
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="text-sm leading-relaxed space-y-3 px-1 py-1 text-muted-foreground">
+              <p className="text-foreground/90 font-medium text-center text-xs leading-relaxed px-4">
+                Bằng việc nhấn <strong className="text-primary font-semibold">Tiếp tục</strong>, bạn đồng ý cho phép KConnecta thu thập và xử lý các dữ liệu của bạn để phục vụ các dịch vụ trên hệ thống:
+              </p>
+              
+              <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-3.5">
+                <div className="flex items-start gap-3 text-sm">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary mt-0.5">
+                    <User className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-xs">Thông tin cá nhân</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">Email, Họ tên, Ảnh đại diện để thiết lập tài khoản và hồ sơ cá nhân.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 text-sm border-t border-border/50 pt-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary mt-0.5">
+                    <MessageSquare className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-xs">Nội dung & Hoạt động</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">Các bài viết, bình luận, tin nhắn và hoạt động tương tác của bạn.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 text-sm border-t border-border/50 pt-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary mt-0.5">
+                    <Database className="h-4.5 w-4.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-xs">Dữ liệu hệ thống</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">Thông tin thiết bị, địa chỉ IP nhằm bảo mật và tối ưu hệ thống.</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[11px] leading-normal pt-1 text-center px-4">
+                Chúng tôi cam kết bảo mật thông tin theo đúng{" "}
+                <Link to="/privacy" target="_blank" className="font-semibold text-primary hover:underline">Chính sách bảo mật</Link> và{" "}
+                <Link to="/terms" target="_blank" className="font-semibold text-primary hover:underline">Điều khoản dịch vụ</Link> của chúng tôi.
+              </p>
+            </div>
+
+            <div className="flex items-start space-x-2.5 py-1 px-1 mt-1">
+              <Checkbox
+                id="consent-checkbox"
+                checked={consentChecked}
+                onCheckedChange={(checked) => setConsentChecked(checked === true)}
+                className="mt-0.5 cursor-pointer border-primary/50 shrink-0"
+              />
+              <label htmlFor="consent-checkbox" className="cursor-pointer text-xs font-semibold leading-relaxed text-foreground select-none">
+                Tôi đồng ý cho phép KConnecta thu thập và xử lý các dữ liệu của tôi như nêu trên.
+              </label>
+            </div>
+
+            <DialogFooter className="gap-2.5 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelConsent}
+                className="h-10 rounded-[8px] border-border hover:bg-muted text-foreground text-xs px-5"
+              >
+                Hủy
+              </Button>
+              <Button
+                type="button"
+                disabled={!consentChecked}
+                onClick={handleAcceptConsent}
+                className="h-10 rounded-[8px] bg-primary text-white hover:bg-primary/95 disabled:opacity-50 text-xs px-5"
+              >
+                Tiếp tục
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
