@@ -396,7 +396,8 @@ public class ChatServiceImpl implements ChatService {
         if (!Boolean.TRUE.equals(message.getDeleted())) {
             message.setDeleted(true);
             message.setDeletedAt(LocalDateTime.now());
-            message.setContent("Tin nhắn đã được gỡ");
+            // Nội dung gốc được giữ nguyên trong DB (chỉ đánh dấu deleted=true) để Admin vẫn xem được
+            // khi kiểm duyệt; phía người dùng tự hiển thị "Tin nhắn đã được gỡ" dựa trên cờ deleted.
             chatMessageRepository.save(message);
             chatMessageReactionRepository.deleteByMessageId(messageId);
         }
@@ -404,6 +405,14 @@ public class ChatServiceImpl implements ChatService {
         ChatMessageResponse updated = toMessageResponse(message);
         broadcastMessageUpdate(message, updated);
         return updated;
+    }
+
+    @Override
+    public void syncMessageStatusFromAdmin(UUID messageId) {
+        chatMessageRepository.findByIdWithUsers(messageId).ifPresent(message -> {
+            ChatMessageResponse response = toMessageResponse(message);
+            broadcastMessageUpdate(message, response);
+        });
     }
 
     @Override
@@ -1647,7 +1656,8 @@ public class ChatServiceImpl implements ChatService {
                 message.getSeenAt(),
                 message.getDeleted(),
                 message.getDeletedAt(),
-                reactions
+                reactions,
+                message.getStatus()
         );
     }
 

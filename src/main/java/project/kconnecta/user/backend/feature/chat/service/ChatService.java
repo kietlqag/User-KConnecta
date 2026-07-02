@@ -39,6 +39,7 @@ public interface ChatService {
     void markConversationSeen(String currentUsername, UUID peerUserId);
     ChatMessageResponse updateMessageReaction(String currentUsername, UUID messageId, MessageReactionRequest request);
     ChatMessageResponse deleteMessage(String currentUsername, UUID messageId);
+    void syncMessageStatusFromAdmin(UUID messageId);
     void reportMessage(String currentUsername, UUID messageId, MessageReportRequest request);
 
     ChatHistoryPageResponse getChatHistory(UUID userId1, UUID userId2, LocalDateTime beforeCreatedAt, Integer limit);

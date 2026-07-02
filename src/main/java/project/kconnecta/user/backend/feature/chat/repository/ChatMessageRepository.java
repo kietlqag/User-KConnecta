@@ -60,7 +60,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
                 m.seenAt,
                 m.deleted,
                 m.deletedAt,
-                null
+                null,
+                m.status
             )
             FROM ChatMessage m
             JOIN m.sender s
@@ -103,7 +104,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
                 m.seenAt,
                 m.deleted,
                 m.deletedAt,
-                null
+                null,
+                m.status
             )
             FROM ChatMessage m
             JOIN m.sender s
@@ -170,7 +172,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
                         WHEN m.sender_id = :currentUserId THEN m.receiver_id
                         ELSE m.sender_id
                     END AS peer_user_id,
-                    m.content AS last_message_content,
+                    CASE
+                        WHEN m.deleted THEN 'Tin nhắn đã được gỡ'
+                        WHEN m.status = 'HIDDEN' THEN 'Tin nhắn này đã bị ẩn do vi phạm tiêu chuẩn cộng đồng'
+                        ELSE m.content
+                    END AS last_message_content,
                     m.sender_id AS last_message_sender_id,
                     m.created_at AS last_message_created_at
                 FROM chat_messages m
@@ -202,7 +208,11 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
                         WHEN m.sender_id = :currentUserId THEN m.receiver_id
                         ELSE m.sender_id
                     END AS peer_user_id,
-                    m.content AS last_message_content,
+                    CASE
+                        WHEN m.deleted THEN 'Tin nhắn đã được gỡ'
+                        WHEN m.status = 'HIDDEN' THEN 'Tin nhắn này đã bị ẩn do vi phạm tiêu chuẩn cộng đồng'
+                        ELSE m.content
+                    END AS last_message_content,
                     m.sender_id AS last_message_sender_id,
                     m.created_at AS last_message_created_at
                 FROM chat_messages m

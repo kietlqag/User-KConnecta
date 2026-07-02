@@ -27,4 +27,5 @@ public class ChatMessageResponse {
     private Boolean deleted;
     private LocalDateTime deletedAt;
     private List<String> reactions;
+    private String status;
 }

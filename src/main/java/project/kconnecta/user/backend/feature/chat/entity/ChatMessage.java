@@ -65,4 +65,8 @@ public class ChatMessage {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @Builder.Default
+    @Column(name = "status", length = 20)
+    private String status = "ACTIVE";
 }
