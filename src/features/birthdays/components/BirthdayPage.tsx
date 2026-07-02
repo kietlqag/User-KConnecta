@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 function formatGroupLabel(
   friends: BirthdayFriend[],
-  t: (key: string, options?: Record<string, unknown>) => string,
+
 ): string {
   if (friends.length === 0) return '';
   if (friends.length === 1) return friends[0].name;
@@ -35,8 +35,8 @@ const PANEL_CLASS =
 const QUICK_WISH_KEYS = ['quickWish1', 'quickWish2', 'quickWish3', 'quickWish4'] as const;
 
 function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWish }: BirthdayFriendCardProps) {  const quickWishes = useMemo(
-    () => QUICK_WISH_KEYS.map((key) => t(`birthdays.${key}`)),
-    [t],
+    () => QUICK_WISH_KEYS.map((key) => vi.birthdays[key]),
+    [],
   );
 
   const birthDate = new Date(friend.birthDate);
@@ -197,7 +197,7 @@ export function BirthdayPage() {  const [searchQuery, setSearchQuery] = useStat
                       {formatVi(vi.birthdays.month, { month: group.month })}
                     </h3>
                     <p className="mb-3 text-sm text-muted-foreground">
-                      {formatGroupLabel(group.friends, t)}
+                      {formatGroupLabel(group.friends)}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {group.friends.map((friend) => (

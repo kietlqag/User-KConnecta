@@ -47,6 +47,10 @@ export interface AuthUser {
   requiresProfileSetup?: boolean;
   requiresTwoFactor?: boolean;
   twoFactorToken?: string;
+  /** True when the user is currently under a temporary comment ban. */
+  commentLocked?: boolean;
+  /** True when the user is currently under a temporary post ban. */
+  postLocked?: boolean;
 }
 
 export interface RegisterData {

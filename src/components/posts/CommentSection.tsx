@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { FileText, ChevronDown } from 'lucide-react';
+import { FileText, ChevronDown, Ban } from 'lucide-react';
 import { toast } from 'sonner';
-import { authService } from '@/services/authService';
+import { authService, AUTH_USER_CHANGED_EVENT } from '@/services/authService';
 import { postService, type PostCommentResponse } from '@/services/postService';
 import { CommentInput } from './CommentInput';
 import { CommentItem, type Comment } from './CommentItem';
@@ -64,8 +64,33 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
   const [sortBy, setSortBy] = useState<SortValue>('oldest');
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
+  const [commentLocked, setCommentLocked] = useState(
+    () => authService.getCurrentUser()?.commentLocked ?? false,
+  );
+
+  // Sync commentLocked whenever authUser changes (e.g. after ban notification arrives)
+  useEffect(() => {
+    const syncLock = () =>
+      setCommentLocked(authService.getCurrentUser()?.commentLocked ?? false);
+    window.addEventListener(AUTH_USER_CHANGED_EVENT, syncLock);
+    return () => window.removeEventListener(AUTH_USER_CHANGED_EVENT, syncLock);
+  }, []);
 
   const activeSort = SORT_OPTIONS.find((o) => o.value === sortBy) ?? SORT_OPTIONS[1];
+
+  // Sau khi một lần gửi bình luận/trả lời bị từ chối, hỏi lại server xem tài khoản có vừa
+  // bị khóa bình luận không — không đợi vòng poll thông báo mới khóa được ô nhập ngay.
+  const syncCommentLockFromServer = useCallback(async (userId: string) => {
+    try {
+      const fresh = await authService.getUserById(userId);
+      if (fresh.commentLocked) {
+        setCommentLocked(true);
+        authService.saveCurrentUser({ ...authService.getCurrentUser(), ...fresh });
+      }
+    } catch {
+      // Bỏ qua — trạng thái khóa sẽ được đồng bộ lại ở vòng poll thông báo tiếp theo.
+    }
+  }, []);
 
   useEffect(() => {
     if (!sortMenuOpen) return;
@@ -102,6 +127,16 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
     setPage(0);
     setHasMore(false);
     void fetchPage(0, false);
+  }, [fetchPage]);
+
+  useEffect(() => {
+    const handleNotificationRefresh = () => {
+      void fetchPage(0, false);
+    };
+    window.addEventListener('notification:refresh', handleNotificationRefresh);
+    return () => {
+      window.removeEventListener('notification:refresh', handleNotificationRefresh);
+    };
   }, [fetchPage]);
 
   const handleLoadMore = () => {
@@ -149,6 +184,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể gửi bình luận');
+      void syncCommentLockFromServer(currentUser.id);
     } finally {
       setIsSubmitting(false);
     }
@@ -190,6 +226,7 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
       );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể gửi trả lời');
+      void syncCommentLockFromServer(currentUser.id);
       throw error;
     }
   };
@@ -261,14 +298,24 @@ export function CommentSection({ postId, onCommentAdded, onCommentsLoaded }: Com
       <div
         className={`sticky bottom-0 -mx-4 -mb-3 rounded-b-lg border-t border-border bg-card px-4 py-3 ${ isSubmitting ? 'pointer-events-none opacity-70' : '' }`}
       >
-        <CommentInput
-          onSubmit={handleAddComment}
-          enableImage
-          userName={authService.getCurrentUser()?.fullName}
-          userId={authService.getCurrentUser()?.id}
-          userAvatar={authService.getCurrentUser()?.avatarUrl}
-          placeholder={`Bình luận dưới tên ${authService.getCurrentUser()?.fullName || 'bạn'}`}
-        />
+        {commentLocked ? (
+          <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-4 py-3">
+            <Ban className="h-5 w-5 shrink-0 text-red-500" />
+            <p className="text-sm text-red-700 dark:text-red-400">
+              Bạn đang bị tạm cấm bình luận. Vui lòng thử lại sau khi lệnh cấm hết hạn.
+            </p>
+          </div>
+        ) : (
+          <CommentInput
+            onSubmit={handleAddComment}
+            enableImage
+            userName={authService.getCurrentUser()?.fullName}
+            userId={authService.getCurrentUser()?.id}
+            userAvatar={authService.getCurrentUser()?.avatarUrl}
+            placeholder={`Bình luận dưới tên ${authService.getCurrentUser()?.fullName || 'bạn'}`}
+            autoFocus
+          />
+        )}
       </div>
     </div>
   );

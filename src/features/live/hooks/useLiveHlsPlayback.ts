@@ -155,7 +155,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           onFatalErrorRef.current?.();
           return;
         }
-
         if (recovering) return;
         recovering = true;
         window.setTimeout(() => { recovering = false; }, 3000);
@@ -168,6 +167,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           hls.recoverMediaError();
           return;
         }
+
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       const loadNative = () => {

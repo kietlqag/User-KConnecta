@@ -26,7 +26,8 @@ export const FriendCard = ({
   pendingFriendshipId,
   onRemoveSuggestion,
   showRemove = false,
-}: FriendCardProps) => {  const [loading, setLoading] = useState<'add' | 'cancel' | 'unfriend' | 'remove' | null>(null);
+}: FriendCardProps) => {
+  const [loading, setLoading] = useState<'add' | 'cancel' | 'unfriend' | 'remove' | null>(null);
 
   const handleAdd = async () => {
     if (!onAddFriend) return;

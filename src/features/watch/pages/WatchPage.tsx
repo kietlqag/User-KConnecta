@@ -43,7 +43,8 @@ const WatchSidebar = ({
   showSavedTab: boolean;
   showCreateReel: boolean;
   onCreateReel: () => void;
-}) => {
+}) => {
+
   return (
   <aside className="hidden lg:flex fixed top-14 left-0 z-40 h-[calc(100vh-56px)] w-[320px] flex-col gap-1 border-r border-border bg-card px-3 py-4">
     <h1 className="px-3 pb-3 text-2xl font-bold text-foreground">{vi.watch.title}</h1>
@@ -93,7 +94,8 @@ const WatchSidebar = ({
   );
 };
 
-export const WatchPage = () => {  const [currentReelIndex, setCurrentReelIndex] = useState(0);
+export const WatchPage = () => {
+  const [currentReelIndex, setCurrentReelIndex] = useState(0);
   const [watchTab, setWatchTab] = useState<WatchTab>('forYou');
   const [showCreateReelModal, setShowCreateReelModal] = useState(false);
   const viewportRef = useRef<ReelSlideViewportHandle>(null);
@@ -242,7 +244,7 @@ export const WatchPage = () => {  const [currentReelIndex, setCurrentReelIndex]
     if (isLoading) return vi.watch.loading;
     if (isFetchingNextPage && reels.length === 0) return vi.watch.loading;
     return null;
-  }, [currentUser?.id, isLoading, isFetchingNextPage, reels.length, t]);
+  }, [currentUser?.id, isLoading, isFetchingNextPage, reels.length]);
 
   return (
     <div className="h-screen bg-card overflow-hidden">

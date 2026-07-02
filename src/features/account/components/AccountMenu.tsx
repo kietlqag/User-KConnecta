@@ -9,7 +9,8 @@ interface AccountMenuProps {
   onClose: () => void;
 }
 
-export function AccountMenu({ onClose }: AccountMenuProps) {  const menuRef = useRef<HTMLDivElement>(null);
+export function AccountMenu({ onClose }: AccountMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
   const [loggingOut, setLoggingOut] = useState(false);

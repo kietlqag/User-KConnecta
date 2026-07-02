@@ -70,7 +70,8 @@ export function ProfileLayout() {
   const [loading, setLoading] = React.useState(true);
   const [accessDenied, setAccessDenied] = React.useState(false);
   const [blocked, setBlocked] = React.useState(false);
-  const [isEditOpen, setIsEditOpen] = React.useState(false);  const navigationType = useNavigationType();
+  const [isEditOpen, setIsEditOpen] = React.useState(false);
+  const navigationType = useNavigationType();
   const locationRef = React.useRef(location);
   locationRef.current = location;
   const loadedProfileRef = React.useRef<{ id: string; username?: string } | null>(null);

@@ -1,4 +1,5 @@
-﻿import * as React from 'react';
+import * as React from 'react';
+import { vi } from '@/constants/vi';
 import { Link, useLocation } from 'react-router-dom';
 import { logProfileTabClick, type ProfileTabId } from '../../utils/profileTabLogger';
 
@@ -39,7 +40,7 @@ export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {  const 
                 onClick={() => logProfileTabClick(tab.labelKey, tab.path, currentPath)}
                 className={`whitespace-nowrap border-b-4 px-4 py-4 font-medium transition-colors ${ isActive(tab.path) ? 'border-emerald-600 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400' : 'border-transparent text-muted-foreground hover:bg-muted dark:text-muted-foreground' }`}
               >
-                {t(`profileTabs.${tab.labelKey}`)}
+                {vi.profileTabs[tab.labelKey]}
               </Link>
             ))}
 

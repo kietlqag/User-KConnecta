@@ -242,7 +242,11 @@ export function PostDetailModal({
               buttonClassName="cursor-pointer disabled:cursor-not-allowed"
             />
 
-            <button className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-muted cursor-pointer">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('comment-input:focus'))}
+              className="flex items-center justify-center gap-2 rounded-md py-2 transition-colors hover:bg-muted cursor-pointer"
+            >
               <MessageCircle className="h-5 w-5 text-muted-foreground" />
               <span className="text-[15px] font-semibold text-muted-foreground">Bình luận</span>
             </button>

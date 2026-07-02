@@ -47,6 +47,14 @@ export function CommentInput({
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [showEmojiPicker]);
 
+  useEffect(() => {
+    const handleGlobalFocus = () => {
+      inputRef.current?.focus();
+    };
+    window.addEventListener('comment-input:focus', handleGlobalFocus);
+    return () => window.removeEventListener('comment-input:focus', handleGlobalFocus);
+  }, []);
+
   const handleEmojiSelect = (emoji: { native?: string }) => {
     const native = emoji.native;
     if (!native) return;

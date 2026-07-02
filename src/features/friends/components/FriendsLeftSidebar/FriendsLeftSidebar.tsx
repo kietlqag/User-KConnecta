@@ -42,7 +42,7 @@ export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: Fri
                   {item.icon}
                 </div>
                 <span className={`font-medium ${activeTab === item.id ? 'text-emerald-600' : 'text-foreground'}`}>
-                  {t(`friendsPage.${item.labelKey}`)}
+                  {vi.friendsPage[item.labelKey]}
                 </span>
               </div>
               {item.count != null && item.count > 0 && (

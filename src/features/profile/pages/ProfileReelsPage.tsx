@@ -31,7 +31,8 @@ function ReelsGrid({
   showUnsave?: boolean;
   onUnsave?: (postId: string) => void;
   onOpen: (postId: string) => void;
-}) {
+}) {
+
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {reels.map((reel) => (
@@ -77,7 +78,8 @@ function ReelsGrid({
   );
 }
 
-export function ProfileReelsPage() {  const navigate = useNavigate();
+export function ProfileReelsPage() {
+  const navigate = useNavigate();
   const { profile, resolvedId, isOwnProfile, loading: profileLoading } = useProfileLayoutContext();
   useProfileTabDebug('watch', resolvedId);
   const [currentUser, setCurrentUser] = React.useState(() => authService.getCurrentUser());

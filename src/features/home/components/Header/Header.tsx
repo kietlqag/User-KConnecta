@@ -21,7 +21,8 @@ import logoV2 from '@/assets/LogoKConnecta_V2.png';
 import { LIVE_NAV_LABEL } from '@/components/shared';
 import { refreshHomeFeed } from '../../hooks/usePosts';
 
-export function Header() {  const [showMessenger, setShowMessenger] = useState(false);
+export function Header() {
+  const [showMessenger, setShowMessenger] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
@@ -120,7 +121,7 @@ export function Header() {  const [showMessenger, setShowMessenger] = useState(
     { icon: <Clapperboard className="w-6 h-6" />, href: '/watch', label: vi.nav.watch },
     { icon: <Shapes className="w-6 h-6" />, href: '/groups', label: vi.nav.groups },
     { icon: <Radio className="w-6 h-6" />, href: '/live', label: LIVE_NAV_LABEL },
-  ], [t]);
+  ], []);
 
   const headerActionBtnClass =
     'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors cursor-pointer hover:bg-muted/80';

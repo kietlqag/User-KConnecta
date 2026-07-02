@@ -60,6 +60,18 @@ export function useNotifications() {
           queueRef.current.enqueue(n);
         });
         processQueue();
+
+        // Real-time ban detection: if any new SYSTEM notification signals a comment ban,
+        // update the cached auth user immediately so CommentSection locks without reload.
+        const hasCommentBan = newOnes.some(
+          (n) => n.type === 'system' && n.text.includes('tạm cấm bình luận'),
+        );
+        if (hasCommentBan) {
+          const currentUser = authService.getCurrentUser();
+          if (currentUser) {
+            authService.saveCurrentUser({ ...currentUser, commentLocked: true });
+          }
+        }
       }
 
       setUnreadCount(data.filter((n) => n.isUnread).length);

@@ -238,7 +238,7 @@ export function ProfileCreatePostModal({
       setIsCheckingContent(true);
       try {
         const verifyRes = await postService.verifyContent(trimmedText);
-        if (verifyRes.level === 'AI_UNSAFE') {
+        if (verifyRes.level === 'AI_UNSAFE' || verifyRes.level === 'BLACKLIST') {
           toast.error(verifyRes.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
           return;
         }
@@ -445,7 +445,7 @@ export function ProfileCreatePostModal({
       const trimmedText = postContent.trim();
       if (trimmedText.length >= 5 && !checkKeywords(postContent, publicPolicy)) {
         const verifyRes = await postService.verifyContent(trimmedText);
-        if (verifyRes.level === 'AI_UNSAFE') {
+        if (verifyRes.level === 'AI_UNSAFE' || verifyRes.level === 'BLACKLIST') {
           toast.error(verifyRes.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
           setIsPosting(false);
           return;

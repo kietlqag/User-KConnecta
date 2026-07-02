@@ -848,7 +848,6 @@ export default function LiveSetupPage() {
                         if (option.id === 'group') {
                           setSelectedPrivacy('PUBLIC');
                           setIsPrivacyOpen(false);
-                          setIsExceptEditorOpen(false);
                         }
                         setIsDestinationOpen(false);
                         setDestinationSearch('');
