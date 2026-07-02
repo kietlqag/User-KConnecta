@@ -16,7 +16,8 @@ interface FriendsLeftSidebarProps {
   requestCount?: number;
 }
 
-export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: FriendsLeftSidebarProps) => {
+export const FriendsLeftSidebar = ({ activeTab, onTabChange, requestCount }: FriendsLeftSidebarProps) => {
+
   const sidebarItems: SidebarItem[] = [
     { id: 'home', labelKey: 'home', icon: <Home className="w-5 h-5" /> },
     { id: 'requests', labelKey: 'requests', icon: <UserPlus className="w-5 h-5" />, count: requestCount },

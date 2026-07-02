@@ -8,10 +8,7 @@ import { useBirthdays, useSendBirthdayWish, type BirthdayFriend } from '../hooks
 import { SendWishDialog } from './SendWishDialog';
 import { toast } from 'sonner';
 
-function formatGroupLabel(
-  friends: BirthdayFriend[],
-
-): string {
+function formatGroupLabel(friends: BirthdayFriend[]): string {
   if (friends.length === 0) return '';
   if (friends.length === 1) return friends[0].name;
   if (friends.length === 2) return `${friends[0].name}, ${friends[1].name}`;
@@ -34,7 +31,8 @@ const PANEL_CLASS =
 
 const QUICK_WISH_KEYS = ['quickWish1', 'quickWish2', 'quickWish3', 'quickWish4'] as const;
 
-function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWish }: BirthdayFriendCardProps) {  const quickWishes = useMemo(
+function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWish }: BirthdayFriendCardProps) {
+  const quickWishes = useMemo(
     () => QUICK_WISH_KEYS.map((key) => vi.birthdays[key]),
     [],
   );
@@ -103,7 +101,8 @@ function BirthdayFriendCard({ friend, showAge = true, onSendWish, onOpenCustomWi
   );
 }
 
-export function BirthdayPage() {  const [searchQuery, setSearchQuery] = useState('');
+export function BirthdayPage() {
+  const [searchQuery, setSearchQuery] = useState('');
   const [wishFriend, setWishFriend] = useState<BirthdayFriend | null>(null);
   const [wishDialogOpen, setWishDialogOpen] = useState(false);
   const [wishInitialMessage, setWishInitialMessage] = useState('');

@@ -13,7 +13,8 @@ interface SendWishDialogProps {
   initialMessage?: string;
 }
 
-export function SendWishDialog({ friend, open, onOpenChange, initialMessage = '' }: SendWishDialogProps) {  const [message, setMessage] = useState(initialMessage);
+export function SendWishDialog({ friend, open, onOpenChange, initialMessage = '' }: SendWishDialogProps) {
+  const [message, setMessage] = useState(initialMessage);
   const sendWish = useSendBirthdayWish();
 
   useEffect(() => {

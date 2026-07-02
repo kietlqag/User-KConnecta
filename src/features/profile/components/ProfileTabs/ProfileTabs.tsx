@@ -1,5 +1,5 @@
-import * as React from 'react';
 import { vi } from '@/constants/vi';
+import * as React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { logProfileTabClick, type ProfileTabId } from '../../utils/profileTabLogger';
 
@@ -8,7 +8,8 @@ interface ProfileTabsProps {
   profileKey?: string;
 }
 
-export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {  const location = useLocation();
+export function ProfileTabs({ userId, profileKey }: ProfileTabsProps) {
+  const location = useLocation();
   const currentPath = location.pathname;
   const resolvedProfileKey = profileKey || userId || '';
 

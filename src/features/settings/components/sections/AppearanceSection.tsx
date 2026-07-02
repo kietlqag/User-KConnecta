@@ -22,7 +22,8 @@ export function AppearanceSection({
   saving,
   onSave,
   onDiscard,
-}: AppearanceSectionProps) {
+}: AppearanceSectionProps) {
+
   const themeOptions = useMemo(
     () => [
       { value: 'light' as ThemeOption, label: vi.settings.appearance.themeLight, description: vi.settings.appearance.themeLightDesc, icon: Sun },
