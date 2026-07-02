@@ -37,8 +37,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     onFatalErrorRef.current = onFatalError;
   }, [onFatalError]);
 
-
-
   // Toàn bộ thời gian (live edge + vị trí phát) đều bám theo seekable range THẬT của
   // video. Lưu ý: hls.js luôn giữ playback lùi ~liveSyncDurationCount×segment (~6s)
   // sau segment mới nhất để ổn định, nên playhead không bao giờ chạm seekable end.
@@ -167,7 +165,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           hls.recoverMediaError();
           return;
         }
-
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       const loadNative = () => {

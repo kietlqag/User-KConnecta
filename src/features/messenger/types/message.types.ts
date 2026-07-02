@@ -25,6 +25,7 @@ export interface Message {
   reactions?: string[];
   deleted?: boolean;
   deletedAt?: string;
+  status?: string;
   systemType?: 'call_log' | 'missed_call' | 'chat_action';
   systemActionType?:
     | 'rename_conversation'
@@ -100,6 +101,7 @@ export interface IncomingChatMessage {
   deleted?: boolean;
   deletedAt?: string;
   reactions?: string[];
+  status?: string;
 }
 
 export interface IncomingMessageStatus {

@@ -698,7 +698,13 @@ export const MessageBubble = ({
               </button>
               ) : (
               <MessageTextContent
-                text={message.deleted ? 'Tin nhắn đã được gỡ' : message.text}
+                text={
+                  message.deleted
+                    ? 'Tin nhắn đã được gỡ'
+                    : message.status === 'HIDDEN'
+                      ? 'Tin nhắn này đã bị ẩn do vi phạm tiêu chuẩn cộng đồng'
+                      : message.text
+                }
                 isOwn={message.isOwn}
                 onGroupJoinLinkClick={onGroupJoinLinkClick}
               />

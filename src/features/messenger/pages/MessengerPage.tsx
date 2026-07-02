@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useEffect, useMemo, useRef, type ChangeEvent, type MouseEvent, type ReactNode, type UIEvent } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, type ChangeEvent, type MouseEvent, type ReactNode, type UIEvent } from 'react';
 import axios from 'axios';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
@@ -444,6 +444,7 @@ function mapIncomingToMessage(raw: IncomingChatMessage, currentUserId?: string |
     seenAt: raw.seenAt,
     deleted: raw.deleted,
     deletedAt: raw.deletedAt,
+    status: raw.status,
     reactions: raw.reactions ?? [],
   };
 }
@@ -2279,6 +2280,7 @@ export default function MessengerPage() {
   const [fetchedChatUser, setFetchedChatUser] = useState<ChatUser | null>(null);
   const [isFetchingChatUser, setIsFetchingChatUser] = useState(false);
   const [isMessagingBlocked, setIsMessagingBlocked] = useState(false);
+  const [isConvLocked, setIsConvLocked] = useState(false);
   const [serverGroupConversations, setServerGroupConversations] = useState<Conversation[]>([]);
   const [groupConversationsReady, setGroupConversationsReady] = useState(false);
   const [groupMembersById, setGroupMembersById] = useState<Record<string, ChatUser[]>>({});
@@ -2498,6 +2500,7 @@ export default function MessengerPage() {
   useEffect(() => {
     if (!activeChatUserId || isActiveGroupChat) {
       setIsMessagingBlocked(false);
+      setIsConvLocked(false);
       return;
     }
 
@@ -2505,10 +2508,16 @@ export default function MessengerPage() {
     void userSettingsApi
       .getBlockStatus(activeChatUserId)
       .then((status) => {
-        if (!cancelled) setIsMessagingBlocked(status.blockedByMe);
+        if (!cancelled) {
+          setIsMessagingBlocked(status.blockedByMe);
+          setIsConvLocked(status.conversationLocked || false);
+        }
       })
       .catch(() => {
-        if (!cancelled) setIsMessagingBlocked(false);
+        if (!cancelled) {
+          setIsMessagingBlocked(false);
+          setIsConvLocked(false);
+        }
       });
 
     return () => {
@@ -2537,11 +2546,13 @@ export default function MessengerPage() {
 
   const isAcceptedFriendChat = Boolean(activePrivateConversation && !activePrivateConversation.isStranger);
   const isStrangerChat = !isActiveGroupChat && Boolean(effectiveChatUser) && !isAcceptedFriendChat;
-  const canMessage = Boolean(isActiveGroupChat || effectiveChatUser) && !isMessagingBlocked;
-  const messagingDisabledReason = isMessagingBlocked
+  const canMessage = Boolean(isActiveGroupChat || effectiveChatUser) && !isMessagingBlocked && !isConvLocked;
+  const messagingDisabledReason = isConvLocked
+    ? 'Cuộc hội thoại này đã bị khóa bởi quản trị viên'
+    : isMessagingBlocked
     ? 'Bạn đã chặn người này nên không thể nhắn tin'
     : 'Bạn không thể nhắn tin với người này';
-  const canStartCalls = (isActiveGroupChat || isAcceptedFriendChat) && !isMessagingBlocked;
+  const canStartCalls = (isActiveGroupChat || isAcceptedFriendChat) && !isMessagingBlocked && !isConvLocked;
 
   const selectableFriends = useMemo(
     () => baseConversationItems.filter((conversation) => !conversation.isStranger && !conversation.isGroup).map((c) => c.user),
@@ -2746,7 +2757,10 @@ export default function MessengerPage() {
             ...prev,
             [peerUserId]: {
               ...(prev[peerUserId] ?? {}),
-              lastMessage: buildConversationPreviewFromContent(last.text, last.senderId, currentUser.id),
+              lastMessage: buildConversationPreviewFromContent(last.text, last.senderId, currentUser.id, {
+                deleted: last.deleted,
+                status: last.status,
+              }),
               timestamp: formatRelativeConversationTime(last.timestamp),
               lastActivityAt: last.timestamp.getTime(),
             },
@@ -2903,22 +2917,32 @@ export default function MessengerPage() {
         })(),
       }));
 
-      const previewMessage = buildConversationPreviewFromContent(msg.content, msg.senderId, myId);
+      const previewMessage = buildConversationPreviewFromContent(msg.content, msg.senderId, myId, {
+        deleted: msg.deleted,
+        status: msg.status,
+      });
 
-      setOverrides((prev) => ({
-        ...prev,
-        [otherUserId]: {
-          ...(prev[otherUserId] ?? {}),
-          ...(previewMessage
-            ? {
-                lastMessage: previewMessage,
-                timestamp: 'Vừa xong',
-                lastActivityAt: newMsg.timestamp.getTime(),
-              }
-            : {}),
-          isUnread: activeChatUserId !== otherUserId,
-        },
-      }));
+      setOverrides((prev) => {
+        const prevOverride = prev[otherUserId];
+        // A moderation/recall update can arrive for a message that is no longer the
+        // conversation's latest — don't let it clobber a newer preview that's already shown.
+        const isStillLatest =
+          !prevOverride?.lastActivityAt || newMsg.timestamp.getTime() >= prevOverride.lastActivityAt;
+        return {
+          ...prev,
+          [otherUserId]: {
+            ...(prevOverride ?? {}),
+            ...(previewMessage && isStillLatest
+              ? {
+                  lastMessage: previewMessage,
+                  timestamp: 'Vừa xong',
+                  lastActivityAt: newMsg.timestamp.getTime(),
+                }
+              : {}),
+            isUnread: activeChatUserId !== otherUserId,
+          },
+        };
+      });
 
       if (newMsg.deleted) {
         setPinnedMessagesByConversation((prev) => {

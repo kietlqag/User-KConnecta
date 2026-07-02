@@ -86,17 +86,17 @@ export const userSettingsApi = {
   },
 
   blockUser: async (blockedUserId: string): Promise<void> => {
-    await api.post(`/users/me/blocks/${blockedUserId}`);
+    await api.post(`/users/me/blocks/${blockedUserId}`, {});
     notifyUserBlockChanged();
   },
 
-  getBlockStatus: async (blockedUserId: string): Promise<{ blockedByMe: boolean }> => {
+  getBlockStatus: async (blockedUserId: string): Promise<{ blockedByMe: boolean; conversationLocked?: boolean }> => {
     if (!blockedUserId?.trim()) {
       return { blockedByMe: false };
     }
     // Backend hỗ trợ username; vẫn ưu tiên UUID khi có để tránh lookup thừa
     const id = isUserUuid(blockedUserId) ? blockedUserId : encodeURIComponent(blockedUserId);
-    return api.get<{ blockedByMe: boolean }>(`/users/me/blocks/${id}/status`);
+    return api.get<{ blockedByMe: boolean; conversationLocked?: boolean }>(`/users/me/blocks/${id}/status`);
   },
 
   revokeSession: async (sessionId: string): Promise<UserSettings> => {

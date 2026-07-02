@@ -257,7 +257,10 @@ export function useFriendConversations(options: UseFriendConversationsOptions = 
         return;
       }
 
-      const preview = buildConversationPreviewFromContent(msg.content, msg.senderId, currentUser.id);
+      const preview = buildConversationPreviewFromContent(msg.content, msg.senderId, currentUser.id, {
+        deleted: msg.deleted,
+        status: msg.status,
+      });
       const chatUserId = msg.conversationId
         ? `group:${msg.conversationId}`
         : (msg.senderId === currentUser.id ? msg.receiverId : msg.senderId);

@@ -131,8 +131,13 @@ export function buildConversationPreviewFromContent(
   content: string | null | undefined,
   senderId: string | null | undefined,
   currentUserId: string | null | undefined,
+  moderation?: { deleted?: boolean; status?: string },
 ) {
-  const previewText = mapContentToConversationPreview(content);
+  const previewText = moderation?.deleted
+    ? 'Tin nhắn đã được gỡ'
+    : moderation?.status === 'HIDDEN'
+      ? 'Tin nhắn này đã bị ẩn do vi phạm tiêu chuẩn cộng đồng'
+      : mapContentToConversationPreview(content);
   if (!previewText) return '';
   const isOwn = Boolean(senderId && currentUserId && senderId === currentUserId);
   return formatConversationPreview(previewText, isOwn);
