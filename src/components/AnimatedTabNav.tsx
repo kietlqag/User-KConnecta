@@ -53,23 +53,30 @@ export function AnimatedTabNav({ items, onHomeClick }: AnimatedTabNavProps) {
     }
   };
 
-  // Update indicator position when active tab changes
-  // Use useLayoutEffect to synchronize before paint
+  // Update indicator position and handle layout shifts / resizing using ResizeObserver
   useLayoutEffect(() => {
-    // Execute immediately for synchronous update
-    updateIndicator();
-    
-    // Also run after a frame to handle any layout shifts
-    const rafId = requestAnimationFrame(updateIndicator);
-    
-    return () => cancelAnimationFrame(rafId);
-  }, [activeIndex, location.pathname]); // Added location.pathname to ensure updates on route change
+    if (!navRef.current) return;
 
-  // Handle window resize to recalculate positions
-  useLayoutEffect(() => {
-    window.addEventListener('resize', updateIndicator);
-    return () => window.removeEventListener('resize', updateIndicator);
-  }, [activeIndex]);
+    // Immediately calculate position
+    updateIndicator();
+
+    const observer = new ResizeObserver(() => {
+      updateIndicator();
+    });
+
+    // Observe the main container
+    observer.observe(navRef.current);
+
+    // Observe all children (the tab links) to detect layout changes
+    const children = Array.from(navRef.current.children);
+    children.forEach(child => {
+      observer.observe(child);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [activeIndex, location.pathname]);
 
   return (
     <nav 

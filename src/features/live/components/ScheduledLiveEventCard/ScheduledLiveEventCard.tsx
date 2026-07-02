@@ -33,13 +33,10 @@ export function ScheduledLiveEventCard({
     : 'bg-violet-600 text-white';
 
   return (
-    <div className={`rounded-lg border p-4 transition-colors ${cardTone}`}>
-      <button
-        type="button"
-        onClick={() => onOpen(session)}
-        className="w-full text-left"
-      >
-        <div className="mb-2 flex flex-wrap items-center gap-2">
+    <div className={`flex h-full min-h-[210px] flex-col rounded-lg border p-4 transition-colors ${cardTone}`}>
+      {/* Top Row: Badges & Interest Button */}
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-2">
           <span className={`inline-flex rounded px-2 py-0.5 text-xs font-semibold ${badgeTone}`}>
             Đã lên lịch
           </span>
@@ -50,6 +47,35 @@ export function ScheduledLiveEventCard({
           )}
         </div>
 
+        {showInterest && (
+          <button
+            type="button"
+            disabled={isSubscribing}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleInterest?.(session);
+            }}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+              isSubscribed
+                ? 'border border-violet-600 bg-card text-violet-700 hover:bg-violet-50 dark:border-violet-500 dark:bg-transparent dark:text-violet-300 dark:hover:bg-violet-950/40'
+                : 'bg-violet-600 text-white hover:bg-violet-700'
+            } disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            {isSubscribing ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Bell className="h-3.5 w-3.5" />
+            )}
+            {isSubscribing ? 'Đang...' : isSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
+          </button>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onOpen(session)}
+        className="w-full text-left"
+      >
         <p className="line-clamp-1 font-semibold text-foreground">{session.title}</p>
         {session.description && (
           <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{session.description}</p>
@@ -62,52 +88,34 @@ export function ScheduledLiveEventCard({
       </button>
 
       {!isOwner && (
-        <Link
-          to={`/profile/${session.hostUserId}`}
-          onClick={(e) => e.stopPropagation()}
-          className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg py-1 pr-2 transition-colors hover:bg-card/60/60"
-        >
-          <UserAvatar
-            name={hostLabel}
-            avatarUrl={session.hostAvatarUrl}
-            userId={session.hostUserId}
-            rounded="full"
-            className="h-8 w-8 shrink-0"
-          />
-          <span className="min-w-0 truncate text-sm text-foreground">
-            <span className="text-muted-foreground">Tạo bởi </span>
-            <span className="font-semibold text-foreground">{hostLabel}</span>
-          </span>
-        </Link>
-      )}
-
-      {(showInterest || (session.subscriptionCount ?? 0) > 0) && (
-        <div className="mt-3 flex items-center justify-between gap-3 border-t border-black/5 pt-3 dark:border-white/10">
-          <p className="text-xs font-medium text-muted-foreground">
-            {(session.subscriptionCount ?? 0) > 0
-              ? `${session.subscriptionCount} người quan tâm`
-              : 'Chưa có ai quan tâm'}
-          </p>
-          {showInterest && (
-            <button
-              type="button"
-              disabled={isSubscribing}
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleInterest?.(session);
-              }}
-              className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${ isSubscribed ? 'border border-violet-600 bg-card text-violet-700 hover:bg-violet-50 dark:border-violet-500 dark:bg-transparent dark:text-violet-300 dark:hover:bg-violet-950/40' : 'bg-violet-600 text-white hover:bg-violet-700' } disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              {isSubscribing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Bell className="h-4 w-4" />
-              )}
-              {isSubscribing ? 'Đang lưu...' : isSubscribed ? 'Đã quan tâm' : 'Quan tâm'}
-            </button>
-          )}
+        <div className="mt-3 flex">
+          <Link
+            to={`/profile/${session.hostUserId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex max-w-full items-center gap-2 rounded-lg py-1 pr-2 transition-colors hover:bg-card/60"
+          >
+            <UserAvatar
+              name={hostLabel}
+              avatarUrl={session.hostAvatarUrl}
+              userId={session.hostUserId}
+              rounded="full"
+              className="h-8 w-8 shrink-0"
+            />
+            <span className="min-w-0 truncate text-sm text-foreground">
+              <span className="text-muted-foreground">Tạo bởi </span>
+              <span className="font-semibold text-foreground">{hostLabel}</span>
+            </span>
+          </Link>
         </div>
       )}
+
+      <div className="mt-auto pt-3 border-t border-black/5 dark:border-white/10">
+        <p className="text-xs font-medium text-muted-foreground">
+          {(session.subscriptionCount ?? 0) > 0
+            ? `${session.subscriptionCount} người quan tâm`
+            : 'Chưa có ai quan tâm'}
+        </p>
+      </div>
     </div>
   );
 }

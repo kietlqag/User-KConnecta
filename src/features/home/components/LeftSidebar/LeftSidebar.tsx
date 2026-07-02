@@ -7,9 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   Bookmark,
   Users,
-  Clapperboard,
-  Shapes,
-  Radio,
+  Timer,
 } from 'lucide-react';
 import { AUTH_USER_CHANGED_EVENT, authService, type AuthUser } from '@/services/authService';
 import { useRecentGroupShortcuts } from '@/features/groups/hooks/useRecentGroupShortcuts';
@@ -21,7 +19,7 @@ export const LeftSidebar = () => {
   const [isLargeScreen, setIsLargeScreen] = useState(() => window.innerWidth >= 1024);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => authService.getCurrentUser());
 
-  const groupShortcuts = useRecentGroupShortcuts(4);
+  const groupShortcuts = useRecentGroupShortcuts(10);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 1024px)');
@@ -86,22 +84,10 @@ export const LeftSidebar = () => {
       href: '/friends',
     },
     {
-      id: 'watch',
-      icon: <Clapperboard className="h-9 w-9 rounded-full bg-amber-100 p-2 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400" />,
-      label: vi.nav.watch,
-      href: '/watch',
-    },
-    {
-      id: 'groups',
-      icon: <Shapes className="h-9 w-9 rounded-full bg-pink-100 p-2 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400" />,
-      label: vi.nav.groups,
-      href: '/groups',
-    },
-    {
-      id: 'live',
-      icon: <Radio className="h-9 w-9 rounded-full bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" />,
-      label: vi.nav.live,
-      href: '/live',
+      id: 'reminders',
+      icon: <Timer className="h-9 w-9 rounded-full bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" />,
+      label: vi.settings.tabs.reminders,
+      href: '/settings?tab=reminders',
     },
   ];
 
@@ -141,46 +127,42 @@ export const LeftSidebar = () => {
         </div>
 
         {groupShortcuts.length > 0 && (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pb-2">
-            {groupShortcuts.length > 0 && (
-              <div className="flex min-h-0 flex-col">
-                <div className="my-2 shrink-0 border-t border-border" />
-                <div className="mb-2 flex shrink-0 items-center justify-between px-1">
-                  <h3 className="text-sm font-semibold text-muted-foreground">{vi.sidebar.shortcuts}</h3>
-                  <button
-                    type="button"
-                    onClick={() => handleNavigate('/groups')}
-                    className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
-                  >
-                    {vi.sidebar.seeAllGroups}
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  {groupShortcuts.map((group) => (
-                    <button
-                      key={group.id}
-                      type="button"
-                      onClick={() => handleNavigate(`/groups/${group.id}`)}
-                      className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted"
-                      aria-label={group.name}
-                    >
-                      {group.icon ? (
-                        <img
-                          src={group.icon}
-                          alt=""
-                          className="h-9 w-9 shrink-0 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
-                          {group.name.charAt(0)}
-                        </div>
-                      )}
-                      <span className="truncate text-sm font-medium text-foreground">{group.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
+            <div className="my-2 shrink-0 border-t border-border" />
+            <div className="mb-2 flex shrink-0 items-center justify-between px-1">
+              <h3 className="text-sm font-semibold text-muted-foreground">{vi.sidebar.shortcuts}</h3>
+              <button
+                type="button"
+                onClick={() => handleNavigate('/groups')}
+                className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
+              >
+                {vi.sidebar.seeAllGroups}
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto sidebar-scrollbar space-y-1">
+              {groupShortcuts.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => handleNavigate(`/groups/${group.id}`)}
+                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted"
+                  aria-label={group.name}
+                >
+                  {group.icon ? (
+                    <img
+                      src={group.icon}
+                      alt=""
+                      className="h-9 w-9 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-sm font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                      {group.name.charAt(0)}
+                    </div>
+                  )}
+                  <span className="truncate text-sm font-medium text-foreground">{group.name}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

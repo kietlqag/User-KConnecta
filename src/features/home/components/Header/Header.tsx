@@ -117,7 +117,6 @@ export function Header() {
 
   const navItems = useMemo(() => [
     { icon: <Home className="w-6 h-6" />, href: '/home', label: vi.nav.home },
-    { icon: <Users className="w-6 h-6" />, href: '/friends', label: vi.nav.friends },
     { icon: <Clapperboard className="w-6 h-6" />, href: '/watch', label: vi.nav.watch },
     { icon: <Shapes className="w-6 h-6" />, href: '/groups', label: vi.nav.groups },
     { icon: <Radio className="w-6 h-6" />, href: '/live', label: LIVE_NAV_LABEL },
