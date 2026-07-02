@@ -640,6 +640,18 @@ public class PostServiceImpl implements PostService {
         comment.setStatus(CommentStatus.APPROVED);
         comment.setModerationFailReason(null);
         postCommentRepository.save(comment);
+
+        // Notify comment author in real time
+        UUID commentAuthorId = comment.getUser().getId();
+        UUID postId = comment.getShare() != null ? comment.getShare().getId() : comment.getPost().getId();
+        notificationEventPublisher.publish(
+                null,
+                commentAuthorId,
+                NotificationType.SYSTEM,
+                "Bình luận của bạn đã được phê duyệt.",
+                postId
+        );
+
         if (wasHidden) {
             publishCommentNotification(comment);
         }
@@ -655,6 +667,18 @@ public class PostServiceImpl implements PostService {
         comment.setStatus(CommentStatus.REJECTED);
         comment.setModerationFailReason(reason);
         postCommentRepository.save(comment);
+
+        // Notify comment author in real time
+        UUID commentAuthorId = comment.getUser().getId();
+        UUID postId = comment.getShare() != null ? comment.getShare().getId() : comment.getPost().getId();
+        notificationEventPublisher.publish(
+                null,
+                commentAuthorId,
+                NotificationType.SYSTEM,
+                "Cảnh báo: bình luận của bạn đã bị ẩn do vi phạm tiêu chuẩn cộng đồng" + 
+                (reason != null && !reason.isBlank() ? ": " + reason : "") + ".",
+                postId
+        );
     }
 
     private static final String UPLOAD_OWNERSHIP_PREFIX = "post:upload:";
@@ -2058,6 +2082,7 @@ public class PostServiceImpl implements PostService {
 
         return shares.stream()
                 .map(share -> {
+                    if (share.getPost() == null) return null;
                     PostResponse original = byPostId.get(share.getPost().getId());
                     if (original == null) return null;
                     User sharer = share.getUser();
@@ -2327,6 +2352,17 @@ public class PostServiceImpl implements PostService {
                         .reason("Nội dung chứa từ khóa bị cấm: \"" + matched.value() + "\"")
                         .build();
             } else if ("watchlist".equalsIgnoreCase(cat) || "sensitive".equalsIgnoreCase(cat)) {
+                // Watchlist matched! Check with AI first if enabled.
+                if (aiModerationPolicyReader.isEnabled()) {
+                    var moderationOpt = geminiModerationService.moderate(content);
+                    if (moderationOpt.isPresent() && !moderationOpt.get().safe()) {
+                        return ContentVerificationResponse.builder()
+                                .safe(false)
+                                .level("AI_UNSAFE")
+                                .reason("Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderationOpt.get().reason())
+                                .build();
+                    }
+                }
                 return ContentVerificationResponse.builder()
                         .safe(true) // Watchlist vẫn cho qua để đăng, nhưng cảnh báo để AI quét tiếp
                         .level("WATCHLIST")
@@ -2336,7 +2372,7 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        // 2. Kiểm tra bằng AI (nếu AI bật)
+        // 2. Kiểm tra bằng AI (nếu AI bật và không khớp watchlist)
         if (aiModerationPolicyReader.isEnabled()) {
             var moderationOpt = geminiModerationService.moderate(content);
             if (moderationOpt.isPresent() && !moderationOpt.get().safe()) {

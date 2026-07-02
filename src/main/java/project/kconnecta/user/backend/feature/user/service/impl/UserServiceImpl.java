@@ -21,6 +21,7 @@ import project.kconnecta.user.backend.common.util.MediaFileSniffer;
 import project.kconnecta.user.backend.feature.auth.entity.Account;
 import project.kconnecta.user.backend.feature.auth.repository.AccountRepository;
 import project.kconnecta.user.backend.feature.auth.service.RefreshTokenService;
+import project.kconnecta.user.backend.feature.post.service.CommentViolationService;
 import project.kconnecta.user.backend.feature.user.dto.request.UpdateUserRequest;
 import project.kconnecta.user.backend.feature.user.dto.response.UserResponse;
 import project.kconnecta.user.backend.feature.user.entity.User;
@@ -60,6 +61,7 @@ public class UserServiceImpl implements UserService {
     private final CloudinaryService cloudinaryService;
     private final CacheManager cacheManager;
     private final RefreshTokenService refreshTokenService;
+    private final CommentViolationService commentViolationService;
 
     // -------------------------------------------------------------------------
     // READ
@@ -283,6 +285,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private UserResponse mapToResponse(User user) {
+        boolean commentLocked = commentViolationService.isCommentLocked(user.getId());
         return UserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -304,6 +307,8 @@ public class UserServiceImpl implements UserService {
                 .coverPhotoUrl(user.getCoverPhotoUrl())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
+                .commentLocked(commentLocked)
+                .postLocked(false)
                 .build();
     }
 }

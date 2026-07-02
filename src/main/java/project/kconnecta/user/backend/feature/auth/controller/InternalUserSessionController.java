@@ -48,7 +48,7 @@ public class InternalUserSessionController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User account email not found");
         }
 
-        otpService.sendOtp(user.getAccount().getEmail());
+        otpService.sendOtp(user.getAccount().getEmail(), true);
         return ResponseEntity.ok().build();
     }
 

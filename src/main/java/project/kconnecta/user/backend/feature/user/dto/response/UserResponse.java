@@ -43,4 +43,8 @@ public class UserResponse implements Serializable {
     private Boolean profileContentRestricted;
     /** True when there is a block relationship (either direction) between viewer and this user. */
     private Boolean blocked;
+    /** True when the user is currently under a temporary comment ban. */
+    private Boolean commentLocked;
+    /** True when the user is currently under a temporary post ban. */
+    private Boolean postLocked;
 }
