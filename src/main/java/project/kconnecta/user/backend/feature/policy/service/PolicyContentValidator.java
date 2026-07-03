@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 public class PolicyContentValidator {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final int CHAT_SPAM_COOLDOWN_SECONDS = 5 * 60;
     private static final String VOICE_MESSAGE_PREFIX = "__VOICE__:";
     private static final String IMAGE_MESSAGE_PREFIX = "__IMAGE__:";
     private static final String FILE_MESSAGE_PREFIX = "__FILE__:";
@@ -50,11 +51,14 @@ public class PolicyContentValidator {
 
     private final Map<UUID, Deque<Instant>> postTimestamps = new ConcurrentHashMap<>();
     private final Map<UUID, Deque<Instant>> postEditTimestamps = new ConcurrentHashMap<>();
+    private final Map<UUID, Deque<Instant>> chatMessageTimestamps = new ConcurrentHashMap<>();
+    private final Map<UUID, Instant> chatCooldownUntil = new ConcurrentHashMap<>();
     private final Map<String, ConsecutiveMessageState> consecutiveMessageStates = new ConcurrentHashMap<>();
 
     private static final class ConsecutiveMessageState {
         private String lastNormalizedContent = "";
         private int streak;
+        private Instant lastMessageAt;
     }
 
     public void validatePost(UUID authorId, String content, int mediaCount) {
@@ -293,7 +297,121 @@ public class PolicyContentValidator {
     }
 
     public void validateChatMessage(UUID senderId, String content, UUID conversationId, String messageClientId) {
-        // Chat moderation disabled — post/comment moderation remains active.
+        JsonNode chatPolicy = policyService.getConfigJson().path("chatPolicy");
+        if (!chatPolicy.path("antiSpamEnabled").asBoolean(false)) {
+            return;
+        }
+
+        checkActiveChatCooldown(senderId, conversationId, messageClientId);
+        int messagesPerMinute = Math.max(1, chatPolicy.path("messagesPerMinute").asInt(10));
+        // Structured payloads count toward the rate limit but are not duplicate text.
+        String checkableText = extractPolicyCheckableText(content);
+        if (!checkableText.isBlank()) {
+            checkDuplicateMessageSpam(
+                    senderId,
+                    checkableText,
+                    3,
+                    120,
+                    conversationId,
+                    messageClientId
+            );
+        }
+        checkChatMessageRateLimit(
+                senderId,
+                messagesPerMinute,
+                60,
+                conversationId,
+                messageClientId
+        );
+    }
+
+    private void checkActiveChatCooldown(
+            UUID userId,
+            UUID conversationId,
+            String messageClientId
+    ) {
+        if (userId == null) {
+            return;
+        }
+        Instant now = Instant.now();
+        Instant cooldownUntil = chatCooldownUntil.get(userId);
+        if (cooldownUntil == null) {
+            return;
+        }
+        if (!cooldownUntil.isAfter(now)) {
+            chatCooldownUntil.remove(userId, cooldownUntil);
+            return;
+        }
+        throwChatCooldown(
+                now,
+                cooldownUntil,
+                "Bạn đang bị tạm khóa gửi tin nhắn do có dấu hiệu spam.",
+                conversationId,
+                messageClientId
+        );
+    }
+
+    private void startChatCooldown(
+            UUID userId,
+            String message,
+            UUID conversationId,
+            String messageClientId
+    ) {
+        Instant now = Instant.now();
+        Instant cooldownUntil = now.plusSeconds(CHAT_SPAM_COOLDOWN_SECONDS);
+        chatCooldownUntil.put(userId, cooldownUntil);
+        throwChatCooldown(now, cooldownUntil, message, conversationId, messageClientId);
+    }
+
+    private void throwChatCooldown(
+            Instant now,
+            Instant cooldownUntil,
+            String message,
+            UUID conversationId,
+            String messageClientId
+    ) {
+        int retryAfterSeconds = Math.max(
+                1,
+                (int) Math.ceil(Duration.between(now, cooldownUntil).toMillis() / 1000.0)
+        );
+        int retryAfterMinutes = Math.max(1, (int) Math.ceil(retryAfterSeconds / 60.0));
+        throw new ChatValidationException(
+                "CHAT_RATE_LIMITED",
+                message + " Vui lòng thử lại sau " + retryAfterMinutes + " phút.",
+                retryAfterSeconds,
+                conversationId == null ? null : conversationId.toString(),
+                messageClientId
+        );
+    }
+
+    private void checkChatMessageRateLimit(
+            UUID userId,
+            int limit,
+            int windowSeconds,
+            UUID conversationId,
+            String messageClientId
+    ) {
+        if (userId == null) {
+            return;
+        }
+
+        Instant now = Instant.now();
+        Instant cutoff = now.minusSeconds(windowSeconds);
+        Deque<Instant> timestamps = chatMessageTimestamps.computeIfAbsent(
+                userId, ignored -> new ConcurrentLinkedDeque<>());
+        while (!timestamps.isEmpty() && timestamps.peekFirst().isBefore(cutoff)) {
+            timestamps.pollFirst();
+        }
+
+        if (timestamps.size() >= limit) {
+            startChatCooldown(
+                    userId,
+                    "Bạn đang gửi tin nhắn quá nhanh.",
+                    conversationId,
+                    messageClientId
+            );
+        }
+        timestamps.addLast(now);
     }
 
     /**
@@ -505,7 +623,14 @@ public class PolicyContentValidator {
         };
     }
 
-    private void checkDuplicateMessageSpam(UUID userId, String content, int maxConsecutive, String conversationId, String messageClientId) {
+    private void checkDuplicateMessageSpam(
+            UUID userId,
+            String content,
+            int maxConsecutive,
+            int duplicateWindowSeconds,
+            UUID conversationId,
+            String messageClientId
+    ) {
         if (userId == null || maxConsecutive <= 0) {
             return;
         }
@@ -515,23 +640,28 @@ public class PolicyContentValidator {
         }
         String stateKey = userId + ":" + (conversationId != null ? conversationId : "_");
         ConsecutiveMessageState state = consecutiveMessageStates.computeIfAbsent(stateKey, key -> new ConsecutiveMessageState());
+        Instant now = Instant.now();
+        boolean expired = state.lastMessageAt == null
+                || Duration.between(state.lastMessageAt, now).getSeconds() >= duplicateWindowSeconds;
 
-        if (normalized.equals(state.lastNormalizedContent)) {
-            if (state.streak >= maxConsecutive) {
-                throw new ChatValidationException(
-                        "CHAT_RATE_LIMITED",
-                        "Bạn đã gửi quá nhiều tin giống nhau liên tiếp. Vui lòng đổi nội dung.",
-                        null,
+        if (!expired && normalized.equals(state.lastNormalizedContent)) {
+            int nextStreak = state.streak + 1;
+            if (nextStreak >= maxConsecutive) {
+                startChatCooldown(
+                        userId,
+                        "Bạn đã gửi quá nhiều tin giống nhau liên tiếp.",
                         conversationId,
                         messageClientId
                 );
             }
-            state.streak++;
+            state.streak = nextStreak;
+            state.lastMessageAt = now;
             return;
         }
 
         state.lastNormalizedContent = normalized;
         state.streak = 1;
+        state.lastMessageAt = now;
     }
 
     private String normalizeChatContent(String content) {

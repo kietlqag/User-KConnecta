@@ -82,7 +82,8 @@ class PolicyContentValidatorTest {
     // ── chat moderation disabled ────────────────────────────────────────────
 
     @Test
-    void validateChatMessage_isNoOp() {
+    void validateChatMessage_isNoOpWhenAntiSpamDisabled() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWith(20, false, false));
         assertThatNoException().isThrownBy(() -> {
             for (int i = 0; i < 20; i++) {
                 validator.validateChatMessage(userId, "hi", null, null);
@@ -92,6 +93,50 @@ class PolicyContentValidatorTest {
             String imagePayload = "__IMAGE__:{\"imageUrl\":\"https://cdn.example.com/a.jpg\",\"caption\":\"badword here\"}";
             validator.validateChatMessage(userId, imagePayload, null, null);
         });
+    }
+
+    @Test
+    void validateChatMessage_blocksWhenRateLimitIsReached() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWith(3, true, false));
+
+        validator.validateChatMessage(userId, "one", null, "m1");
+        validator.validateChatMessage(userId, "two", null, "m2");
+        validator.validateChatMessage(userId, "three", null, "m3");
+
+        assertThatThrownBy(() -> validator.validateChatMessage(userId, "four", null, "m4"))
+                .isInstanceOf(ChatValidationException.class)
+                .satisfies(error -> {
+                    ChatValidationException chatError = (ChatValidationException) error;
+                    assertThat(chatError.getCode()).isEqualTo("CHAT_RATE_LIMITED");
+                    assertThat(chatError.getRetryAfterSeconds()).isEqualTo(300);
+                    assertThat(chatError.getMessageClientId()).isEqualTo("m4");
+                });
+
+        assertThatThrownBy(() -> validator.validateChatMessage(userId, "different", null, "m5"))
+                .isInstanceOf(ChatValidationException.class)
+                .satisfies(error -> assertThat(
+                        ((ChatValidationException) error).getRetryAfterSeconds()
+                ).isBetween(299, 300));
+    }
+
+    @Test
+    void validateChatMessage_blocksThirdConsecutiveDuplicate() throws Exception {
+        when(policyService.getConfigJson()).thenReturn(configWith(20, true, false));
+        UUID conversationId = UUID.randomUUID();
+
+        validator.validateChatMessage(userId, "same message", conversationId, "m1");
+        validator.validateChatMessage(userId, "same message", conversationId, "m2");
+
+        assertThatThrownBy(() ->
+                validator.validateChatMessage(userId, "same message", conversationId, "m3"))
+                .isInstanceOf(ChatValidationException.class)
+                .satisfies(error -> {
+                    ChatValidationException chatError = (ChatValidationException) error;
+                    assertThat(chatError.getCode()).isEqualTo("CHAT_RATE_LIMITED");
+                    assertThat(chatError.getRetryAfterSeconds()).isEqualTo(300);
+                    assertThat(chatError.getConversationId()).isEqualTo(conversationId.toString());
+                    assertThat(chatError.getMessageClientId()).isEqualTo("m3");
+                });
     }
 
     // ── suspect pre-filter (comment moderation) ─────────────────────────────
