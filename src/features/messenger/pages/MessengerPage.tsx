@@ -2884,7 +2884,6 @@ export default function MessengerPage() {
 
   const handleIncomingMessage = useCallback(
     (msg: IncomingChatMessage) => {
-      console.log("[incoming]", msg);
       const myId = currentUser?.id;
       const otherUserId = msg.conversationId
         ? `group:${msg.conversationId}`

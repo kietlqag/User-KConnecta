@@ -315,16 +315,7 @@ export const postService = {
       .get<SpringPaginatedRaw<PostResponse>>(`/posts?${params.toString()}`)
       .then(normalizePaginatedResponse);
   },
-  createPost: (data: CreatePostPayload) => {
-    if (import.meta.env.DEV) {
-      console.log('[post-schedule] api payload', {
-        status: data.status,
-        scheduledAt: data.scheduledAt ?? null,
-        groupId: data.groupId ?? null,
-      });
-    }
-    return api.post<PostResponse>('/posts', data);
-  },
+  createPost: (data: CreatePostPayload) => api.post<PostResponse>('/posts', data),
   getPostRateLimit: () => api.get<PostRateLimitStatus>('/posts/rate-limit'),
   getPostEditRateLimit: () => api.get<PostRateLimitStatus>('/posts/edit-rate-limit'),
   updatePost: (postId: string, data: UpdatePostPayload) =>

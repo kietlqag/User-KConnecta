@@ -19,9 +19,3 @@ export function scheduledAtApiToDatetimeLocal(iso?: string | null): string {
   if (Number.isNaN(d.getTime())) return toDatetimeLocalValue(new Date(Date.now() + 60 * 60 * 1000));
   return toDatetimeLocalValue(d);
 }
-
-export function debugScheduleLog(label: string, payload: Record<string, unknown>) {
-  if (import.meta.env.DEV) {
-    console.log(`[post-schedule] ${label}`, payload);
-  }
-}

@@ -55,13 +55,6 @@ export function GroupFeed({
       setIsLoading(true);
       setError(null);
       const data = await postService.getGroupPosts(groupId, currentUser?.id);
-      if (import.meta.env.DEV) {
-        console.log('[post-schedule] feed query group', {
-          groupId,
-          count: data.length,
-          statuses: data.map(p => p.status),
-        });
-      }
       const mapped = data.map(mapApiPost);
       setPosts(mapped);
       onPostsLoaded?.(mapped.length);

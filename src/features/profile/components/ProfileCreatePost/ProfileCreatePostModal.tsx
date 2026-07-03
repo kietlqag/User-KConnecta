@@ -43,7 +43,7 @@ import { formatPostRateLimitMessage, isPostRateLimitReached } from '@/utils/post
 import { validatePostAgainstPolicy, checkKeywords, checkWatchlistKeywords, validatePostMediaFiles } from '@/utils/policyValidation';
 import { buildPostMediaAcceptAttribute, getPostMediaKind, toApiMediaType, type PostMediaKind } from '@/utils/allowedFileTypes';
 
-import { toApiScheduledAt, debugScheduleLog } from './postScheduleUtils';
+import { toApiScheduledAt } from './postScheduleUtils';
 import { GroupPollComposer } from '@/features/groups/components/GroupPollComposer/GroupPollComposer';
 import { HashtagSuggestions } from '@/components/posts/HashtagSuggestions';
 import { computeEmojiPickerPosition, type EmojiPickerPosition } from '@/utils/emojiPickerPosition';
@@ -477,14 +477,6 @@ export function ProfileCreatePostModal({
       const user = authService.getCurrentUser();
       const isScheduled = scheduleMode === 'scheduled';
       const scheduledAtApi = isScheduled ? toApiScheduledAt(scheduledAtLocal) : undefined;
-
-      debugScheduleLog('create post', {
-        scheduleMode,
-        scheduledAtLocal,
-        scheduledAtApi,
-        status: isScheduled ? 'SCHEDULED' : 'PUBLISHED',
-        groupId: groupId ?? selectedGroupId ?? null,
-      });
 
       const effectiveGroupId = groupId ?? selectedGroupId ?? undefined;
       const apiPrivacy = isGroupPost ? ('PUBLIC' as const) : mapPrivacyToApi();

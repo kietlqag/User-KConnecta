@@ -66,7 +66,7 @@ function MediaTile({
             e.stopPropagation(); // prevent triggering parent onActivate
             const video = e.currentTarget;
             if (video.paused) {
-              video.play().catch(err => console.log("Video play interrupted:", err));
+              video.play().catch(() => {});
             } else {
               video.pause();
             }
