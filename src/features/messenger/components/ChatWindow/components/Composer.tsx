@@ -40,6 +40,14 @@ interface ComposerProps {
   isDuplicateBlocked?: boolean;
 }
 
+const formatCooldown = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes <= 0) return `${seconds} giây`;
+  if (seconds === 0) return `${minutes} phút`;
+  return `${minutes} phút ${seconds} giây`;
+};
+
 export const Composer: React.FC<ComposerProps> = ({
   inputText,
   setInputText,
@@ -154,7 +162,7 @@ export const Composer: React.FC<ComposerProps> = ({
     <div className="p-3 bg-card border-t border-border">
       {cooldownSeconds > 0 && (
         <div className="mb-2 px-1 text-[11px] font-medium text-red-600">
-          Tạm dừng gửi tin — thử lại sau {cooldownSeconds}s
+          Thanh chat tạm khóa do có dấu hiệu spam — thử lại sau {formatCooldown(cooldownSeconds)}
         </div>
       )}
 
@@ -204,7 +212,7 @@ export const Composer: React.FC<ComposerProps> = ({
             <button
               type="button"
               onClick={onStopAndSendVoice}
-              disabled={isSendingVoice}
+              disabled={isSendingVoice || cooldownSeconds > 0}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md transition-transform hover:scale-105 hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
               title="Gửi ghi âm"
             >
@@ -217,17 +225,17 @@ export const Composer: React.FC<ComposerProps> = ({
               <button
                 type="button"
                 onClick={onStartVoice}
-                disabled={!connected || isSendingVoice}
+                disabled={!connected || cooldownSeconds > 0 || isSendingVoice}
                 className="p-2 hover:bg-muted rounded-full transition-colors disabled:opacity-50 cursor-pointer"
                 title="Gửi tin nhắn thoại"
               >
                 <Mic className="w-5 h-5 text-emerald-600" />
               </button>
-              <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
+              <input ref={imageInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} disabled={cooldownSeconds > 0} />
               <button
                 type="button"
                 onClick={onImageClick}
-                disabled={!connected || isSendingImage}
+                disabled={!connected || cooldownSeconds > 0 || isSendingImage}
                 className="p-2 hover:bg-muted rounded-full text-emerald-600 disabled:opacity-50 cursor-pointer"
                 title="Đính kèm ảnh"
               >
@@ -236,7 +244,7 @@ export const Composer: React.FC<ComposerProps> = ({
               <button
                 type="button"
                 onClick={onCameraClick}
-                disabled={!connected || isOpeningCamera}
+                disabled={!connected || cooldownSeconds > 0 || isOpeningCamera}
                 className="p-2 hover:bg-muted rounded-full text-emerald-600 disabled:opacity-50 cursor-pointer"
                 title="Chụp ảnh"
               >
@@ -249,11 +257,12 @@ export const Composer: React.FC<ComposerProps> = ({
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.rtf,.csv,.zip,.rar,.7z,.json,.xml,.mp3,.wav,.m4a,.mp4,.mov,.avi,.mkv"
                 className="hidden"
                 onChange={handleFileSelect}
+                disabled={cooldownSeconds > 0}
               />
               <button
                 type="button"
                 onClick={onFileClick}
-                disabled={!connected || isSendingFile}
+                disabled={!connected || cooldownSeconds > 0 || isSendingFile}
                 className="p-2 hover:bg-muted rounded-full text-emerald-600 disabled:opacity-50 cursor-pointer"
                 title="Gửi file"
               >
@@ -276,7 +285,7 @@ export const Composer: React.FC<ComposerProps> = ({
                     e.currentTarget.style.height = 'auto';
                   }
                 }}
-                placeholder={!connected ? 'Đang kết nối...' : cooldownSeconds > 0 ? `Thử lại sau ${cooldownSeconds}s...` : 'Aa'}
+                placeholder={!connected ? 'Đang kết nối...' : cooldownSeconds > 0 ? `Thử lại sau ${formatCooldown(cooldownSeconds)}...` : 'Aa'}
                 disabled={!connected || cooldownSeconds > 0 || isSendingImage || isSendingFile}
                 rows={1}
                 className="w-full pl-3 pr-11 py-2 bg-transparent outline-none transition-all text-sm disabled:opacity-50 resize-none min-h-[36px] max-h-[120px] leading-relaxed block"
@@ -295,7 +304,8 @@ export const Composer: React.FC<ComposerProps> = ({
                     onEmojiClick();
                     setShowEmojiPicker((prev) => !prev);
                   }}
-                  className="cursor-pointer rounded-full p-1.5 text-emerald-600 hover:bg-muted"
+                  disabled={cooldownSeconds > 0}
+                  className="cursor-pointer rounded-full p-1.5 text-emerald-600 hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                   title="Emoji"
                 >
                   <Smile className="w-5 h-5" />

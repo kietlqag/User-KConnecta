@@ -231,9 +231,14 @@ export function RealtimeCallProvider({ children }: { children: ReactNode }) {
     let msg: string;
     switch (error.code) {
       case 'CHAT_RATE_LIMITED':
-        msg = error.retryAfterSeconds
-          ? `Bạn đang gửi tin nhắn quá nhanh. Vui lòng thử lại sau ${error.retryAfterSeconds} giây.`
-          : 'Bạn đang gửi tin nhắn quá nhanh. Vui lòng thử lại sau.';
+        if (error.retryAfterSeconds) {
+          const waitLabel = error.retryAfterSeconds >= 60
+            ? `${Math.ceil(error.retryAfterSeconds / 60)} phút`
+            : `${error.retryAfterSeconds} giây`;
+          msg = `Thanh chat đã tạm khóa do có dấu hiệu spam. Vui lòng thử lại sau ${waitLabel}.`;
+        } else {
+          msg = 'Thanh chat đã tạm khóa do có dấu hiệu spam. Vui lòng thử lại sau.';
+        }
         break;
       case 'CHAT_BLOCKED_KEYWORD':
         msg = 'Tin nhắn chứa nội dung không phù hợp nên không thể gửi.';
