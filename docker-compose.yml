@@ -65,7 +65,7 @@ services:
       - livekit_egress_data:/out
 
   redis:
-    image: redis:alpine
+    image: redis/redis-stack-server:latest
     ports:
       - "6379:6379"
     healthcheck:
@@ -76,6 +76,19 @@ services:
     volumes:
       - redis_data:/data
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.2
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
 volumes:
   redis_data:
   livekit_egress_data:
+  es_data:

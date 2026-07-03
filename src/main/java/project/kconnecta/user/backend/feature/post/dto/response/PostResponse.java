@@ -60,4 +60,5 @@ public class PostResponse {
     private SharedAlbumResponse sharedAlbum;
 
     private PostPollResponse poll;
+    private boolean sharedByCurrentUser;
 }

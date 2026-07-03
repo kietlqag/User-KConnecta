@@ -1000,10 +1000,12 @@ public class PostServiceImpl implements PostService {
 
         Map<UUID, ReactionType> userReactionsMap = Collections.emptyMap();
         Set<UUID> savedPostIds = Collections.emptySet();
+        Set<UUID> sharedPostIds = Collections.emptySet();
         if (currentUserId != null) {
             userReactionsMap = postReactionRepository.findAllByUserIdAndPostIdIn(currentUserId, postIds).stream()
                     .collect(Collectors.toMap(r -> r.getPost().getId(), PostReaction::getReactionType));
             savedPostIds = postSavedRepository.findSavedPostIdsByUserIdAndPostIdIn(currentUserId, postIds);
+            sharedPostIds = postShareRepository.findSharedPostIdsByUserIdAndPostIdIn(currentUserId, postIds);
         }
 
         final Map<UUID, Map<ReactionType, Long>> finalReactionCounts = reactionCountsMap;
@@ -1011,6 +1013,7 @@ public class PostServiceImpl implements PostService {
         final Map<UUID, Long> finalShareCounts = shareCountsMap;
         final Map<UUID, ReactionType> finalUserReactions = userReactionsMap;
         final Set<UUID> finalSavedPostIds = savedPostIds;
+        final Set<UUID> finalSharedPostIds = sharedPostIds;
         final Map<UUID, PostPollResponse> pollResponses = buildPollResponseMap(postIds, currentUserId);
 
         return posts.stream()
@@ -1020,6 +1023,7 @@ public class PostServiceImpl implements PostService {
                         finalShareCounts.getOrDefault(post.getId(), 0L),
                         finalUserReactions.get(post.getId()),
                         finalSavedPostIds.contains(post.getId()),
+                        finalSharedPostIds.contains(post.getId()),
                         pollResponses.get(post.getId())))
                 .toList();
     }
@@ -1415,6 +1419,23 @@ public class PostServiceImpl implements PostService {
 
         if (postShareRepository.existsByPostIdAndUserId(postId, request.getUserId())) {
             throw new ValidationException("Bạn đã chia sẻ bài viết này rồi");
+        }
+
+        policyContentValidator.validatePost(
+                user.getId(),
+                request.getSharedContent(),
+                0
+        );
+
+        if (aiModerationPolicyReader.isEnabled()
+                && request.getSharedContent() != null
+                && !request.getSharedContent().isBlank()) {
+            geminiModerationService.moderate(request.getSharedContent()).ifPresent(moderation -> {
+                if (!moderation.safe()) {
+                    throw new ValidationException(
+                            "Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderation.reason());
+                }
+            });
         }
 
         PostPrivacy sharePrivacy = request.getPrivacy() != null ? request.getPrivacy() : PostPrivacy.PUBLIC;
@@ -1912,10 +1933,12 @@ public class PostServiceImpl implements PostService {
         long shareCount = postShareRepository.countByPostId(post.getId());
         boolean savedByCurrentUser = currentUserId != null &&
                 postSavedRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
+        boolean sharedByCurrentUser = currentUserId != null &&
+                postShareRepository.existsByPostIdAndUserId(post.getId(), currentUserId);
 
         Map<UUID, PostPollResponse> pollMap = buildPollResponseMap(List.of(post.getId()), currentUserId);
 
-        return mapToResponseOptimized(post, currentUserId, reactionCounts, commentCount, shareCount, currentUserReaction, savedByCurrentUser, pollMap.get(post.getId()));
+        return mapToResponseOptimized(post, currentUserId, reactionCounts, commentCount, shareCount, currentUserReaction, savedByCurrentUser, sharedByCurrentUser, pollMap.get(post.getId()));
     }
 
     private PostResponse mapToResponseOptimized(Post post, UUID currentUserId,
@@ -1924,6 +1947,7 @@ public class PostServiceImpl implements PostService {
                                                long shareCount,
                                                ReactionType currentUserReactionType,
                                                boolean savedByCurrentUser,
+                                               boolean sharedByCurrentUser,
                                                PostPollResponse poll) {
         List<PostMediaResponse> media = post.getMedia()
                 .stream()
@@ -1997,6 +2021,7 @@ public class PostServiceImpl implements PostService {
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .poll(poll)
+                .sharedByCurrentUser(sharedByCurrentUser)
                 .sharedGroup(buildSharedGroupSummary(post.getSharedGroup()))
                 .sharedAlbum(buildSharedAlbumSummary(post.getSharedAlbum()))
                 .build();
@@ -2119,6 +2144,9 @@ public class PostServiceImpl implements PostService {
                             .taggedUserIds(Collections.emptyList())
                             .sharedPost(true)
                             .originalPost(original)
+                            // Nếu currentUser đã share bài gốc rồi thì wrapper cũng đánh dấu đã share
+                            // để frontend hiện thông báo "đã chia sẻ" thay vì mở modal lại.
+                            .sharedByCurrentUser(original.isSharedByCurrentUser())
                             .build();
                 })
                 .filter(Objects::nonNull)

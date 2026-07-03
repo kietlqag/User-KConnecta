@@ -28,6 +28,7 @@ public class UserSettingsController {
     private final JwtUtil jwtUtil;
     private final UserService userService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @GetMapping("/settings")
     public ResponseEntity<UserSettingsResponse> getSettings(
@@ -66,9 +67,14 @@ public class UserSettingsController {
     public ResponseEntity<Map<String, Boolean>> getBlockStatus(
             @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable String blockedUserId) {
+        UUID targetUserId = resolveBlockedUserId(blockedUserId);
         boolean blockedByMe = settingsService.isBlockedByMe(
-                principal.getUserId(), resolveBlockedUserId(blockedUserId));
-        return ResponseEntity.ok(Map.of("blockedByMe", blockedByMe));
+                principal.getUserId(), targetUserId);
+        boolean conversationLocked = isConversationLocked(principal.getUserId(), targetUserId);
+        return ResponseEntity.ok(Map.of(
+                "blockedByMe", blockedByMe,
+                "conversationLocked", conversationLocked
+        ));
     }
 
     @DeleteMapping("/blocks/{blockedUserId}")
@@ -123,5 +129,21 @@ public class UserSettingsController {
     /** Cho phép UUID hoặc username trong path — tránh 400 khi frontend gửi username. */
     private UUID resolveBlockedUserId(String identifier) {
         return userService.getUserByIdOrUsername(identifier).getId();
+    }
+
+    private boolean isConversationLocked(UUID u1, UUID u2) {
+        String id1 = u1.toString();
+        String id2 = u2.toString();
+        String convId = id1.compareTo(id2) < 0 ? id1 + "_" + id2 : id2 + "_" + id1;
+        try {
+            String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM admin_conversation_statuses WHERE id = ?",
+                String.class,
+                convId
+            );
+            return "LOCKED".equalsIgnoreCase(status) || "DELETED".equalsIgnoreCase(status);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

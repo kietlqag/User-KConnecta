@@ -18,6 +18,8 @@ import project.kconnecta.user.backend.feature.chat.dto.request.MessageReactionRe
 import project.kconnecta.user.backend.feature.chat.dto.request.MessageReportRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.AddGroupMembersRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.PrivateMessageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.EmptyResultDataAccessException;
 import project.kconnecta.user.backend.feature.chat.dto.request.GroupMessageRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.LeaveGroupConversationRequest;
 import project.kconnecta.user.backend.feature.chat.dto.request.CreateGroupConversationRequest;
@@ -115,6 +117,7 @@ public class ChatServiceImpl implements ChatService {
     private final PolicyContentValidator policyContentValidator;
     private final ActivityLogService activityLogService;
     private final SettingsService settingsService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void sendPrivateMessage(String currentUsername, PrivateMessageRequest request) {
@@ -129,6 +132,10 @@ public class ChatServiceImpl implements ChatService {
 
         if (settingsService.isBlockedEitherDirection(sender.getId(), receiver.getId())) {
             throw new ForbiddenException("Không thể nhắn tin với người dùng này");
+        }
+
+        if (isConversationLocked(sender.getId(), receiver.getId())) {
+            throw new ForbiddenException("Cuộc hội thoại đã bị khóa bởi quản trị viên");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -1446,6 +1453,9 @@ public class ChatServiceImpl implements ChatService {
             if (peer == null) {
                 continue;
             }
+            if (isConversationLocked(currentUserId, peer.getId())) {
+                continue;
+            }
             result.add(new PrivatePeerConversationResponse(
                     row.getPeerUserId(),
                     peer.getFullName(),
@@ -1965,6 +1975,24 @@ public class ChatServiceImpl implements ChatService {
             activityLogService.log(sender.getId(), sender.getUsername(), ActivityLogType.MESSAGE_BLOCKED_KEYWORD,
                     "{\"reason\":\"" + escapeJson(e.getMessage()) + "\"}");
             throw e;
+        }
+    }
+
+    private boolean isConversationLocked(UUID u1, UUID u2) {
+        String id1 = u1.toString();
+        String id2 = u2.toString();
+        String convId = id1.compareTo(id2) < 0 ? id1 + "_" + id2 : id2 + "_" + id1;
+        try {
+            String status = jdbcTemplate.queryForObject(
+                "SELECT status FROM admin_conversation_statuses WHERE id = ?",
+                String.class,
+                convId
+            );
+            return "LOCKED".equalsIgnoreCase(status) || "DELETED".equalsIgnoreCase(status);
+        } catch (EmptyResultDataAccessException e) {
+            return false;
+        } catch (Exception e) {
+            return false;
         }
     }
 }

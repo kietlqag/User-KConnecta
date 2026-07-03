@@ -19,6 +19,7 @@ public final class StoryPrivacySchemaBootstrap {
 
     public static void migrateBeforeStartup() {
         String url = resolve("DB_URL");
+        log.info("stories.privacy pre-migration: Resolved DB_URL = {}", url);
         if (url == null || url.isBlank()) {
             log.debug("Skipping stories.privacy pre-migration: DB_URL is not set");
             return;

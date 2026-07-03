@@ -33,6 +33,14 @@ public interface PostShareRepository extends JpaRepository<PostShare, UUID> {
         long getCount();
     }
 
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT s.post.id FROM PostShare s WHERE s.user.id = :userId AND s.post.id IN :postIds"
+    )
+    java.util.Set<UUID> findSharedPostIdsByUserIdAndPostIdIn(
+        @org.springframework.data.repository.query.Param("userId") UUID userId,
+        @org.springframework.data.repository.query.Param("postIds") java.util.List<UUID> postIds
+    );
+
     // All shares by a user, with post+author+sharer eagerly loaded to avoid N+1
     @org.springframework.data.jpa.repository.Query(
         "SELECT ps FROM PostShare ps " +
