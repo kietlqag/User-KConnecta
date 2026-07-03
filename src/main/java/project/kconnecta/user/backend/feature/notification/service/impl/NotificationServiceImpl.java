@@ -7,6 +7,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import project.kconnecta.user.backend.exception.ForbiddenException;
 import project.kconnecta.user.backend.exception.ResourceNotFoundException;
 import project.kconnecta.user.backend.feature.notification.dto.response.NotificationResponse;
 import project.kconnecta.user.backend.feature.notification.entity.Notification;
@@ -87,9 +88,12 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void markAsRead(UUID notificationId) {
+    public void markAsRead(UUID userId, UUID notificationId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found: " + notificationId));
+        if (!notification.getRecipient().getId().equals(userId)) {
+            throw new ForbiddenException("You cannot mark another user's notification as read");
+        }
         notification.setRead(true);
         notificationRepository.save(notification);
         pushUnreadCountUpdate(notification.getRecipient());

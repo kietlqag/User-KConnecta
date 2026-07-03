@@ -2,7 +2,7 @@
   cors:
     allowed-origins: http://localhost:*,http://127.0.0.1:*,https://user-k-connecta.vercel.app
   search:
-    reindex-on-startup: false  # Dev: skip full Redis reindex; use POST /api/search/reindex when needed
+    reindex-on-startup: false  # Dev: skip full Redis reindex; use POST /api/internal/search/reindex with X-Internal-Key when needed
 
 spring:
   jpa:

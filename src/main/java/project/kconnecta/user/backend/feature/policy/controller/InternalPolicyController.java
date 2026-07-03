@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import project.kconnecta.user.backend.feature.policy.dto.AiModerationConfigRequest;
 import project.kconnecta.user.backend.feature.policy.dto.PolicyConfigUpdateRequest;
 import project.kconnecta.user.backend.feature.policy.dto.PolicyKeywordMergeResult;
 import project.kconnecta.user.backend.feature.policy.service.PolicyService;
@@ -47,6 +48,18 @@ public class InternalPolicyController {
         validateKey(key);
         JsonNode saved = policyService.saveConfig(request.config(), request.updatedBy());
         return ResponseEntity.ok(saved);
+    }
+
+    @PutMapping("/ai-moderation")
+    public ResponseEntity<Void> saveAiModerationConfig(
+            @RequestHeader("X-Internal-Key") String key,
+            @RequestBody AiModerationConfigRequest request,
+            @RequestParam(required = false) String updatedBy) {
+        validateKey(key);
+        policyService.saveAiModerationConfig(
+                request,
+                updatedBy != null && !updatedBy.isBlank() ? updatedBy : "internal");
+        return ResponseEntity.noContent().build();
     }
 
     /**

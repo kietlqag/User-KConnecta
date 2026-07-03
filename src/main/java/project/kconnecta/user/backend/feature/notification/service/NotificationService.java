@@ -10,7 +10,7 @@ public interface NotificationService {
     NotificationResponse createNotification(UUID recipientId, UUID senderId, NotificationType type, String content, UUID relatedId);
     List<NotificationResponse> getNotificationsForUser(UUID userId);
     int getUnreadCount(UUID userId);
-    void markAsRead(UUID notificationId);
+    void markAsRead(UUID userId, UUID notificationId);
     void markAllAsRead(UUID userId);
     void markAsActioned(UUID notificationId);
 
