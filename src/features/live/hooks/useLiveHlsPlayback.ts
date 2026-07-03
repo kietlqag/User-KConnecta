@@ -29,24 +29,23 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
   const [isReady, setIsReady] = useState(false);
 
   // Giữ callback trong ref để identity của nó KHÔNG làm effect chính chạy lại.
-  // Trước đây truyền inline `() => setHlsLoadFailed(true)` khiến mỗi render (mỗi
-  // giây) tạo hàm mới → effect teardown/destroy Hls liên tục → màn hình nháy và
-  // thanh tua đứng ở 00:00 vì seekable range không kịp tích lũy.
   const onFatalErrorRef = useRef(onFatalError);
   useEffect(() => {
     onFatalErrorRef.current = onFatalError;
   }, [onFatalError]);
 
+  // Chỉ dùng làm độ dài dự phòng KHI seekable chưa sẵn sàng (vài giây đầu).
+  const getSessionElapsed = useCallback(() => {
+    if (!startedAt) return 0;
+    return Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000));
+  }, [startedAt]);
+
   // Toàn bộ thời gian (live edge + vị trí phát) đều bám theo seekable range THẬT của
-  // video. Lưu ý: hls.js luôn giữ playback lùi ~liveSyncDurationCount×segment (~6s)
-  // sau segment mới nhất để ổn định, nên playhead không bao giờ chạm seekable end.
-  // Vì vậy khi còn trong ngưỡng live edge thì coi như đang ở edge và SNAP nhãn vị
-  // trí phát = buffered để thanh tua đầy 100% và hiển thị "TRỰC TIẾP" ổn định, thay
-  // vì dao động qua lại "TUA LẠI" do khoảng cách ~6s lớn hơn ngưỡng cũ (3s).
+  // video.
   const updateFromVideo = useCallback((video: HTMLVideoElement) => {
     const { start, end } = getSeekableRange(video);
     const duration = Math.max(end - start, 0);
-    const buffer = duration;
+    const buffer = duration > 0 ? duration : getSessionElapsed();
     const relative = Math.max(0, Math.min(video.currentTime - start, buffer));
     const atEdge = buffer - relative <= LIVE_EDGE_THRESHOLD_SEC;
 
@@ -55,7 +54,7 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       setPlaybackSeconds(Math.floor(atEdge ? buffer : relative));
       setIsAtLiveEdge(atEdge);
     }
-  }, []);
+  }, [getSessionElapsed]);
 
   const resumePlayback = useCallback((video: HTMLVideoElement) => {
     const play = () => {
@@ -79,10 +78,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     let hls: Hls | null = null;
     let becameReady = false;
     let recovering = false;
-    // Khi mới vào live, playback.m3u8 có thể chưa kịp lên R2 (egress đang ghi segment
-    // đầu) → manifest 404. Không được bỏ cuộc vì HLS là nguồn DVR duy nhất; thay vào
-    // đó retry nạp lại manifest với số lần đủ lớn. Chỉ báo fatal sau khi thử rất nhiều
-    // lần mà vẫn chưa từng sẵn sàng (HLS hỏng thật, vd cấu hình sai).
     let manifestRetries = 0;
     const MAX_MANIFEST_RETRIES = 40;
     let retryTimer = 0;
@@ -116,12 +111,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     if (Hls.isSupported()) {
       hls = new Hls({
         enableWorker: true,
-        // DVR: tua lại toàn bộ buổi live. Tắt low-latency, giữ back buffer vô hạn,
-        // và đặt ngưỡng "trễ tối đa" rất lớn để hls.js KHÔNG tự nhảy về live edge
-        // khi người xem đang xem lại quá khứ.
-        // liveSyncDurationCount=1: phát sát segment mới nhất để giảm độ trễ so với
-        // real-time (mặc định 3 ≈ trễ thêm ~6s). Đổi lại buffer phía trước mỏng hơn
-        // nên mạng yếu có thể giật nhẹ — onWaiting sẽ tự play lại.
         lowLatencyMode: false,
         backBufferLength: Infinity,
         liveSyncDurationCount: 1,
@@ -141,9 +130,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal || !hls) return;
 
-        // Chưa từng sẵn sàng (playlist đầu buổi chưa lên R2): kiên trì nạp lại
-        // manifest cho tới khi có. Đây là lý do "vào lần 1 thanh tua trống, lần 2
-        // mới có" — trước đây lỗi này tắt HLS vĩnh viễn.
         if (!becameReady) {
           manifestRetries += 1;
           if (manifestRetries <= MAX_MANIFEST_RETRIES) {

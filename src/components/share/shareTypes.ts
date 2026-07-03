@@ -5,6 +5,7 @@ export type ShareTarget =
       type: 'post';
       postId: string;
       parentShareId?: string;
+      alreadyShared?: boolean;
       content?: string;
       image?: string;
       authorName?: string;

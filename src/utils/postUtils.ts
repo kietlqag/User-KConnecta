@@ -238,5 +238,6 @@ export function mapApiPost(item: PostResponse): FeedPost {
       : undefined,
     status: item.status,
     scheduledAt: item.scheduledAt ?? undefined,
+    currentUserShared: item.sharedByCurrentUser ?? false,
   };
 }

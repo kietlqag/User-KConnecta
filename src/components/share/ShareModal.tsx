@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Link2, MessageCircle, ArrowLeft, Search, Globe, Lock, Smile, ChevronDown, Newspaper, Users } from 'lucide-react';
+import { Link2, MessageCircle, ArrowLeft, Search, Globe, Lock, Smile, ChevronDown, Newspaper, Users, AlertCircle, Loader2 } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import {
@@ -30,6 +30,9 @@ import {
   getStoryNavigateState,
 } from './shareHelpers';
 import { computeEmojiPickerPosition, type EmojiPickerPosition } from '@/utils/emojiPickerPosition';
+import { usePublicPolicies } from '@/hooks/usePublicPolicies';
+import { validatePostAgainstPolicy, checkKeywords } from '@/utils/policyValidation';
+import { HashtagSuggestions } from '@/components/posts/HashtagSuggestions';
 
 function isEventInsideRef(event: MouseEvent, ref: RefObject<HTMLElement | null>) {
   const node = ref.current;
@@ -88,6 +91,43 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
   const { conversations, loading: loadingFriends } = useFriendConversations();
   const { sendMessage } = useRealtimeCall();
 
+  const { data: publicPolicy } = usePublicPolicies();
+  const [aiViolationError, setAiViolationError] = useState<string | null>(null);
+  const [isAiChecking, setIsAiChecking] = useState(false);
+
+  useEffect(() => {
+    const trimmed = caption.trim();
+    if (!trimmed || trimmed.length < 5) {
+      setAiViolationError(null);
+      setIsAiChecking(false);
+      return;
+    }
+
+    if (checkKeywords(caption, publicPolicy)) {
+      setAiViolationError(null);
+      setIsAiChecking(false);
+      return;
+    }
+
+    setIsAiChecking(true);
+    const handler = setTimeout(async () => {
+      try {
+        const response = await postService.verifyContent(trimmed);
+        if (response.level === 'AI_UNSAFE') {
+          setAiViolationError(response.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
+        } else {
+          setAiViolationError(null);
+        }
+      } catch (err) {
+        console.error('Failed to verify content with AI:', err);
+      } finally {
+        setIsAiChecking(false);
+      }
+    }, 1000);
+
+    return () => clearTimeout(handler);
+  }, [caption, publicPolicy]);
+
   const filteredConversations = useMemo(
     () =>
       searchQuery.trim()
@@ -142,6 +182,8 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
     setShowPrivacyMenu(false);
     setShowEmojiPicker(false);
     setSendingToUserId(null);
+    setAiViolationError(null);
+    setIsAiChecking(false);
     onClose();
   };
 
@@ -180,12 +222,38 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
   };
 
   const handleShareToFeed = async () => {
+    if (target.type === 'post' && target.alreadyShared) {
+      toast.info('Bạn đã chia sẻ bài viết này lên bảng tin rồi');
+      return;
+    }
+
     if (!currentUser) {
       toast.error('Bạn cần đăng nhập để chia sẻ');
       return;
     }
+
+    const trimmedText = caption.trim();
+    const policyError = validatePostAgainstPolicy(
+      trimmedText,
+      0,
+      publicPolicy
+    );
+    if (policyError) {
+      toast.error(policyError);
+      return;
+    }
+
+    setIsSharingNow(true);
     try {
-      setIsSharingNow(true);
+      if (trimmedText.length >= 5 && !checkKeywords(caption, publicPolicy)) {
+        const verifyRes = await postService.verifyContent(trimmedText);
+        if (verifyRes.level === 'AI_UNSAFE' || verifyRes.level === 'BLACKLIST') {
+          toast.error(verifyRes.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
+          setIsSharingNow(false);
+          return;
+        }
+      }
+
       if (target.type === 'post') {
         const response = await postService.sharePost(target.postId, {
           userId: currentUser.id,
@@ -397,10 +465,12 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                   <textarea
                     ref={textareaRef}
                     value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
+                    onChange={(e) => {
+                      const max = publicPolicy?.postPolicy.maxPostLength ?? 1000;
+                      if (e.target.value.length <= max) setCaption(e.target.value);
+                    }}
                     placeholder={placeholder}
                     rows={2}
-                    maxLength={1000}
                     className="w-full resize-none rounded-xl border-none bg-transparent px-0 py-1 text-base text-foreground outline-none placeholder:text-muted-foreground"
                   />
                   <div className="relative">
@@ -422,15 +492,70 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                   </div>
                 </div>
 
+                {/* Hashtag suggestions */}
+                <HashtagSuggestions
+                  content={caption}
+                  textareaRef={textareaRef}
+                  onContentChange={setCaption}
+                />
+
+                {/* Character counter */}
+                {publicPolicy && (() => {
+                  const max = publicPolicy.postPolicy.maxPostLength;
+                  const len = caption.length;
+                  const ratio = len / max;
+                  return (
+                    <div className={`text-right text-xs ${ratio >= 1 ? 'text-red-500 font-medium' : ratio >= 0.9 ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                      {len} / {max}
+                    </div>
+                  );
+                })()}
+
+                {/* AI checking indicator */}
+                {isAiChecking && !checkKeywords(caption, publicPolicy) && (
+                  <div className="flex items-center gap-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400">
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                    Đang kiểm duyệt nội dung…
+                  </div>
+                )}
+
+                {/* Keyword / AI violation errors */}
+                {(() => {
+                  const err = checkKeywords(caption, publicPolicy);
+                  if (err) {
+                    return (
+                      <div className="flex items-center gap-1.5 rounded-md bg-red-50 dark:bg-red-900/20 px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        {err}
+                      </div>
+                    );
+                  }
+                  if (aiViolationError) {
+                    return (
+                      <div className="flex items-center gap-1.5 rounded-md bg-red-50 dark:bg-red-900/20 px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        {aiViolationError}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
                 <SharePreview target={target} />
 
                 <button
                   type="button"
                   onClick={() => void handleShareToFeed()}
-                  disabled={isSharingNow}
+                  disabled={(target.type === 'post' && !!target.alreadyShared) || isSharingNow || isAiChecking || !!checkKeywords(caption, publicPolicy) || !!aiViolationError}
                   className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
-                  {isSharingNow ? 'Đang đăng...' : 'Đăng bài'}
+                  {target.type === 'post' && target.alreadyShared
+                    ? 'Đã chia sẻ lên bảng tin'
+                    : isSharingNow
+                      ? 'Đang đăng...'
+                      : isAiChecking
+                        ? 'Đang kiểm duyệt...'
+                        : 'Đăng bài'}
                 </button>
 
                 <div className="h-px bg-background" />

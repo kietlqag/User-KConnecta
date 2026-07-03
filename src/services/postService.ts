@@ -169,6 +169,7 @@ export interface PostResponse {
   sharedGroup?: SharedGroupResponse | null;
   sharedAlbum?: SharedAlbumResponse | null;
   poll?: PostPollResponse | null;
+  sharedByCurrentUser?: boolean;
 }
 
 export interface SharedAlbumResponse {

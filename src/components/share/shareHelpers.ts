@@ -35,7 +35,7 @@ export function getShareLink(target: ShareTarget): string {
     case 'post':
       return target.linkStyle === 'watch'
         ? `${origin}/watch?id=${target.postId}`
-        : `${origin}/posts/${target.postId}`;
+        : `${origin}/home?post=${encodeURIComponent(target.postId)}`;
   }
 }
 

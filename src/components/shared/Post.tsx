@@ -146,6 +146,8 @@ export interface PostProps {
   /** Stretch the card to fill its container height (for equal-height grids). */
   fillHeight?: boolean;
   onPostUpdated?: (post: PostResponse) => void;
+  /** True if the current user has already shared this post. */
+  currentUserShared?: boolean;
 }
 
 export function Post({
@@ -184,6 +186,7 @@ export function Post({
   compact = false,
   fillHeight = false,
   onPostUpdated,
+  currentUserShared: initialCurrentUserShared = false,
 }: PostProps) {
   // For share wrappers, save/share actions target the original post; interactions use the wrapper id.
   const originalPostId = sharedPost && originalPost ? originalPost.id : id;
@@ -211,6 +214,9 @@ export function Post({
   const [isReacting, setIsReacting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [currentUserShared, setCurrentUserShared] = useState(
+    initialCurrentUserShared || (sharedPost && !!originalPost?.currentUserShared)
+  );
   const deleteScrollYRef = useRef(0);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [displayContent, setDisplayContent] = useState(content);
@@ -924,7 +930,9 @@ export function Post({
           <button
             type="button"
             onClick={() => setIsShareModalOpen(true)}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 text-muted-foreground transition-colors hover:bg-muted"
+            className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2 transition-colors hover:bg-muted ${
+              currentUserShared ? 'text-primary font-semibold' : 'text-muted-foreground'
+            }`}
           >
             <Share2 className="w-5 h-5" />
             <span className="font-medium">Chia sẻ</span>
@@ -1151,6 +1159,7 @@ export function Post({
         onClose={() => setIsShareModalOpen(false)}
         postId={originalPostId}
         parentShareId={sharedPost ? id : undefined}
+        alreadyShared={currentUserShared}
         postContent={sharedPost && originalPost ? originalPost.content : displayContent}
         postImage={sharedPost && originalPost
           ? (originalPost.image || (originalPost.media?.type === 'image' ? originalPost.media.url : undefined))
@@ -1163,6 +1172,7 @@ export function Post({
           } else {
             setShareCount(response.shareCount);
           }
+          setCurrentUserShared(true);
           // Refresh the feed so the new share post shows up immediately (no F5 needed)
           void queryClient.invalidateQueries({ queryKey: POSTS_FEED_KEY });
         }}

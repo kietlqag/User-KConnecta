@@ -6,6 +6,7 @@ interface PostShareModalProps {
   onClose: () => void;
   postId: string;
   parentShareId?: string;
+  alreadyShared?: boolean;
   postContent?: string;
   postImage?: string;
   postAuthorName?: string;
@@ -20,6 +21,7 @@ export function PostShareModal({
   onClose,
   postId,
   parentShareId,
+  alreadyShared,
   postContent,
   postImage,
   postAuthorName,
@@ -35,6 +37,7 @@ export function PostShareModal({
         type: 'post',
         postId,
         parentShareId,
+        alreadyShared,
         content: postContent,
         image: postImage,
         authorName: postAuthorName,
