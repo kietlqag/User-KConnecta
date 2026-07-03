@@ -3,7 +3,7 @@ import { formatVi } from '@/constants/formatVi';
 import { useEffect, useState, useMemo, useCallback, type MouseEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Search, Home, Users, Shapes, Clapperboard, Radio, MessageCircle, Bell, Menu } from 'lucide-react';
+import { Search, Home, Users, Shapes, Clapperboard, Radio, MessageCircle, Bell, Menu, X } from 'lucide-react';
 import { MessengerPanel } from '../../../messenger/components';
 import { NotificationsPanel } from '../../../notifications/components';
 import { AccountMenu } from '../../../account/components';
@@ -162,10 +162,10 @@ export function Header() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden />
               <input
                 id="header-search"
-                type="search"
+                type="text"
                 name="q"
                 placeholder="Tìm kiếm trên KConnecta"
-                className="w-full pl-10 pr-4 py-2 bg-muted text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-muted/70 transition-colors"
+                className={`w-full pl-10 ${searchQuery ? 'pr-9' : 'pr-4'} py-2 bg-muted text-foreground placeholder:text-muted-foreground rounded-full outline-none focus:bg-muted/70 transition-colors`}
                 value={searchQuery}
                 onFocus={() => setShowSearchSuggestions(true)}
                 onChange={(e) => {
@@ -180,6 +180,16 @@ export function Header() {
                   }
                 }}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Xóa tìm kiếm"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
               {showSearchSuggestions && (
                 <SearchSuggestions
                   query={searchQuery}

@@ -292,7 +292,7 @@ export default function SearchResultsPage() {
                 <section>
                   <SectionHeader title="Mọi người" count={people.length} onSeeAll={() => setActiveFilter('people')} />
                   <div className={PEOPLE_GRID_CLASS}>
-                    {people.slice(0, 4).map(p => (
+                    {people.slice(0, 5).map(p => (
                       <PeopleResult key={p.id} person={p} onFriendToggle={handleFriendToggle} />
                     ))}
                   </div>

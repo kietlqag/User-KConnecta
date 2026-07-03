@@ -52,7 +52,7 @@ export function SearchRightPanel({
     <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 self-start overflow-y-auto border-l border-border bg-card p-4 lg:block">
       <div className="space-y-4">
         {showPostFilters && (
-          <div className="rounded-xl border border-border bg-muted/80 p-4/40">
+          <div className="rounded-xl border border-border bg-muted/80 p-4">
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -127,7 +127,7 @@ export function SearchRightPanel({
         )}
 
         {showPeopleFilters && (
-          <div className="rounded-xl border border-border bg-muted/80 p-4/40">
+          <div className="rounded-xl border border-border bg-muted/80 p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Lọc mọi người
             </p>
@@ -157,7 +157,7 @@ export function SearchRightPanel({
         )}
 
         {showGroupFilters && (
-          <div className="rounded-xl border border-border bg-muted/80 p-4/40">
+          <div className="rounded-xl border border-border bg-muted/80 p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Lọc nhóm
             </p>

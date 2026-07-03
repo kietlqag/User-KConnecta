@@ -131,12 +131,12 @@ export function RightSidebar() {
               <input
                 id="contact-search"
                 ref={searchInputRef}
-                type="search"
+                type="text"
                 name="contact"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Tìm người liên hệ"
-                className="w-full bg-muted rounded-full py-2 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:bg-muted/80 transition-colors"
+                className={`w-full bg-muted rounded-full py-2 pl-9 ${query ? 'pr-9' : 'pr-4'} text-sm text-foreground placeholder:text-muted-foreground outline-none focus:bg-muted/80 transition-colors`}
               />
               {query && (
                 <button

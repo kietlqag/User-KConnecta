@@ -668,7 +668,7 @@ export function Post({
           </div>
 
           {(displayContent && !hasLivePreview) || (sharedPost && displayContent) ? (
-            <p className="text-foreground mb-3 whitespace-pre-wrap">{displayContent}</p>
+            <p className="text-foreground mb-3 whitespace-pre-wrap break-words">{displayContent}</p>
           ) : null}
 
           {poll && !sharedPost && !isScheduled && (
@@ -729,7 +729,7 @@ export function Post({
                     </div>
                   ) : (
                     originalPost.content && (
-                      <p className="text-sm text-foreground whitespace-pre-wrap line-clamp-4">{originalPost.content}</p>
+                      <p className="text-sm text-foreground whitespace-pre-wrap break-words line-clamp-4">{originalPost.content}</p>
                     )
                   )}
                 </div>

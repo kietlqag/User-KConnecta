@@ -186,7 +186,7 @@ export function PostDetailModal({
 
           {!livePreview && (
             <div className="px-4 pb-3">
-              <p className="whitespace-pre-wrap text-[15px] leading-relaxed">{post.content}</p>
+              <p className="whitespace-pre-wrap text-[15px] leading-relaxed break-words">{post.content}</p>
             </div>
           )}
 
