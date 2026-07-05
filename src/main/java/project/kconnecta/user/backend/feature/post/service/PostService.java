@@ -65,7 +65,9 @@ public interface PostService {
     PostResponse updatePrivacy(UUID postId, UUID userId, UpdatePostPrivacyRequest request);
     void reportPost(UUID postId, ReportPostRequest request);
     boolean hasUserReportedPost(UUID postId, UUID userId);
+    boolean hasUserReportedComment(UUID commentId, UUID userId);
     void reportComment(UUID commentId, ReportCommentRequest request);
+
     List<PostReportResponse> getMyReports(UUID userId);
 
     List<PostResponse> getPostsByIds(List<UUID> postIds, UUID currentUserId);

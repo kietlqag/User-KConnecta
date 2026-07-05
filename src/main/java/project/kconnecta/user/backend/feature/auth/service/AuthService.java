@@ -130,19 +130,15 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         Account account = accountRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("Email khong ton tai"));
-
-        if (account.getPasswordHash() == null) {
-            throw new ValidationException("Tai khoan nay dang nhap qua Google, vui long dung nut Dang nhap bang Google");
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại"));
 
         User user = userRepository.findByAccountId(account.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay nguoi dung tuong ung"));
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng tương ứng"));
 
-        if (!passwordEncoder.matches(request.getPassword(), account.getPasswordHash())) {
+        if (account.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), account.getPasswordHash())) {
             activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.LOGIN_FAILED,
                     "{\"reason\":\"Mat khau khong dung\"}");
-            throw new ValidationException("Mat khau khong dung");
+            throw new ValidationException("Mật khẩu không đúng");
         }
 
         AuthResponse blocked = resolveLockState(account, user,
@@ -151,10 +147,10 @@ public class AuthService {
             return blocked;
         }
         if (account.getStatus() == AccountStatus.DELETED) {
-            throw new ValidationException("Tai khoan da bi xoa");
+            throw new ValidationException("Tài khoản đã bị xóa");
         }
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new ValidationException("Tai khoan khong kha dung");
+            throw new ValidationException("Tài khoản không khả dụng");
         }
 
         if (settingsService.isTwoFactorEnabled(user.getId())) {

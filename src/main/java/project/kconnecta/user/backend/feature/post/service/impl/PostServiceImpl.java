@@ -1605,6 +1605,16 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public boolean hasUserReportedComment(UUID commentId, UUID userId) {
+        if (commentId == null || userId == null) {
+            return false;
+        }
+        return commentReportRepository.existsByCommentIdAndReporterId(commentId, userId);
+    }
+
+
+    @Override
     public void reportComment(UUID commentId, project.kconnecta.user.backend.feature.post.dto.request.ReportCommentRequest request) {
         if (request == null || request.getReporterId() == null) {
             throw new ValidationException("Reporter is required");

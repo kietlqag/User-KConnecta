@@ -254,6 +254,15 @@ public class PostController {
         return ResponseEntity.ok(java.util.Map.of("reported", reported));
     }
 
+    @GetMapping("/comments/{commentId}/reports/status")
+    public ResponseEntity<java.util.Map<String, Boolean>> getCommentReportStatus(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID commentId) {
+        boolean reported = postService.hasUserReportedComment(commentId, principal.getUserId());
+        return ResponseEntity.ok(java.util.Map.of("reported", reported));
+    }
+
+
     @PostMapping("/comments/{commentId}/reports")
     public ResponseEntity<Void> reportComment(
             @AuthenticationPrincipal UserPrincipal principal,
