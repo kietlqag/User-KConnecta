@@ -1,5 +1,5 @@
-﻿import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Pin, UserRound } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Pin, UserRound, AlertTriangle } from 'lucide-react';
 import { ChatUser, Message } from '../../types/message.types';
 import { ChatHeader } from './components/ChatHeader';
 import { MessageList } from './components/MessageList';
@@ -11,6 +11,16 @@ import { useChatScroll } from './hooks/useChatScroll';
 import { useVoiceRecorder } from './hooks/useVoiceRecorder';
 import { useAttachments } from './hooks/useAttachments';
 import { useCameraCapture } from './hooks/useCameraCapture';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+
 
 const REPLY_PREFIX = '__REPLY__:';
 
@@ -26,7 +36,7 @@ interface ChatWindowProps {
   onReactMessage?: (messageId: string, emoji: string) => void;
   onDeleteMessageForMe?: (messageId: string) => void;
   onDeleteMessageForEveryone?: (messageId: string) => void;
-  onReportMessage?: (messageId: string) => Promise<boolean> | boolean;
+  onReportMessage?: (messageId: string, reason?: string) => Promise<boolean> | boolean;
   onForwardMessage?: (message: Message) => void;
   onPinMessage?: (message: Message) => void;
   pinnedMessages?: PinnedChatMessage[];
@@ -115,7 +125,22 @@ export const ChatWindow = ({
 }: ChatWindowProps) => {
   const [inputText, setInputText] = useState('');
   const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
-  const [reportNotice, setReportNotice] = useState<string | null>(null);
+  const [reportMessageDialogOpen, setReportMessageDialogOpen] = useState(false);
+  const [reportingMessage, setReportingMessage] = useState<Message | null>(null);
+  const [reportMessageReason, setReportMessageReason] = useState('');
+  const [isReportingMessage, setIsReportingMessage] = useState(false);
+
+  const setReportNotice = (msg: string | null) => {
+    if (msg) {
+      if (msg.toLowerCase().includes('không') || msg.toLowerCase().includes('lỗi') || msg.toLowerCase().includes('hủy') || msg.toLowerCase().includes('thất bại')) {
+        toast.error(msg);
+      } else {
+        toast.success(msg);
+      }
+    }
+  };
+
+
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [showPinnedModal, setShowPinnedModal] = useState(false);
@@ -247,12 +272,30 @@ export const ChatWindow = ({
     }
   }, [hasOlder, onLoadOlder]);
 
-  const handleReport = async (message: Message) => {
-    const excerpt = message.text.slice(0, 40);
-    const ok = await Promise.resolve(onReportMessage?.(message.id) ?? true);
-    setReportNotice(ok ? `Đã báo cáo: "${excerpt}..."` : 'Không thể báo cáo lúc này');
-    window.setTimeout(() => setReportNotice(null), 1800);
+  const handleReport = (message: Message) => {
+    setReportingMessage(message);
+    setReportMessageReason('');
+    setReportMessageDialogOpen(true);
   };
+
+  const handleConfirmReportMessage = async () => {
+    if (!reportingMessage || isReportingMessage) return;
+    setIsReportingMessage(true);
+    try {
+      const ok = await Promise.resolve(onReportMessage?.(reportingMessage.id, reportMessageReason) ?? true);
+      if (ok) {
+        toast.success('Đã gửi báo cáo tin nhắn.');
+        setReportMessageDialogOpen(false);
+      } else {
+        toast.error('Không thể báo cáo lúc này');
+      }
+    } catch {
+      toast.error('Không thể báo cáo lúc này');
+    } finally {
+      setIsReportingMessage(false);
+    }
+  };
+
 
   const hasActiveVoiceCall = callStatus === 'calling' || callStatus === 'connecting' || callStatus === 'in_call';
   const isStartingVoiceCall = callStatus === 'calling' || callStatus === 'connecting';
@@ -426,11 +469,56 @@ export const ChatWindow = ({
         onCameraReady={onCameraReady}
       />
 
-      {reportNotice && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-2 bg-card/90 text-white text-sm rounded-lg shadow-xl z-[200] animate-in fade-in zoom-in duration-200">
-          {reportNotice}
-        </div>
-      )}
+      <Dialog open={reportMessageDialogOpen} onOpenChange={setReportMessageDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Báo cáo tin nhắn
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {reportingMessage && (
+              <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground italic max-h-24 overflow-y-auto">
+                "{reportingMessage.text}"
+              </div>
+            )}
+
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">
+                Lý do báo cáo <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                className="w-full rounded-md border border-border p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+                rows={3}
+                placeholder="Vui lòng nhập lý do báo cáo tin nhắn này..."
+                value={reportMessageReason}
+                onChange={(e) => setReportMessageReason(e.target.value)}
+                maxLength={500}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              disabled={isReportingMessage}
+              onClick={() => setReportMessageDialogOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isReportingMessage || !reportMessageReason.trim()}
+              onClick={() => void handleConfirmReportMessage()}
+            >
+              {isReportingMessage ? 'Đang gửi...' : 'Gửi báo cáo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <PinnedMessagesModal
         open={showPinnedModal}

@@ -386,6 +386,9 @@ export const postService = {
       category: category ?? null,
       reason: reason?.trim() || null,
     }),
+  getCommentReportStatus: (commentId: string) =>
+    api.get<{ reported: boolean }>(`/posts/comments/${commentId}/reports/status`),
+
   verifyContent: (content: string) =>
     api.post<{
       safe: boolean;

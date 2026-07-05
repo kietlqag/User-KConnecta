@@ -3606,14 +3606,15 @@ export default function MessengerPage() {
     [activeChatUserId],
   );
 
-  const handleReportMessage = useCallback(async (messageId: string) => {
+  const handleReportMessage = useCallback(async (messageId: string, reason?: string) => {
     try {
-      await chatService.reportMessage(messageId, 'reported-from-messenger-ui');
+      await chatService.reportMessage(messageId, reason || 'reported-from-messenger-ui');
       return true;
     } catch {
       return false;
     }
   }, []);
+
 
   const filters: { key: MessengerFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },

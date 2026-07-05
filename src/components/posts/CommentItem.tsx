@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { MoreHorizontal, Trash2, Pencil, Flag, Clock, X } from 'lucide-react';
+import { MoreHorizontal, Trash2, Pencil, Flag, Clock, X, AlertTriangle } from 'lucide-react';
 import { CommentInput } from './CommentInput';
 import { authService } from '@/services/authService';
-import { postService, type ReactionType } from '@/services/postService';
+import { postService, type ReactionType, type ReportCategory } from '@/services/postService';
 import {
   ReactionButton,
   reactions,
@@ -13,6 +13,15 @@ import {
 } from '@/components/reactions';
 import { toast } from 'sonner';
 import { UserAvatar } from '@/components/shared/UserAvatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+
 
 export interface Comment {
   id: string;
@@ -46,6 +55,16 @@ interface CommentItemProps {
 }
 
 const UNDO_DELAY_MS = 5000;
+
+const REPORT_CATEGORIES: { value: ReportCategory; label: string }[] = [
+  { value: 'SPAM',           label: 'Spam / Quảng cáo' },
+  { value: 'VIOLENCE',       label: 'Bạo lực' },
+  { value: 'HATE_SPEECH',    label: 'Ngôn ngữ thù địch' },
+  { value: 'NUDITY',         label: 'Nội dung khiêu dâm' },
+  { value: 'MISINFORMATION', label: 'Thông tin sai lệch' },
+  { value: 'OTHER',          label: 'Lý do khác' },
+];
+
 
 function recordToCountMap(rec?: Record<string, number> | null): ReactionCountMap {
   const map: ReactionCountMap = { LIKE: 0, LOVE: 0, HAHA: 0, WOW: 0, SAD: 0, ANGRY: 0 };
@@ -85,6 +104,14 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<ReportCategory | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [isReporting, setIsReporting] = useState(false);
+  const [hasReported, setHasReported] = useState(false);
+  const [reportStatusLoading, setReportStatusLoading] = useState(false);
+
+
 
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -104,6 +131,32 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!comment.id || isOwner || !currentUser) {
+      setHasReported(false);
+      return;
+    }
+
+    let cancelled = false;
+    setReportStatusLoading(true);
+    void postService
+      .getCommentReportStatus(comment.id)
+      .then((status) => {
+        if (!cancelled) setHasReported(Boolean(status.reported));
+      })
+      .catch(() => {
+        if (!cancelled) setHasReported(false);
+      })
+      .finally(() => {
+        if (!cancelled) setReportStatusLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [comment.id, isOwner, currentUser]);
+
 
   const loadReplies = async () => {
     const data = await postService.getReplies(comment.postId, comment.id, currentUser?.id);
@@ -231,16 +284,34 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
     setReplies((prev) => prev.map((r) => r.id === replyId ? { ...r, content: newContent } : r));
   };
 
-  const handleReport = async () => {
+  const handleOpenReportDialog = () => {
     setShowMenu(false);
-    if (!currentUser) return;
+    if (!currentUser) {
+      toast.error('Vui lòng đăng nhập để báo cáo bình luận.');
+      return;
+    }
+    if (hasReported) return;
+    setSelectedCategory(null);
+    setReportReason('');
+    setReportDialogOpen(true);
+  };
+
+  const handleReportCommentSubmit = async () => {
+    if (isReporting || !currentUser || !selectedCategory) return;
+    setIsReporting(true);
     try {
-      await postService.reportComment(comment.id, currentUser.id);
-      toast.success('Đã gửi báo cáo. Cảm ơn bạn đã góp phần giữ cộng đồng an toàn!');
+      await postService.reportComment(comment.id, currentUser.id, selectedCategory, reportReason);
+      setReportDialogOpen(false);
+      setHasReported(true);
+      toast.success('Đã gửi báo cáo bình luận tới quản trị viên.');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Không thể gửi báo cáo');
+    } finally {
+      setIsReporting(false);
     }
   };
+
+
 
   const handleSaveEdit = async () => {
     const trimmed = editContent.trim();
@@ -500,12 +571,19 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
                     </>
                   ) : (
                     <button
-                      onClick={() => void handleReport()}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors cursor-pointer"
+                      onClick={hasReported ? undefined : handleOpenReportDialog}
+                      disabled={hasReported || reportStatusLoading}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                        hasReported
+                          ? 'text-muted-foreground cursor-not-allowed opacity-60'
+                          : 'text-foreground hover:bg-muted cursor-pointer'
+                      }`}
                     >
                       <Flag className="w-4 h-4" />
-                      Báo cáo
+                      {hasReported ? 'Đã báo cáo' : 'Báo cáo'}
                     </button>
+
+
                   )}
                 </div>
               </>
@@ -536,6 +614,73 @@ export function CommentItem({ comment, depth = 0, isOrphan = false, onReply, onD
           />
         </div>
       )}
+
+      <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Báo cáo bình luận
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">Chọn lý do báo cáo bình luận này:</p>
+            <div className="space-y-2">
+              {REPORT_CATEGORIES.map((cat) => (
+                <label
+                  key={cat.value}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedCategory === cat.value ? 'border-red-400 bg-red-50' : 'border-border hover:bg-muted'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="reportCategory"
+                    value={cat.value}
+                    checked={selectedCategory === cat.value}
+                    onChange={() => setSelectedCategory(cat.value)}
+                    className="accent-red-600"
+                  />
+                  <span className="text-sm font-medium">{cat.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div>
+              <label className="text-sm text-muted-foreground mb-1 block">
+                Mô tả thêm <span className="text-muted-foreground">(tuỳ chọn)</span>
+              </label>
+              <textarea
+                className="w-full rounded-md border border-border p-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+                rows={3}
+                placeholder="Mô tả chi tiết vi phạm..."
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                maxLength={500}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              disabled={isReporting}
+              onClick={() => setReportDialogOpen(false)}
+            >
+              Hủy
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={isReporting || !selectedCategory}
+              onClick={() => void handleReportCommentSubmit()}
+            >
+              {isReporting ? 'Đang gửi...' : 'Gửi báo cáo'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

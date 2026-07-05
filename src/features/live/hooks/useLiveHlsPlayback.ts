@@ -1,11 +1,7 @@
 import Hls from 'hls.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-<<<<<<< Updated upstream
 const LIVE_EDGE_THRESHOLD_SEC = 10;
-=======
-const LIVE_EDGE_THRESHOLD_SEC = 3;
->>>>>>> Stashed changes
 
 type UseLiveHlsPlaybackOptions = {
   enabled: boolean;
@@ -32,15 +28,12 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
   const [bufferedSeconds, setBufferedSeconds] = useState(0);
   const [isReady, setIsReady] = useState(false);
 
-<<<<<<< Updated upstream
   // Giữ callback trong ref để identity của nó KHÔNG làm effect chính chạy lại.
   const onFatalErrorRef = useRef(onFatalError);
   useEffect(() => {
     onFatalErrorRef.current = onFatalError;
   }, [onFatalError]);
 
-=======
->>>>>>> Stashed changes
   // Chỉ dùng làm độ dài dự phòng KHI seekable chưa sẵn sàng (vài giây đầu).
   const getSessionElapsed = useCallback(() => {
     if (!startedAt) return 0;
@@ -48,30 +41,18 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
   }, [startedAt]);
 
   // Toàn bộ thời gian (live edge + vị trí phát) đều bám theo seekable range THẬT của
-<<<<<<< Updated upstream
-  // video.
-=======
   // video, không dùng đồng hồ tường — nhờ vậy kéo tới giây nào là tới đúng giây đó.
->>>>>>> Stashed changes
   const updateFromVideo = useCallback((video: HTMLVideoElement) => {
     const { start, end } = getSeekableRange(video);
     const duration = Math.max(end - start, 0);
     const buffer = duration > 0 ? duration : getSessionElapsed();
     const relative = Math.max(0, Math.min(video.currentTime - start, buffer));
-<<<<<<< Updated upstream
     const atEdge = buffer - relative <= LIVE_EDGE_THRESHOLD_SEC;
 
     setBufferedSeconds(Math.floor(buffer));
     if (!isScrubbingRef.current) {
       setPlaybackSeconds(Math.floor(atEdge ? buffer : relative));
       setIsAtLiveEdge(atEdge);
-=======
-
-    setBufferedSeconds(Math.floor(buffer));
-    if (!isScrubbingRef.current) {
-      setPlaybackSeconds(Math.floor(relative));
-      setIsAtLiveEdge(buffer - relative <= LIVE_EDGE_THRESHOLD_SEC);
->>>>>>> Stashed changes
     }
   }, [getSessionElapsed]);
 
@@ -130,18 +111,12 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
     if (Hls.isSupported()) {
       hls = new Hls({
         enableWorker: true,
-<<<<<<< Updated upstream
-        lowLatencyMode: false,
-        backBufferLength: Infinity,
-        liveSyncDurationCount: 1,
-=======
         // DVR: tua lại toàn bộ buổi live. Tắt low-latency, giữ back buffer vô hạn,
         // và đặt ngưỡng "trễ tối đa" rất lớn để hls.js KHÔNG tự nhảy về live edge
         // khi người xem đang xem lại quá khứ.
         lowLatencyMode: false,
         backBufferLength: Infinity,
         liveSyncDurationCount: 3,
->>>>>>> Stashed changes
         liveMaxLatencyDurationCount: 600,
       });
       hlsRef.current = hls;
@@ -157,7 +132,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
       hls.on(Hls.Events.LEVEL_UPDATED, () => updateFromVideo(video));
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal || !hls) return;
-<<<<<<< Updated upstream
 
         if (!becameReady) {
           manifestRetries += 1;
@@ -168,8 +142,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           onFatalErrorRef.current?.();
           return;
         }
-=======
->>>>>>> Stashed changes
         if (recovering) return;
         recovering = true;
         window.setTimeout(() => { recovering = false; }, 3000);
@@ -182,12 +154,6 @@ export function useLiveHlsPlayback({ enabled, hlsUrl, startedAt, onFatalError }:
           hls.recoverMediaError();
           return;
         }
-<<<<<<< Updated upstream
-=======
-        if (!becameReady) {
-          onFatalError?.();
-        }
->>>>>>> Stashed changes
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       const loadNative = () => {
