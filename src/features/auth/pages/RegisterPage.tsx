@@ -61,6 +61,7 @@ export function RegisterPage() {
     email: googleSignupSession?.email ?? "",
     password: "",
   });
+  const [otpSentAt, setOtpSentAt] = useState<number | null>(null);
 
   const [mouseX, setMouseX] = useState<number>(0);
   const [mouseY, setMouseY] = useState<number>(0);
@@ -126,6 +127,7 @@ export function RegisterPage() {
 
   const handleEmailNext = (email: string) => {
     setSignupData((prev) => ({ ...prev, email }));
+    setOtpSentAt(Date.now());
     setCurrentStep("otp");
   };
   const handleOTPNext = () => setCurrentStep("password");
@@ -307,12 +309,21 @@ export function RegisterPage() {
           {currentStep === "otp" && (
             <OTPVerificationStep
               email={signupData.email}
+              otpSentAt={otpSentAt}
+              onResendSuccess={setOtpSentAt}
               onNext={handleOTPNext}
               onBack={() => setCurrentStep("email")}
             />
           )}
           {currentStep === "password" && (
-            <PasswordStep onNext={handlePasswordNext} onBack={() => setCurrentStep("otp")} />
+            <PasswordStep 
+              initialPassword={signupData.password}
+              onNext={handlePasswordNext} 
+              onBack={() => {
+                setSignupData((prev) => ({ ...prev, password: "" }));
+                setCurrentStep("otp");
+              }} 
+            />
           )}
           {currentStep === "profile" && (
             <ProfileSetupStep

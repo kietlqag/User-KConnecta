@@ -1,17 +1,20 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, Lock } from 'lucide-react';
 import { AuthInput } from '../AuthInput';
 import { calculatePasswordStrength, getPasswordChecks } from '@/features/auth/utils/passwordValidation';
 
 interface PasswordStepProps {
+  initialPassword?: string;
   onNext: (password: string) => void;
   onBack: () => void;
 }
 
-export function PasswordStep({ onNext, onBack }: PasswordStepProps) {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordStrength, setPasswordStrength] = useState(0);
+export function PasswordStep({ initialPassword = '', onNext, onBack }: PasswordStepProps) {
+  const [password, setPassword] = useState(initialPassword);
+  const [confirmPassword, setConfirmPassword] = useState(initialPassword);
+  const [passwordStrength, setPasswordStrength] = useState(() =>
+    calculatePasswordStrength(initialPassword)
+  );
   const [errors, setErrors] = useState<{ password?: string; confirmPassword?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
 

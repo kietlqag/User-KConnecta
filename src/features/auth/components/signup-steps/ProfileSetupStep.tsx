@@ -121,6 +121,55 @@ export function ProfileSetupStep({
   }, [googleIdToken, googleSuggestedName, isGoogleSignup]);
 
   useEffect(() => {
+    if (profileData.username.trim()) return;
+
+    let isSubscribed = true;
+    const getBaseUsernameFromEmail = (emailStr: string): string => {
+      if (!emailStr) return 'user';
+      const prefix = emailStr.split('@')[0];
+      const clean = prefix.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+      return clean || 'user';
+    };
+
+    const generateUniqueUsername = async () => {
+      const base = getBaseUsernameFromEmail(email);
+      let candidate = base;
+      let suffix = 1;
+      let uniqueFound = false;
+
+      for (let i = 0; i < 5; i++) {
+        try {
+          const { exists } = await authService.checkUsernameExists(candidate);
+          if (!isSubscribed) return;
+          if (!exists) {
+            uniqueFound = true;
+            break;
+          }
+        } catch (err) {
+          console.error('Failed to check username uniqueness:', err);
+        }
+        candidate = `${base}${suffix}`;
+        suffix++;
+      }
+
+      if (!uniqueFound && isSubscribed) {
+        const randomNum = Math.floor(100 + Math.random() * 900);
+        candidate = `${base}${randomNum}`;
+      }
+
+      if (isSubscribed) {
+        setProfileData((prev) => ({ ...prev, username: candidate }));
+      }
+    };
+
+    void generateUniqueUsername();
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [email]);
+
+  useEffect(() => {
     const loadProvinces = async () => {
       setLocationLoading(true);
       setLocationError('');

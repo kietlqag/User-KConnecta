@@ -115,41 +115,7 @@ export function ProfileCreatePostModal({
   const [showPoll, setShowPoll] = useState(initialShowPoll);
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollAllowAddOptions, setPollAllowAddOptions] = useState(true);
-  const [isAiChecking, setIsAiChecking] = useState(false);
-  const [aiViolationError, setAiViolationError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const trimmed = postContent.trim();
-    if (!trimmed || trimmed.length < 5) {
-      setAiViolationError(null);
-      setIsAiChecking(false);
-      return;
-    }
-
-    if (checkKeywords(postContent, publicPolicy)) {
-      setAiViolationError(null);
-      setIsAiChecking(false);
-      return;
-    }
-
-    setIsAiChecking(true);
-    const handler = setTimeout(async () => {
-      try {
-        const response = await postService.verifyContent(trimmed);
-        if (response.level === 'AI_UNSAFE') {
-          setAiViolationError(response.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
-        } else {
-          setAiViolationError(null);
-        }
-      } catch (err) {
-        console.error('Failed to verify content with AI:', err);
-      } finally {
-        setIsAiChecking(false);
-      }
-    }, 1000);
-
-    return () => clearTimeout(handler);
-  }, [postContent, publicPolicy]);
 
   const { data: targetGroup } = useGroupById(groupId);
   const postContext = groupId ? 'GROUP' : 'PROFILE';

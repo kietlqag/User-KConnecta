@@ -1,19 +1,40 @@
-﻿import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { authService } from '@/services/authService';
 
 interface OTPVerificationStepProps {
   email: string;
+  otpSentAt: number | null;
+  onResendSuccess: (timestamp: number) => void;
   onNext: () => void;
   onBack: () => void;
 }
 
-export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationStepProps) {
+export function OTPVerificationStep({
+  email,
+  otpSentAt,
+  onResendSuccess,
+  onNext,
+  onBack,
+}: OTPVerificationStepProps) {
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [expiresIn, setExpiresIn] = useState(60);
+  
+  const getResendRemainingTime = () => {
+    if (!otpSentAt) return 60;
+    const elapsed = Math.floor((Date.now() - otpSentAt) / 1000);
+    return Math.max(60 - elapsed, 0);
+  };
+  const getOtpRemainingTime = () => {
+    if (!otpSentAt) return 300;
+    const elapsed = Math.floor((Date.now() - otpSentAt) / 1000);
+    return Math.max(300 - elapsed, 0);
+  };
+
+  const [resendCooldown, setResendCooldown] = useState(getResendRemainingTime);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(getOtpRemainingTime);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const handleChange = (index: number, value: string) => {
@@ -30,17 +51,27 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
   };
 
   useEffect(() => {
-    if (expiresIn <= 0) return;
+    if (resendCooldown <= 0) return;
 
     const timer = window.setTimeout(() => {
-      setExpiresIn((prev) => Math.max(prev - 1, 0));
+      setResendCooldown((prev) => Math.max(prev - 1, 0));
     }, 1000);
 
     return () => window.clearTimeout(timer);
-  }, [expiresIn]);
+  }, [resendCooldown]);
 
-  const formattedExpiresIn = `${String(Math.floor(expiresIn / 60)).padStart(2, '0')}:${String(
-    expiresIn % 60,
+  useEffect(() => {
+    if (otpExpiresIn <= 0) return;
+
+    const timer = window.setTimeout(() => {
+      setOtpExpiresIn((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [otpExpiresIn]);
+
+  const formattedExpiresIn = `${String(Math.floor(otpExpiresIn / 60)).padStart(2, '0')}:${String(
+    otpExpiresIn % 60,
   ).padStart(2, '0')}`;
 
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
@@ -93,14 +124,16 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
   };
 
   const handleResend = async () => {
-    if (expiresIn > 0 || isResending) return;
+    if (resendCooldown > 0 || isResending) return;
 
     setError('');
     setIsResending(true);
 
     try {
       await authService.sendOtp(email);
-      setExpiresIn(60);
+      onResendSuccess(Date.now());
+      setResendCooldown(60);
+      setOtpExpiresIn(300);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } catch (err) {
@@ -171,7 +204,7 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
 
         <p className="text-sm text-muted-foreground text-center -mt-2">
           Mã hết hạn sau:{' '}
-          <span className={expiresIn > 10 ? 'font-semibold text-amber-600' : 'font-semibold text-red-500'}>
+          <span className={otpExpiresIn > 10 ? 'font-semibold text-amber-600' : 'font-semibold text-red-500'}>
             {formattedExpiresIn}
           </span>
         </p>
@@ -179,8 +212,8 @@ export function OTPVerificationStep({ email, onNext, onBack }: OTPVerificationSt
         <div className="text-center">
           <p className="text-sm text-muted-foreground">
             Không nhận được mã?{' '}
-            {expiresIn > 0 ? (
-              <span className="text-muted-foreground">Gửi lại sau {expiresIn}s</span>
+            {resendCooldown > 0 ? (
+              <span className="text-muted-foreground">Gửi lại sau {resendCooldown}s</span>
             ) : (
               <button
                 type="button"
