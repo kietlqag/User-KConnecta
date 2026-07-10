@@ -1257,9 +1257,27 @@ public class PostServiceImpl implements PostService {
             }
         }
 
-        CommentStatus status = aiModerationPolicyReader.isEnabled()
-                && !content.isBlank()
-                ? CommentStatus.PENDING : CommentStatus.APPROVED;
+        CommentStatus status = CommentStatus.APPROVED;
+        AiModerationStatus aiStatus = AiModerationStatus.NOT_CHECKED;
+        String failReason = null;
+
+        if (aiModerationPolicyReader.isEnabled() && !content.isBlank()) {
+            var moderationOpt = geminiModerationService.moderate(content);
+            if (moderationOpt.isPresent()) {
+                var moderation = moderationOpt.get();
+                if (!moderation.safe()) {
+                    commentViolationService.recordAiUnsafeViolation(
+                            user.getId(), null, null, content, moderation.reason());
+
+                    throw new ValidationException(
+                            "Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderation.reason());
+                }
+                aiStatus = AiModerationStatus.SAFE;
+            } else {
+                status = CommentStatus.PENDING;
+                aiStatus = AiModerationStatus.FAILED;
+            }
+        }
 
         PostComment saved = postCommentRepository.save(PostComment.builder()
                 .post(target.post())
@@ -1269,6 +1287,9 @@ public class PostServiceImpl implements PostService {
                 .content(content)
                 .imageUrl(imageUrl)
                 .status(status)
+                .aiModerationStatus(aiStatus)
+                .moderationFailReason(failReason)
+                .lastModeratedAt(aiStatus == AiModerationStatus.SAFE ? LocalDateTime.now() : null)
                 .build());
 
         userInterestService.recordInteraction(
@@ -1277,7 +1298,6 @@ public class PostServiceImpl implements PostService {
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.COMMENT_ADDED,
                 "{\"targetId\":\"" + target.getTargetId() + "\"}");
 
-        // Hoãn notification cho comment PENDING — chỉ báo khi đã được duyệt (job nền sẽ gửi).
         if (status == CommentStatus.APPROVED) {
             publishCommentNotification(saved);
         }
@@ -1315,11 +1335,27 @@ public class PostServiceImpl implements PostService {
         comment.setContent(trimmed);
 
         if (aiModerationPolicyReader.isEnabled() && policyContentValidator.isSuspect(request.getContent())) {
-            comment.setStatus(CommentStatus.PENDING);
-            comment.setModerationFailReason(null);
-            comment.setModerationAttempts(0);
-            comment.setAiModerationStatus(AiModerationStatus.NOT_CHECKED);
-            comment.setLastModeratedAt(null);
+            var moderationOpt = geminiModerationService.moderate(request.getContent());
+            if (moderationOpt.isPresent()) {
+                var moderation = moderationOpt.get();
+                if (!moderation.safe()) {
+                    commentViolationService.recordAiUnsafeViolation(
+                            user.getId(), comment.getId(), null, request.getContent(), moderation.reason());
+                    throw new ValidationException(
+                            "Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderation.reason());
+                }
+                comment.setStatus(CommentStatus.APPROVED);
+                comment.setModerationFailReason(null);
+                comment.setModerationAttempts(0);
+                comment.setAiModerationStatus(AiModerationStatus.SAFE);
+                comment.setLastModeratedAt(LocalDateTime.now());
+            } else {
+                comment.setStatus(CommentStatus.PENDING);
+                comment.setModerationFailReason(null);
+                comment.setModerationAttempts(0);
+                comment.setAiModerationStatus(AiModerationStatus.FAILED);
+                comment.setLastModeratedAt(null);
+            }
         } else {
             comment.setStatus(CommentStatus.APPROVED);
             comment.setModerationFailReason(null);
@@ -1747,20 +1783,20 @@ public class PostServiceImpl implements PostService {
         String username = post.getAuthor().getUsername();
 
         // Manual cascade deletion to avoid FK constraint violations
-        entityManager.createNativeQuery("DELETE FROM post_comment_likes WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM comment_violations WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM comment_reports WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM post_comments WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_comment_likes WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = ?1)").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM comment_violations WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = ?1)").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM comment_reports WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = ?1)").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_comments WHERE post_id = ?1").setParameter(1, postId).executeUpdate();
 
-        entityManager.createNativeQuery("DELETE FROM post_poll_votes WHERE poll_id IN (SELECT id FROM post_polls WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM post_poll_options WHERE poll_id IN (SELECT id FROM post_polls WHERE post_id = :postId)").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM post_polls WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_poll_votes WHERE poll_id IN (SELECT id FROM post_polls WHERE post_id = ?1)").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_poll_options WHERE poll_id IN (SELECT id FROM post_polls WHERE post_id = ?1)").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_polls WHERE post_id = ?1").setParameter(1, postId).executeUpdate();
 
-        entityManager.createNativeQuery("DELETE FROM post_reactions WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM post_saved WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM post_reports WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM post_shares WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
-        entityManager.createNativeQuery("DELETE FROM post_topics WHERE post_id = :postId").setParameter("postId", postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_reactions WHERE post_id = ?1").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_saved WHERE post_id = ?1").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_reports WHERE post_id = ?1").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_shares WHERE post_id = ?1").setParameter(1, postId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM post_topics WHERE post_id = ?1").setParameter(1, postId).executeUpdate();
 
         postRepository.delete(post);
         activityLogService.log(userId, username, ActivityLogType.POST_DELETED,

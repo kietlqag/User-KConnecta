@@ -27,7 +27,8 @@ import java.time.Duration;
 public class OtpService {
 
     private static final String REDIS_KEY_PREFIX = "otp:";
-    private static final long OTP_EXPIRATION_MINUTES = 1;
+    private static final long OTP_EXPIRATION_MINUTES = 5;
+    private static final long OTP_VERIFIED_EXPIRATION_MINUTES = 15;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final MailService mailService;
@@ -111,7 +112,7 @@ public class OtpService {
             throw new ValidationException("Ma OTP khong dung");
         }
 
-        redisTemplate.opsForValue().set(key, otp.markVerified(), Duration.ofMinutes(OTP_EXPIRATION_MINUTES));
+        redisTemplate.opsForValue().set(key, otp.markVerified(), Duration.ofMinutes(OTP_VERIFIED_EXPIRATION_MINUTES));
     }
 
     public boolean isVerified(String email, OtpType otpType) {

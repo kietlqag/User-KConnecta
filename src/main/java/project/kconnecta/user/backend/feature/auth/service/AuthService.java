@@ -95,14 +95,14 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (!otpService.isActivationVerified(request.getEmail())) {
-            throw new ValidationException("Email chua duoc xac thuc OTP");
+            throw new ValidationException("Email chưa được xác thực OTP");
         }
 
         if (accountRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException("Email da duoc su dung");
+            throw new DuplicateResourceException("Email đã được sử dụng");
         }
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Ten nguoi dung da ton tai");
+            throw new DuplicateResourceException("Tên người dùng đã tồn tại");
         }
 
         Account account = accountRepository.save(Account.builder()
@@ -260,7 +260,6 @@ public class AuthService {
 
         User user = userRepository.findByAccountEmail(tokenInfo.email()).orElse(null);
         if (user == null) {
-            ensureGoogleAccountExists(tokenInfo);
             return AuthResponse.builder()
                     .email(tokenInfo.email())
                     .fullName(tokenInfo.name())
@@ -300,10 +299,10 @@ public class AuthService {
         GoogleTokenInfo tokenInfo = resolveGoogleTokenInfo(request.getIdToken(), request.getAccessToken());
 
         if (userRepository.findByAccountEmail(tokenInfo.email()).isPresent()) {
-            throw new DuplicateResourceException("Email da duoc su dung");
+            throw new DuplicateResourceException("Email đã được sử dụng");
         }
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new DuplicateResourceException("Ten nguoi dung da ton tai");
+            throw new DuplicateResourceException("Tên người dùng đã tồn tại");
         }
 
         Account account = ensureGoogleAccountExists(tokenInfo);
@@ -335,7 +334,7 @@ public class AuthService {
     }
 
     public boolean emailExists(String email) {
-        return userRepository.findByAccountEmail(email).isPresent();
+        return accountRepository.existsByEmail(email);
     }
 
     public boolean usernameExists(String username) {
