@@ -119,37 +119,45 @@ public class ChatServiceImpl implements ChatService {
     private final SettingsService settingsService;
     private final JdbcTemplate jdbcTemplate;
 
+    /**
+     * [GỬI TIN NHẮN CÁ NHÂN - PRIVATE MESSAGE]
+     * Thực hiện gửi tin nhắn realtime giữa 2 cá nhân, lưu vào database,
+     * và phát sóng sự kiện qua WebSocket STOMP tới cả người gửi và người nhận.
+     */
     @Override
     public void sendPrivateMessage(String currentUsername, PrivateMessageRequest request) {
 
         User sender = userRepository.findByUsername(currentUsername)
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
 
+        // Kiểm tra spam và từ khóa vi phạm
         validateChatForSend(sender, request.getContent(), null, request.getMessageClientId());
 
         User receiver = userRepository.findById(request.getReceiverId())
                 .orElseThrow(() -> new RuntimeException("Receiver not found"));
 
+        // Kiểm tra chặn (block) giữa 2 người dùng
         if (settingsService.isBlockedEitherDirection(sender.getId(), receiver.getId())) {
             throw new ForbiddenException("Không thể nhắn tin với người dùng này");
         }
 
+        // Kiểm tra cuộc hội thoại có bị khóa bởi Admin hay không
         if (isConversationLocked(sender.getId(), receiver.getId())) {
             throw new ForbiddenException("Cuộc hội thoại đã bị khóa bởi quản trị viên");
         }
 
         LocalDateTime now = LocalDateTime.now();
 
-        // Lưu tin nhắn vào DB
+        // Khởi tạo thực thể tin nhắn
         ChatMessage message = ChatMessage.builder()
                 .sender(sender)
                 .receiver(receiver)
                 .conversation(null)
                 .content(request.getContent())
                 .createdAt(now)
-                .delivered(false)
+                .delivered(false) // Mặc định là chưa chuyển tới thiết bị receiver
                 .deliveredAt(null)
-                .seen(false)
+                .seen(false)      // Mặc định là chưa đọc
                 .seenAt(null)
                 .build();
         message = chatMessageRepository.save(message);
@@ -159,14 +167,14 @@ public class ChatServiceImpl implements ChatService {
 
         ChatMessageResponse response = toMessageResponse(message);
 
-        // gửi cho receiver
+        // Gửi tin nhắn bất đồng bộ qua WebSocket cho người nhận
         messagingTemplate.convertAndSendToUser(
                 receiver.getUsername(),
                 "/queue/messages",
                 response
         );
 
-        // gửi lại cho sender (hiển thị ngay)
+        // Gửi phản hồi ngược lại cho chính người gửi để hiển thị lập tức trên giao diện
         messagingTemplate.convertAndSendToUser(
                 sender.getUsername(),
                 "/queue/messages",
@@ -292,6 +300,11 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
+    /**
+     * [GỬI TIN NHẮN NHÓM - GROUP MESSAGE]
+     * Thực hiện gửi tin nhắn trong một cuộc hội thoại nhóm chat (Group chat),
+     * sau đó đẩy tin nhắn realtime tới toàn bộ các thành viên được phê duyệt thuộc nhóm.
+     */
     @Override
     @Transactional
     public ChatMessageResponse sendGroupMessage(String currentUsername, GroupMessageRequest request) {
@@ -308,6 +321,7 @@ public class ChatServiceImpl implements ChatService {
         ChatConversation conversation = chatConversationRepository.findByIdPlain(request.getConversationId())
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
 
+        // Kiểm tra người gửi có phải là thành viên hợp lệ (Approved) của nhóm chat
         boolean isMember = chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversation.getId(), sender.getId());
         if (!isMember) {
             throw new RuntimeException("Forbidden");
@@ -318,14 +332,14 @@ public class ChatServiceImpl implements ChatService {
         LocalDateTime now = LocalDateTime.now();
         ChatMessage message = ChatMessage.builder()
                 .sender(sender)
-                // Keep compatibility with old DB schemas that still enforce NOT NULL on receiver_id.
-                // For group messages, receiver is not used by business logic (conversation_id is used),
-                // so falling back to sender avoids insert failures before schema migration is applied.
+                // Duy trì khả năng tương thích với thiết kế DB cũ vẫn bắt buộc trường receiver_id NOT NULL.
+                // Đối với tin nhắn nhóm, receiver không được dùng bởi logic nghiệp vụ (thay vào đó dùng conversation_id),
+                // vì vậy gán mặc định bằng sender sẽ tránh được lỗi lưu dữ liệu trước khi chạy migration DB.
                 .receiver(sender)
                 .conversation(conversation)
                 .content(request.getContent())
                 .createdAt(now)
-                .delivered(true)
+                .delivered(true) // Tin nhắn nhóm coi như đã phân phối
                 .deliveredAt(now)
                 .seen(false)
                 .seenAt(null)
@@ -336,6 +350,8 @@ public class ChatServiceImpl implements ChatService {
                 "{\"messageId\":\"" + message.getId() + "\",\"conversationId\":\"" + conversation.getId() + "\",\"type\":\"group\"}");
 
         ChatMessageResponse response = toMessageResponse(message);
+        
+        // Quét toàn bộ thành viên nhóm để đẩy tin nhắn qua WebSocket
         List<ChatConversationMember> members = chatConversationMemberRepository.findMembersByConversationId(conversation.getId());
         for (ChatConversationMember member : members) {
             messagingTemplate.convertAndSendToUser(
@@ -1110,6 +1126,11 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
+    /**
+     * [TẠO PHIÊN CUỘC GỌI NHÓM - GROUP CALL SESSION]
+     * Khởi tạo một phiên cuộc gọi thoại hoặc cuộc gọi video (audio/video call) trong cuộc trò chuyện nhóm,
+     * thiết lập trạng thái RINGING và lưu vào database trước khi kết nối luồng LiveKit.
+     */
     @Override
     @Transactional
     public GroupCallSessionResponse createGroupCallSession(
@@ -1122,6 +1143,7 @@ public class ChatServiceImpl implements ChatService {
         if (conversationId == null) {
             throw new BadRequestException("Conversation ID is required");
         }
+        // Kiểm tra người gọi phải thuộc nhóm chat
         if (!chatConversationMemberRepository.existsApprovedByConversationIdAndUserId(conversationId, caller.getId())) {
             throw new ForbiddenException("You are not a member of this conversation");
         }
@@ -1136,8 +1158,8 @@ public class ChatServiceImpl implements ChatService {
                 .conversation(conversation)
                 .caller(caller)
                 .startedAt(now)
-                .status("RINGING")
-                .lastSignalType("CALL_INVITE")
+                .status("RINGING")             // Trạng thái cuộc gọi đang reo chuông
+                .lastSignalType("CALL_INVITE") // Tín hiệu mời tham gia cuộc gọi
                 .callMediaType(mediaType)
                 .build();
 
@@ -1158,6 +1180,10 @@ public class ChatServiceImpl implements ChatService {
         return toGroupCallSessionResponse(session, LocalDateTime.now());
     }
 
+    /**
+     * [GHIM CUỘC HỘI THOẠI - PIN CONVERSATION]
+     * Ghim cuộc trò chuyện cá nhân hoặc nhóm chat lên đầu danh sách tin nhắn của người dùng hiện tại.
+     */
     @Override
     @Transactional
     public ConversationPinResponse setConversationPinned(String currentUsername, ConversationPinRequest request) {
@@ -1170,6 +1196,7 @@ public class ChatServiceImpl implements ChatService {
         boolean pinned = Boolean.TRUE.equals(request.getPinned());
         UUID peerUserId = request.getPeerUserId();
         UUID conversationId = request.getConversationId();
+        // Kiểm tra dữ liệu đầu vào: Chỉ ghim 1 cuộc hội thoại đơn lẻ (cá nhân hoặc nhóm)
         if ((peerUserId == null && conversationId == null) || (peerUserId != null && conversationId != null)) {
             throw new RuntimeException("Exactly one target is required");
         }
@@ -1232,6 +1259,10 @@ public class ChatServiceImpl implements ChatService {
         return result;
     }
 
+    /**
+     * [GHIM TIN NHẮN - PIN MESSAGE]
+     * Thực hiện ghim một tin nhắn bất kỳ (hình ảnh, văn bản...) trong cuộc trò chuyện nhóm chat hoặc cá nhân.
+     */
     @Override
     @Transactional
     public PinnedMessageResponse setPinnedMessage(String currentUsername, PinnedMessageRequest request) {
@@ -1258,6 +1289,7 @@ public class ChatServiceImpl implements ChatService {
             throw new RuntimeException("Cannot pin deleted message");
         }
 
+        // Kiểm tra xem tin nhắn có thuộc cuộc hội thoại được ghim hay không
         if (peerUserId != null) {
             if (message.getConversation() != null) {
                 throw new RuntimeException("Message does not belong to private chat");

@@ -55,12 +55,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Triển khai nghiệp vụ cho việc quản lý phiên livestream (LiveSessionService).
+ * Điều phối vòng đời của buổi Live: Khởi tạo -> Lên lịch -> Phát trực tiếp -> Tương tác realtime (Chat, Reaction, Xem số Viewer) -> Kết thúc -> Kết xuất lưu trữ video HLS.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
 @Slf4j
 public class LiveSessionServiceImpl implements LiveSessionService {
 
+    // Thời gian tối đa nếu Viewer không gửi heartbeat sẽ bị coi là mất kết nối (45 giây)
     private static final long VIEWER_HEARTBEAT_TIMEOUT_SECONDS = 45;
     private static final DateTimeFormatter SCHEDULED_AT_DISPLAY_FORMAT =
             DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
@@ -79,6 +84,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
 
+    /**
+     * Tạo mới một phiên livestream (DRAFT hoặc SCHEDULED).
+     */
     @Override
     public LiveSessionResponse createSession(CreateLiveSessionRequest request, UUID hostUserId) {
         liveAccessService.requireAuthenticated(hostUserId);
@@ -89,12 +97,14 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         User host = userRepository.findById(hostUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + hostUserId));
 
+        // Kiểm tra tính hợp lệ của thời gian lên lịch phát
         validateScheduleRule(request.getStartMode(), request.getScheduledAt());
 
         LiveSessionStatus initialStatus = request.getStartMode() == LiveStartMode.SCHEDULED
                 ? LiveSessionStatus.SCHEDULED
                 : LiveSessionStatus.DRAFT;
 
+        // Sinh tên phòng ngẫu nhiên duy nhất cho LiveKit
         String roomName = "live_" + UUID.randomUUID().toString().replace("-", "");
 
         LiveSession session = LiveSession.builder()
@@ -120,6 +130,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         return toResponse(liveSessionRepository.save(session));
     }
 
+    /**
+     * Kích hoạt phiên livestream chuyển sang trạng thái phát trực tiếp (LIVE).
+     */
     @Override
     public GoLiveResponse goLive(UUID sessionId, UUID hostUserId) {
         LiveSession session = findSession(sessionId);
@@ -129,6 +142,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             throw new ValidationException("Cannot start a finished live session");
         }
 
+        // Kiểm tra nếu chưa tới giờ lên lịch đối với phiên Scheduled
         if (session.getStatus() == LiveSessionStatus.SCHEDULED
                 && session.getScheduledAt() != null
                 && session.getScheduledAt().isAfter(LocalDateTime.now())) {
@@ -138,6 +152,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             );
         }
 
+        // Tự động kích hoạt hiển thị bài đăng liên kết (Post) gắn liền với phiên Live
         publishLinkedPostIfNeeded(session);
 
         session.setStatus(LiveSessionStatus.LIVE);
@@ -148,9 +163,12 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }
 
         LiveSessionResponse response = toResponse(liveSessionRepository.save(session), hostUserId);
+        
+        // Phát sự kiện thời gian thực tới toàn bộ client qua WebSocket
         realtimePublisher.publishSessionEvent("LIVE_STARTED", response);
         liveEventSubscriptionService.notifyLiveStarted(session);
 
+        // Sinh Token LiveKit cho chủ phòng (HOST) để bắt đầu đẩy luồng phát
         LiveKitTokenRequest tokenRequest = new LiveKitTokenRequest();
         tokenRequest.setUserId(hostUserId);
         tokenRequest.setSessionId(sessionId);
@@ -164,6 +182,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .build();
     }
 
+    /**
+     * Bắt đầu tiến trình ghi hình/kết xuất luồng HLS lên lưu trữ đám mây.
+     */
     @Override
     public LiveSessionResponse startHlsEgress(UUID sessionId, UUID hostUserId) {
         LiveSession session = findSession(sessionId);
@@ -171,12 +192,17 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         if (session.getStatus() != LiveSessionStatus.LIVE) {
             throw new ValidationException("Phiên live chưa ở trạng thái LIVE");
         }
+        
+        // Khởi chạy LiveKit HLS Egress ghi luồng phát
         startHlsEgressIfNeeded(session);
         LiveSessionResponse response = toResponse(liveSessionRepository.save(session), hostUserId);
         realtimePublisher.publishSessionEvent("SESSION_UPDATED", response);
         return response;
     }
 
+    /**
+     * Kết thúc phiên phát livestream (ENDED).
+     */
     @Override
     public LiveSessionResponse endLive(UUID sessionId, UUID requesterUserId) {
         LiveSession session = findSession(sessionId);
@@ -188,6 +214,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             return response;
         }
 
+        // Dừng ghi luồng Egress trên LiveKit Server
         if (!isBlank(session.getEgressId())) {
             liveKitEgressService.stopEgress(session.getEgressId());
         }
@@ -195,8 +222,11 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         session.setStatus(LiveSessionStatus.ENDED);
         session.setEndedAt(LocalDateTime.now());
         session.setViewerCount(0);
+        
+        // Dọn sạch danh sách Viewer hiện tại khỏi phòng live
         liveSessionViewerRepository.deleteAllBySessionId(sessionId);
 
+        // Xử lý nạp đường dẫn phát lại HLS (VOD) sau khi live kết thúc
         if (!isBlank(session.getHlsPlaybackUrl())) {
             session.setPlaybackUrl(liveKitEgressService.buildVodPlaylistUrl(sessionId));
             session.setRecordingStatus(LiveRecordingStatus.PROCESSING);
@@ -215,14 +245,18 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }
 
         LiveSessionResponse response = toResponse(liveSessionRepository.save(session));
+        
+        // Đồng bộ hóa lượng tương tác thời gian thực thu thập được trong phòng Live sang bài đăng chính thức
         syncLiveEngagementToPost(session);
+        
+        // Thông báo cho toàn bộ client qua WebSocket
         realtimePublisher.publishSessionEvent("LIVE_ENDED", response);
         return response;
     }
 
     /**
      * Chuyển cảm xúc live (live_session_reactions) sang post_reactions để bài post
-     * hiển thị đúng sau khi xem lại. Bình luận live đã ghi vào post_comments nên không cần sync.
+     * hiển thị đúng sau khi kết thúc xem lại.
      */
     private void syncLiveEngagementToPost(LiveSession session) {
         UUID postId = session.getPostId();
@@ -234,6 +268,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
             return;
         }
 
+        // Quét toàn bộ cảm xúc trong phòng live và ghi nhận sang bài viết
         List<LiveSessionReaction> liveReactions = liveSessionReactionRepository.findAllBySession_Id(session.getId());
         for (LiveSessionReaction liveReaction : liveReactions) {
             ReactionType postReactionType = mapLiveReactionToPost(liveReaction.getReactionType());
@@ -257,6 +292,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         log.info("Synced {} live reactions to post {} for session {}", liveReactions.size(), postId, session.getId());
     }
 
+    /** Ánh xạ loại cảm xúc của LiveKit sang loại cảm xúc của Post trong DB. */
     private ReactionType mapLiveReactionToPost(LiveReactionType liveType) {
         if (liveType == null) {
             return null;
@@ -306,6 +342,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         return response;
     }
 
+    /**
+     * Người xem (Viewer) tham gia phòng Live.
+     */
     @Override
     public LiveSessionResponse join(UUID sessionId, UUID userId) {
         LiveSession session = findLiveSession(sessionId);
@@ -315,12 +354,16 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }
 
         User user = findUser(userId);
+        
+        // Quét dọn các phiên Viewer bị mất kết nối trước đó (Stale heartbeats)
         cleanupStaleViewers(session);
 
         LiveSessionViewer viewer = liveSessionViewerRepository.findBySessionIdAndUserId(sessionId, user.getId())
                 .orElseGet(() -> LiveSessionViewer.builder().session(session).user(user).build());
         viewer.setLastSeenAt(LocalDateTime.now());
         liveSessionViewerRepository.save(viewer);
+        
+        // Đếm lại tổng số viewer hiện tại và cập nhật kỷ lục người xem (peak)
         refreshViewerCount(session);
 
         LiveSessionResponse response = toResponse(session);
@@ -328,6 +371,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         return response;
     }
 
+    /**
+     * Nhận tin báo duy trì kết nối (Heartbeat) định kỳ từ client của Viewer.
+     */
     @Override
     public LiveSessionResponse heartbeat(UUID sessionId, UUID userId) {
         LiveSession session = findLiveSession(sessionId);
@@ -348,6 +394,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         return toResponse(session);
     }
 
+    /**
+     * Viewer chủ động rời khỏi phòng livestream (Leave).
+     */
     @Override
     public LiveSessionResponse leave(UUID sessionId, UUID userId) {
         LiveSession session = findSession(sessionId);
@@ -363,6 +412,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         return toResponse(session);
     }
 
+    /**
+     * Ghi nhận và phát sóng phản hồi cảm xúc (Reactions) thời gian thực của người dùng trong phiên Live.
+     */
     @Override
     public LiveSessionResponse react(UUID sessionId, UUID userId, UpsertLiveReactionRequest request) {
         LiveSession session = findLiveSession(sessionId);
@@ -388,6 +440,8 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         session.setTotalReactionCount(liveSessionReactionRepository.countBySessionId(sessionId));
         liveSessionRepository.save(session);
         LiveSessionResponse response = toResponse(session);
+        
+        // Thông báo sự kiện reaction mới qua WebSocket cho tất cả mọi người trong phòng
         realtimePublisher.publishReactionUpdated(response, user.getId(), request.getReactionType());
         return response;
     }
@@ -425,6 +479,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         return toResponse(session, viewerUserId);
     }
 
+    /** Lấy danh sách các buổi livestream đang LIVE. */
     @Override
     @Transactional(readOnly = true)
     public List<LiveSessionResponse> listActive(UUID viewerUserId) {
@@ -435,6 +490,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .toList();
     }
 
+    /** Lấy danh sách các buổi live đã lên lịch (SCHEDULED). */
     @Override
     @Transactional(readOnly = true)
     public List<LiveSessionResponse> listScheduled(UUID viewerUserId) {
@@ -445,6 +501,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .toList();
     }
 
+    /**
+     * Cập nhật thông tin sự kiện livestream đã lên lịch.
+     */
     @Override
     public LiveSessionResponse updateScheduled(UUID sessionId, UUID hostUserId, UpdateScheduledLiveRequest request) {
         LiveSession session = findSession(sessionId);
@@ -463,6 +522,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         session.setScheduledAt(request.getScheduledAt());
         session.setPrivacy(privacy);
 
+        // Đồng bộ sửa đổi nội dung bài đăng liên kết
         if (session.getPostId() != null) {
             postRepository.findById(session.getPostId()).ifPresent(post -> {
                 post.setContent(buildLiveContent(title, description));
@@ -475,6 +535,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         return toResponse(liveSessionRepository.save(session), hostUserId);
     }
 
+    /**
+     * Hủy bỏ buổi livestream đã lên lịch.
+     */
     @Override
     public void cancelScheduled(UUID sessionId, UUID hostUserId) {
         LiveSession session = findSession(sessionId);
@@ -486,6 +549,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         session.setStatus(LiveSessionStatus.CANCELED);
         liveSessionRepository.save(session);
 
+        // Xóa bài viết liên kết
         if (session.getPostId() != null) {
             postRepository.findById(session.getPostId()).ifPresent(postRepository::delete);
         }
@@ -504,6 +568,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
                 .toList();
     }
 
+    /**
+     * Lấy danh sách các sự kiện live của Nhóm (Group Events).
+     */
     @Override
     @Transactional(readOnly = true)
     public List<LiveSessionResponse> listByGroup(UUID groupId, UUID viewerUserId) {
@@ -615,6 +682,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         }
     }
 
+    /**
+     * Job tự động quét kích hoạt phát trực tiếp đối với các sự kiện đã lên lịch đến giờ phát.
+     */
     @Override
     public int activateDueScheduledSessions() {
         LocalDateTime now = LocalDateTime.now();
@@ -669,6 +739,7 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         if (!liveKitEgressService.isEgressConfigured()) {
             return;
         }
+        // Gọi service kết xuất HLS của LiveKit Egress
         liveKitEgressService.startRoomHlsEgress(session).ifPresentOrElse(result -> {
             session.setEgressId(result.getEgressId());
             session.setHlsPlaybackUrl(result.getHlsPlaybackUrl());
@@ -681,6 +752,9 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         });
     }
 
+    /**
+     * Dọn sạch các Viewer hết hạn duy trì kết nối (Heartbeat Timeout).
+     */
     private void cleanupStaleViewers(LiveSession session) {
         liveSessionViewerRepository.deleteStaleBySessionId(
                 session.getId(),
@@ -688,13 +762,16 @@ public class LiveSessionServiceImpl implements LiveSessionService {
         );
     }
 
+    /**
+     * Làm mới số lượng người xem đồng thời hiện tại của phòng Live.
+     */
     private void refreshViewerCount(LiveSession session) {
         int viewers = session.getStatus() == LiveSessionStatus.LIVE
                 ? liveSessionViewerRepository.countBySessionId(session.getId())
                 : 0;
         session.setViewerCount(viewers);
         if (viewers > session.getPeakViewerCount()) {
-            session.setPeakViewerCount(viewers);
+            session.setPeakViewerCount(viewers); // Lưu trữ kỷ lục mắt xem cao nhất
         }
         liveSessionRepository.save(session);
     }

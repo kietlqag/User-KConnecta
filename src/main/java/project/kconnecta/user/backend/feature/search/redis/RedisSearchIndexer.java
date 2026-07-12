@@ -36,15 +36,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Service quản lý Index dữ liệu và thực hiện tìm kiếm toàn văn (Full-text Search) bằng RediSearch.
+ * Công cụ tìm kiếm hiệu năng cao tích hợp sẵn trên Redis Stack giúp truy vấn nhanh chóng các thực thể:
+ * Người dùng (User), Nhóm (Group), và Bài viết công khai (Post).
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class RedisSearchIndexer {
 
+    // Định nghĩa tên Index trong RediSearch
     public static final String USER_IDX   = "user-idx";
     public static final String GROUP_IDX  = "group-idx";
     public static final String POST_IDX   = "post-idx";
 
+    // Định nghĩa tiền tố (Prefix) của Key lưu trong Redis Hash
     public static final String USER_PFX   = "user:";
     public static final String GROUP_PFX  = "group:";
     public static final String POST_PFX   = "post:";
@@ -59,16 +66,22 @@ public class RedisSearchIndexer {
     @Value("${app.search.reindex-on-startup:true}")
     private boolean reindexOnStartup;
 
-    // ── Startup ───────────────────────────────────────────────────────────────
+    // ── Startup - Khởi động Index tự động ──────────────────────────────────────────────────────────
 
+    /**
+     * Lắng nghe sự kiện ApplicationReadyEvent để tạo Index và cập nhật cơ sở dữ liệu tìm kiếm
+     * khi ứng dụng khởi động thành công.
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
         try {
-            createIndexes();
+            createIndexes(); // Tạo Index nếu chưa tồn tại
             if (!reindexOnStartup) {
                 log.info("[RedisSearch] Skipping startup reindex (app.search.reindex-on-startup=false)");
                 return;
             }
+            // Khởi chạy tiến trình ngầm (Daemon Thread) thực hiện đánh chỉ mục toàn bộ dữ liệu (Reindex)
+            // Việc chạy dưới nền giúp tránh block luồng khởi động chính của ứng dụng
             Thread reindexThread = new Thread(() -> {
                 try {
                     reindexAllWithRetry(3, 3_000);
@@ -87,6 +100,9 @@ public class RedisSearchIndexer {
         }
     }
 
+    /**
+     * Cơ chế Reindex tự động thử lại nhiều lần nếu gặp lỗi kết nối cơ sở dữ liệu tạm thời.
+     */
     private void reindexAllWithRetry(int maxAttempts, long delayMs) throws InterruptedException {
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
@@ -138,8 +154,11 @@ public class RedisSearchIndexer {
         return message != null ? message : error.getClass().getSimpleName();
     }
 
-    // ── Index creation ────────────────────────────────────────────────────────
+    // ── Index Creation - Khởi tạo các Index ────────────────────────────────────────────────────────
 
+    /**
+     * Tạo tất cả Index cần thiết trong RediSearch.
+     */
     public void createIndexes() {
         createUserIndex();
         createGroupIndex();
@@ -147,14 +166,17 @@ public class RedisSearchIndexer {
         log.info("[RedisSearch] Indexes ready");
     }
 
+    /**
+     * Tạo Index Người dùng (User). Trọng số tìm kiếm ưu tiên theo Họ tên (weight 5.0) rồi tới Username (weight 2.0).
+     */
     private void createUserIndex() {
         try {
             jedis.ftCreate(USER_IDX,
                 FTCreateParams.createParams().on(IndexDataType.HASH).prefix(USER_PFX),
                 new SchemaField[]{
-                    TextField.of("s_name").weight(5.0),
-                    TextField.of("s_username").weight(2.0),
-                    TextField.of("s_bio").weight(1.0)
+                    TextField.of("s_name").weight(5.0),       // Tên hiển thị (được chuẩn hóa)
+                    TextField.of("s_username").weight(2.0),   // Tên tài khoản (được chuẩn hóa)
+                    TextField.of("s_bio").weight(1.0)         // Tiểu sử (được chuẩn hóa)
                 }
             );
         } catch (JedisDataException e) {
@@ -164,14 +186,17 @@ public class RedisSearchIndexer {
         }
     }
 
+    /**
+     * Tạo Index Nhóm (Group). Cho phép lọc nhanh theo Quyền riêng tư (Privacy) dạng TagField.
+     */
     private void createGroupIndex() {
         try {
             jedis.ftCreate(GROUP_IDX,
                     FTCreateParams.createParams().on(IndexDataType.HASH).prefix(GROUP_PFX),
                 new SchemaField[]{
-                    TextField.of("s_name").weight(5.0),
-                    TextField.of("s_description").weight(1.0),
-                    TagField.of("privacy")
+                    TextField.of("s_name").weight(5.0),       // Tên nhóm
+                    TextField.of("s_description").weight(1.0),// Mô tả nhóm
+                    TagField.of("privacy")                     // Quyền riêng tư (public/private)
                 }
             );
         } catch (JedisDataException e) {
@@ -181,15 +206,18 @@ public class RedisSearchIndexer {
         }
     }
 
+    /**
+     * Tạo Index Bài đăng (Post). Hỗ trợ lọc theo Tag (privacy, status) và sắp xếp theo Thời gian (publishedAt).
+     */
     private void createPostIndex() {
         try {
             jedis.ftCreate(POST_IDX,
                     FTCreateParams.createParams().on(IndexDataType.HASH).prefix(POST_PFX),
                 new SchemaField[]{
-                    TextField.of("s_content"),
-                    TagField.of("privacy"),
-                    TagField.of("status"),
-                    NumericField.of("publishedAt").sortable()
+                    TextField.of("s_content"),               // Nội dung bài đăng
+                    TagField.of("privacy"),                  // Quyền riêng tư
+                    TagField.of("status"),                   // Trạng thái bài đăng
+                    NumericField.of("publishedAt").sortable()// Thời điểm xuất bản (sắp xếp được)
                 }
             );
         } catch (JedisDataException e) {
@@ -199,16 +227,22 @@ public class RedisSearchIndexer {
         }
     }
 
-    // ── Full reindex ──────────────────────────────────────────────────────────
+    // ── Full Reindex - Đánh chỉ mục toàn bộ dữ liệu ──────────────────────────────────────────────────────────
 
+    /**
+     * Đọc toàn bộ dữ liệu từ RDBMS và nạp lại vào Redis để xây dựng lại Index tìm kiếm.
+     */
     public void reindexAll() {
         long start = System.currentTimeMillis();
 
+        // 1. Reindex toàn bộ Users
         List<UserRepository.UserSearchProjection> users = userRepository.findAllSearchProjections();
         users.forEach(this::indexUser);
 
+        // 2. Reindex toàn bộ Groups theo phân trang để tránh tràn bộ nhớ (Batching)
         long groupCount = reindexGroupsInBatches();
 
+        // 3. Reindex toàn bộ Posts công khai đã xuất bản
         List<Post> posts = postRepository.findAllPublishedPublicWithAuthorAndGroup();
         posts.forEach(this::indexPost);
 
@@ -230,7 +264,7 @@ public class RedisSearchIndexer {
         return count;
     }
 
-    // ── Index single document ─────────────────────────────────────────────────
+    // ── Index Single Document - Đánh chỉ mục thực thể đơn lẻ ───────────────────────────────────────────
 
     public void indexUser(User user) {
         indexUser(
@@ -252,6 +286,10 @@ public class RedisSearchIndexer {
         );
     }
 
+    /**
+     * Đưa thông tin Người dùng vào Redis Hash.
+     * Lưu trữ cả dạng hiển thị (fullName, username) và dạng đã chuẩn hóa viết thường không dấu (s_name, s_username).
+     */
     private void indexUser(UUID userId, String fullName, String username, String avatarUrl, String bio) {
         try {
             Map<String, String> h = new HashMap<>();
@@ -259,6 +297,7 @@ public class RedisSearchIndexer {
             h.put("username",  safe(username));
             h.put("avatarUrl", safe(avatarUrl));
             h.put("bio",       safe(bio));
+            // Các trường có tiền tố s_ dùng làm mục tiêu cho bộ lọc tìm kiếm toàn văn
             h.put("s_name",     normalize(fullName));
             h.put("s_username", normalize(username));
             h.put("s_bio",      normalize(bio));
@@ -288,6 +327,9 @@ public class RedisSearchIndexer {
         );
     }
 
+    /**
+     * Đưa thông tin Nhóm vào Redis Hash.
+     */
     private void indexGroup(
             UUID groupId,
             String name,
@@ -307,13 +349,17 @@ public class RedisSearchIndexer {
         }
     }
 
+    /**
+     * Đưa thông tin Bài viết vào Redis Hash.
+     * BẢO MẬT: Bài đăng thuộc nhóm kín (PRIVATE) hoặc chưa xuất bản/không công khai sẽ bị loại bỏ khỏi index.
+     */
     public void indexPost(Post post) {
         try {
-            // Posts inside a private group must never be searchable by non-members.
             boolean inPrivateGroup = post.getGroup() != null
                     && post.getGroup().getPrivacy() == GroupPrivacy.PRIVATE;
+            // Nếu bài đăng không phải PUBLIC, hoặc không phải PUBLISHED, hoặc thuộc Nhóm Kín -> Không cho phép tìm kiếm toàn cục
             if (post.getStatus() != PostStatus.PUBLISHED || post.getPrivacy() != PostPrivacy.PUBLIC || inPrivateGroup) {
-                deletePost(post.getId());
+                deletePost(post.getId()); // Xóa khỏi Index tìm kiếm nếu có
                 return;
             }
             long ts = post.getPublishedAt() != null
@@ -345,35 +391,42 @@ public class RedisSearchIndexer {
         }
     }
 
-    // ── Delete document ───────────────────────────────────────────────────────
+    // ── Delete Document - Xóa khỏi Index ──────────────────────────────────────────────────────────
 
     public void deleteUser(UUID id)  { jedis.del(USER_PFX  + id); }
     public void deleteGroup(UUID id) { jedis.del(GROUP_PFX + id); }
     public void deletePost(UUID id)  { jedis.del(POST_PFX  + id); }
 
-    // ── Search ────────────────────────────────────────────────────────────────
+    // ── Search Operations - Các tác vụ Truy vấn Tìm kiếm ───────────────────────────────────────────────
 
+    /**
+     * Tìm kiếm người dùng theo từ khóa.
+     */
     public List<Document> searchUsers(String rawQuery, int limit) {
         return ftSearch(USER_IDX, rawQuery, limit);
     }
 
+    /**
+     * Tìm kiếm nhóm theo từ khóa.
+     */
     public List<Document> searchGroups(String rawQuery, int limit) {
         return ftSearch(GROUP_IDX, rawQuery, limit);
     }
 
     /**
-     * Search PUBLIC PUBLISHED posts only — filter is applied via TAG fields.
+     * Tìm kiếm bài đăng công khai. Chỉ lấy bài viết ở chế độ PUBLIC và trạng thái PUBLISHED.
      */
     public List<Document> searchPosts(String rawQuery, int limit) {
         String term = buildTerm(normalize(rawQuery));
+        // Lọc kết hợp tìm kiếm từ khóa kèm theo bộ lọc TAG trạng thái
         String queryStr = "(@s_content:" + term + ") (@privacy:{public}) (@status:{published})";
         Query q = new Query(queryStr)
-                .setSortBy("publishedAt", false)
+                .setSortBy("publishedAt", false) // Sắp xếp bài đăng mới nhất lên đầu
                 .limit(0, limit);
         return jedis.ftSearch(POST_IDX, q).getDocuments();
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Helpers - Các phương thức bổ trợ ───────────────────────────────────────────────────────────────
 
     private List<Document> ftSearch(String idx, String rawQuery, int limit) {
         String term = buildTerm(normalize(rawQuery));
@@ -382,17 +435,16 @@ public class RedisSearchIndexer {
     }
 
     /**
-     * Builds a RediSearch query string that supports:
-     * - "nguyen" → matches token "nguyen"
-     * - "nguyen van" → each word matched as prefix: "nguyen* | van*"
-     *   allowing partial input from either token
+     * Dựng cấu trúc câu truy vấn RediSearch hỗ trợ Progressive Typing (Tìm kiếm tiệm cận khi người dùng đang nhập).
+     * Ví dụ:
+     * - "nguyen" -> "nguyen*" (Khớp các từ bắt đầu bằng nguyen như Nguyễn, Nguyên, Nguyện)
+     * - "nguyen van" -> "nguyen van*" (Mỗi từ cách nhau bằng khoảng trắng thể hiện phép toán AND, từ cuối cùng thêm wildcard *)
      */
     private String buildTerm(String normalizedQuery) {
         String[] words = normalizedQuery.trim().split("\\s+");
         if (words.length == 1) {
             return words[0] + "*";
         }
-        // All words joined with AND, last word as prefix for progressive typing
         List<String> parts = new ArrayList<>();
         for (int i = 0; i < words.length - 1; i++) {
             parts.add(words[i]);
@@ -402,17 +454,20 @@ public class RedisSearchIndexer {
     }
 
     /**
-     * Strips Vietnamese diacritics and normalizes to lowercase ASCII.
-     * "Nguyễn Văn Đức" → "nguyen van duc"
+     * Chuẩn hóa văn bản tiếng Việt: Chuyển về chữ thường, bỏ dấu và các ký tự đặc biệt.
+     * Thuật toán: Sử dụng Normalizer.Form.NFD để tách nguyên âm và dấu riêng biệt,
+     * sau đó dùng Regex loại bỏ toàn bộ dấu thanh Combining Diacritical Marks.
+     * Ví dụ: "Nguyễn Văn Đức" -> "nguyen van duc"
      */
     public static String normalize(String text) {
         if (text == null || text.isBlank()) return "";
+        // Chuyển ký tự đ/Đ thành d/d một cách chủ động (vì bộ Unicode NFD không tự tách đ thành d)
         String s = text.replace('đ', 'd').replace('Đ', 'd');
         String nfd = Normalizer.normalize(s, Normalizer.Form.NFD);
         return nfd.replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
                   .toLowerCase()
-                  .replaceAll("[^a-z0-9\\s]", " ")
-                  .replaceAll("\\s+", " ")
+                  .replaceAll("[^a-z0-9\\s]", " ") // Chỉ giữ lại chữ cái ASCII, chữ số và khoảng trắng
+                  .replaceAll("\\s+", " ")          // Gộp các khoảng trắng thừa
                   .trim();
     }
 

@@ -180,14 +180,15 @@ public class PostServiceImpl implements PostService {
             }
         }
 
+        // Thực hiện kiểm tra thô các giới hạn bài viết (độ dài, spam tần suất đăng bài)
         policyContentValidator.validatePost(
                 author.getId(),
                 request.getContent(),
                 mediaRequests.size()
         );
 
-        // AI duyệt MỌI bài có text (không còn cổng lọc từ khóa isSuspect), để bắt cả
-        // nội dung lách luật bằng tiếng lóng/ghép chữ mà danh sách từ khóa không phủ được.
+        // [KIỂM DUYỆT AI ĐỒNG BỘ] AI duyệt MỌI bài viết có văn bản để bắt các nội dung lách luật, từ lóng...
+        // Nếu AI đánh giá vi phạm tiêu chuẩn cộng đồng -> Ném lỗi ra màn hình ngay lập tức để chặn không cho tạo bài.
         if (aiModerationPolicyReader.isEnabled()
                 && request.getContent() != null
                 && !request.getContent().isBlank()) {
@@ -542,20 +543,25 @@ public class PostServiceImpl implements PostService {
         return count;
     }
 
-    /** Max comments AI-moderated per scheduler tick — keeps headroom under the shared 15 RPM / 500 RPD Gemini quota. */
+    /** Số lượng bình luận tối đa được AI duyệt mỗi chu kỳ scheduler - giúp duy trì hạn ngạch dưới mức 15 RPM / 500 RPD của Gemini. */
     private static final int COMMENT_MODERATION_BATCH = 8;
-    /** After this many failed AI attempts a comment drops out of the queue (stays PENDING for admin), so it can't starve newer ones. */
+    /** Sau số lần thử kiểm duyệt AI thất bại này, bình luận sẽ bị loại khỏi hàng đợi (giữ PENDING cho admin duyệt tay) để tránh làm nghẽn các bình luận mới hơn. */
     private static final int MAX_MODERATION_ATTEMPTS = 3;
-    /** Bao lâu thì một comment đã được AI duyệt mới được phép gọi AI lại khi bị report. */
+    /** Khoảng thời gian giãn cách tối thiểu để một bình luận đã được AI duyệt trước đó được phép kiểm duyệt lại khi bị người dùng báo cáo vi phạm. */
     private static final java.time.Duration REPORT_RECHECK_AFTER = java.time.Duration.ofHours(24);
-    /** Đủ số reporter KHÁC NHAU này thì ép AI duyệt lại ngay, bất kể vừa duyệt. */
+    /** Số lượng người báo cáo khác nhau tối thiểu để ép buộc hệ thống gọi AI kiểm duyệt lại bình luận ngay lập tức. */
     private static final int REPORT_FORCE_RECHECK_REPORTERS = 3;
-
+    /**
+     * [JOB CHẠY NGẦM KIỂM DUYỆT BÌNH LUẬN PENDING]
+     * Lấy ra lô bình luận đang ở trạng thái PENDING để kiểm duyệt bằng AI bất đồng bộ.
+     * Quét giới hạn theo COMMENT_MODERATION_BATCH nhằm điều phối hạn mức (Quota) của Gemini API.
+     */
     @Override
     public int moderatePendingComments() {
         if (!aiModerationPolicyReader.isEnabled()) {
             return 0;
         }
+        // Lấy danh sách bình luận PENDING có số lần thử kiểm duyệt chưa vượt ngưỡng tối đa
         Page<PostComment> pending = postCommentRepository.findByStatusAndModerationAttemptsLessThanOrderByCreatedAtAsc(
                 CommentStatus.PENDING, MAX_MODERATION_ATTEMPTS, PageRequest.of(0, COMMENT_MODERATION_BATCH));
         if (pending.isEmpty()) {
@@ -565,7 +571,7 @@ public class PostServiceImpl implements PostService {
         int resolved = 0;
         for (PostComment comment : pending.getContent()) {
             try {
-                // Report có thể đã gọi AI sync (SAFE) trước khi job chạy — không gọi lại API.
+                // Tránh gọi lại API nếu bình luận đã được quét và đánh giá bởi luồng báo cáo khác trước đó
                 if (comment.getAiModerationStatus() == AiModerationStatus.SAFE) {
                     comment.setStatus(CommentStatus.APPROVED);
                     comment.setModerationFailReason(null);
@@ -574,15 +580,20 @@ public class PostServiceImpl implements PostService {
                     resolved++;
                     continue;
                 }
+                
+                // Gọi Gemini AI đánh giá nội dung bình luận
                 var moderation = geminiModerationService.moderate(comment.getContent());
                 if (moderation.isEmpty()) {
-                    // Hết quota / mọi model fail → fail-closed: giữ PENDING (ẩn) cho admin duyệt tay.
+                    // Cơ chế FAIL-CLOSED: Hết quota / API lỗi -> Vẫn giữ trạng thái PENDING (ẩn) và tăng số lần thử
                     comment.setModerationAttempts(comment.getModerationAttempts() + 1);
                     comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.FAILED);
                     postCommentRepository.save(comment);
                     continue;
                 }
+                
+                // Phân tích phản hồi của AI
                 if (moderation.get().safe()) {
+                    // Case APPROVED: Bình luận sạch -> Cho phép hiển thị công khai và bắn thông báo
                     comment.setStatus(CommentStatus.APPROVED);
                     comment.setModerationFailReason(null);
                     comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.SAFE);
@@ -590,6 +601,7 @@ public class PostServiceImpl implements PostService {
                     postCommentRepository.save(comment);
                     publishCommentNotification(comment);
                 } else {
+                    // Case REJECTED: Phát hiện vi phạm -> Chuyển sang REJECTED (ẩn vĩnh viễn), lưu lý do, và bắn thông báo hệ thống phạt tác giả bình luận
                     comment.setStatus(CommentStatus.REJECTED);
                     comment.setModerationFailReason(moderation.get().reason());
                     comment.setAiModerationStatus(project.kconnecta.user.backend.feature.post.entity.AiModerationStatus.UNSAFE);
@@ -1244,12 +1256,13 @@ public class PostServiceImpl implements PostService {
             throw new ValidationException("Bình luận phải có nội dung hoặc ảnh.");
         }
 
-        // Chỉ kiểm duyệt phần text (ảnh không qua bộ lọc keyword/AI — xem ghi chú).
+        // 1. KIỂM TRA THÔ BẰNG REGEX (Blacklist và Watchlist tĩnh)
         if (!content.isBlank()) {
             try {
+                // Thực hiện so khớp với bộ lọc Blacklist và liên kết nghi vấn. Nếu dính Blacklist -> Ném lỗi chặn đồng bộ (TC04).
                 policyContentValidator.validateComment(content);
             } catch (ValidationException e) {
-                // Ghi nhận vi phạm khi nội dung chứa từ cấm/link bị chặn (bỏ qua lỗi độ dài).
+                // Ghi nhận vi phạm từ cấm tĩnh vào DB để tính điểm phạt/khóa comment
                 policyContentValidator.findCommentViolationKeyword(content)
                         .ifPresent(mk -> commentViolationService.recordBlacklistViolation(
                                 user.getId(), content, mk.id(), mk.value()));
@@ -1261,24 +1274,35 @@ public class PostServiceImpl implements PostService {
         AiModerationStatus aiStatus = AiModerationStatus.NOT_CHECKED;
         String failReason = null;
 
+        // 2. KIỂM DUYỆT BẰNG AI HOẶC TREO DUYỆT (PENDING) NẾU NGHI VẤN
         if (aiModerationPolicyReader.isEnabled() && !content.isBlank()) {
-            var moderationOpt = geminiModerationService.moderate(content);
-            if (moderationOpt.isPresent()) {
-                var moderation = moderationOpt.get();
-                if (!moderation.safe()) {
-                    commentViolationService.recordAiUnsafeViolation(
-                            user.getId(), null, null, content, moderation.reason());
-
-                    throw new ValidationException(
-                            "Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderation.reason());
-                }
-                aiStatus = AiModerationStatus.SAFE;
-            } else {
+            // Nếu phát hiện chứa từ nhạy cảm trong Watchlist hoặc chứa URL -> Đưa thẳng về PENDING để job nền gọi AI quét sau (TC02, TC09).
+            // Tránh block yêu cầu của người dùng để nâng cao hiệu năng.
+            if (policyContentValidator.isSuspect(content)) {
                 status = CommentStatus.PENDING;
-                aiStatus = AiModerationStatus.FAILED;
+                aiStatus = AiModerationStatus.NOT_CHECKED;
+            } else {
+                // Nếu nội dung nằm ngoài watchlist -> Cho gọi AI kiểm duyệt đồng bộ ngay lập tức.
+                var moderationOpt = geminiModerationService.moderate(content);
+                if (moderationOpt.isPresent()) {
+                    var moderation = moderationOpt.get();
+                    // Nếu phát hiện nội dung độc hại -> Ném lỗi từ chối và ghi nhận lịch sử vi phạm.
+                    if (!moderation.safe()) {
+                        commentViolationService.recordAiUnsafeViolation(
+                                user.getId(), null, null, content, moderation.reason());
+                        throw new ValidationException(
+                                "Nội dung vi phạm tiêu chuẩn cộng đồng: " + moderation.reason());
+                    }
+                    aiStatus = AiModerationStatus.SAFE;
+                } else {
+                    // Nếu AI không phản hồi (hết quota) -> FAIL-CLOSED: đưa về trạng thái PENDING chờ admin duyệt tay (TC06).
+                    status = CommentStatus.PENDING;
+                    aiStatus = AiModerationStatus.FAILED;
+                }
             }
         }
 
+        // Lưu thông tin comment vào DB
         PostComment saved = postCommentRepository.save(PostComment.builder()
                 .post(target.post())
                 .share(target.share())
@@ -1292,12 +1316,14 @@ public class PostServiceImpl implements PostService {
                 .lastModeratedAt(aiStatus == AiModerationStatus.SAFE ? LocalDateTime.now() : null)
                 .build());
 
+        // Ghi nhận tương tác sở thích của User (comment giúp tăng điểm chủ đề liên quan)
         userInterestService.recordInteraction(
                 request.getUserId(), target.post().getId(), InterestEventType.COMMENT);
 
         activityLogService.log(user.getId(), user.getUsername(), ActivityLogType.COMMENT_ADDED,
                 "{\"targetId\":\"" + target.getTargetId() + "\"}");
 
+        // Gửi thông báo cho chủ bài viết ngay lập tức nếu comment sạch (APPROVED)
         if (status == CommentStatus.APPROVED) {
             publishCommentNotification(saved);
         }
@@ -1334,6 +1360,9 @@ public class PostServiceImpl implements PostService {
 
         comment.setContent(trimmed);
 
+        // [SỬA BÌNH LUẬN - VÁ LỖ HỔNG KIỂM DUYỆT]
+        // Nếu nội dung sửa đổi chứa từ khóa nghi vấn (Watchlist) hoặc URL -> Đưa về PENDING để job kiểm duyệt sau.
+        // Ngược lại, nếu nội dung lành -> Cho duyệt APPROVED luôn.
         if (aiModerationPolicyReader.isEnabled() && policyContentValidator.isSuspect(request.getContent())) {
             var moderationOpt = geminiModerationService.moderate(request.getContent());
             if (moderationOpt.isPresent()) {
@@ -1608,6 +1637,8 @@ public class PostServiceImpl implements PostService {
             throw new ValidationException("Bạn đã báo cáo bài viết này");
         }
 
+        // [BÁO CÁO BÀI VIẾT - AI PHÂN TÍCH]
+        // Gọi Gemini AI đánh giá mức độ vi phạm của bài viết bị báo cáo so với lý do báo cáo
         var analysis = geminiModerationService.analyzeReport(
                 post.getContent(),
                 request.getCategory() != null ? request.getCategory().name() : null,
@@ -1620,7 +1651,7 @@ public class PostServiceImpl implements PostService {
                 .reason(trimToNull(request.getReason()))
                 .category(request.getCategory())
                 .aiAnalysis(analysis.map(a -> a.analysis()).orElse("Không thể phân tích tự động"))
-                .aiSeverity(analysis.map(a -> a.severity()).orElse("NONE"))
+                .aiSeverity(analysis.map(a -> a.severity()).orElse("NONE")) // Trả về mức độ HIGH/MEDIUM/LOW/NONE giúp admin
                 .build());
 
         adminPostReportNotificationClient.notifyPostReport(
@@ -1677,7 +1708,8 @@ public class PostServiceImpl implements PostService {
 
         long distinctReporters = commentReportRepository.countDistinctReportersByCommentId(commentId);
 
-        // Report chỉ là tín hiệu — comment chỉ bị ẩn khi AI kết luận unsafe.
+        // [KIỂM TRA BÁO CÁO BÌNH LUẬN]
+        // Nếu bình luận bị nhiều người báo cáo hoặc chưa từng được kiểm duyệt, tự động kích hoạt kiểm duyệt AI đồng bộ
         if (aiModerationPolicyReader.isEnabled() && shouldRecheck(comment, distinctReporters)) {
             recheckReportedComment(comment);
         }
