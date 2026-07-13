@@ -40,34 +40,43 @@ public class LiveStartServiceImpl implements LiveStartService {
 
     @Override
     public StartLiveResponse startLive(StartLiveRequest request) {
+        // [LUỒNG LIVE - BE]: BƯỚC 1 - Kiểm tra tính hợp lệ của thời gian lên lịch (nếu chế độ là SCHEDULED)
         if (request.getStartMode() == LiveStartMode.SCHEDULED && request.getScheduledAt() == null) {
             throw new ValidationException("scheduledAt is required when startMode is SCHEDULED");
         }
 
+        // [LUỒNG LIVE - BE]: BƯỚC 2 - Khởi tạo đối tượng yêu cầu tạo bài đăng thông báo livestream
         CreatePostRequest createPostRequest = new CreatePostRequest();
         createPostRequest.setAuthorId(request.getUserId());
         createPostRequest.setGroupId(request.getGroupId());
         createPostRequest.setPageId(request.getPageId());
         createPostRequest.setContent(buildContent(request.getTitle(), request.getDescription()));
         createPostRequest.setPrivacy(request.getPrivacy());
-        // Announcement post is visible immediately; only the live session waits for scheduledAt.
+        // Bài đăng thông báo sẽ hiển thị ngay lập tức trên feed (Status: PUBLISHED)
         createPostRequest.setStatus(PostStatus.PUBLISHED);
         createPostRequest.setScheduledAt(null);
         createPostRequest.setLocationText(request.getLocationText());
-        createPostRequest.setBackgroundStyle("LIVE_POST");
+        createPostRequest.setBackgroundStyle("LIVE_POST"); // Gắn kiểu background đặc biệt dạng LIVE CARD
         createPostRequest.setExcludedUserIds(request.getExcludedUserIds());
         createPostRequest.setTaggedUserIds(request.getTaggedUserIds());
         createPostRequest.setPromoted(Boolean.FALSE);
 
+        // Gọi PostService để tạo và lưu bài đăng này vào cơ sở dữ liệu
         PostResponse post = postService.createPost(createPostRequest);
         User host = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ValidationException("User not found: " + request.getUserId()));
 
+        // [LUỒNG LIVE - BE]: BƯỚC 3 - Xác định trạng thái ban đầu của Livestream
+        // Nếu lên lịch thì trạng thái là SCHEDULED, nếu phát ngay thì là LIVE
         LiveSessionStatus status = request.getStartMode() == LiveStartMode.SCHEDULED
                 ? LiveSessionStatus.SCHEDULED
                 : LiveSessionStatus.LIVE;
         LocalDateTime now = LocalDateTime.now();
+        
+        // roomName của phòng LiveKit được đặt theo định dạng: "live_" + ID bài đăng (bỏ dấu gạch ngang)
         String roomName = "live_" + post.getId().toString().replace("-", "");
+        
+        // Lưu thông tin phiên livestream (LiveSession) xuống cơ sở dữ liệu
         LiveSession session = liveSessionRepository.save(LiveSession.builder()
                 .host(host)
                 .groupId(request.getGroupId())
@@ -81,6 +90,7 @@ public class LiveStartServiceImpl implements LiveStartService {
                 .status(status)
                 .streamKey(roomName)
                 .roomName(roomName)
+                // Nếu phát ngay, bật cờ ghi hình (RECORDING)
                 .recordingStatus(status == LiveSessionStatus.LIVE ? LiveRecordingStatus.RECORDING : LiveRecordingStatus.NONE)
                 .viewerCount(0)
                 .peakViewerCount(0)
@@ -88,19 +98,22 @@ public class LiveStartServiceImpl implements LiveStartService {
                 .startedAt(status == LiveSessionStatus.LIVE ? now : null)
                 .build());
 
+        // [LUỒNG LIVE - BE]: BƯỚC 4 - Phát sự kiện qua WebSocket thông báo buổi Live đã bắt đầu
         if (status == LiveSessionStatus.LIVE) {
             realtimePublisher.publishSessionEvent("LIVE_STARTED", toResponse(session));
         }
 
+        // [LUỒNG LIVE - BE]: BƯỚC 5 - Sinh Access Token của LiveKit cho Host để đẩy luồng WebRTC
         LiveKitTokenResponse hostToken = null;
         if (status == LiveSessionStatus.LIVE) {
             LiveKitTokenRequest tokenRequest = new LiveKitTokenRequest();
             tokenRequest.setUserId(request.getUserId());
             tokenRequest.setSessionId(session.getId());
-            tokenRequest.setRole(LiveKitTokenRequest.LiveKitParticipantRole.HOST);
+            tokenRequest.setRole(LiveKitTokenRequest.LiveKitParticipantRole.HOST); // Phân quyền là HOST
             hostToken = liveKitTokenService.createToken(tokenRequest);
         }
 
+        // Trả về thông tin đầy đủ để Frontend bắt đầu chuyển hướng và phát sóng
         return StartLiveResponse.builder()
                 .postId(post.getId())
                 .sessionId(session.getId())

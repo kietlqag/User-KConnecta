@@ -81,19 +81,23 @@ public class ChatSocketController {
         return callLockStripes[Math.floorMod(callId.hashCode(), callLockStripes.length)];
     }
 
+    // [LUỒNG TIN NHẮN CHAT - BE]: Nhận tin nhắn chat cá nhân (1-1) từ client qua WebSocket
     @MessageMapping("/chat.private")
     public void sendPrivateMessage(PrivateMessageRequest request, Principal principal) {
         if (principal == null) {
             throw new IllegalStateException("Unauthenticated WebSocket session");
         }
+        // Gọi ChatService để xử lý lưu vào CSDL và phát tin nhắn tới người nhận thông qua WebSocket queue
         chatService.sendPrivateMessage(principal.getName(), request);
     }
 
+    // [LUỒNG TIN NHẮN CHAT - BE]: Nhận tin nhắn nhóm từ client qua WebSocket
     @MessageMapping("/chat.group")
     public void sendGroupMessage(GroupMessageRequest request, Principal principal) {
         if (principal == null) {
             throw new IllegalStateException("Unauthenticated WebSocket session");
         }
+        // Gọi ChatService để xử lý lưu vào CSDL và phát tin nhắn tới các thành viên trong nhóm chat
         chatService.sendGroupMessage(principal.getName(), request);
     }
 
@@ -113,10 +117,13 @@ public class ChatSocketController {
         chatService.markConversationSeen(principal.getName(), request.getPeerUserId());
     }
 
+    // [LUỒNG CUỘC GỌI VIDEO/THOẠI - BE]: Tiếp nhận tín hiệu WebRTC signaling (invite, offer, answer, ice candidate)
     @MessageMapping("/call.signal")
     public void sendCallSignal(CallSignalRequest request, Principal principal) {
-        // Khóa theo callId rồi mới vào transaction: thread sau chỉ đọc DB sau khi
-        // thread trước đã COMMIT, nên find-or-create không còn chèn trùng call_id.
+        // GIẢI PHÁP ĐẶC BIỆT: Khóa theo callId (sử dụng Striped Lock) trước khi vào transaction.
+        // Điều này đảm bảo khi cuộc gọi mới bắt đầu, luồng CALL_INVITE và CALL_OFFER (hoặc các tín hiệu khác)
+        // gửi đồng thời sẽ được xếp hàng xử lý tuần tự, tránh tình trạng cả hai luồng cùng kiểm tra DB
+        // và cùng insert thực thể CallSession mới dẫn đến lỗi trùng khóa (Duplicate Key Exception).
         if (request != null && request.getCallId() != null) {
             synchronized (callLockFor(request.getCallId())) {
                 self.processCallSignal(request, principal);
@@ -126,6 +133,7 @@ public class ChatSocketController {
         }
     }
 
+    // [LUỒNG CUỘC GỌI VIDEO/THOẠI - BE]: Xử lý chi tiết tín hiệu cuộc gọi
     @Transactional
     public void processCallSignal(CallSignalRequest request, Principal principal) {
         try {
