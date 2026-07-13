@@ -151,21 +151,12 @@ export function normalizeLivePostContent(content: string): string {
   return description ? `${title}\n\n${description}` : title;
 }
 
-function isLikelyLiveByContent(item: PostResponse): boolean {
-  if ((item.media ?? []).length > 0) return false;
-  const content = (item.content || '').trim();
-  if (!content) return false;
-  if (content.includes('\n\n')) return true;
-  const lines = content.split(/\n/).map((line) => line.trim()).filter(Boolean);
-  return lines.length === 2 && lines[0] === lines[1];
-}
-
 export function mapApiPost(item: PostResponse): FeedPost {
   const firstVideo = (item.media ?? []).find((m) => m.mediaType === 'VIDEO');
   const firstImage = (item.media ?? []).find((m) => m.mediaType === 'IMAGE');
   const legacyVideoUrl = !firstVideo && isVideoUrl(item.imageUrl) ? item.imageUrl : null;
   const legacyImageUrl = item.imageUrl && !isVideoUrl(item.imageUrl) ? item.imageUrl : null;
-  const isLivePost = item.backgroundStyle === 'LIVE_POST' || isLikelyLiveByContent(item);
+  const isLivePost = item.backgroundStyle === 'LIVE_POST';
 
   const videoUrl = firstVideo?.mediaUrl || firstVideo?.fileUrl || legacyVideoUrl || undefined;
   const imageUrl = firstImage?.mediaUrl || firstImage?.fileUrl || legacyImageUrl || undefined;

@@ -403,6 +403,40 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     [getGroupMeshRecipients, sendSignal],
   );
 
+  const endCall = useCallback(() => {
+    if (activeCall) {
+      const hasJoinedGroupCall =
+        Boolean(activeCall.groupConversationId) &&
+        (activeCall.direction === 'incoming' ||
+          connectedGroupParticipantIdsRef.current.size > 1 ||
+          authoritativeSessionStatus === 'ONGOING');
+      // Cuộc gọi đã được nghe máy (session ONGOING) thì luôn gửi CALL_END, kể cả
+      // khi ICE còn đang 'connecting'. Trước đây dùng status==='in_call' nên video
+      // chưa connect xong sẽ gửi nhầm CALL_CANCEL và đầu kia bỏ qua → không tắt máy.
+      const callAnswered = status === 'in_call' || authoritativeSessionStatus === 'ONGOING';
+      const endType: CallSignalType = callAnswered || hasJoinedGroupCall ? 'CALL_END' : 'CALL_CANCEL';
+      const durationSec =
+        endType === 'CALL_END' ? calculateCallDurationSeconds(callStartedAtMs) : undefined;
+      const receivers = activeCall.groupConversationId
+        ? getGroupMeshRecipients(activeCall, [])
+        : activeCall.participantIds?.length
+          ? activeCall.participantIds
+          : [activeCall.peerUserId];
+      receivers.forEach((receiverId) => {
+        sendSignal(receiverId, activeCall.callId, endType, {
+          conversationId: activeCall.groupConversationId,
+          durationSec,
+        });
+      });
+    } else if (incomingSignal) {
+      sendSignal(incomingSignal.fromUserId, incomingSignal.callId, 'CALL_CANCEL', {
+        conversationId: incomingSignal.conversationId ?? undefined,
+      });
+    }
+    setStatus('ended');
+    cleanup(true);
+  }, [activeCall, authoritativeSessionStatus, callStartedAtMs, cleanup, getGroupMeshRecipients, incomingSignal, sendSignal, status]);
+
   const handleGroupPeerDeparture = useCallback(
     (
       peerUserId: string,
@@ -428,8 +462,12 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       if (snapshot) {
         applyAuthoritativeSnapshot(snapshot);
       }
-      setStatus('ended');
-      cleanup(true);
+      if (call.direction === 'outgoing') {
+        endCall();
+      } else {
+        setStatus('ended');
+        cleanup(true);
+      }
       return true;
     },
     [
@@ -440,6 +478,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
       currentUserId,
       removeGroupParticipant,
       updateGroupParticipant,
+      endCall,
     ],
   );
 
@@ -1099,39 +1138,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
     updateGroupParticipant,
   ]);
 
-  const endCall = useCallback(() => {
-    if (activeCall) {
-      const hasJoinedGroupCall =
-        Boolean(activeCall.groupConversationId) &&
-        (activeCall.direction === 'incoming' ||
-          connectedGroupParticipantIdsRef.current.size > 1 ||
-          authoritativeSessionStatus === 'ONGOING');
-      // Cuộc gọi đã được nghe máy (session ONGOING) thì luôn gửi CALL_END, kể cả
-      // khi ICE còn đang 'connecting'. Trước đây dùng status==='in_call' nên video
-      // chưa connect xong sẽ gửi nhầm CALL_CANCEL và đầu kia bỏ qua → không tắt máy.
-      const callAnswered = status === 'in_call' || authoritativeSessionStatus === 'ONGOING';
-      const endType: CallSignalType = callAnswered || hasJoinedGroupCall ? 'CALL_END' : 'CALL_CANCEL';
-      const durationSec =
-        endType === 'CALL_END' ? calculateCallDurationSeconds(callStartedAtMs) : undefined;
-      const receivers = activeCall.groupConversationId
-        ? getGroupMeshRecipients(activeCall, [])
-        : activeCall.participantIds?.length
-          ? activeCall.participantIds
-          : [activeCall.peerUserId];
-      receivers.forEach((receiverId) => {
-        sendSignal(receiverId, activeCall.callId, endType, {
-          conversationId: activeCall.groupConversationId,
-          durationSec,
-        });
-      });
-    } else if (incomingSignal) {
-      sendSignal(incomingSignal.fromUserId, incomingSignal.callId, 'CALL_CANCEL', {
-        conversationId: incomingSignal.conversationId ?? undefined,
-      });
-    }
-    setStatus('ended');
-    cleanup(true);
-  }, [activeCall, authoritativeSessionStatus, callStartedAtMs, cleanup, getGroupMeshRecipients, incomingSignal, sendSignal, status]);
+
 
   const toggleMute = useCallback(() => {
     const stream = localStreamRef.current;
