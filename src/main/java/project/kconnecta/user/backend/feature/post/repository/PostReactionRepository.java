@@ -95,4 +95,7 @@ public interface PostReactionRepository extends JpaRepository<PostReaction, UUID
 
     @Query("select r from PostReaction r where r.user.id = :userId and r.share.id in :shareIds")
     List<PostReaction> findAllByUserIdAndShareIdIn(@Param("userId") UUID userId, @Param("shareIds") List<UUID> shareIds);
+
+    @Query("select r.post.author.id, count(r) from PostReaction r where r.user.id = :userId group by r.post.author.id")
+    List<Object[]> countReactionsByAuthorForUser(@Param("userId") UUID userId);
 }

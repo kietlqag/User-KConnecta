@@ -19,8 +19,12 @@ import project.kconnecta.user.backend.feature.story.repository.StoryRepository;
 import project.kconnecta.user.backend.feature.story.service.StoryService;
 import project.kconnecta.user.backend.feature.user.entity.User;
 import project.kconnecta.user.backend.feature.user.repository.UserRepository;
+import project.kconnecta.user.backend.feature.post.repository.PostReactionRepository;
 
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -37,6 +41,7 @@ public class StoryServiceImpl implements StoryService {
     private final StoryRepository storyRepository;
     private final UserRepository userRepository;
     private final FriendshipRepository friendshipRepository;
+    private final PostReactionRepository postReactionRepository;
     private final CloudinaryService cloudinaryService;
 
     @Override
@@ -106,11 +111,57 @@ public class StoryServiceImpl implements StoryService {
     @Override
     @Transactional(readOnly = true)
     public List<StoryResponse> getAllActiveStories(UUID viewerId) {
-        return storyRepository.findByExpiresAtAfterAndActiveTrueOrderByCreatedAtDesc(LocalDateTime.now())
-                .stream()
+        if (viewerId == null) {
+            return List.of();
+        }
+
+        // 1. Get friend IDs of the viewer
+        List<UUID> friendIds = friendshipRepository.findFriendIdsByUserIdAndStatus(viewerId, FriendshipStatus.ACCEPTED);
+
+        // 2. Fetch active stories of self and friends
+        List<Story> activeStories;
+        if (friendIds.isEmpty()) {
+            activeStories = storyRepository.findByUserIdAndExpiresAtAfterAndActiveTrueOrderByCreatedAtAsc(viewerId, LocalDateTime.now());
+        } else {
+            activeStories = storyRepository.findActiveStoriesForViewer(viewerId, friendIds, LocalDateTime.now());
+        }
+
+        // 3. Construct closeness map based on reaction counts
+        List<Object[]> reactionCounts = postReactionRepository.countReactionsByAuthorForUser(viewerId);
+        Map<UUID, Long> closenessMap = new HashMap<>();
+        for (Object[] row : reactionCounts) {
+            if (row[0] != null && row[1] != null) {
+                closenessMap.put((UUID) row[0], (Long) row[1]);
+            }
+        }
+
+        // 4. Filter by privacy visibility and map to response
+        List<StoryResponse> responses = activeStories.stream()
                 .filter(story -> canViewStory(story, viewerId))
                 .map(this::mapToResponse)
-                .toList();
+                .collect(Collectors.toList());
+
+        // 5. Sort stories: self first, then closeness count desc, then createdAt desc
+        responses.sort((a, b) -> {
+            if (a.getUserId().equals(viewerId) && !b.getUserId().equals(viewerId)) {
+                return -1;
+            }
+            if (!a.getUserId().equals(viewerId) && b.getUserId().equals(viewerId)) {
+                return 1;
+            }
+            if (a.getUserId().equals(b.getUserId())) {
+                // If same user, sort by createdAt desc
+                return b.getCreatedAt().compareTo(a.getCreatedAt());
+            }
+            long scoreA = closenessMap.getOrDefault(a.getUserId(), 0L);
+            long scoreB = closenessMap.getOrDefault(b.getUserId(), 0L);
+            if (scoreA != scoreB) {
+                return Long.compare(scoreB, scoreA); // Closeness desc
+            }
+            return b.getCreatedAt().compareTo(a.getCreatedAt()); // CreatedAt desc
+        });
+
+        return responses;
     }
 
     @Override
