@@ -10,30 +10,48 @@ export interface Ward {
   name: string;
 }
 
-interface CasProvinceResponse {
-  provinces: Province[];
+interface OpenApiProvince {
+  code: number;
+  name: string;
 }
 
-interface CasCommunesResponse {
-  communes: Ward[];
+interface OpenApiWard {
+  code: number;
+  name: string;
+}
+
+interface OpenApiDistrict {
+  wards: OpenApiWard[];
+}
+
+interface OpenApiProvinceDetail {
+  districts: OpenApiDistrict[];
 }
 
 const locationAxios = axios.create({
-  baseURL: `https://production.cas.so/address-kit/2025-07-01`,
+  baseURL: `https://provinces.open-api.vn/api`,
 });
 
 export const locationService = {
   async getProvinces(): Promise<Province[]> {
-    const { data } = await locationAxios.get<CasProvinceResponse>('/provinces');
-    const provinces = data.provinces ?? [];
+    const { data } = await locationAxios.get<OpenApiProvince[]>('/');
+    const provinces = (data ?? []).map(p => ({
+      code: String(p.code),
+      name: p.name,
+    }));
     return provinces.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   },
 
   async getWardsByProvinceCode(provinceCode: string): Promise<Ward[]> {
-    const { data } = await locationAxios.get<CasCommunesResponse>(`/provinces/${provinceCode}/communes`);
-    const wards = (data.communes ?? []).filter(
-      (ward) => ward.name && ward.name.trim().length > 1 && ward.name.trim() !== '.',
-    );
+    const { data } = await locationAxios.get<OpenApiProvinceDetail>(`/p/${provinceCode}?depth=3`);
+    const districts = data.districts ?? [];
+    const wards: Ward[] = districts
+      .flatMap(d => d.wards ?? [])
+      .filter(w => w.name && w.name.trim().length > 1 && w.name.trim() !== '.')
+      .map(w => ({
+        code: String(w.code),
+        name: w.name,
+      }));
     return wards.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   },
 };

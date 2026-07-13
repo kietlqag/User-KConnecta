@@ -6,7 +6,7 @@ const CSP_DEV =
   "font-src 'self' data:; " +
   "img-src 'self' data: blob: https://res.cloudinary.com https://cdn.jsdelivr.net https://i.pravatar.cc https://ui-avatars.com https://images.unsplash.com https://placehold.co https://lh3.googleusercontent.com https://*.googleusercontent.com; " +
   "media-src 'self' blob: https://res.cloudinary.com https://*.r2.dev https://*.r2.cloudflarestorage.com; " +
-  "connect-src 'self' http://localhost:8080 ws://localhost:3000 ws://localhost:8080 https://res.cloudinary.com https://accounts.google.com https://oauth2.googleapis.com https://*.r2.dev https://*.r2.cloudflarestorage.com wss: ws:; " +
+  "connect-src 'self' http://localhost:8080 ws://localhost:3000 ws://localhost:8080 https://res.cloudinary.com https://accounts.google.com https://oauth2.googleapis.com https://*.r2.dev https://*.r2.cloudflarestorage.com https://provinces.open-api.vn https://nominatim.openstreetmap.org wss: ws:; " +
   "frame-src https://accounts.google.com; " +
   "frame-ancestors 'none'; " +
   "base-uri 'self'; " +
@@ -24,7 +24,7 @@ export const devSecurityHeaders: Record<string, string> = {
   'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   'Cross-Origin-Resource-Policy': 'same-site',
   'Permissions-Policy':
-    'accelerometer=(), camera=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()',
+    'accelerometer=(), camera=(self), geolocation=(self), gyroscope=(), magnetometer=(), microphone=(self), payment=(), usb=()',
   'Content-Security-Policy-Report-Only': CSP_DEV,
 };
 
