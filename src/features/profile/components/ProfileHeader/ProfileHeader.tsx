@@ -29,6 +29,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { isPlaceholderAvatar } from '@/utils/userAvatarUtils';
 import { PROFILE_DEFAULT_COVER } from '../../utils/profileDisplayUtils';
+import { useQuery } from '@tanstack/react-query';
+import { storyService } from '@/services/storyService';
 
 const DEFAULT_COVER = PROFILE_DEFAULT_COVER;
 
@@ -64,7 +66,17 @@ export function ProfileHeader({
   onAvatarUpload,
   onCoverUpload,
 }: ProfileHeaderProps) {
-  const navigate = useNavigate();
+  const navigate = useNavigate();
+  // Fetch active stories of the profile user
+  const { data: userStories = [] } = useQuery({
+    queryKey: ['active-stories', profileUserId],
+    queryFn: () => {
+      if (!profileUserId) return Promise.resolve([]);
+      return storyService.getActiveStoriesByUser(profileUserId);
+    },
+    enabled: !!profileUserId,
+  });
+
   // Lightbox / upload state
   const [viewerImage, setViewerImage]     = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -309,47 +321,75 @@ export function ProfileHeader({
         <div className="relative px-4 pb-4 pt-1 pointer-events-none">
           <div className="flex flex-col md:flex-row items-center md:items-end gap-4 -mt-8 md:-mt-12 lg:-mt-16">
 
-            {/* ── Avatar ── */}
-            <div
-              className="relative group/avatar flex-shrink-0 pointer-events-auto"
-              style={{ cursor: hasRealAvatar && !loading ? 'pointer' : 'default' }}
-              onClick={() => hasRealAvatar && avatar && !loading && setViewerImage(avatar)}
-            >
-              <div className="relative w-[168px] h-[168px] rounded-full border-[5px] border-white dark:border-card bg-card dark:bg-card overflow-hidden shadow-sm">
-                {loading ? (
-                  <div className="absolute inset-0 bg-muted animate-pulse" />
-                ) : (
-                  <UserAvatar
-                    name={displayName}
-                    avatarUrl={avatar}
-                    userId={profileUserId}
-                    className="absolute inset-0 h-full w-full group-hover/avatar:brightness-95 transition-[filter]"
-                    rounded="full"
-                    initialsClassName="text-5xl font-bold tracking-wide"
-                  />
-                )}
+                        {/* ── Avatar ── */}
+            {(() => {
+              const avatarContent = (
+                <div
+                  className={`relative rounded-full transition-transform pointer-events-auto ${userStories.length > 0 ? 'p-[3px] border-[3px] border-emerald-500 bg-card cursor-pointer hover:scale-[1.01]' : ''}`}
+                  style={{ cursor: (hasRealAvatar || userStories.length > 0) && !loading ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (userStories.length === 0 && hasRealAvatar && avatar && !loading) {
+                      setViewerImage(avatar);
+                    }
+                  }}
+                >
+                  <div className="relative w-[168px] h-[168px] rounded-full border-[5px] border-white dark:border-card bg-card dark:bg-card overflow-hidden shadow-sm">
+                    {loading ? (
+                      <div className="absolute inset-0 bg-muted animate-pulse" />
+                    ) : (
+                      <UserAvatar
+                        name={displayName}
+                        avatarUrl={avatar}
+                        userId={profileUserId}
+                        className="absolute inset-0 h-full w-full group-hover/avatar:brightness-95 transition-[filter]"
+                        rounded="full"
+                        initialsClassName="text-5xl font-bold tracking-wide"
+                      />
+                    )}
 
-                {avatarUploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted/80/80">
-                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                    {avatarUploading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-muted/80/80">
+                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Camera button */}
-              {isOwnProfile && !loading && (
-                <>
-                  <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileChange} onClick={e => e.stopPropagation()} />
-                  <button
-                    onClick={e => { e.stopPropagation(); avatarInputRef.current?.click(); }}
-                    disabled={avatarUploading}
-                    className="absolute bottom-3 right-3 w-9 h-9 bg-muted hover:bg-muted rounded-full flex items-center justify-center transition-colors border-2 border-border shadow-sm dark:shadow-none cursor-pointer disabled:opacity-70"
-                  >
-                    <Camera className="w-5 h-5 text-foreground" />
-                  </button>
-                </>
-              )}
-            </div>
+                  {/* Camera button */}
+                  {isOwnProfile && !loading && (
+                    <>
+                      <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileChange} onClick={e => e.stopPropagation()} />
+                      <button
+                        onClick={e => { e.stopPropagation(); avatarInputRef.current?.click(); }}
+                        disabled={avatarUploading}
+                        className="absolute bottom-3 right-3 w-9 h-9 bg-muted hover:bg-muted rounded-full flex items-center justify-center transition-colors border-2 border-border shadow-sm dark:shadow-none cursor-pointer disabled:opacity-70"
+                      >
+                        <Camera className="w-5 h-5 text-foreground" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              );
+
+              if (userStories.length > 0) {
+                return (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      {avatarContent}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-48 rounded-xl">
+                      <DropdownMenuItem onClick={() => hasRealAvatar && avatar && setViewerImage(avatar)} className="cursor-pointer">
+                        Xem ảnh đại diện
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate(`/stories/${profileUserId}`)} className="cursor-pointer font-medium text-emerald-600 dark:text-emerald-400">
+                        Xem tin (Story)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                );
+              }
+
+              return avatarContent;
+            })()}
 
             {/* ── Name & friends count ── */}
             <div className="flex-1 min-w-0 text-center md:text-left mb-2 md:pb-2 pointer-events-auto">

@@ -64,7 +64,24 @@ export function ProfileSetupStep({
   const [submitError, setSubmitError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [countdown, setCountdown] = useState(5);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+
+  useEffect(() => {
+    if (!showSuccessModal) return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [showSuccessModal]);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
 
   const [isLocationPickerOpen, setIsLocationPickerOpen] = useState(false);
@@ -524,6 +541,9 @@ export function ProfileSetupStep({
           <div className="w-full max-w-sm rounded-2xl bg-card p-6 text-center shadow-2xl">
             <CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-emerald-500" />
             <p className="text-lg font-semibold text-foreground">Tạo tài khoản thành công</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Tự động chuyển hướng về trang chủ sau {countdown}s...
+            </p>
           </div>
         </div>
       )}
