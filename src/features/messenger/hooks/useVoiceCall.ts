@@ -716,7 +716,7 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   }, []);
 
   const applyPendingIce = useCallback(async (peerUserId?: string) => {
-    if (peerUserId) {
+    if (peerUserId && activeCallRef.current?.groupConversationId) {
       await applyPendingIceForPeer(peerUserId);
       return;
     }
