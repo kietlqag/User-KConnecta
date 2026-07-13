@@ -1322,6 +1322,10 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
             });
             setStatus('connecting');
             armConnectTimeout(signal.fromUserId, signal.callId);
+          } else if (incomingSignal?.callId === signal.callId && signal.fromUserId === currentUserId) {
+            // Cuộc gọi được chấp nhận từ thiết bị khác của cùng tài khoản
+            setStatus('ended');
+            cleanup(true);
           }
           break;
         case 'CALL_PARTICIPANT_UPDATE':
@@ -1448,7 +1452,8 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
           break;
           }
         case 'CALL_ICE':
-          if (!matchesByCallId || !signal.candidate) break;
+          const isRelated = matchesByCallId || (incomingSignal?.callId === signal.callId);
+          if (!isRelated || !signal.candidate) break;
           const candidate: RTCIceCandidateInit = {
             candidate: signal.candidate,
             sdpMid: signal.sdpMid ?? undefined,
