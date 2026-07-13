@@ -1169,7 +1169,25 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
   const handleIncomingSignal = useCallback(
     async (signal: IncomingCallSignal) => {
       if (!currentUserId) return;
-      if (signal.fromUserId === currentUserId) return;
+      if (signal.fromUserId === currentUserId) {
+        // Tín hiệu đồng bộ đa thiết bị: khi nhận được tín hiệu chấp nhận/từ chối/hủy cuộc gọi
+        // phát ra từ thiết bị khác của chính mình, chúng ta dừng đổ chuông nếu cuộc gọi đó
+        // không đang hoạt động trên thiết bị này.
+        const isDeviceSyncSignal =
+          signal.type === 'CALL_ACCEPT' ||
+          signal.type === 'CALL_REJECT' ||
+          signal.type === 'CALL_CANCEL';
+        
+        if (isDeviceSyncSignal) {
+          const isCallActiveOnThisDevice = activeCallRef.current?.callId === signal.callId;
+          const isRingingOnThisDevice = incomingSignal?.callId === signal.callId;
+          if (!isCallActiveOnThisDevice && isRingingOnThisDevice) {
+            setStatus('ended');
+            cleanup(true);
+          }
+        }
+        return;
+      }
 
       const matchesByCallId = activeCall?.callId === signal.callId;
       logWebRtc('incoming signal', { callId: signal.callId, type: signal.type });
@@ -1322,10 +1340,6 @@ export function useVoiceCall({ currentUserId, sendCallSignal }: UseVoiceCallOpti
             });
             setStatus('connecting');
             armConnectTimeout(signal.fromUserId, signal.callId);
-          } else if (incomingSignal?.callId === signal.callId && signal.fromUserId === currentUserId) {
-            // Cuộc gọi được chấp nhận từ thiết bị khác của cùng tài khoản
-            setStatus('ended');
-            cleanup(true);
           }
           break;
         case 'CALL_PARTICIPANT_UPDATE':
