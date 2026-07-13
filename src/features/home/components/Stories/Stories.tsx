@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, AuthUser, AUTH_USER_CHANGED_EVENT } from '../../../../services/authService';
 import { useStoriesQuery, type OptimisticStory } from '../../../stories/hooks/useStories';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 interface StoryGroup {
   userId: string;
@@ -141,14 +142,11 @@ export function Stories() {
           aria-label="Tạo tin của bạn"
         >
           <div className="relative w-[112px] h-[160px] bg-muted rounded-xl overflow-hidden border border-border flex flex-col">
-            <div className="h-[105px] w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
-              <img
-                src={currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14'}
-                alt={currentUser?.fullName ? `Ảnh đại diện của ${currentUser.fullName}` : 'Ảnh đại diện của bạn'}
-                width={112}
-                height={105}
-                loading="lazy"
-                className="w-full h-full object-cover"
+            <div className="h-[105px] w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 overflow-hidden">
+              <UserAvatar
+                name={currentUser?.fullName || 'Ảnh đại diện của bạn'}
+                avatarUrl={currentUser?.avatarUrl}
+                className="w-full h-full"
               />
             </div>
             <div className="h-[55px] bg-card flex flex-col items-center justify-center relative">
@@ -194,13 +192,11 @@ export function Stories() {
                 </div>
               )}
               <div className="absolute top-2 left-2 w-10 h-10 rounded-full border-[3px] border-emerald-500 bg-card overflow-hidden">
-                <img
-                  src={group.userAvatarUrl}
-                  alt={`Ảnh đại diện của ${group.userFullName}`}
-                  width={40}
-                  height={40}
-                  loading="lazy"
-                  className="w-full h-full object-cover"
+                <UserAvatar
+                  name={group.userFullName}
+                  avatarUrl={group.userAvatarUrl}
+                  rounded="full"
+                  className="w-full h-full"
                 />
               </div>
             </div>

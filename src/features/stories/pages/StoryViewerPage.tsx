@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { storyService, type StoryPrivacy, type StoryResponse, type StorySticker, parseStoryStickers } from '@/services/storyService';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import { useDeleteStoryMutation } from '@/features/stories/hooks/useStories';
 import { resolveStoryTextSize } from '@/lib/storyShareText';
 import { useRealtimeCall } from '@/contexts/RealtimeCallContext';
@@ -452,10 +453,11 @@ export function StoryViewerPage() {
                   className={`flex items-center gap-3 w-full rounded-lg px-2 py-2 transition cursor-pointer text-left ${ index === currentAuthorIndex ? 'bg-emerald-50' : 'hover:bg-muted' }`}
                 >
                   <div className="relative shrink-0">
-                    <img
-                      src={a.avatarUrl}
-                      alt={a.name}
-                      className="h-14 w-14 rounded-full object-cover border-[3px] border-emerald-500"
+                    <UserAvatar
+                      name={a.name}
+                      avatarUrl={a.avatarUrl}
+                      rounded="full"
+                      className="h-14 w-14 border-[3px] border-emerald-500"
                     />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -585,10 +587,11 @@ export function StoryViewerPage() {
 
           {/* Author Header */}
           <div className="absolute top-8 left-3 right-3 z-30 flex items-center gap-2">
-            <img
-              src={author.avatarUrl}
-              alt={author.name}
-              className="h-9 w-9 rounded-full border-2 border-emerald-400 object-cover shrink-0"
+            <UserAvatar
+              name={author.name}
+              avatarUrl={author.avatarUrl}
+              rounded="full"
+              className="h-9 w-9 border-2 border-emerald-400 shrink-0"
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white drop-shadow truncate">{author.name}</p>
@@ -721,11 +724,14 @@ export function StoryViewerPage() {
         {!isOwnStory && (
           <div className="flex w-[min(360px,calc(100vw-32px))] flex-col gap-2">
             <div className="flex items-center gap-2 rounded-full bg-card/10 border border-white/30 px-4 py-2">
-              <img
-                src={currentUser?.avatarUrl || 'https://i.pravatar.cc/80?img=14'}
-                alt="me"
-                className="h-6 w-6 rounded-full object-cover shrink-0"
-              />
+              <div className="h-6 w-6 rounded-full overflow-hidden shrink-0">
+                <UserAvatar
+                  name={currentUser?.fullName || 'Ảnh đại diện của bạn'}
+                  avatarUrl={currentUser?.avatarUrl}
+                  rounded="full"
+                  className="h-full w-full"
+                />
+              </div>
               <input
                 type="text"
                 value={replyText}

@@ -8,6 +8,7 @@ import { authService, AuthUser, AUTH_USER_CHANGED_EVENT } from '@/services/authS
 import { useCreateStoryMutation } from '@/features/stories/hooks/useStories';
 import type { StoryDurationHours, StoryPrivacy } from '@/services/storyService';
 import { estimateStoryTextSize } from '@/lib/storyShareText';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 import bgImg1 from './backgroundImage/000ecac94d4fa09a8369747056ce72f0.jpg';
 import bgImg2 from './backgroundImage/2886e1de8d8637a139478d903feb0643.jpg';
 import bgImg3 from './backgroundImage/60b39f8c265cc15e17009e2b539249c7.jpg';
@@ -615,10 +616,11 @@ export function CreateStoryPage() {
           <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4">
             <div className="mb-4 flex items-center gap-3 rounded-lg px-2 py-2">
               <div className="h-10 w-10 overflow-hidden rounded-full bg-muted">
-                <img
-                  src={userAvatar}
-                  alt="Avatar"
-                  className="h-full w-full object-cover"
+                <UserAvatar
+                  name={userFullName}
+                  avatarUrl={currentUser?.avatarUrl}
+                  rounded="full"
+                  className="h-full w-full"
                 />
               </div>
               <span className="font-medium text-foreground">{userFullName}</span>

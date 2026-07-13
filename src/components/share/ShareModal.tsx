@@ -92,41 +92,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
   const { sendMessage } = useRealtimeCall();
 
   const { data: publicPolicy } = usePublicPolicies();
-  const [aiViolationError, setAiViolationError] = useState<string | null>(null);
   const [isAiChecking, setIsAiChecking] = useState(false);
-
-  useEffect(() => {
-    const trimmed = caption.trim();
-    if (!trimmed || trimmed.length < 5) {
-      setAiViolationError(null);
-      setIsAiChecking(false);
-      return;
-    }
-
-    if (checkKeywords(caption, publicPolicy)) {
-      setAiViolationError(null);
-      setIsAiChecking(false);
-      return;
-    }
-
-    setIsAiChecking(true);
-    const handler = setTimeout(async () => {
-      try {
-        const response = await postService.verifyContent(trimmed);
-        if (response.level === 'AI_UNSAFE') {
-          setAiViolationError(response.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
-        } else {
-          setAiViolationError(null);
-        }
-      } catch (err) {
-        console.error('Failed to verify content with AI:', err);
-      } finally {
-        setIsAiChecking(false);
-      }
-    }, 1000);
-
-    return () => clearTimeout(handler);
-  }, [caption, publicPolicy]);
 
   const filteredConversations = useMemo(
     () =>
@@ -182,7 +148,6 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
     setShowPrivacyMenu(false);
     setShowEmojiPicker(false);
     setSendingToUserId(null);
-    setAiViolationError(null);
     setIsAiChecking(false);
     onClose();
   };
@@ -246,11 +211,16 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
     setIsSharingNow(true);
     try {
       if (trimmedText.length >= 5 && !checkKeywords(caption, publicPolicy)) {
-        const verifyRes = await postService.verifyContent(trimmedText);
-        if (verifyRes.level === 'AI_UNSAFE' || verifyRes.level === 'BLACKLIST') {
-          toast.error(verifyRes.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
-          setIsSharingNow(false);
-          return;
+        setIsAiChecking(true);
+        try {
+          const verifyRes = await postService.verifyContent(trimmedText);
+          if (verifyRes.level === 'AI_UNSAFE' || verifyRes.level === 'BLACKLIST') {
+            toast.error(verifyRes.reason ?? 'Nội dung vi phạm tiêu chuẩn cộng đồng');
+            setIsSharingNow(false);
+            return;
+          }
+        } finally {
+          setIsAiChecking(false);
         }
       }
 
@@ -511,15 +481,7 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                   );
                 })()}
 
-                {/* AI checking indicator */}
-                {isAiChecking && !checkKeywords(caption, publicPolicy) && (
-                  <div className="flex items-center gap-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400">
-                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                    Đang kiểm duyệt nội dung…
-                  </div>
-                )}
-
-                {/* Keyword / AI violation errors */}
+                {/* Keyword violation errors */}
                 {(() => {
                   const err = checkKeywords(caption, publicPolicy);
                   if (err) {
@@ -527,14 +489,6 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                       <div className="flex items-center gap-1.5 rounded-md bg-red-50 dark:bg-red-900/20 px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400">
                         <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                         {err}
-                      </div>
-                    );
-                  }
-                  if (aiViolationError) {
-                    return (
-                      <div className="flex items-center gap-1.5 rounded-md bg-red-50 dark:bg-red-900/20 px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400">
-                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                        {aiViolationError}
                       </div>
                     );
                   }
@@ -546,15 +500,15 @@ export function ShareModal({ isOpen, onClose, target, title = 'Chia sẻ' }: Sha
                 <button
                   type="button"
                   onClick={() => void handleShareToFeed()}
-                  disabled={(target.type === 'post' && !!target.alreadyShared) || isSharingNow || isAiChecking || !!checkKeywords(caption, publicPolicy) || !!aiViolationError}
+                  disabled={(target.type === 'post' && !!target.alreadyShared) || isSharingNow || isAiChecking || !!checkKeywords(caption, publicPolicy)}
                   className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {target.type === 'post' && target.alreadyShared
                     ? 'Đã chia sẻ lên bảng tin'
-                    : isSharingNow
-                      ? 'Đang đăng...'
-                      : isAiChecking
-                        ? 'Đang kiểm duyệt...'
+                    : isAiChecking
+                      ? 'Đang kiểm duyệt...'
+                      : isSharingNow
+                        ? 'Đang đăng...'
                         : 'Đăng bài'}
                 </button>
 

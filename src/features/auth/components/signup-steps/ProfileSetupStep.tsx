@@ -505,9 +505,9 @@ export function ProfileSetupStep({
       if (isGoogleSignup) {
         clearGoogleSignupSession();
       }
-      authService.saveCurrentUser(authUser);
       setShowSuccessModal(true);
       window.setTimeout(() => {
+        authService.saveCurrentUser(authUser);
         navigate('/home');
       }, 5000);
     } catch (err) {
